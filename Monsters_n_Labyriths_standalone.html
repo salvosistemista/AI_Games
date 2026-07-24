@@ -1,0 +1,3155 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Monsters &amp; Labyrinths</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#0c0f12; }
+  #root { height:100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+(() => {
+  const { useEffect, useRef } = React;
+  const THREE_CDN_URL = "https://unpkg.com/three@0.128.0/build/three.min.js";
+  function loadThreeJs() {
+    if (typeof window.THREE !== "undefined") {
+      return Promise.resolve(window.THREE);
+    }
+    if (!window.__threeLoadingPromise) {
+      window.__threeLoadingPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = THREE_CDN_URL;
+        script.async = true;
+        script.onload = () => {
+          if (typeof window.THREE !== "undefined") resolve(window.THREE);
+          else reject(new Error("three.js caricato ma window.THREE non \xE8 definito."));
+        };
+        script.onerror = () => {
+          reject(new Error("Impossibile scaricare three.js da " + THREE_CDN_URL));
+        };
+        document.head.appendChild(script);
+      });
+    }
+    return window.__threeLoadingPromise;
+  }
+  const GAME_VERSION = "v1.22";
+  const GAME_STYLE = `
+  html, body {
+      height: 100%;
+  }
+  body {
+      margin: 0; padding: 0; overflow: hidden;
+      background-color: #0c0f12; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; color: #e0e6ed;
+  }
+  #game-container {
+      position: relative; width: 100vw; height: 100vh;
+      /* 100dvh (viewport dinamico) tiene conto della barra degli
+         indirizzi dei browser mobile, a differenza di 100vh che su
+         telefono include anche l'area che sparisce quando si scorre.
+         I browser che non conoscono "dvh" ignorano questa riga e
+         restano sul valore "vh" qui sopra. */
+      height: 100dvh;
+      /* Rete di sicurezza per i browser mobile che NON supportano
+         "dvh" (in quel caso il bug di "100vh" persiste): --app-vh
+         viene calcolato in JavaScript da window.innerHeight (il vero
+         spazio visibile in quel momento, aggiornato ad ogni resize) e
+         sovrascrive tutto quello che c'\xE8 sopra, appena il gioco parte. */
+      height: var(--app-vh, 100dvh);
+      max-width: 500px; max-height: 850px; margin: 0 auto;
+      box-shadow: 0 0 30px rgba(0,0,0,0.9); background: #0b0d10;
+  }
+  canvas { width: 100% !important; height: 100% !important; display: block; }
+
+  .ui-screen {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0d1117; z-index: 200; display: flex; flex-direction: column;
+      box-sizing: border-box; padding: 25px; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+  }
+  h1, h2, h3 { text-align: center; color: #00ffcc; margin-top: 10px; letter-spacing: 1px; }
+  h1 { font-size: 26px; text-shadow: 0 0 10px rgba(0, 255, 204, 0.3); }
+
+  /* Su schermi bassi (telefoni in orizzontale, telefoni piccoli, o
+     verticale con tastiera aperta) si stringono i margini/spaziature
+     principali, cos\xEC schermate lunghe come la Creazione Personaggio
+     entrano senza dover scorrere. Lo scroll resta comunque attivo
+     come rete di sicurezza per i casi limite. */
+  @media (max-height: 720px) {
+    .ui-screen { padding: 14px 20px; }
+    h1 { font-size: 21px; margin-top: 12px; margin-bottom: 12px; }
+    h2 { margin: 6px 0; font-size: 18px; }
+    .btn { padding: 9px; margin: 5px 0; font-size: 14px; }
+    .stat-allocator { padding: 4px 12px; margin: 2px 0; }
+    .build-selector-grid { gap: 4px; margin-bottom: 8px; }
+    .input-field { padding: 9px; margin-bottom: 8px; }
+  }
+  @media (max-height: 600px) {
+    .ui-screen { padding: 10px 16px; }
+    h1 { font-size: 18px; margin-top: 8px; margin-bottom: 8px; }
+    .stat-allocator { padding: 2px 10px; }
+  }
+
+  .btn {
+      background: #161b22; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 14px; margin: 8px 0; border-radius: 6px; font-size: 15px;
+      font-weight: bold; cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: #238636; border-color: #2ea44f; color: white; }
+  .btn-primary:not(:disabled):hover { background: #2ea44f; }
+  .btn-danger { background: #da3637; border-color: #f85149; color: white; }
+  .btn-action { border-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.05); }
+
+  .slot-card {
+      position: relative;
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 12px; margin: 10px 0; cursor: pointer; display: flex;
+      justify-content: space-between; align-items: center; transition: border 0.2s;
+  }
+  .slot-info { display: flex; flex-direction: column; gap: 5px; }
+  .slot-delete-btn {
+      position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
+      border-radius: 50%; background: rgba(218,54,55,0.15); border: 1px solid rgba(248,81,73,0.5);
+      color: #f85149; font-size: 11px; font-weight: bold; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+  }
+
+  .input-field {
+      background: #0d1117; border: 1px solid #30363d; color: white;
+      padding: 12px; border-radius: 6px; font-size: 15px; width: 100%;
+      box-sizing: border-box; text-align: center; margin-bottom: 12px;
+  }
+  .input-field:focus { border-color: #00ffcc; outline: none; }
+
+  .build-selector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .build-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .build-btn {
+      background: #21262d; border: 1px solid #30363d; color: #8b949e;
+      padding: 8px 4px; border-radius: 4px; font-size: 11px; font-weight: bold;
+      cursor: pointer; text-align: center; width: 100%; box-sizing: border-box;
+  }
+  .build-btn.active { background: rgba(0,255,204,0.15); border-color: #00ffcc; color: white; }
+  .delete-build-btn { background: #21262d; border: 1px solid #f85149; color: #f85149; font-size: 9px; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-weight: bold; }
+
+  .stat-allocator {
+      background: #161b22; border-radius: 6px; padding: 6px 12px;
+      margin: 4px 0; display: flex; justify-content: space-between; align-items: center;
+  }
+  .stat-label { font-weight: bold; font-size: 14px; min-width: 90px; }
+  .stat-controls { display: flex; align-items: center; gap: 12px; }
+  .circle-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 1px solid #30363d;
+      background: #30363d; color: white; font-weight: bold; display: flex;
+      align-items: center; justify-content: center; cursor: pointer;
+  }
+
+  .custom-modal {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(11, 13, 16, 0.95); z-index: 300;
+      display: none; flex-direction: column; justify-content: center; padding: 20px; box-sizing: border-box;
+  }
+  .modal-content { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+
+  .preview-box { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 10px; font-size: 12px; }
+  .preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 5px; text-align: center; }
+  .preview-stat { background: #161b22; padding: 4px; border-radius: 4px; font-weight: bold; border: 1px solid #30363d; }
+
+  #confirm-modal { z-index: 400; }
+  #confirm-modal-text { color: #e0e6ed; font-size: 14px; text-align: center; line-height: 1.4; margin: 4px 0 10px; }
+  #equip-picker-modal { z-index: 410; }
+
+  #hud {
+      position: absolute; top: 10px; left: 10px; right: 10px;
+      color: white; background: rgba(11,13,16,0.85); padding: 12px;
+      border-radius: 6px; z-index: 10; font-size: 12px;
+      display: none; flex-direction: column; gap: 4px; border: 1px solid #30363d; pointer-events: none;
+  }
+  .hud-row { display: flex; justify-content: space-between; align-items: center; }
+
+  /* Barre HP/XP */
+  .bar-label-row { display: flex; justify-content: space-between; font-size: 10px; color: #8b949e; margin-top: 4px; }
+  .bar-track { background: #1f242c; border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill-hp { height: 100%; background: #2ee44f; width: 0%; transition: width 0.25s; }
+  .bar-fill-xp { height: 100%; background: #00d2ff; width: 0%; transition: width 0.25s; }
+
+  /* Barra di notifica oggetti trovati (fino a 3, sotto HP/XP/Oro) */
+  #loot-toast {
+      display: none; flex-direction: column; gap: 3px; margin-top: 4px;
+      overflow: hidden; transition: max-height 0.25s ease;
+  }
+  .loot-toast-item {
+      background: rgba(46, 228, 79, 0.12); border: 1px solid #2ee44f; color: #2ee44f;
+      font-size: 11px; font-weight: bold; padding: 5px 8px; border-radius: 5px;
+      animation: loot-pop 0.25s ease-out;
+  }
+  @keyframes loot-pop { from { transform: translateY(-6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  #levelup-toast {
+      position: absolute; top: 100px; left: 10px; right: 10px;
+      display: none; z-index: 16; text-align: center;
+      background: rgba(46, 228, 79, 0.15); border: 1px solid #2ee44f;
+      color: #2ee44f; font-size: 12px; font-weight: bold;
+      padding: 8px 10px; border-radius: 6px; pointer-events: none;
+  }
+
+  #stairs-hint {
+      position: absolute; top: 100px; left: 10px; right: 10px;
+      display: none; z-index: 15; text-align: center;
+      background: rgba(241, 196, 15, 0.15); border: 1px solid #f1c40f;
+      color: #f1c40f; font-size: 12px; font-weight: bold;
+      padding: 8px 10px; border-radius: 6px; pointer-events: none;
+  }
+
+  /* ---------------- CLUSTER AZIONI: Esci + accordion personaggio/statistiche ---------------- */
+  #action-cluster {
+      position: absolute; bottom: 20px; left: 20px; z-index: 50; display: none;
+      flex-direction: column; align-items: flex-start; gap: 8px;
+      transition: opacity 0.2s;
+  }
+  #action-cluster.hand-left { left: auto; right: 20px; align-items: flex-end; }
+
+  #btn-exit-game {
+      background: rgba(218, 54, 55, 0.85); border: 1px solid #f85149; color: white;
+      font-size: 12px; font-weight: bold; padding: 10px 16px; border-radius: 6px;
+      cursor: pointer; white-space: nowrap;
+  }
+
+  #bottom-row { display: flex; align-items: center; gap: 8px; }
+  #action-cluster.hand-left #bottom-row { flex-direction: row-reverse; }
+
+  .square-toggle, .toggle-horizontal, .toggle-vertical {
+      flex-shrink: 0;
+      background: rgba(22,27,34,0.85); border: 1px solid #30363d; color: #00ffcc;
+      font-weight: bold; border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+  }
+  .square-toggle { width: 40px; height: 40px; min-width: 40px; font-size: 16px; }
+  /* Toggle orizzontale (fra "Esci" e "Inven"): fa scorrere una riga di
+     pulsanti in orizzontale, quindi resta stretto e alto quanto Esci. */
+  .toggle-horizontal { width: 24px; height: 40px; min-width: 24px; font-size: 13px; }
+  /* Toggle verticale (sopra "Esci"): fa scorrere una colonna di
+     pulsanti in verticale, quindi resta basso e largo. */
+  .toggle-vertical { width: 40px; height: 24px; min-width: 40px; font-size: 13px; }
+
+  #char-toggle-row {
+      display: flex; gap: 6px; overflow: hidden; max-width: 0;
+      transition: max-width 0.3s ease;
+  }
+  #char-toggle-row.open { max-width: 320px; }
+  #action-cluster.hand-left #char-toggle-row { flex-direction: row-reverse; }
+
+  #stats-toggle-row {
+      display: flex; flex-direction: column-reverse; gap: 6px; align-items: flex-start;
+      overflow: hidden; max-height: 0;
+      transition: max-height 0.3s ease;
+  }
+  #stats-toggle-row.open { max-height: 220px; }
+  #action-cluster.hand-left #stats-toggle-row { align-items: flex-end; }
+
+  .slide-btn {
+      background: rgba(22,27,34,0.85); border: 1px solid #30363d; color: #c9d1d9;
+      font-size: 11px; font-weight: bold; padding: 10px 10px; border-radius: 6px;
+      cursor: pointer; white-space: nowrap;
+  }
+
+  #dpad-container {
+      position: absolute;
+      bottom: 60px; right: 50px;
+      width: 170px; height: 170px;
+      z-index: 50; display: none;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 6px;
+      transition: opacity 0.2s;
+  }
+  .dpad-btn {
+      background: rgba(22, 27, 34, 0.6);
+      border: 1px solid rgba(0, 255, 204, 0.35);
+      color: rgba(0, 255, 204, 0.8);
+      border-radius: 8px; font-weight: bold; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; backdrop-filter: blur(2px);
+  }
+  .dpad-btn:active { background: rgba(0, 255, 204, 0.3); color: white; border-color: #00ffcc; }
+  .dpad-rot-btn { border-color: rgba(165, 94, 234, 0.4); color: rgba(165, 94, 234, 0.8); font-size: 15px; }
+  .dpad-rot-btn:active { background: rgba(165, 94, 234, 0.25); color: white; border-color: #a55eea; }
+
+  /* ---------------- OVERLAY DI INCONTRO NEMICO ---------------- */
+  #encounter-overlay {
+      position: absolute; top: 5%; left: 5%; width: 90%; height: 90%;
+      background: rgba(9, 11, 15, 0.74); backdrop-filter: blur(3px);
+      border: 1px solid rgba(0, 255, 204, 0.3); border-radius: 18px;
+      z-index: 150; display: none; flex-direction: column;
+      align-items: center; justify-content: center; box-sizing: border-box; padding: 20px;
+  }
+  #btn-encounter-flee {
+      position: absolute;
+      background: #da3637; border: 1px solid #f85149; color: white;
+      padding: 9px 16px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer;
+      transform: translate(-50%, -50%);
+  }
+  #encounter-name { color: #00ffcc; font-size: 20px; font-weight: bold; margin-bottom: 10px; text-align: center; letter-spacing: 1px; }
+  .monster-art { margin-bottom: 18px; }
+  .monster-art svg { display: block; animation: float-monster 3s ease-in-out infinite; }
+  @keyframes float-monster { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @keyframes pulse-eye { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.2); } }
+  .eye-anim { animation: pulse-eye 1.1s infinite; transform-origin: center; }
+  #encounter-hp-bar-bg, #encounter-player-hp-bar-bg { width: 70%; max-width: 260px; height: 12px; background: #1f242c; border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+  #encounter-hp-fill { height: 100%; background: #da3637; width: 100%; transition: width 0.3s; }
+  #encounter-player-hp-fill { height: 100%; background: #2ee44f; width: 100%; transition: width 0.3s; }
+  #encounter-hp-label, #encounter-player-hp-label { color: #c9d1d9; font-size: 12px; margin-bottom: 8px; }
+  #encounter-hint { color: #8b949e; font-size: 11px; text-align: center; margin-top: 8px; }
+
+  /* ---------------- COMBATTIMENTO A TEMPO (QTE) ---------------- */
+  .qte-label { font-size: 14px; font-weight: bold; margin-top: 4px; min-height: 18px; text-align: center; }
+  .qte-label-attack { color: #f1c40f; }
+  .qte-label-defense { color: #00d2ff; }
+  .qte-feedback { font-size: 13px; font-weight: bold; min-height: 18px; text-align: center; display: none; }
+  .qte-feedback-good { color: #2ee44f; }
+  .qte-feedback-bad { color: #ff4d4d; }
+
+  #qte-reticle {
+      position: absolute; width: 54px; height: 54px; margin-left: -27px; margin-top: -27px;
+      border-radius: 50%; display: none; align-items: center; justify-content: center;
+      font-size: 24px; cursor: pointer; z-index: 220;
+      animation: qte-pulse-ring linear forwards;
+  }
+  .qte-attack { background: rgba(241, 196, 15, 0.25); border: 3px solid #f1c40f; box-shadow: 0 0 14px rgba(241,196,15,0.5); }
+  .qte-defense { background: rgba(0, 210, 255, 0.25); border: 3px solid #00d2ff; box-shadow: 0 0 14px rgba(0,210,255,0.5); }
+  @keyframes qte-pulse-ring { from { transform: scale(1.5); opacity: 0.9; } to { transform: scale(0.6); opacity: 0.35; } }
+
+  /* ---------------- COUNTDOWN PRIMA DEL COMBATTIMENTO ---------------- */
+  #countdown-overlay {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 5; display: none; align-items: center; justify-content: center;
+      flex-direction: column; background: rgba(9, 11, 15, 0.55); border-radius: 18px;
+  }
+  #countdown-circle {
+      width: 220px; height: 220px; border-radius: 50%;
+      border: 8px solid #f1c40f; display: flex; align-items: center; justify-content: center;
+      background: rgba(241, 196, 15, 0.08);
+  }
+  .countdown-anim { animation: countdown-shrink 0.5s ease-out; }
+  @keyframes countdown-shrink { from { transform: scale(1.4); opacity: 0.3; } to { transform: scale(0.85); opacity: 1; } }
+  #countdown-number { font-size: 84px; font-weight: bold; color: #f1c40f; text-shadow: 0 0 12px rgba(241,196,15,0.6); }
+  #countdown-fight-text {
+      display: none; font-size: 40px; font-weight: bold; color: #ff4d4d;
+      text-shadow: 0 0 16px rgba(255,77,77,0.7); letter-spacing: 2px;
+  }
+  .fight-pop { animation: fight-pop 0.35s ease-out; }
+  @keyframes fight-pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ---------------- FINESTRE DI DETTAGLIO (Stato, Diario, Mappa, Statistiche, Inventario, Equip.) ---------------- */
+  .detail-overlay {
+      position: absolute; top: 5%; left: 5%; width: 90%; height: 90%;
+      background: rgba(13, 17, 23, 0.97); border: 1px solid rgba(0, 255, 204, 0.25);
+      border-radius: 16px; z-index: 160; display: none; flex-direction: column;
+      box-sizing: border-box; padding: 20px; overflow: hidden;
+  }
+  .detail-fixed-top { flex-shrink: 0; }
+  .detail-scroll-area { flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
+  /* Nell'Inventario la fascia fissa in basso (filtri + ordina) prende
+     gi\xE0 il posto lasciato libero per il pulsante di chiusura, quindi
+     l'area scorrevole non ha pi\xF9 bisogno di quel grande spazio extra. */
+  .inventory-scroll-area { padding-bottom: 8px; }
+  #inventory-summary {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: #8b949e; margin-top: 6px;
+  }
+  .detail-fixed-bottom {
+      flex-shrink: 0; border-top: 1px solid #21262d;
+      padding: 10px 14px 4px 54px; /* spazio a sx per non coprire il pulsante \u2715 */
+  }
+  .detail-overlay.hand-left .detail-fixed-bottom { padding: 10px 54px 4px 14px; }
+  #inventory-filter-row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .inventory-filter-btn { flex: 1; min-width: 58px; text-align: center; padding: 7px 4px; margin: 0; font-size: 10px; }
+  .inventory-filter-btn.active { border-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.08); }
+  .close-btn {
+      position: absolute; bottom: 14px; left: 14px; width: 32px; height: 32px;
+      border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25);
+      color: #c9d1d9; font-size: 14px; font-weight: bold; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+  }
+  .detail-overlay.hand-left .close-btn { left: auto; right: 14px; }
+
+  #status-header { text-align: center; color: #8b949e; font-size: 13px; margin-bottom: 6px; }
+  .status-section-title {
+      font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px;
+      margin: 16px 0 8px; border-bottom: 1px solid #21262d; padding-bottom: 4px;
+  }
+  .status-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+      padding: 8px 12px; margin-bottom: 6px; font-size: 13px;
+  }
+  .status-row .label { font-weight: bold; color: #e0e6ed; }
+  .status-row .breakdown { color: #8b949e; font-size: 11px; margin-top: 2px; }
+  .status-row .total { color: #00ffcc; font-weight: bold; font-size: 16px; margin-left: 8px; white-space: nowrap; }
+  .status-note { font-size: 11px; color: #58606b; margin-top: 6px; font-style: italic; line-height: 1.4; }
+
+  /* ---------------- DIARIO ---------------- */
+  #diario-entries { display: flex; flex-direction: column; gap: 6px; }
+  .diario-entry { background: #161b22; border: 1px solid #21262d; border-radius: 6px; padding: 8px 10px; font-size: 12px; border-left-width: 3px; border-left-style: solid; }
+  .diario-entry.type-livello { border-left-color: #a55eea; }
+  .diario-entry.type-nemico { border-left-color: #da3637; }
+  .diario-entry.type-oggetto { border-left-color: #2ee44f; }
+  .diario-entry.type-piano { border-left-color: #f1c40f; }
+  .diario-entry.type-sistema { border-left-color: #00d2ff; }
+  .diario-meta { color: #8b949e; font-size: 10px; margin-bottom: 2px; }
+  #diario-filter-row { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px solid #21262d; margin-bottom: 40px; flex-shrink: 0; }
+  .diario-filter-btn { flex: 1; min-width: 62px; text-align: center; padding: 8px 4px; margin: 0; }
+  .diario-filter-btn.active { border-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.08); }
+
+  /* ---------------- MAPPA ---------------- */
+  #map-grid-wrapper { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 6px 0; min-height: 0; }
+  #map-grid { display: grid; gap: 1px; background: #21262d; padding: 4px; border-radius: 6px; }
+  .map-cell { border-radius: 2px; }
+  .map-cell.wall { background: #1f242c; }
+  .map-cell.floor { background: #0f1115; }
+  .map-cell.player { background: #00ffcc; box-shadow: 0 0 6px #00ffcc; border-radius: 50%; }
+  .map-cell.stairs { background: #2f80ed; }
+  .map-cell.enemy { background: #da3637; }
+  .map-cell.item { background: #2ee44f; }
+  #map-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: #8b949e; padding-top: 10px; border-top: 1px solid #21262d; margin-bottom: 40px; flex-shrink: 0; }
+  .map-legend-item { display: flex; align-items: center; gap: 4px; }
+  .map-legend-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* ---------------- INVENTARIO / EQUIP. ---------------- */
+  .equipped-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: #ff4d4d; margin-right: 6px; box-shadow: 0 0 4px rgba(255,77,77,0.8);
+  }
+  .item-durability { color: #8b949e; font-size: 11px; }
+  .inventory-row, .equip-slot-row { align-items: center; }
+  .inventory-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .item-destroy-btn {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(218,54,55,0.15); border: 1px solid rgba(248,81,73,0.5);
+      font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+  }
+  .equip-pick-row { cursor: pointer; }
+  .equip-pick-row:hover { border-color: #00ffcc; }
+
+  /* ---------------- MORTE ---------------- */
+  .death-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(5, 0, 0, 0.93); z-index: 500; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+      box-sizing: border-box; padding: 30px;
+  }
+  #death-title {
+      color: #ff2020; font-size: 48px; letter-spacing: 5px; margin: 0;
+      text-shadow: 0 0 30px rgba(255,0,0,0.8); text-align: center;
+  }
+  .death-grow { animation: death-grow-anim 4s ease-out forwards; }
+  @keyframes death-grow-anim {
+      0% { transform: scale(0.03); opacity: 0; }
+      12% { opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+  }
+  #death-losses { color: #e0e6ed; font-size: 14px; text-align: center; line-height: 2; }
+  #death-losses strong { color: #ff6b6b; font-size: 16px; }
+`;
+  const GAME_HTML = `
+  <div id="menu-main" class="ui-screen">
+      <h1 style="margin-top: 40px; margin-bottom: 40px;">Monsters and Labyrinths<br><span style="color: #8b949e; font-size: 16px;">Procedural Roguelike <span id="game-version-label"></span></span></h1>
+      <button class="btn btn-primary" id="btn-main-continue" style="display:none;">Continua Ultima Partita</button>
+      <button class="btn btn-action" id="btn-main-new">Nuova Partita</button>
+      <button class="btn" id="btn-main-load" style="display:none;">Carica</button>
+      <button class="btn" id="btn-main-options">Opzioni</button>
+      <button class="btn" onclick="alert('Fuggi attraverso labirinti procedurali, trova la scala ed evita (o affronta) i nemici!')">Informazioni</button>
+      <button class="btn btn-danger" onclick="alert('Uscita simulata.')">Esci</button>
+  </div>
+
+  <div id="menu-slots" class="ui-screen" style="display: none;">
+      <h2 id="slots-menu-title">Seleziona uno Slot</h2>
+      <div id="slots-list-container" style="flex: 1;"></div>
+      <button class="btn btn-danger" id="btn-slots-back">Annulla</button>
+  </div>
+
+  <div id="menu-options" class="ui-screen" style="display: none;">
+      <h2>Opzioni</h2>
+      <h3 style="font-size: 13px; margin: 10px 0 6px; text-align: left;">Lato dei comandi</h3>
+      <p style="font-size: 12px; color: #8b949e; margin: 0 0 10px;">Il d-pad di movimento e il cluster Esci si spostano sul lato scelto.</p>
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+          <button class="btn" id="btn-hand-left" style="flex: 1;">Sinistra</button>
+          <button class="btn" id="btn-hand-right" style="flex: 1;">Destra</button>
+      </div>
+      <h3 style="font-size: 13px; margin: 10px 0 6px; text-align: left;">Aracnofobia</h3>
+      <p style="font-size: 12px; color: #8b949e; margin: 0 0 10px;">Se abilitata, sostituisce i Ragni Giganti con un nemico alternativo (Orco Gigante), senza cambiare difficolt\xE0 o statistiche.</p>
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+          <button class="btn" id="btn-arachno-off" style="flex: 1;">No</button>
+          <button class="btn" id="btn-arachno-on" style="flex: 1;">S\xEC</button>
+      </div>
+      <div style="flex: 1;"></div>
+      <button class="btn btn-danger" id="btn-options-back">Indietro</button>
+  </div>
+
+  <div id="menu-create" class="ui-screen" style="display: none;">
+      <h2 id="create-title-slot">Nuovo Personaggio</h2>
+      <input type="text" id="char-name" class="input-field" placeholder="Nome del Personaggio" maxlength="14">
+
+      <h3 style="font-size: 13px; margin: 4px 0; text-align: left;">Archetipi Predefiniti:</h3>
+      <div class="build-selector-grid">
+          <button class="build-btn" onclick="applyPreset('warrior', this)">Guerriero</button>
+          <button class="build-btn" onclick="applyPreset('scout', this)">Esploratore</button>
+          <button class="build-btn" onclick="applyPreset('mage', this)">Mago</button>
+          <button class="build-btn" onclick="applyPreset('rogue', this)">Canaglia</button>
+          <button class="build-btn" onclick="applyPreset('cleric', this)">Chierico</button>
+      </div>
+
+      <h3 style="font-size: 13px; margin: 4px 0; text-align: left;">Le Tue Build Custom:</h3>
+      <div class="build-selector-grid">
+          <div class="build-block">
+              <button class="build-btn" id="custom-b-0" onclick="applyCustomPreset(0, this)">1 (Vuoto)</button>
+              <button class="delete-build-btn" id="del-b-0" style="display:none;" onclick="deleteCustomBuild(0, event)">Elimina</button>
+          </div>
+          <div class="build-block">
+              <button class="build-btn" id="custom-b-1" onclick="applyCustomPreset(1, this)">2 (Vuoto)</button>
+              <button class="delete-build-btn" id="del-b-1" style="display:none;" onclick="deleteCustomBuild(1, event)">Elimina</button>
+          </div>
+          <div class="build-block">
+              <button class="build-btn" id="custom-b-2" onclick="applyCustomPreset(2, this)">3 (Vuoto)</button>
+              <button class="delete-build-btn" id="del-b-2" style="display:none;" onclick="deleteCustomBuild(2, event)">Elimina</button>
+          </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 5px 0;">
+          <span style="font-size: 13px; color: #8b949e;">Punti Rimanenti:</span>
+          <strong style="color: #00ffcc; font-size: 16px;" id="available-points">30</strong>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+          <div class="stat-allocator"><span class="stat-label" style="color: #ff4d4d;">\u2764\uFE0F Salute</span><div class="stat-controls"><div class="circle-btn" onclick="modifyStat('salute', -1)">-</div><span class="stat-val" id="val-salute">0</span><div class="circle-btn" onclick="modifyStat('salute', 1)">+</div></div></div>
+          <div class="stat-allocator"><span class="stat-label" style="color: #ff9f43;">\u2694\uFE0F Forza</span><div class="stat-controls"><div class="circle-btn" onclick="modifyStat('forza', -1)">-</div><span class="stat-val" id="val-forza">0</span><div class="circle-btn" onclick="modifyStat('forza', 1)">+</div></div></div>
+          <div class="stat-allocator"><span class="stat-label" style="color: #00d2ff;">\u{1F3AF} Destrezza</span><div class="stat-controls"><div class="circle-btn" onclick="modifyStat('destrezza', -1)">-</div><span class="stat-val" id="val-destrezza">0</span><div class="circle-btn" onclick="modifyStat('destrezza', 1)">+</div></div></div>
+          <div class="stat-allocator"><span class="stat-label" style="color: #2ee44f;">\u26A1 Stamina</span><div class="stat-controls"><div class="circle-btn" onclick="modifyStat('stamina', -1)">-</div><span class="stat-val" id="val-stamina">0</span><div class="circle-btn" onclick="modifyStat('stamina', 1)">+</div></div></div>
+          <div class="stat-allocator"><span class="stat-label" style="color: #a55eea;">\u{1F52E} Magia</span><div class="stat-controls"><div class="circle-btn" onclick="modifyStat('magia', -1)">-</div><span class="stat-val" id="val-magia">0</span><div class="circle-btn" onclick="modifyStat('magia', 1)">+</div></div></div>
+          <div class="stat-allocator"><span class="stat-label" style="color: #f1c40f;">\u{1F340} Fortuna</span><div class="stat-controls"><div class="circle-btn" onclick="modifyStat('fortuna', -1)">-</div><span class="stat-val" id="val-fortuna">0</span><div class="circle-btn" onclick="modifyStat('fortuna', 1)">+</div></div></div>
+      </div>
+
+      <button class="btn btn-action" id="btn-open-save-modal" style="padding: 8px; font-size: 12px; margin-top: 5px;">Salva Build Corrente in uno Slot Custom</button>
+
+      <div style="display: flex; gap: 10px; margin-top: 5px;">
+          <button class="btn btn-danger" id="btn-create-back" style="flex: 1;">Annulla</button>
+          <button class="btn btn-primary" id="btn-create-start" style="flex: 1;" disabled>Inizia</button>
+      </div>
+  </div>
+
+  <div id="modal-build-saver" class="custom-modal">
+      <div class="modal-content">
+          <h3 style="margin-top:0; color:#00ffcc; text-align:center;">Salva Build Custom</h3>
+          <div class="preview-box">
+              <span style="color:#00ffcc; font-weight:bold;">\u2728 Nuova build corrente:</span>
+              <div class="preview-grid" id="modal-new-preview-grid"></div>
+          </div>
+          <input type="text" id="modal-build-name" class="input-field" placeholder="Nome Build (Es: Berserker)" maxlength="12">
+          <label style="font-size:12px; color:#8b949e;">Seleziona Destinazione:</label>
+          <select id="modal-build-slot-select" class="input-field" style="background:#0d1117;" onchange="updateModalComparison()"></select>
+          <div class="preview-box" id="modal-old-preview-box" style="display:none; border-color:#da3637;">
+              <span style="color:#ff4d4d; font-weight:bold;">\u26A0\uFE0F Build attualmente presente:</span>
+              <div class="preview-grid" id="modal-old-preview-grid"></div>
+          </div>
+          <div style="display:flex; gap: 10px; margin-top:5px;">
+              <button class="btn btn-danger" id="btn-modal-cancel" style="flex:1; padding:10px; margin:0;">Annulla</button>
+              <button class="btn btn-primary" id="btn-modal-confirm" style="flex:1; padding:10px; margin:0;">Salva</button>
+          </div>
+      </div>
+  </div>
+
+  <div id="confirm-modal" class="custom-modal">
+      <div class="modal-content">
+          <h3 style="margin-top:0; color:#f1c40f; text-align:center;">Conferma</h3>
+          <p id="confirm-modal-text">Sei sicuro?</p>
+          <div style="display:flex; gap:10px;">
+              <button id="confirm-modal-no" class="btn btn-danger" style="flex:1; margin:0;">No</button>
+              <button id="confirm-modal-yes" class="btn btn-primary" style="flex:1; margin:0;">S\xEC</button>
+          </div>
+      </div>
+  </div>
+
+  <div id="equip-picker-modal" class="custom-modal">
+      <div class="modal-content">
+          <h3 style="margin-top:0; color:#00ffcc; text-align:center;">Scegli un Oggetto</h3>
+          <div id="equip-picker-list" style="max-height:300px; overflow-y:auto;"></div>
+          <button id="btn-equip-picker-cancel" class="btn btn-danger" style="margin:0;">Annulla</button>
+      </div>
+  </div>
+
+  <div id="hud">
+      <div class="hud-row">
+          <span id="hud-player-name" style="font-weight: bold; color: #00ffcc;">Eroe</span>
+          <span id="hud-level" style="color: #a55eea;">Lv. 1</span>
+          <span id="hud-floor" style="color: #f1c40f;">PIANO: 1</span>
+      </div>
+      <div class="bar-label-row"><span>HP</span><span id="hud-hp-label">0 / 0</span></div>
+      <div class="bar-track"><div id="hud-hp-fill" class="bar-fill-hp"></div></div>
+      <div class="bar-label-row"><span>XP</span><span id="hud-xp-label">0 / 100</span></div>
+      <div class="bar-track"><div id="hud-xp-fill" class="bar-fill-xp"></div></div>
+      <div class="hud-row" style="font-size: 11px; margin-top: 2px;">
+          <span>\u2694\uFE0F ATK: <span id="hud-atk">0</span> | \u{1F6E1}\uFE0F DEF: <span id="hud-def">0</span></span>
+          <span>\u{1FA99} Oro: <span id="hud-gold" style="color: #f1c40f;">0</span></span>
+      </div>
+      <div id="loot-toast"></div>
+  </div>
+
+  <div id="stairs-hint">\u{1FA9C} Sei sulla scala! Tocca il personaggio per scendere al piano successivo.</div>
+  <div id="levelup-toast">\u{1F389} Livello aumentato!</div>
+
+  <div id="action-cluster">
+      <div id="stats-toggle-row">
+          <button class="slide-btn" id="btn-open-stats">Statistiche</button>
+          <button class="slide-btn" id="btn-open-diario">Diario</button>
+          <button class="slide-btn" id="btn-open-map">Mappa</button>
+      </div>
+      <button id="btn-toggle-stats" class="toggle-vertical">\u25B2</button>
+      <div id="bottom-row">
+          <button id="btn-exit-game">Esci</button>
+          <button id="btn-toggle-char" class="toggle-horizontal">\u25B6</button>
+          <div id="char-toggle-row">
+              <button class="slide-btn" id="btn-open-inventory">Inven</button>
+              <button class="slide-btn" id="btn-open-equip">Equip</button>
+              <button class="slide-btn" id="btn-char-stato">Stato</button>
+          </div>
+      </div>
+  </div>
+
+  <div id="dpad-container">
+      <div></div>
+      <div class="dpad-btn" onclick="handleVirtualMove(0, -1)">\u25B2</div>
+      <div></div>
+
+      <div class="dpad-btn" onclick="handleVirtualMove(-1, 0)">\u25C0</div>
+      <div></div>
+      <div class="dpad-btn" onclick="handleVirtualMove(1, 0)">\u25B6</div>
+
+      <div class="dpad-btn dpad-rot-btn" onclick="rotateView(-1)">\u21BA</div>
+      <div class="dpad-btn" onclick="handleVirtualMove(0, 1)">\u25BC</div>
+      <div class="dpad-btn dpad-rot-btn" onclick="rotateView(1)">\u21BB</div>
+  </div>
+
+  <div id="encounter-overlay">
+      <button id="btn-encounter-flee" onclick="closeEncounter()">FUGGI</button>
+      <div id="encounter-name">Nemico</div>
+
+      <div class="monster-art" id="art-goblin" style="display:none;">
+          <svg viewBox="0 0 200 200" width="170" height="170">
+              <polygon points="40,95 8,38 58,78" fill="#2f7d34"/>
+              <polygon points="160,95 192,38 142,78" fill="#2f7d34"/>
+              <ellipse cx="100" cy="120" rx="60" ry="55" fill="#4caf50"/>
+              <circle class="eye-anim" cx="75" cy="112" r="15" fill="#fff200"/>
+              <circle class="eye-anim" cx="125" cy="112" r="15" fill="#fff200"/>
+              <circle cx="75" cy="112" r="6" fill="#181818"/>
+              <circle cx="125" cy="112" r="6" fill="#181818"/>
+              <path d="M68 152 Q100 178 132 152 Q100 168 68 152 Z" fill="#181818"/>
+              <polygon points="78,152 85,163 92,152" fill="#f4f4f4"/>
+              <polygon points="108,152 115,163 122,152" fill="#f4f4f4"/>
+          </svg>
+      </div>
+
+      <div class="monster-art" id="art-scheletro" style="display:none;">
+          <svg viewBox="0 0 200 200" width="170" height="170">
+              <ellipse cx="100" cy="105" rx="54" ry="58" fill="#ece7d8"/>
+              <ellipse class="eye-anim" cx="78" cy="100" rx="15" ry="19" fill="#181818"/>
+              <ellipse class="eye-anim" cx="122" cy="100" rx="15" ry="19" fill="#181818"/>
+              <polygon points="93,118 107,118 100,133" fill="#c9c6b4"/>
+              <path d="M65 145 h70 M70 154 h60 M75 163 h50" stroke="#181818" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <rect x="55" y="172" width="90" height="22" rx="6" fill="#ece7d8"/>
+              <path d="M65 172 v22 M85 172 v22 M105 172 v22 M125 172 v22" stroke="#8b8672" stroke-width="2"/>
+          </svg>
+      </div>
+
+      <div class="monster-art" id="art-ragno" style="display:none;">
+          <svg viewBox="0 0 200 200" width="170" height="170">
+              <g stroke="#211f2b" stroke-width="7" fill="none" stroke-linecap="round">
+                  <path d="M60 108 Q18 88 8 56"/>
+                  <path d="M60 128 Q10 132 0 156"/>
+                  <path d="M65 98 Q28 66 22 34"/>
+                  <path d="M65 142 Q22 162 12 194"/>
+                  <path d="M140 108 Q182 88 192 56"/>
+                  <path d="M140 128 Q190 132 200 156"/>
+                  <path d="M135 98 Q172 66 178 34"/>
+                  <path d="M135 142 Q178 162 188 194"/>
+              </g>
+              <ellipse cx="100" cy="122" rx="46" ry="40" fill="#211f2b"/>
+              <circle cx="100" cy="78" r="28" fill="#2a2836"/>
+              <circle class="eye-anim" cx="88" cy="72" r="6" fill="#ff3b3b"/>
+              <circle class="eye-anim" cx="112" cy="72" r="6" fill="#ff3b3b"/>
+              <circle class="eye-anim" cx="78" cy="84" r="4" fill="#ff3b3b"/>
+              <circle class="eye-anim" cx="122" cy="84" r="4" fill="#ff3b3b"/>
+          </svg>
+      </div>
+
+      <!-- Nemico alternativo mostrato al posto del Ragno Gigante quando
+           l'opzione Aracnofobia \xE8 abilitata nelle Opzioni. Stesso stile
+           piatto e stessa palette scura degli altri nemici. -->
+      <div class="monster-art" id="art-orco" style="display:none;">
+          <svg viewBox="0 0 200 200" width="170" height="170">
+              <ellipse cx="100" cy="150" rx="66" ry="42" fill="#4a5a30"/>
+              <ellipse cx="100" cy="86" rx="54" ry="50" fill="#5c7137"/>
+              <polygon points="52,68 26,42 60,58" fill="#4a5a30"/>
+              <polygon points="148,68 174,42 140,58" fill="#4a5a30"/>
+              <path d="M64 66 L92 76" stroke="#2b331a" stroke-width="6" stroke-linecap="round"/>
+              <path d="M136 66 L108 76" stroke="#2b331a" stroke-width="6" stroke-linecap="round"/>
+              <circle class="eye-anim" cx="80" cy="86" r="8" fill="#ff3b3b"/>
+              <circle class="eye-anim" cx="120" cy="86" r="8" fill="#ff3b3b"/>
+              <path d="M58 112 Q100 142 142 112 Q100 130 58 112 Z" fill="#2b331a"/>
+              <polygon points="70,112 63,130 82,116" fill="#f4f4f4"/>
+              <polygon points="130,112 137,130 118,116" fill="#f4f4f4"/>
+          </svg>
+      </div>
+
+      <div id="encounter-hp-bar-bg"><div id="encounter-hp-fill"></div></div>
+      <div id="encounter-hp-label">-- / -- HP</div>
+
+      <div id="encounter-player-hp-bar-bg"><div id="encounter-player-hp-fill"></div></div>
+      <div id="encounter-player-hp-label">Tu: -- / -- HP</div>
+
+      <div id="qte-turn-label" class="qte-label"></div>
+      <div id="qte-feedback" class="qte-feedback"></div>
+
+      <div id="encounter-hint">Il nemico attacca per primo: tocca il bersaglio \u{1F6E1}\uFE0F per parare! Se ci riesci, guadagni il turno di attacco \u2694\uFE0F \u2014 altrimenti il nemico colpisce ancora.</div>
+
+      <div id="countdown-overlay">
+          <div id="countdown-circle" class="countdown-anim"><span id="countdown-number">3</span></div>
+          <div id="countdown-fight-text">COMBATTI!</div>
+      </div>
+  </div>
+
+  <div id="qte-reticle"></div>
+
+  <div id="status-overlay" class="detail-overlay">
+      <button id="btn-status-close" class="close-btn">\u2715</button>
+      <div class="detail-fixed-top">
+          <h2 style="margin-top:0;">\u{1F4DC} Stato del Personaggio</h2>
+          <div id="status-header"></div>
+      </div>
+      <div class="detail-scroll-area">
+          <div class="status-section-title">Statistiche di Combattimento</div>
+          <div id="status-combat-rows"></div>
+
+          <div class="status-section-title">Attributi Base (creazione personaggio)</div>
+          <div id="status-attr-rows"></div>
+          <div class="status-note">Stamina, Magia e Fortuna non sono ancora collegate a nessun effetto di gioco: verranno usate nelle prossime versioni (resistenza nel combattimento QTE, incantesimi, critici/fortuna).</div>
+      </div>
+  </div>
+
+  <div id="diario-overlay" class="detail-overlay">
+      <button id="btn-diario-close" class="close-btn">\u2715</button>
+      <div class="detail-fixed-top">
+          <h2 style="margin-top:0;">\u{1F4D6} Diario dell'Eroe</h2>
+      </div>
+      <div class="detail-scroll-area">
+          <div id="diario-entries"></div>
+      </div>
+      <div id="diario-filter-row">
+          <button class="slide-btn diario-filter-btn active" data-filter="tutti">Tutti</button>
+          <button class="slide-btn diario-filter-btn" data-filter="livello">Livello</button>
+          <button class="slide-btn diario-filter-btn" data-filter="nemico">Nemici</button>
+          <button class="slide-btn diario-filter-btn" data-filter="oggetto">Oggetti</button>
+          <button class="slide-btn diario-filter-btn" data-filter="piano">Piani</button>
+      </div>
+  </div>
+
+  <div id="map-overlay" class="detail-overlay">
+      <button id="btn-map-close" class="close-btn">\u2715</button>
+      <div class="detail-fixed-top">
+          <h2 style="margin-top:0;">\u{1F5FA}\uFE0F Mappa del Piano</h2>
+      </div>
+      <div id="map-grid-wrapper"><div id="map-grid"></div></div>
+      <div id="map-legend">
+          <span class="map-legend-item"><span class="map-legend-swatch" style="background:#00ffcc;"></span>Tu</span>
+          <span class="map-legend-item"><span class="map-legend-swatch" style="background:#2f80ed;"></span>Scala</span>
+          <span class="map-legend-item"><span class="map-legend-swatch" style="background:#da3637;"></span>Nemico</span>
+          <span class="map-legend-item"><span class="map-legend-swatch" style="background:#2ee44f;"></span>Oggetto</span>
+          <span class="map-legend-item"><span class="map-legend-swatch" style="background:#1f242c;"></span>Muro</span>
+      </div>
+  </div>
+
+  <div id="stats-overlay" class="detail-overlay">
+      <button id="btn-stats-close" class="close-btn">\u2715</button>
+      <div class="detail-fixed-top">
+          <h2 style="margin-top:0;">\u{1F4CA} Statistiche del Girovagare</h2>
+      </div>
+      <div class="detail-scroll-area">
+          <div id="stats-rows"></div>
+      </div>
+  </div>
+
+  <div id="inventory-overlay" class="detail-overlay">
+      <button id="btn-inventory-close" class="close-btn">\u2715</button>
+      <div class="detail-fixed-top">
+          <h2 style="margin-top:0;">\u{1F392} Inventario</h2>
+          <div id="inventory-summary"></div>
+      </div>
+      <div class="detail-scroll-area inventory-scroll-area">
+          <div id="inventory-rows"></div>
+      </div>
+      <div class="detail-fixed-bottom">
+          <div id="inventory-filter-row">
+              <button class="slide-btn inventory-filter-btn active" data-filter="tutto">Tutto</button>
+              <button class="slide-btn inventory-filter-btn" data-filter="armatura">Armatura</button>
+              <button class="slide-btn inventory-filter-btn" data-filter="armi">Armi</button>
+              <button class="slide-btn inventory-filter-btn" data-filter="anelli">Anelli</button>
+              <button class="slide-btn inventory-filter-btn" data-filter="pozioni">Pozioni</button>
+          </div>
+          <button class="slide-btn" id="btn-inventory-sort" style="width:100%; margin-top:6px;">Ordina: Ultimo arrivato</button>
+      </div>
+  </div>
+
+  <div id="equip-overlay" class="detail-overlay">
+      <button id="btn-equip-close" class="close-btn">\u2715</button>
+      <div class="detail-fixed-top">
+          <h2 style="margin-top:0;">\u{1F6E0}\uFE0F Equipaggiamento</h2>
+          <div class="status-section-title" style="margin-top:6px;">Statistiche con Equipaggiamento</div>
+          <div id="equip-summary"></div>
+      </div>
+      <div class="detail-scroll-area">
+          <div class="status-section-title" style="margin-top:0;">Slot Equipaggiamento</div>
+          <div id="equip-rows"></div>
+      </div>
+  </div>
+
+  <div id="death-overlay" class="death-overlay">
+      <h1 id="death-title" class="death-grow">YOU DIED</h1>
+      <div id="death-losses">
+          <div>Esperienza persa in questo labirinto: <strong id="death-lost-xp">0</strong> XP</div>
+          <div>Oro perso in questo labirinto: <strong id="death-lost-gold">0</strong> \u{1FA99}</div>
+      </div>
+      <div id="death-broken-list" style="display:none; color:#ff8a8a; font-size:13px; text-align:center; max-width:320px; line-height:1.5;"></div>
+      <button id="btn-death-back" class="btn btn-danger" style="display:none; position:absolute; bottom:30px; left:50%; transform:translateX(-50%); width:auto; padding:12px 30px; margin:0;">Torna indietro</button>
+  </div>
+`;
+  function getFloorConfig(floor) {
+    if (floor <= 2) return { width: 11, height: 17, enemyRate: 0.08, treasureRate: 0.06, enemyPool: ["goblin"] };
+    if (floor <= 4) return { width: 13, height: 21, enemyRate: 0.1, treasureRate: 0.05, enemyPool: ["goblin", "scheletro"] };
+    return { width: 15, height: 25, enemyRate: 0.12, treasureRate: 0.04, enemyPool: ["goblin", "scheletro", "ragno"] };
+  }
+  const ENEMY_INFO = {
+    goblin: { nome: "Goblin", colore: 5025616, hpBase: 16, hpScale: 4, xp: 35, atkBase: 6, atkScale: 2 },
+    scheletro: { nome: "Scheletro", colore: 15525848, hpBase: 22, hpScale: 5, xp: 60, atkBase: 9, atkScale: 2.6 },
+    ragno: { nome: "Ragno Gigante", colore: 2762806, hpBase: 30, hpScale: 6, xp: 100, atkBase: 13, atkScale: 2.8 }
+  };
+  const QTE_GRID_COLS = 6;
+  const QTE_GRID_ROWS = 9;
+  const QTE_CELLS_DESTRO = [19, 20, 21, 22, 25, 26, 27, 28, 31, 32, 33, 34, 37, 38, 39, 40, 43, 44, 45, 46];
+  const QTE_CELLS_SX = [18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40, 42, 43, 44, 45, 46];
+  const FLEE_CELL_DESTRO = 17;
+  const FLEE_CELL_SX = 12;
+  function calcMaxHp(stats) {
+    return 20 + stats.salute * 8;
+  }
+  function calcAtk(stats) {
+    return 4 + Math.round(stats.forza * 1.2);
+  }
+  function calcDef(stats) {
+    return 1 + Math.round(stats.destrezza * 0.6);
+  }
+  function xpRequiredForNext(level) {
+    return level * 100;
+  }
+  const WEAPON_KINDS = ["spada", "ascia", "lancia", "bacchetta"];
+  const ARMOR_KINDS = ["elmo", "busto", "guanti", "schinieri"];
+  const INVENTORY_MAX_SLOTS = 20;
+  const MAX_STACK_SIZE = 10;
+  const ITEM_DEFS = {
+    potion_hp: { name: "Pozione Curativa", icon: "\u{1F9EA}", consumable: true },
+    potion_atk: { name: "Pozione del Potere", icon: "\u2697\uFE0F", consumable: true },
+    ring_gold: { name: "Anello d'Oro", icon: "\u{1F48D}", slot: "ring", effect: { hp: 50 } },
+    ring_silver: { name: "Anello d'Argento", icon: "\u{1F48D}", slot: "ring", effect: { atkPct: 0.2 } },
+    ring_bronze: { name: "Anello di Bronzo", icon: "\u{1F48D}", slot: "ring", effect: { defPct: 0.1 } },
+    ring_tin: { name: "Anello di Latta", icon: "\u{1F48D}", slot: "ring", effect: {}, special: "death_protect" },
+    shield: { name: "Scudo", icon: "\u{1F6E1}\uFE0F", slot: "shield", effect: { defPct: 0.2 } },
+    weapon_spada: { name: "Spada", icon: "\u2694\uFE0F", slot: "weapon", effect: { atkPct: 0.2 } },
+    weapon_ascia: { name: "Ascia", icon: "\u{1FA93}", slot: "weapon", effect: { atkPct: 0.25 } },
+    weapon_lancia: { name: "Lancia", icon: "\u{1F531}", slot: "weapon", effect: { atkPct: 0.15 } },
+    weapon_bacchetta: { name: "Bacchetta Magica", icon: "\u{1FA84}", slot: "weapon", effect: { atkPct: 0.2 } },
+    armor_elmo: { name: "Elmo", icon: "\u26D1\uFE0F", slot: "helmet", effect: { defPct: 0.03 } },
+    armor_busto: { name: "Armatura", icon: "\u{1F94B}", slot: "chest", effect: { defPct: 0.05 } },
+    armor_guanti: { name: "Guanti", icon: "\u{1F9E4}", slot: "gloves", effect: { defPct: 0.02 } },
+    armor_schinieri: { name: "Schinieri", icon: "\u{1F97E}", slot: "boots", effect: { defPct: 0.02 } }
+  };
+  const LOOT_TABLE = [
+    { type: "GOLD", weight: 15 },
+    { type: "XP", weight: 15 },
+    { type: "POTION_HP", weight: 25 },
+    { type: "POTION_ATK", weight: 5 },
+    { type: "RING_GOLD", weight: 5 },
+    { type: "RING_SILVER", weight: 5 },
+    { type: "RING_BRONZE", weight: 5 },
+    { type: "RING_TIN", weight: 5 },
+    { type: "SHIELD", weight: 5 },
+    { type: "WEAPON", weight: 5 },
+    { type: "ARMOR_PIECE", weight: 10 }
+  ];
+  const LOOT_TABLE_EARLY = [
+    { type: "GOLD", weight: 25 },
+    { type: "XP", weight: 25 },
+    { type: "POTION_HP", weight: 42 },
+    { type: "POTION_ATK", weight: 8 }
+  ];
+  function rollLoot(floor) {
+    const table = floor <= 2 ? LOOT_TABLE_EARLY : LOOT_TABLE;
+    const total = table.reduce((s, e) => s + e.weight, 0);
+    let r = Math.random() * total;
+    for (const entry of table) {
+      if (r < entry.weight) return entry.type;
+      r -= entry.weight;
+    }
+    return table[table.length - 1].type;
+  }
+  const EQUIP_SLOT_ORDER = ["weapon", "shield", "helmet", "chest", "gloves", "boots", "ring1", "ring2"];
+  const EQUIP_SLOT_LABELS = {
+    helmet: "\u26D1\uFE0F Elmo (Testa)",
+    chest: "\u{1F94B} Armatura (Busto)",
+    gloves: "\u{1F9E4} Guanti (Braccia)",
+    boots: "\u{1F97E} Schinieri (Gambe)",
+    ring1: "\u{1F48D} Anello 1",
+    ring2: "\u{1F48D} Anello 2",
+    shield: "\u{1F6E1}\uFE0F Scudo",
+    weapon: "\u2694\uFE0F Arma"
+  };
+  function itemMatchesSlot(defKey, slotKey) {
+    const def = ITEM_DEFS[defKey];
+    if (!def || !def.slot) return false;
+    if (slotKey === "ring1" || slotKey === "ring2") return def.slot === "ring";
+    return def.slot === slotKey;
+  }
+  const STAT_LINKED_ITEMS = {
+    shield: "stamina",
+    weapon_spada: "forza",
+    weapon_ascia: "forza",
+    weapon_lancia: "destrezza",
+    weapon_bacchetta: "magia"
+  };
+  const WEAPON_ATTACK_DURATION_FACTOR = {
+    weapon_ascia: 0.8,
+    weapon_lancia: 1.25
+  };
+  const BACCHETTA_LIFESTEAL_PCT = 0.08;
+  const ELMO_DEFENSE_DURATION_FACTOR = 1.2;
+  const GUANTI_ATTACK_DURATION_FACTOR = 1.2;
+  const SCHINIERI_DEGRADATION_REDUCTION = 0.15;
+  const TOUCH_QTE_DURATION_FACTOR = 0.8;
+  function computeScaledEffect(defKey, floor, statValue = 0) {
+    const def = ITEM_DEFS[defKey];
+    if (!def || !def.effect) return {};
+    const floorGrowth = Math.max(0, floor - 1) * 5e-3;
+    const statGrowth = Math.max(0, statValue) * 1e-3;
+    const growth = floorGrowth + statGrowth;
+    const scaled = {};
+    if (def.effect.hp) scaled.hp = Math.round(def.effect.hp * (1 + growth));
+    if (def.effect.atkPct) scaled.atkPct = def.effect.atkPct + growth;
+    if (def.effect.defPct) scaled.defPct = def.effect.defPct + growth;
+    return scaled;
+  }
+  function formatItemEffect(item) {
+    const def = ITEM_DEFS[item.defKey];
+    if (!def) return "";
+    if (item.defKey === "potion_hp") return "Cura il 50% degli HP massimi";
+    if (item.defKey === "potion_atk") return "+3 ATK permanenti (cumulabile a ogni uso)";
+    if (def.special === "death_protect") return "Se equipaggiato: salva XP e oro alla morte (poi si rompe per sempre)";
+    const effect = item.effect || def.effect || {};
+    const dur = item.durability != null ? item.durability : 1;
+    const parts = [];
+    if (effect.hp) parts.push(`${effect.hp * dur >= 0 ? "+" : ""}${Math.round(effect.hp * dur)} HP`);
+    if (effect.atkPct) parts.push(`${effect.atkPct >= 0 ? "+" : ""}${Math.round(effect.atkPct * dur * 1e3) / 10}% ATK`);
+    if (effect.defPct) parts.push(`${effect.defPct >= 0 ? "+" : ""}${Math.round(effect.defPct * dur * 1e3) / 10}% DEF`);
+    if (item.defKey === "weapon_ascia") parts.push("colpo pesante: finestra di attacco pi\xF9 corta");
+    if (item.defKey === "weapon_lancia") parts.push("arma sicura: finestra di attacco pi\xF9 lunga");
+    if (item.defKey === "weapon_bacchetta") parts.push(`cura ${Math.round(BACCHETTA_LIFESTEAL_PCT * 100)}% HP max a ogni attacco riuscito`);
+    if (item.defKey === "armor_elmo") parts.push("finestra di difesa pi\xF9 lunga (pi\xF9 facile parare)");
+    if (item.defKey === "armor_guanti") parts.push("finestra di attacco pi\xF9 lunga (pi\xF9 facile colpire)");
+    if (item.defKey === "armor_schinieri") parts.push(`riduce del ${Math.round(SCHINIERI_DEGRADATION_REDUCTION * 100)}% il logoramento di tutto l'equipaggiamento alla morte`);
+    return parts.length ? parts.join(", ") : "Nessun bonus";
+  }
+  function MazeGame() {
+    const containerRef = useRef(null);
+    useEffect(() => {
+      let cancelled = false;
+      let cleanupGame = () => {
+      };
+      loadThreeJs().then((THREE) => {
+        if (cancelled) return;
+        cleanupGame = initGame(THREE);
+      }).catch((err) => {
+        console.error(err);
+        const el = document.getElementById("game-container");
+        if (el) {
+          const msg = document.createElement("div");
+          msg.style.cssText = "position:absolute;top:0;left:0;right:0;padding:20px;background:#3a0d0d;color:#ffb3b3;font-family:sans-serif;font-size:14px;z-index:9999;text-align:center;";
+          msg.innerText = "Errore: impossibile caricare three.js dal CDN (verifica la connessione a Internet).";
+          el.appendChild(msg);
+        }
+      });
+      return () => {
+        cancelled = true;
+        cleanupGame();
+      };
+      function initGame(THREE) {
+        document.getElementById("game-version-label").innerText = GAME_VERSION;
+        function setAppViewportHeight() {
+          document.documentElement.style.setProperty("--app-vh", `${window.innerHeight}px`);
+        }
+        setAppViewportHeight();
+        window.addEventListener("resize", setAppViewportHeight);
+        window.addEventListener("orientationchange", setAppViewportHeight);
+        let GameData = {
+          saves: [null, null, null, null, null],
+          customBuilds: [null, null, null],
+          activeSlot: null
+        };
+        if (localStorage.getItem("maze_rogue_saves")) GameData.saves = JSON.parse(localStorage.getItem("maze_rogue_saves"));
+        if (localStorage.getItem("maze_rogue_builds")) GameData.customBuilds = JSON.parse(localStorage.getItem("maze_rogue_builds"));
+        let Settings = { handedness: "right", arachnophobia: false };
+        try {
+          const s = localStorage.getItem("maze_rogue_settings");
+          if (s) Settings = { ...Settings, ...JSON.parse(s) };
+        } catch (e) {
+        }
+        const isTouchInputDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+        function saveSettings() {
+          try {
+            localStorage.setItem("maze_rogue_settings", JSON.stringify(Settings));
+          } catch (e) {
+          }
+        }
+        function getEnemyDisplayName(enemyType) {
+          if (enemyType === "ragno" && Settings.arachnophobia) return "Orco Gigante";
+          const info = ENEMY_INFO[enemyType] || ENEMY_INFO.goblin;
+          return info.nome;
+        }
+        function getEnemyArtKey(enemyType) {
+          if (enemyType === "ragno" && Settings.arachnophobia) return "orco";
+          return enemyType;
+        }
+        let charMenuOpen = false;
+        let statsMenuOpen = false;
+        const DETAIL_OVERLAY_IDS = ["status-overlay", "diario-overlay", "map-overlay", "stats-overlay", "inventory-overlay", "equip-overlay"];
+        function setUnderlyingControlsInteractive(enabled) {
+          const cluster = document.getElementById("action-cluster");
+          const dpad = document.getElementById("dpad-container");
+          [cluster, dpad].forEach((el) => {
+            if (!el) return;
+            el.style.pointerEvents = enabled ? "auto" : "none";
+            el.style.opacity = enabled ? "1" : "0.35";
+          });
+        }
+        function applyHandedness() {
+          const dpad = document.getElementById("dpad-container");
+          const cluster = document.getElementById("action-cluster");
+          if (Settings.handedness === "left") {
+            dpad.style.right = "auto";
+            dpad.style.left = "50px";
+            cluster.classList.add("hand-left");
+            DETAIL_OVERLAY_IDS.forEach((id) => document.getElementById(id).classList.add("hand-left"));
+          } else {
+            dpad.style.left = "auto";
+            dpad.style.right = "50px";
+            cluster.classList.remove("hand-left");
+            DETAIL_OVERLAY_IDS.forEach((id) => document.getElementById(id).classList.remove("hand-left"));
+          }
+          updateCharToggleArrow();
+          updateFleeButtonPosition();
+        }
+        function updateHandednessButtons() {
+          const r = document.getElementById("btn-hand-right");
+          const l = document.getElementById("btn-hand-left");
+          r.className = "btn" + (Settings.handedness !== "left" ? " btn-action" : "");
+          l.className = "btn" + (Settings.handedness === "left" ? " btn-action" : "");
+        }
+        function updateArachnoButtons() {
+          const off = document.getElementById("btn-arachno-off");
+          const on = document.getElementById("btn-arachno-on");
+          off.className = "btn" + (!Settings.arachnophobia ? " btn-action" : "");
+          on.className = "btn" + (Settings.arachnophobia ? " btn-action" : "");
+        }
+        document.getElementById("btn-main-options").onclick = () => {
+          showScreen("menu-options");
+          updateHandednessButtons();
+          updateArachnoButtons();
+        };
+        document.getElementById("btn-options-back").onclick = () => showScreen("menu-main");
+        document.getElementById("btn-hand-right").onclick = () => {
+          Settings.handedness = "right";
+          saveSettings();
+          applyHandedness();
+          updateHandednessButtons();
+        };
+        document.getElementById("btn-arachno-off").onclick = () => {
+          Settings.arachnophobia = false;
+          saveSettings();
+          updateArachnoButtons();
+        };
+        document.getElementById("btn-arachno-on").onclick = () => {
+          Settings.arachnophobia = true;
+          saveSettings();
+          updateArachnoButtons();
+        };
+        document.getElementById("btn-hand-left").onclick = () => {
+          Settings.handedness = "left";
+          saveSettings();
+          applyHandedness();
+          updateHandednessButtons();
+        };
+        function getActiveQteCells() {
+          return Settings.handedness === "left" ? QTE_CELLS_SX : QTE_CELLS_DESTRO;
+        }
+        function qteCellPosition(cellIndex) {
+          const col = cellIndex % QTE_GRID_COLS;
+          const row = Math.floor(cellIndex / QTE_GRID_COLS);
+          return {
+            leftPct: (col + 0.5) / QTE_GRID_COLS * 100,
+            topPct: (row + 0.5) / QTE_GRID_ROWS * 100
+          };
+        }
+        function updateFleeButtonPosition() {
+          const btn = document.getElementById("btn-encounter-flee");
+          if (!btn) return;
+          const cellIndex = Settings.handedness === "left" ? FLEE_CELL_SX : FLEE_CELL_DESTRO;
+          const pos = qteCellPosition(cellIndex);
+          btn.style.left = `${pos.leftPct}%`;
+          btn.style.top = `${pos.topPct}%`;
+        }
+        function positionHudHints() {
+          const hud = document.getElementById("hud");
+          if (!hud) return;
+          const y = hud.offsetTop + hud.offsetHeight + 10;
+          const stairsHint = document.getElementById("stairs-hint");
+          const levelupToast = document.getElementById("levelup-toast");
+          if (stairsHint) stairsHint.style.top = `${y}px`;
+          if (levelupToast) levelupToast.style.top = `${y}px`;
+        }
+        function updateCharToggleArrow() {
+          const btn = document.getElementById("btn-toggle-char");
+          const mirrored = Settings.handedness === "left";
+          if (charMenuOpen) btn.innerText = mirrored ? "\u25B6" : "\u25C0";
+          else btn.innerText = mirrored ? "\u25C0" : "\u25B6";
+        }
+        function toggleCharMenu() {
+          charMenuOpen = !charMenuOpen;
+          document.getElementById("char-toggle-row").classList.toggle("open", charMenuOpen);
+          updateCharToggleArrow();
+        }
+        document.getElementById("btn-toggle-char").onclick = toggleCharMenu;
+        function updateStatsToggleArrow() {
+          document.getElementById("btn-toggle-stats").innerText = statsMenuOpen ? "\u25BC" : "\u25B2";
+        }
+        function toggleStatsMenu() {
+          statsMenuOpen = !statsMenuOpen;
+          document.getElementById("stats-toggle-row").classList.toggle("open", statsMenuOpen);
+          updateStatsToggleArrow();
+        }
+        document.getElementById("btn-toggle-stats").onclick = toggleStatsMenu;
+        function closeActionAccordions() {
+          charMenuOpen = false;
+          statsMenuOpen = false;
+          document.getElementById("char-toggle-row").classList.remove("open");
+          document.getElementById("stats-toggle-row").classList.remove("open");
+          updateCharToggleArrow();
+          updateStatsToggleArrow();
+        }
+        function closeAllDetailOverlays() {
+          DETAIL_OVERLAY_IDS.forEach((id) => {
+            document.getElementById(id).style.display = "none";
+          });
+          setUnderlyingControlsInteractive(true);
+        }
+        function openDetailOverlay(id, renderFn) {
+          if (renderFn) renderFn();
+          document.getElementById(id).style.display = "flex";
+          setUnderlyingControlsInteractive(false);
+        }
+        function closeDetailOverlay(id) {
+          document.getElementById(id).style.display = "none";
+          setUnderlyingControlsInteractive(true);
+        }
+        function renderStatusOverlay() {
+          if (!player || GameData.activeSlot === null) return;
+          const save = GameData.saves[GameData.activeSlot];
+          const stats = save.stats;
+          document.getElementById("status-header").innerText = `${save.name} \u2014 Livello ${player.level} \u2014 XP ${player.xp} / ${xpRequiredForNext(player.level)}`;
+          const baseHp = calcMaxHp(stats);
+          const baseAtk = calcAtk(stats);
+          const baseDef = calcDef(stats);
+          const bonusHp = player.maxHp - baseHp;
+          const bonusAtk = player.atk - baseAtk;
+          const bonusDef = player.def - baseDef;
+          const formatBonus = (v) => v === 0 ? "(nessun bonus)" : v > 0 ? `+ ${v} (livello/equip)` : `- ${Math.abs(v)} (livello/equip)`;
+          const combatRows = [
+            { label: "\u2764\uFE0F Punti Vita Massimi (HP)", base: baseHp, bonus: bonusHp, total: player.maxHp },
+            { label: "\u2694\uFE0F Attacco (ATK)", base: baseAtk, bonus: bonusAtk, total: player.atk },
+            { label: "\u{1F6E1}\uFE0F Difesa (DEF)", base: baseDef, bonus: bonusDef, total: player.def }
+          ];
+          document.getElementById("status-combat-rows").innerHTML = combatRows.map((r) => `
+        <div class="status-row">
+          <div>
+            <div class="label">${r.label}</div>
+            <div class="breakdown">Base ${r.base} ${formatBonus(r.bonus)}</div>
+          </div>
+          <div class="total">${r.total}</div>
+        </div>
+      `).join("");
+          const attrRows = [
+            { label: "\u2764\uFE0F Salute", key: "salute" },
+            { label: "\u2694\uFE0F Forza", key: "forza" },
+            { label: "\u{1F3AF} Destrezza", key: "destrezza" },
+            { label: "\u26A1 Stamina", key: "stamina" },
+            { label: "\u{1F52E} Magia", key: "magia" },
+            { label: "\u{1F340} Fortuna", key: "fortuna" }
+          ];
+          document.getElementById("status-attr-rows").innerHTML = attrRows.map((r) => `
+        <div class="status-row">
+          <div class="label">${r.label}</div>
+          <div class="total">${stats[r.key]}</div>
+        </div>
+      `).join("");
+        }
+        function openStatusOverlay() {
+          openDetailOverlay("status-overlay", renderStatusOverlay);
+        }
+        function closeStatusOverlay() {
+          closeDetailOverlay("status-overlay");
+        }
+        document.getElementById("btn-char-stato").onclick = () => openStatusOverlay();
+        document.getElementById("btn-status-close").onclick = () => closeStatusOverlay();
+        let journalEntries = [];
+        let journalFilter = "tutti";
+        function addJournalEntry(type, text) {
+          journalEntries.unshift({ type, text, floor: currentFloor, time: Date.now() });
+          const save = GameData.saves[GameData.activeSlot];
+          if (save) {
+            save.journal = journalEntries;
+            localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+          }
+        }
+        function renderDiarioOverlay() {
+          const list = document.getElementById("diario-entries");
+          const filtered = journalFilter === "tutti" ? journalEntries : journalEntries.filter((e) => e.type === journalFilter);
+          if (filtered.length === 0) {
+            list.innerHTML = `<div class="status-note">Nessun evento registrato per questo filtro.</div>`;
+            return;
+          }
+          list.innerHTML = filtered.map((e) => `
+        <div class="diario-entry type-${e.type}">
+          <div class="diario-meta">Piano ${e.floor} \u2014 ${new Date(e.time).toLocaleTimeString()}</div>
+          <div>${e.text}</div>
+        </div>
+      `).join("");
+        }
+        function setDiarioFilter(filter) {
+          journalFilter = filter;
+          document.querySelectorAll(".diario-filter-btn").forEach((b) => {
+            b.classList.toggle("active", b.dataset.filter === filter);
+          });
+          renderDiarioOverlay();
+        }
+        function openDiarioOverlay() {
+          openDetailOverlay("diario-overlay", renderDiarioOverlay);
+        }
+        function closeDiarioOverlay() {
+          closeDetailOverlay("diario-overlay");
+        }
+        document.getElementById("btn-open-diario").onclick = () => openDiarioOverlay();
+        document.getElementById("btn-diario-close").onclick = () => closeDiarioOverlay();
+        document.querySelectorAll(".diario-filter-btn").forEach((btn) => {
+          btn.onclick = () => setDiarioFilter(btn.dataset.filter);
+        });
+        let mapFound = false;
+        function updateMapButtonState() {
+          const btn = document.getElementById("btn-open-map");
+          if (btn) btn.style.opacity = mapFound ? "1" : "0.45";
+        }
+        function renderMapOverlay() {
+          const wrapper = document.getElementById("map-grid-wrapper");
+          const grid = document.getElementById("map-grid");
+          const availW = Math.max(40, wrapper.clientWidth - 10) * 0.8;
+          const availH = Math.max(40, wrapper.clientHeight - 10) * 0.8;
+          const cellSize = Math.max(3, Math.floor(Math.min(availW / mazeWidth, availH / mazeHeight)));
+          grid.style.gridTemplateColumns = `repeat(${mazeWidth}, ${cellSize}px)`;
+          grid.style.gridAutoRows = `${cellSize}px`;
+          grid.innerHTML = "";
+          const frag = document.createDocumentFragment();
+          for (let y = 0; y < mazeHeight; y++) {
+            for (let x = 0; x < mazeWidth; x++) {
+              const cell = mazeGrid[y][x];
+              const div = document.createElement("div");
+              let cls = "map-cell ";
+              if (x === playerPos.x && y === playerPos.z) cls += "player";
+              else if (cell.type === "WALL") cls += "wall";
+              else if (cell.content === "STAIRS") cls += "stairs";
+              else if (cell.content === "ENEMY") cls += "enemy";
+              else if (cell.content === "ITEM" || cell.content === "ITEM_MAP" || cell.content === "ITEM_XP_RECOVERY") cls += "item";
+              else cls += "floor";
+              div.className = cls;
+              frag.appendChild(div);
+            }
+          }
+          grid.appendChild(frag);
+        }
+        function openMapOverlay() {
+          openDetailOverlay("map-overlay", null);
+          renderMapOverlay();
+        }
+        function closeMapOverlay() {
+          closeDetailOverlay("map-overlay");
+        }
+        document.getElementById("btn-open-map").onclick = () => {
+          if (!mapFound) {
+            alert("Non hai ancora trovato la mappa di questo piano. Esplora il labirinto per trovarla!");
+            return;
+          }
+          openMapOverlay();
+        };
+        document.getElementById("btn-map-close").onclick = () => closeMapOverlay();
+        let lifetimeStats = { goblin: 0, scheletro: 0, ragno: 0, fughe: 0, monete: 0, oggetti: 0, mappe: 0, pianoMax: 1 };
+        function syncLifetimeStats() {
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save) return;
+          save.lifetimeStats = lifetimeStats;
+          localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+        }
+        function renderStatsOverlay() {
+          const rows = [
+            { label: "\u{1F47A} Goblin sconfitti", value: lifetimeStats.goblin },
+            { label: "\u{1F480} Scheletri sconfitti", value: lifetimeStats.scheletro },
+            { label: Settings.arachnophobia ? "\u{1F479} Orchi Giganti sconfitti" : "\u{1F577}\uFE0F Ragni Giganti sconfitti", value: lifetimeStats.ragno },
+            { label: "\u{1F3C3} Fughe da un nemico", value: lifetimeStats.fughe },
+            { label: "\u{1FA99} Monete raccolte", value: lifetimeStats.monete },
+            { label: "\u{1F4E6} Oggetti trovati", value: lifetimeStats.oggetti },
+            { label: "\u{1F5FA}\uFE0F Mappe trovate", value: lifetimeStats.mappe },
+            { label: "\u{1F3F0} Piano pi\xF9 profondo raggiunto", value: lifetimeStats.pianoMax }
+          ];
+          const visibleRows = rows.filter((r) => r.value !== 0);
+          if (visibleRows.length === 0) {
+            document.getElementById("stats-rows").innerHTML = `<div class="status-note">Nessuna statistica da mostrare ancora.</div>`;
+            return;
+          }
+          document.getElementById("stats-rows").innerHTML = visibleRows.map((r) => `
+        <div class="status-row">
+          <div class="label">${r.label}</div>
+          <div class="total">${r.value}</div>
+        </div>
+      `).join("");
+        }
+        function openStatsOverlay() {
+          openDetailOverlay("stats-overlay", renderStatsOverlay);
+        }
+        function closeStatsOverlay() {
+          closeDetailOverlay("stats-overlay");
+        }
+        document.getElementById("btn-open-stats").onclick = () => openStatsOverlay();
+        document.getElementById("btn-stats-close").onclick = () => closeStatsOverlay();
+        let recentLoot = [];
+        let lootToastTimer = null;
+        function renderLootToast() {
+          const el = document.getElementById("loot-toast");
+          el.innerHTML = recentLoot.map((item) => `<div class="loot-toast-item">${item}</div>`).join("");
+        }
+        function addLootNotice(text) {
+          recentLoot.unshift(text);
+          if (recentLoot.length > 3) recentLoot.length = 3;
+          renderLootToast();
+          const el = document.getElementById("loot-toast");
+          el.style.display = "flex";
+          positionHudHints();
+          clearTimeout(lootToastTimer);
+          lootToastTimer = setTimeout(() => {
+            el.style.display = "none";
+            recentLoot = [];
+            positionHudHints();
+          }, 5e3);
+        }
+        let inventory = [];
+        let itemIdCounter = 0;
+        function syncInventoryToSave() {
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save) return;
+          save.inventory = inventory;
+          localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+        }
+        function addItemToInventory(defKey, qty = 1, effect = null) {
+          const def = ITEM_DEFS[defKey];
+          if (!def) return;
+          if (def.consumable) {
+            const existing = inventory.find((it) => it.defKey === defKey && it.qty < MAX_STACK_SIZE);
+            if (existing) {
+              existing.qty = Math.min(MAX_STACK_SIZE, existing.qty + qty);
+            } else {
+              inventory.push({ id: "itm" + ++itemIdCounter, defKey, qty: Math.min(qty, MAX_STACK_SIZE), durability: 1, equippedSlot: null });
+            }
+          } else {
+            inventory.push({ id: "itm" + ++itemIdCounter, defKey, qty: 1, durability: 1, equippedSlot: null, effect: effect || {}, foundAtFloor: currentFloor });
+          }
+          syncInventoryToSave();
+        }
+        function consumeItem(itemId) {
+          const item = inventory.find((it) => it.id === itemId);
+          if (!item) return;
+          const def = ITEM_DEFS[item.defKey];
+          if (!def || !def.consumable) return;
+          if (item.defKey === "potion_hp") {
+            const healAmount = Math.round(player.maxHp * 0.5);
+            player.hp = Math.min(player.maxHp, player.hp + healAmount);
+            addJournalEntry("oggetto", `Hai bevuto una Pozione Curativa e recuperato ${healAmount} HP.`);
+            addLootNotice("\u{1F9EA} Pozione Curativa usata");
+          } else if (item.defKey === "potion_atk") {
+            player.potionAtkBonus = (player.potionAtkBonus || 0) + 3;
+            addJournalEntry("oggetto", "Hai bevuto una Pozione del Potere: +3 ATK permanenti.");
+            addLootNotice("\u2697\uFE0F Pozione del Potere usata");
+            recomputePlayerEffectiveStats(false);
+          }
+          item.qty -= 1;
+          if (item.qty <= 0) inventory = inventory.filter((it) => it.id !== item.id);
+          syncInventoryToSave();
+          syncPlayerToSave();
+          updateHudBars();
+          renderInventoryOverlay();
+        }
+        let inventoryFilterMode = "tutto";
+        let inventorySortMode = "recente";
+        const INVENTORY_SORT_MODES = ["recente", "livello", "alfabetico", "bonus", "integrita"];
+        const INVENTORY_SORT_LABELS = { recente: "Ultimo arrivato", livello: "Lv.", alfabetico: "Alfabetico", bonus: "Bonus", integrita: "Integrit\xE0" };
+        function itemMatchesInventoryFilter(item, filter) {
+          if (filter === "tutto") return true;
+          const def = ITEM_DEFS[item.defKey];
+          if (!def) return false;
+          if (filter === "pozioni") return !!def.consumable;
+          if (filter === "anelli") return def.slot === "ring";
+          if (filter === "armi") return def.slot === "weapon";
+          if (filter === "armatura") return ["helmet", "chest", "gloves", "boots", "shield"].includes(def.slot);
+          return true;
+        }
+        function getItemBonusMagnitude(item) {
+          const def = ITEM_DEFS[item.defKey];
+          if (!def || def.consumable) return 0;
+          const effect = item.effect || def.effect || {};
+          const dur = item.durability != null ? item.durability : 1;
+          let magnitude = 0;
+          if (effect.hp) magnitude += Math.abs(effect.hp * dur);
+          if (effect.atkPct) magnitude += Math.abs(effect.atkPct * dur) * 100;
+          if (effect.defPct) magnitude += Math.abs(effect.defPct * dur) * 100;
+          return magnitude;
+        }
+        function getFilteredSortedInventory() {
+          const filtered = inventory.filter((it) => itemMatchesInventoryFilter(it, inventoryFilterMode));
+          if (inventorySortMode === "recente") {
+            return filtered.slice().reverse();
+          }
+          if (inventorySortMode === "livello") {
+            return filtered.slice().sort((a, b) => (b.foundAtFloor || 0) - (a.foundAtFloor || 0));
+          }
+          if (inventorySortMode === "alfabetico") {
+            return filtered.slice().sort((a, b) => ITEM_DEFS[a.defKey].name.localeCompare(ITEM_DEFS[b.defKey].name, "it"));
+          }
+          if (inventorySortMode === "bonus") {
+            return filtered.slice().sort((a, b) => getItemBonusMagnitude(b) - getItemBonusMagnitude(a));
+          }
+          if (inventorySortMode === "integrita") {
+            return filtered.slice().sort((a, b) => {
+              const defA = ITEM_DEFS[a.defKey], defB = ITEM_DEFS[b.defKey];
+              const durA = defA && defA.consumable ? 1 : a.durability != null ? a.durability : 1;
+              const durB = defB && defB.consumable ? 1 : b.durability != null ? b.durability : 1;
+              return durB - durA;
+            });
+          }
+          return filtered;
+        }
+        function updateInventorySortButtonLabel() {
+          const btn = document.getElementById("btn-inventory-sort");
+          if (btn) btn.innerText = `Ordina: ${INVENTORY_SORT_LABELS[inventorySortMode]}`;
+        }
+        document.querySelectorAll(".inventory-filter-btn").forEach((btn) => {
+          btn.onclick = () => {
+            inventoryFilterMode = btn.dataset.filter;
+            document.querySelectorAll(".inventory-filter-btn").forEach((b) => b.classList.toggle("active", b.dataset.filter === inventoryFilterMode));
+            renderInventoryOverlay();
+          };
+        });
+        document.getElementById("btn-inventory-sort").onclick = () => {
+          const idx = INVENTORY_SORT_MODES.indexOf(inventorySortMode);
+          inventorySortMode = INVENTORY_SORT_MODES[(idx + 1) % INVENTORY_SORT_MODES.length];
+          updateInventorySortButtonLabel();
+          renderInventoryOverlay();
+        };
+        function renderInventoryOverlay() {
+          const container2 = document.getElementById("inventory-rows");
+          const summaryEl = document.getElementById("inventory-summary");
+          const activeSave = GameData.saves[GameData.activeSlot];
+          const goldAmount = activeSave ? activeSave.gold : 0;
+          if (summaryEl) {
+            summaryEl.innerHTML = `
+          <span>Slot occupati: <strong style="color:#00ffcc;">${inventory.length} / ${INVENTORY_MAX_SLOTS}</strong></span>
+          <span>\u{1FA99} Oro: <strong style="color:#f1c40f;">${goldAmount}</strong></span>
+        `;
+          }
+          const list = getFilteredSortedInventory();
+          if (list.length === 0) {
+            container2.innerHTML = `<div class="status-note">${inventory.length === 0 ? "Il tuo inventario \xE8 vuoto. Esplora il labirinto per trovare oggetti!" : "Nessun oggetto corrisponde a questo filtro."}</div>`;
+            return;
+          }
+          container2.innerHTML = list.map((item) => {
+            const def = ITEM_DEFS[item.defKey];
+            const equippedDot = item.equippedSlot ? `<span class="equipped-dot" title="Equipaggiato"></span>` : "";
+            const qtyLabel = def.consumable && item.qty > 1 ? ` x${item.qty}` : "";
+            const durLabel = !def.consumable ? ` <span class="item-durability">(Integrit\xE0: ${Math.round(item.durability * 100)}%)</span>` : "";
+            const floorLabel = !def.consumable && item.foundAtFloor ? ` <span class="item-durability">(Lv.${item.foundAtFloor})</span>` : "";
+            const useBtn = def.consumable ? `<button class="slide-btn item-use-btn" data-item-id="${item.id}">Usa</button>` : "";
+            const destroyBtn = item.equippedSlot ? "" : `<button class="item-destroy-btn" data-item-id="${item.id}" title="Distruggi">\u{1F5D1}\uFE0F</button>`;
+            const effectText = formatItemEffect(item);
+            return `
+          <div class="status-row inventory-row">
+            <div>
+              <div class="label">${equippedDot}${def.icon} ${def.name}${qtyLabel}${durLabel}${floorLabel}</div>
+              ${effectText ? `<div class="breakdown">${effectText}</div>` : ""}
+            </div>
+            <div class="inventory-row-actions">
+              ${useBtn}
+              ${destroyBtn}
+            </div>
+          </div>
+        `;
+          }).join("");
+          container2.querySelectorAll(".item-use-btn").forEach((btn) => {
+            btn.onclick = () => consumeItem(btn.dataset.itemId);
+          });
+          container2.querySelectorAll(".item-destroy-btn").forEach((btn) => {
+            btn.onclick = () => {
+              const item = inventory.find((it) => it.id === btn.dataset.itemId);
+              if (!item || item.equippedSlot) return;
+              const def = ITEM_DEFS[item.defKey];
+              const isStack = def.consumable && item.qty > 1;
+              const message = isStack ? `Vuoi distruggere 1 "${def.name}" da questa pila? Te ne resteranno ${item.qty - 1}.` : `Vuoi distruggere definitivamente "${def.name}"? Non potrai pi\xF9 recuperarlo.`;
+              showConfirmModal(message, () => {
+                destroyInventoryItem(item.id);
+              });
+            };
+          });
+        }
+        function destroyInventoryItem(itemId) {
+          const item = inventory.find((it) => it.id === itemId);
+          if (!item || item.equippedSlot) return;
+          const def = ITEM_DEFS[item.defKey];
+          if (def && def.consumable && item.qty > 1) {
+            item.qty -= 1;
+            syncInventoryToSave();
+            renderInventoryOverlay();
+            return;
+          }
+          inventory = inventory.filter((it) => it.id !== itemId);
+          syncInventoryToSave();
+          recomputePlayerEffectiveStats(false);
+          syncPlayerToSave();
+          updateHudBars();
+          renderInventoryOverlay();
+        }
+        function openInventoryOverlay() {
+          openDetailOverlay("inventory-overlay", renderInventoryOverlay);
+        }
+        function closeInventoryOverlay() {
+          closeDetailOverlay("inventory-overlay");
+        }
+        document.getElementById("btn-open-inventory").onclick = () => openInventoryOverlay();
+        document.getElementById("btn-inventory-close").onclick = () => closeInventoryOverlay();
+        let equipSlots = { helmet: null, chest: null, gloves: null, boots: null, ring1: null, ring2: null, shield: null, weapon: null };
+        function getEquippedWeaponDefKey() {
+          const itemId = equipSlots.weapon;
+          if (!itemId) return null;
+          const item = inventory.find((it) => it.id === itemId);
+          return item ? item.defKey : null;
+        }
+        function hasEquippedItem(defKeyToCheck) {
+          return Object.values(equipSlots).some((itemId) => {
+            if (!itemId) return false;
+            const item = inventory.find((it) => it.id === itemId);
+            return item && item.defKey === defKeyToCheck;
+          });
+        }
+        function syncEquipToSave() {
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save) return;
+          save.equipSlots = equipSlots;
+          localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+        }
+        function equipItem(itemId, slotKey) {
+          const item = inventory.find((it) => it.id === itemId);
+          if (!item) return;
+          if (!itemMatchesSlot(item.defKey, slotKey)) return;
+          const prevItemId = equipSlots[slotKey];
+          if (prevItemId) {
+            const prevItem = inventory.find((it) => it.id === prevItemId);
+            if (prevItem) prevItem.equippedSlot = null;
+          }
+          equipSlots[slotKey] = item.id;
+          item.equippedSlot = slotKey;
+          syncEquipToSave();
+          syncInventoryToSave();
+          recomputePlayerEffectiveStats(false);
+          syncPlayerToSave();
+          updateHudBars();
+        }
+        function unequipSlot(slotKey) {
+          const itemId = equipSlots[slotKey];
+          if (!itemId) return;
+          const item = inventory.find((it) => it.id === itemId);
+          if (item) item.equippedSlot = null;
+          equipSlots[slotKey] = null;
+          syncEquipToSave();
+          syncInventoryToSave();
+          recomputePlayerEffectiveStats(false);
+          syncPlayerToSave();
+          updateHudBars();
+        }
+        function renderEquipSummaryRows() {
+          if (!player || GameData.activeSlot === null) return "";
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save) return "";
+          const stats = save.stats;
+          const baseHp = calcMaxHp(stats) + (player.level - 1) * 5;
+          const baseAtk = calcAtk(stats) + (player.level - 1) * 2;
+          const baseDef = calcDef(stats) + (player.level - 1) * 1;
+          const rows = [
+            { label: "\u2764\uFE0F Punti Vita Massimi (HP)", base: baseHp, total: player.maxHp },
+            { label: "\u2694\uFE0F Attacco (ATK)", base: baseAtk, total: player.atk },
+            { label: "\u{1F6E1}\uFE0F Difesa (DEF)", base: baseDef, total: player.def }
+          ];
+          return rows.map((r) => {
+            const bonus = r.total - r.base;
+            const bonusLabel = bonus === 0 ? "nessun bonus" : bonus > 0 ? `+${bonus}` : `${bonus}`;
+            return `
+          <div class="status-row">
+            <div>
+              <div class="label">${r.label}</div>
+              <div class="breakdown">Standard ${r.base} \u2022 Bonus ${bonusLabel} \u2022 Totale ${r.total}</div>
+            </div>
+            <div class="total">${r.total}</div>
+          </div>
+        `;
+          }).join("");
+        }
+        function renderEquipOverlay() {
+          const summaryEl = document.getElementById("equip-summary");
+          if (summaryEl) summaryEl.innerHTML = renderEquipSummaryRows();
+          const container2 = document.getElementById("equip-rows");
+          const slotsHtml = EQUIP_SLOT_ORDER.map((slotKey) => {
+            const itemId = equipSlots[slotKey];
+            const item = itemId ? inventory.find((it) => it.id === itemId) : null;
+            const def = item ? ITEM_DEFS[item.defKey] : null;
+            const content = item ? `${def.icon} ${def.name} <span class="item-durability">(Integrit\xE0: ${Math.round(item.durability * 100)}%)</span><br><span style="color:#8b949e; font-size:11px;">${formatItemEffect(item)}</span>` : `<span style="color:#58606b;">Slot vuoto</span>`;
+            const actionBtn = item ? `<button class="slide-btn equip-empty-btn" data-slot="${slotKey}">Svuota</button>` : `<button class="slide-btn equip-fill-btn" data-slot="${slotKey}">Scegli</button>`;
+            return `
+          <div class="status-row equip-slot-row">
+            <div>
+              <div class="label">${EQUIP_SLOT_LABELS[slotKey]}</div>
+              <div class="breakdown">${content}</div>
+            </div>
+            ${actionBtn}
+          </div>
+        `;
+          }).join("");
+          container2.innerHTML = slotsHtml;
+          container2.querySelectorAll(".equip-empty-btn").forEach((btn) => {
+            btn.onclick = () => {
+              unequipSlot(btn.dataset.slot);
+              renderEquipOverlay();
+              renderInventoryOverlay();
+            };
+          });
+          container2.querySelectorAll(".equip-fill-btn").forEach((btn) => {
+            btn.onclick = () => openEquipPicker(btn.dataset.slot);
+          });
+        }
+        function openEquipPicker(slotKey) {
+          const matches = inventory.filter((it) => itemMatchesSlot(it.defKey, slotKey) && it.equippedSlot === null);
+          const modal = document.getElementById("equip-picker-modal");
+          const list = document.getElementById("equip-picker-list");
+          if (matches.length === 0) {
+            list.innerHTML = `<div class="status-note">Non hai oggetti di questo tipo disponibili in Inventario.</div>`;
+          } else {
+            list.innerHTML = matches.map((it) => {
+              const def = ITEM_DEFS[it.defKey];
+              const durLabel = ` <span class="item-durability">(Integrit\xE0: ${Math.round(it.durability * 100)}%)</span>`;
+              const floorLabel = it.foundAtFloor ? ` <span class="item-durability">(Lv.${it.foundAtFloor})</span>` : "";
+              const effectText = formatItemEffect(it);
+              return `<div class="slot-card equip-pick-row" data-item-id="${it.id}">
+            <div class="slot-info">
+              <div class="label">${def.icon} ${def.name}${durLabel}${floorLabel}</div>
+              ${effectText ? `<div class="breakdown" style="font-size:11px; color:#8b949e;">${effectText}</div>` : ""}
+            </div>
+          </div>`;
+            }).join("");
+            list.querySelectorAll(".equip-pick-row").forEach((row) => {
+              row.onclick = () => {
+                equipItem(row.dataset.itemId, slotKey);
+                modal.style.display = "none";
+                renderEquipOverlay();
+                renderInventoryOverlay();
+              };
+            });
+          }
+          modal.style.display = "flex";
+        }
+        document.getElementById("btn-equip-picker-cancel").onclick = () => {
+          document.getElementById("equip-picker-modal").style.display = "none";
+        };
+        function openEquipOverlay() {
+          openDetailOverlay("equip-overlay", renderEquipOverlay);
+        }
+        function closeEquipOverlay() {
+          closeDetailOverlay("equip-overlay");
+        }
+        document.getElementById("btn-open-equip").onclick = () => openEquipOverlay();
+        document.getElementById("btn-equip-close").onclick = () => closeEquipOverlay();
+        function recomputePlayerEffectiveStats(fullHeal) {
+          if (!player || GameData.activeSlot === null) return;
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save) return;
+          const stats = save.stats;
+          const baseMaxHp = calcMaxHp(stats) + (player.level - 1) * 5;
+          const baseAtk = calcAtk(stats) + (player.level - 1) * 2;
+          const baseDef = calcDef(stats) + (player.level - 1) * 1;
+          let flatHpBonus = 0, atkPct = 0, defPct = 0;
+          Object.values(equipSlots).forEach((itemId) => {
+            if (!itemId) return;
+            const item = inventory.find((it) => it.id === itemId);
+            if (!item) return;
+            const def = ITEM_DEFS[item.defKey];
+            if (!def) return;
+            const effect = item.effect || def.effect || {};
+            const dur = item.durability != null ? item.durability : 1;
+            if (effect.hp) flatHpBonus += effect.hp * dur;
+            if (effect.atkPct) atkPct += effect.atkPct * dur;
+            if (effect.defPct) defPct += effect.defPct * dur;
+          });
+          player.maxHp = Math.max(1, Math.round(baseMaxHp + flatHpBonus));
+          player.atk = Math.max(0, Math.round((baseAtk + (player.potionAtkBonus || 0)) * (1 + atkPct)));
+          player.def = Math.max(0, Math.round(baseDef * (1 + defPct)));
+          if (fullHeal) player.hp = player.maxHp;
+          else player.hp = Math.min(player.hp, player.maxHp);
+        }
+        const confirmModal = document.getElementById("confirm-modal");
+        let confirmModalCallback = null;
+        function showConfirmModal(message, onYes) {
+          document.getElementById("confirm-modal-text").innerText = message;
+          confirmModalCallback = onYes;
+          confirmModal.style.display = "flex";
+        }
+        document.getElementById("confirm-modal-yes").onclick = () => {
+          confirmModal.style.display = "none";
+          const cb = confirmModalCallback;
+          confirmModalCallback = null;
+          if (cb) cb();
+        };
+        document.getElementById("confirm-modal-no").onclick = () => {
+          confirmModal.style.display = "none";
+          confirmModalCallback = null;
+        };
+        const PRESETS = {
+          warrior: { salute: 8, forza: 8, destrezza: 4, stamina: 6, magia: 1, fortuna: 3 },
+          scout: { salute: 4, forza: 3, destrezza: 7, stamina: 5, magia: 2, fortuna: 9 },
+          mage: { salute: 3, forza: 1, destrezza: 4, stamina: 4, magia: 11, fortuna: 7 },
+          rogue: { salute: 4, forza: 5, destrezza: 9, stamina: 6, magia: 1, fortuna: 5 },
+          cleric: { salute: 6, forza: 5, destrezza: 3, stamina: 5, magia: 8, fortuna: 3 }
+        };
+        let currentCreationStats = { salute: 0, forza: 0, destrezza: 0, stamina: 0, magia: 0, fortuna: 0 };
+        const MAX_POINTS = 30;
+        let gameState = "MENU";
+        let slotSelectionMode = "NEW";
+        let player = null;
+        function showScreen(screenId) {
+          document.querySelectorAll(".ui-screen").forEach((s) => s.style.display = "none");
+          document.getElementById(screenId).style.display = "flex";
+        }
+        function checkContinueButton() {
+          const hasAnySave = GameData.saves.some((s) => s !== null);
+          const btnContinue = document.getElementById("btn-main-continue");
+          const btnLoad = document.getElementById("btn-main-load");
+          btnContinue.style.display = hasAnySave ? "block" : "none";
+          btnLoad.style.display = hasAnySave ? "block" : "none";
+          if (hasAnySave) {
+            btnContinue.onclick = () => startGameWithSlot(GameData.saves.findIndex((s) => s !== null));
+          }
+        }
+        document.getElementById("btn-main-new").onclick = () => {
+          slotSelectionMode = "NEW";
+          openSlotsMenu();
+        };
+        document.getElementById("btn-main-load").onclick = () => {
+          slotSelectionMode = "LOAD";
+          openSlotsMenu();
+        };
+        document.getElementById("btn-slots-back").onclick = () => showScreen("menu-main");
+        document.getElementById("btn-create-back").onclick = () => openSlotsMenu();
+        function openSlotsMenu() {
+          showScreen("menu-slots");
+          document.getElementById("slots-menu-title").innerText = slotSelectionMode === "NEW" ? "Nuova Partita" : "Carica Partita";
+          const listContainer = document.getElementById("slots-list-container");
+          listContainer.innerHTML = "";
+          GameData.saves.forEach((save, index) => {
+            if (slotSelectionMode === "LOAD" && !save) return;
+            let card = document.createElement("div");
+            card.className = "slot-card";
+            if (save) {
+              card.innerHTML = `<div class="slot-info"><strong style="color:#00ffcc;">${save.name}</strong><span style="font-size:12px; color:#8b949e;">Piano ${save.floor} | Lv.${save.level || 1} | S:${save.stats.salute} F:${save.stats.forza}</span></div><span style="color:#f1c40f; font-size:12px; font-weight:bold; margin-right:24px;">\u{1FA99} ${save.gold}</span>`;
+            } else {
+              card.innerHTML = `<div class="slot-info"><strong style="color:#8b949e;">Slot ${index + 1} - Libero</strong><span style="font-size:11px; color:#30363d;">Nessun dato presente</span></div>`;
+            }
+            card.onclick = () => {
+              if (slotSelectionMode === "NEW") {
+                if (save) {
+                  showConfirmModal(
+                    `Lo Slot ${index + 1} \xE8 occupato da "${save.name}" (Piano ${save.floor}). Sovrascrivendolo perderai quella partita. Continuare?`,
+                    () => {
+                      GameData.activeSlot = index;
+                      openCharacterCreation(index);
+                    }
+                  );
+                } else {
+                  GameData.activeSlot = index;
+                  openCharacterCreation(index);
+                }
+              } else if (slotSelectionMode === "LOAD" && save) {
+                startGameWithSlot(index);
+              }
+            };
+            if (save) {
+              const delBtn = document.createElement("button");
+              delBtn.className = "slot-delete-btn";
+              delBtn.innerText = "\u2715";
+              delBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                showConfirmModal(
+                  `Vuoi eliminare definitivamente la partita "${save.name}" (Slot ${index + 1}, Piano ${save.floor})? L'azione non pu\xF2 essere annullata.`,
+                  () => {
+                    GameData.saves[index] = null;
+                    localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+                    openSlotsMenu();
+                    checkContinueButton();
+                  }
+                );
+              };
+              card.appendChild(delBtn);
+            }
+            listContainer.appendChild(card);
+          });
+        }
+        function openCharacterCreation(slotIndex) {
+          showScreen("menu-create");
+          document.getElementById("create-title-slot").innerText = `Crea Eroe (Slot ${slotIndex + 1})`;
+          document.getElementById("char-name").value = "";
+          currentCreationStats = { salute: 0, forza: 0, destrezza: 0, stamina: 0, magia: 0, fortuna: 0 };
+          updateCreationUI();
+          updateCustomBuildButtons();
+        }
+        function updateCustomBuildButtons() {
+          GameData.customBuilds.forEach((b, i) => {
+            const btn = document.getElementById(`custom-b-${i}`);
+            const delBtn = document.getElementById(`del-b-${i}`);
+            if (b) {
+              btn.innerText = b.buildName;
+              btn.style.color = "#00ffcc";
+              delBtn.style.display = "block";
+            } else {
+              btn.innerText = `${i + 1} (Vuoto)`;
+              btn.style.color = "#8b949e";
+              delBtn.style.display = "none";
+            }
+          });
+        }
+        window.deleteCustomBuild = function(index, event) {
+          event.stopPropagation();
+          if (confirm(`Sei sicuro di voler eliminare la build "${GameData.customBuilds[index].buildName}"?`)) {
+            GameData.customBuilds[index] = null;
+            localStorage.setItem("maze_rogue_builds", JSON.stringify(GameData.customBuilds));
+            updateCustomBuildButtons();
+            updateCreationUI();
+          }
+        };
+        window.applyPreset = function(presetKey, element) {
+          document.querySelectorAll(".build-btn").forEach((b) => b.classList.remove("active"));
+          if (element) element.classList.add("active");
+          currentCreationStats = { ...PRESETS[presetKey] };
+          updateCreationUI();
+        };
+        window.applyCustomPreset = function(index, element) {
+          const build = GameData.customBuilds[index];
+          if (!build) return;
+          document.querySelectorAll(".build-btn").forEach((b) => b.classList.remove("active"));
+          if (element) element.classList.add("active");
+          currentCreationStats = { ...build.stats };
+          updateCreationUI();
+        };
+        window.modifyStat = function(statKey, direction) {
+          document.querySelectorAll(".build-btn").forEach((b) => b.classList.remove("active"));
+          let spentPoints = Object.values(currentCreationStats).reduce((a, b) => a + b, 0);
+          if (direction === 1 && spentPoints < MAX_POINTS) currentCreationStats[statKey]++;
+          else if (direction === -1 && currentCreationStats[statKey] > 0) currentCreationStats[statKey]--;
+          updateCreationUI();
+        };
+        function updateCreationUI() {
+          let spentPoints = Object.values(currentCreationStats).reduce((a, b) => a + b, 0);
+          let remaining = MAX_POINTS - spentPoints;
+          document.getElementById("available-points").innerText = remaining;
+          for (let key in currentCreationStats) document.getElementById(`val-${key}`).innerText = currentCreationStats[key];
+          const nameInput = document.getElementById("char-name").value.trim();
+          document.getElementById("btn-create-start").disabled = remaining !== 0 || nameInput === "";
+        }
+        document.getElementById("char-name").oninput = () => updateCreationUI();
+        const buildModal = document.getElementById("modal-build-saver");
+        document.getElementById("btn-open-save-modal").onclick = () => {
+          document.getElementById("modal-build-name").value = "";
+          const newGrid = document.getElementById("modal-new-preview-grid");
+          newGrid.innerHTML = "";
+          for (let key in currentCreationStats) {
+            newGrid.innerHTML += `<div class="preview-stat">${key.substring(0, 3).toUpperCase()}: ${currentCreationStats[key]}</div>`;
+          }
+          const select = document.getElementById("modal-build-slot-select");
+          select.innerHTML = "";
+          GameData.customBuilds.forEach((b, i) => {
+            select.innerHTML += `<option value="${i}">${b ? "Slot " + (i + 1) + ": " + b.buildName : "Slot " + (i + 1) + " (Libero)"}</option>`;
+          });
+          buildModal.style.display = "flex";
+          updateModalComparison();
+        };
+        window.updateModalComparison = function() {
+          let idx = parseInt(document.getElementById("modal-build-slot-select").value);
+          const oldBox = document.getElementById("modal-old-preview-box");
+          const oldGrid = document.getElementById("modal-old-preview-grid");
+          let oldBuild = GameData.customBuilds[idx];
+          if (oldBuild) {
+            oldGrid.innerHTML = "";
+            for (let key in oldBuild.stats) oldGrid.innerHTML += `<div class="preview-stat" style="color:#ff4d4d; border-color:#da3637;">${key.substring(0, 3).toUpperCase()}: ${oldBuild.stats[key]}</div>`;
+            oldBox.style.display = "block";
+          } else {
+            oldBox.style.display = "none";
+          }
+        };
+        document.getElementById("btn-modal-cancel").onclick = () => buildModal.style.display = "none";
+        document.getElementById("btn-modal-confirm").onclick = () => {
+          let name = document.getElementById("modal-build-name").value.trim();
+          let idx = parseInt(document.getElementById("modal-build-slot-select").value);
+          if (!name) {
+            alert("Nome non valido.");
+            return;
+          }
+          if (GameData.customBuilds[idx] && !confirm(`Vuoi davvero sovrascrivere la build "${GameData.customBuilds[idx].buildName}"?`)) return;
+          GameData.customBuilds[idx] = { buildName: name, stats: { ...currentCreationStats } };
+          localStorage.setItem("maze_rogue_builds", JSON.stringify(GameData.customBuilds));
+          updateCustomBuildButtons();
+          buildModal.style.display = "none";
+        };
+        document.getElementById("btn-create-start").onclick = () => {
+          const name = document.getElementById("char-name").value.trim();
+          const stats = { ...currentCreationStats };
+          GameData.saves[GameData.activeSlot] = {
+            name,
+            floor: 1,
+            gold: 0,
+            stats,
+            level: 1,
+            xp: 0,
+            maxHp: calcMaxHp(stats),
+            hp: calcMaxHp(stats),
+            atk: calcAtk(stats),
+            def: calcDef(stats),
+            potionAtkBonus: 0,
+            journal: [{ type: "sistema", text: `${name} \xE8 entrato nel labirinto.`, floor: 1, time: Date.now() }],
+            lifetimeStats: { goblin: 0, scheletro: 0, ragno: 0, fughe: 0, monete: 0, oggetti: 0, mappe: 0, pianoMax: 1 },
+            inventory: [],
+            equipSlots: { helmet: null, chest: null, gloves: null, boots: null, ring1: null, ring2: null, shield: null, weapon: null },
+            mazeState: null
+          };
+          localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+          startGameWithSlot(GameData.activeSlot);
+        };
+        function syncPlayerToSave() {
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save || !player) return;
+          save.level = player.level;
+          save.xp = player.xp;
+          save.maxHp = player.maxHp;
+          save.hp = player.hp;
+          save.atk = player.atk;
+          save.def = player.def;
+          save.potionAtkBonus = player.potionAtkBonus || 0;
+          localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+        }
+        function updateHudBars() {
+          if (!player) return;
+          document.getElementById("hud-level").innerText = `Lv. ${player.level}`;
+          document.getElementById("hud-hp-label").innerText = `${player.hp} / ${player.maxHp}`;
+          document.getElementById("hud-hp-fill").style.width = `${Math.max(0, Math.min(100, player.hp / player.maxHp * 100))}%`;
+          const need = xpRequiredForNext(player.level);
+          document.getElementById("hud-xp-label").innerText = `${player.xp} / ${need}`;
+          document.getElementById("hud-xp-fill").style.width = `${Math.max(0, Math.min(100, player.xp / need * 100))}%`;
+          document.getElementById("hud-atk").innerText = player.atk;
+          document.getElementById("hud-def").innerText = player.def;
+          positionHudHints();
+        }
+        let levelUpToastTimer = null;
+        function showLevelUpToast() {
+          const el = document.getElementById("levelup-toast");
+          el.innerText = `\u{1F389} Livello aumentato! Ora sei livello ${player.level}.`;
+          el.style.display = "block";
+          clearTimeout(levelUpToastTimer);
+          levelUpToastTimer = setTimeout(() => {
+            el.style.display = "none";
+          }, 2200);
+        }
+        function addXp(amount) {
+          if (!player) return;
+          player.xp += amount;
+          floorXpGained += amount;
+          let leveledUp = false;
+          while (player.xp >= xpRequiredForNext(player.level)) {
+            player.xp -= xpRequiredForNext(player.level);
+            player.level += 1;
+            leveledUp = true;
+          }
+          recomputePlayerEffectiveStats(leveledUp);
+          syncPlayerToSave();
+          updateHudBars();
+          if (leveledUp) {
+            showLevelUpToast();
+            addJournalEntry("livello", `Sei salito al livello ${player.level}! (cura completa)`);
+          }
+        }
+        function startGameWithSlot(slotIndex) {
+          let save = GameData.saves[slotIndex];
+          GameData.activeSlot = slotIndex;
+          document.querySelectorAll(".ui-screen").forEach((s) => s.style.display = "none");
+          document.getElementById("hud").style.display = "flex";
+          document.getElementById("dpad-container").style.display = isTouchInputDevice ? "none" : "grid";
+          document.getElementById("action-cluster").style.display = "flex";
+          closeActionAccordions();
+          closeAllDetailOverlays();
+          document.getElementById("hud-player-name").innerText = save.name;
+          document.getElementById("hud-gold").innerText = save.gold;
+          inventory = save.inventory || [];
+          equipSlots = save.equipSlots || { helmet: null, chest: null, gloves: null, boots: null, ring1: null, ring2: null, shield: null, weapon: null };
+          inventory.forEach((it) => {
+            const match = /^itm(\d+)$/.exec(it.id || "");
+            const num = match ? parseInt(match[1], 10) : 0;
+            if (num > itemIdCounter) itemIdCounter = num;
+          });
+          const seenItemIds = /* @__PURE__ */ new Set();
+          inventory.forEach((it) => {
+            if (seenItemIds.has(it.id)) {
+              const oldId = it.id;
+              it.id = "itm" + ++itemIdCounter;
+              Object.keys(equipSlots).forEach((slotKey) => {
+                if (equipSlots[slotKey] === oldId && it.equippedSlot === slotKey) equipSlots[slotKey] = it.id;
+              });
+            }
+            seenItemIds.add(it.id);
+          });
+          Object.keys(equipSlots).forEach((slotKey) => {
+            const itemId = equipSlots[slotKey];
+            if (!itemId) return;
+            const item = inventory.find((it) => it.id === itemId);
+            if (!item || !itemMatchesSlot(item.defKey, slotKey)) {
+              equipSlots[slotKey] = null;
+            }
+          });
+          syncInventoryToSave();
+          syncEquipToSave();
+          player = {
+            level: save.level || 1,
+            xp: save.xp || 0,
+            hp: save.hp != null ? save.hp : calcMaxHp(save.stats),
+            maxHp: save.maxHp || calcMaxHp(save.stats),
+            atk: save.atk || calcAtk(save.stats),
+            def: save.def || calcDef(save.stats),
+            potionAtkBonus: save.potionAtkBonus || 0
+          };
+          recomputePlayerEffectiveStats(false);
+          syncPlayerToSave();
+          updateHudBars();
+          journalEntries = save.journal || [];
+          lifetimeStats = save.lifetimeStats || { goblin: 0, scheletro: 0, ragno: 0, fughe: 0, monete: 0, oggetti: 0, mappe: 0, pianoMax: save.floor || 1 };
+          currentFloor = save.floor || 1;
+          gameState = "EXPLORE";
+          if (save.mazeState) {
+            restoreFloorFromSave(save.mazeState);
+          } else {
+            buildFloor();
+          }
+          checkContinueButton();
+        }
+        function openExitConfirm() {
+          if (gameState === "MENU") return;
+          showConfirmModal(
+            "Vuoi davvero uscire e tornare al menu principale? Il progresso non ancora salvato andr\xE0 perso.",
+            () => {
+              stopCombat();
+              syncMazeStateToSave();
+              document.getElementById("encounter-overlay").style.display = "none";
+              closeAllDetailOverlays();
+              document.getElementById("hud").style.display = "none";
+              document.getElementById("dpad-container").style.display = "none";
+              document.getElementById("action-cluster").style.display = "none";
+              closeActionAccordions();
+              document.getElementById("stairs-hint").style.display = "none";
+              gameState = "MENU";
+              cameraMode = "explore";
+              encounterTarget = null;
+              encounterCell = null;
+              showScreen("menu-main");
+              checkContinueButton();
+            }
+          );
+        }
+        document.getElementById("btn-exit-game").onclick = () => openExitConfirm();
+        function shuffle(arr) {
+          const a = [...arr];
+          for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+          }
+          return a;
+        }
+        function generateMaze(width, height) {
+          const grid = [];
+          for (let y = 0; y < height; y++) {
+            const row = [];
+            for (let x = 0; x < width; x++) row.push({ x, y, type: "WALL", content: null, enemyType: null, visited: false });
+            grid.push(row);
+          }
+          function carve(cx, cy) {
+            grid[cy][cx].type = "FLOOR";
+            grid[cy][cx].visited = true;
+            const dirs = shuffle([[0, -2], [0, 2], [-2, 0], [2, 0]]);
+            for (const [dx, dy] of dirs) {
+              const nx = cx + dx, ny = cy + dy;
+              if (nx > 0 && nx < width - 1 && ny > 0 && ny < height - 1 && !grid[ny][nx].visited) {
+                grid[cy + dy / 2][cx + dx / 2].type = "FLOOR";
+                carve(nx, ny);
+              }
+            }
+          }
+          carve(1, 1);
+          return grid;
+        }
+        function findFarthestFloor(grid, startX, startY) {
+          const height = grid.length, width = grid[0].length;
+          const dist = Array.from({ length: height }, () => new Array(width).fill(-1));
+          const queue = [[startX, startY]];
+          dist[startY][startX] = 0;
+          let farthest = { x: startX, y: startY, d: 0 };
+          while (queue.length) {
+            const [cx, cy] = queue.shift();
+            const d = dist[cy][cx];
+            if (d > farthest.d) farthest = { x: cx, y: cy, d };
+            for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+              const nx = cx + dx, ny = cy + dy;
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[ny][nx].type === "FLOOR" && dist[ny][nx] === -1) {
+                dist[ny][nx] = d + 1;
+                queue.push([nx, ny]);
+              }
+            }
+          }
+          return farthest;
+        }
+        let cellTypes = { WALL: "WALL", FLOOR: "FLOOR" };
+        let currentFloor = 1;
+        let mazeWidth = 11, mazeHeight = 17, mazeGrid = [];
+        let worldGroup = new THREE.Group();
+        let cameraMode = "explore";
+        let encounterTarget = null;
+        let encounterCell = null;
+        let floorXpGained = 0;
+        let floorGoldGained = 0;
+        let floorStartLevel = 1;
+        let floorStartXp = 0;
+        let pendingXpRecovery = 0;
+        let deathTimer = null;
+        const container = document.getElementById("game-container");
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(658448);
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 100);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+        scene.add(worldGroup);
+        let targetRotation = 0, currentRotation = 0;
+        let playerPos = { x: 1, z: 1 };
+        const CHASE_DIST = 3, CHASE_HEIGHT = 4.5;
+        const CAMERA_LOOK_AHEAD_DIST = 1.5;
+        const camPos = new THREE.Vector3(1, CHASE_HEIGHT, 1 + CHASE_DIST);
+        const camLook = new THREE.Vector3(1, 0, 1);
+        function updateStairsHint() {
+          const cell = mazeGrid[playerPos.z] && mazeGrid[playerPos.z][playerPos.x];
+          const hint = document.getElementById("stairs-hint");
+          if (hint) hint.style.display = cell && cell.content === "STAIRS" ? "block" : "none";
+        }
+        function createChestMesh() {
+          const g = new THREE.Group();
+          const base = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.3), new THREE.MeshBasicMaterial({ color: 7029795 }));
+          base.position.y = 0.11;
+          const lid = new THREE.Mesh(new THREE.SphereGeometry(0.21, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 9067055 }));
+          lid.scale.set(0.95, 0.55, 0.65);
+          lid.position.y = 0.22;
+          const band = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.05, 0.32), new THREE.MeshBasicMaterial({ color: 15844367 }));
+          band.position.y = 0.22;
+          g.add(base, lid, band);
+          return g;
+        }
+        function createMapMesh() {
+          const g = new THREE.Group();
+          const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.42, 12), new THREE.MeshBasicMaterial({ color: 15853e3 }));
+          roll.rotation.z = Math.PI / 2;
+          roll.position.y = 0.09;
+          const band = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.022, 8, 16), new THREE.MeshBasicMaterial({ color: 3113197 }));
+          band.rotation.y = Math.PI / 2;
+          band.position.y = 0.09;
+          g.add(roll, band);
+          return g;
+        }
+        function createStairsMesh() {
+          const g = new THREE.Group();
+          const sizes = [0.56, 0.46, 0.36, 0.26];
+          let yCursor = 0;
+          sizes.forEach((size, i) => {
+            const stepH = 0.14;
+            const step = new THREE.Mesh(new THREE.BoxGeometry(size, stepH, size), new THREE.MeshBasicMaterial({ color: 15844367 }));
+            step.position.set(0, yCursor + stepH / 2, 0.14 - i * 0.09);
+            g.add(step);
+            yCursor += stepH;
+          });
+          return g;
+        }
+        function createGoblinMesh() {
+          const g = new THREE.Group();
+          const bodyMat = new THREE.MeshBasicMaterial({ color: 5025616 });
+          const body = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), bodyMat);
+          body.scale.set(1, 0.65, 1);
+          body.position.y = 0.17;
+          const earGeo = new THREE.ConeGeometry(0.07, 0.16, 8);
+          const earL = new THREE.Mesh(earGeo, bodyMat);
+          earL.position.set(-0.2, 0.32, 0);
+          earL.rotation.z = 0.5;
+          const earR = new THREE.Mesh(earGeo, bodyMat);
+          earR.position.set(0.2, 0.32, 0);
+          earR.rotation.z = -0.5;
+          g.add(body, earL, earR);
+          return g;
+        }
+        function createSkeletonMesh() {
+          const g = new THREE.Group();
+          const mat = new THREE.MeshBasicMaterial({ color: 15525848 });
+          const ribcage = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.36, 0.13), mat);
+          ribcage.position.y = 0.18;
+          const skull = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 10), mat);
+          skull.position.y = 0.42;
+          g.add(ribcage, skull);
+          return g;
+        }
+        function createSpiderMesh() {
+          const g = new THREE.Group();
+          const body = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshBasicMaterial({ color: 2762806 }));
+          body.position.y = 0.24;
+          g.add(body);
+          const legMat = new THREE.MeshBasicMaterial({ color: 2170667 });
+          for (let i = 0; i < 8; i++) {
+            const angle = i / 8 * Math.PI * 2;
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.32, 6), legMat);
+            leg.position.set(Math.cos(angle) * 0.24, 0.2, Math.sin(angle) * 0.24);
+            leg.rotation.z = Math.cos(angle) * 1;
+            leg.rotation.x = Math.sin(angle) * 1;
+            g.add(leg);
+          }
+          return g;
+        }
+        function createOrcMesh() {
+          const g = new THREE.Group();
+          const body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 12), new THREE.MeshBasicMaterial({ color: 6058295 }));
+          body.scale.set(1, 0.8, 1);
+          body.position.y = 0.26;
+          const tuskMat = new THREE.MeshBasicMaterial({ color: 16053492 });
+          const tuskGeo = new THREE.ConeGeometry(0.045, 0.14, 8);
+          const tuskL = new THREE.Mesh(tuskGeo, tuskMat);
+          tuskL.position.set(-0.1, 0.12, 0.25);
+          tuskL.rotation.x = Math.PI;
+          const tuskR = new THREE.Mesh(tuskGeo, tuskMat);
+          tuskR.position.set(0.1, 0.12, 0.25);
+          tuskR.rotation.x = Math.PI;
+          g.add(body, tuskL, tuskR);
+          return g;
+        }
+        function createEnemyMesh(enemyType) {
+          const artKey = getEnemyArtKey(enemyType);
+          if (artKey === "scheletro") return createSkeletonMesh();
+          if (artKey === "ragno") return createSpiderMesh();
+          if (artKey === "orco") return createOrcMesh();
+          return createGoblinMesh();
+        }
+        function buildMeshesFromGrid() {
+          while (worldGroup.children.length > 0) worldGroup.remove(worldGroup.children[0]);
+          const wallMat = new THREE.MeshBasicMaterial({ color: 2040876 });
+          const floorMat = new THREE.MeshBasicMaterial({ color: 987413 });
+          const recoveryItemMat = new THREE.MeshBasicMaterial({ color: 16766720 });
+          const wallGeo = new THREE.BoxGeometry(1, 0.8, 1);
+          const floorGeo = new THREE.PlaneGeometry(0.95, 0.95);
+          const recoveryItemGeo = new THREE.OctahedronGeometry(0.32);
+          mazeGrid.forEach((row, y) => {
+            row.forEach((cell, x) => {
+              if (cell.type === cellTypes.WALL) {
+                const w = new THREE.Mesh(wallGeo, wallMat);
+                w.position.set(x, 0.4, y);
+                worldGroup.add(w);
+              } else {
+                const f = new THREE.Mesh(floorGeo, floorMat);
+                f.rotation.x = -Math.PI / 2;
+                f.position.set(x, 0, y);
+                worldGroup.add(f);
+                if (cell.content === "ENEMY") {
+                  const e = createEnemyMesh(cell.enemyType);
+                  e.position.set(x, 0, y);
+                  e.name = `enemy_${x}_${y}`;
+                  worldGroup.add(e);
+                } else if (cell.content === "ITEM") {
+                  const i = createChestMesh();
+                  i.position.set(x, 0, y);
+                  i.name = `item_${x}_${y}`;
+                  worldGroup.add(i);
+                } else if (cell.content === "ITEM_MAP") {
+                  const m = createMapMesh();
+                  m.position.set(x, 0, y);
+                  m.name = `map_${x}_${y}`;
+                  worldGroup.add(m);
+                } else if (cell.content === "ITEM_XP_RECOVERY") {
+                  const rItem = new THREE.Mesh(recoveryItemGeo, recoveryItemMat);
+                  rItem.position.set(x, 0.32, y);
+                  rItem.name = `xprecovery_${x}_${y}`;
+                  worldGroup.add(rItem);
+                } else if (cell.content === "STAIRS") {
+                  const s = createStairsMesh();
+                  s.position.set(x, 0, y);
+                  s.name = "stairs";
+                  worldGroup.add(s);
+                }
+              }
+            });
+          });
+          const playerMesh = new THREE.Group();
+          const playerBody = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.19, 0.3, 0.6, 14),
+            new THREE.MeshBasicMaterial({ color: 65484 })
+          );
+          playerBody.position.y = 0.3;
+          const playerHead = new THREE.Mesh(
+            new THREE.SphereGeometry(0.18, 14, 14),
+            new THREE.MeshBasicMaterial({ color: 65484 })
+          );
+          playerHead.position.y = 0.69;
+          playerMesh.add(playerBody, playerHead);
+          playerMesh.name = "player";
+          playerMesh.position.set(playerPos.x, 0, playerPos.z);
+          worldGroup.add(playerMesh);
+          const noseGeo = new THREE.ConeGeometry(0.07, 0.18, 8);
+          noseGeo.rotateX(Math.PI / 2);
+          const facingMesh = new THREE.Mesh(noseGeo, new THREE.MeshBasicMaterial({ color: 16777215 }));
+          facingMesh.name = "player-facing";
+          worldGroup.add(facingMesh);
+          document.getElementById("hud-floor").innerText = `PIANO: ${currentFloor}`;
+          updateStairsHint();
+          updateMapButtonState();
+          positionHudHints();
+        }
+        function buildFloor() {
+          const config = getFloorConfig(currentFloor);
+          mazeWidth = config.width;
+          mazeHeight = config.height;
+          mazeGrid = generateMaze(mazeWidth, mazeHeight);
+          playerPos = { x: 1, z: 1 };
+          currentRotation = 0;
+          targetRotation = 0;
+          const farthest = findFarthestFloor(mazeGrid, 1, 1);
+          mazeGrid[farthest.y][farthest.x].content = "STAIRS";
+          const activeSave = GameData.saves[GameData.activeSlot];
+          const fortunaPoints = activeSave && activeSave.stats && activeSave.stats.fortuna || 0;
+          const effectiveTreasureRate = config.treasureRate + fortunaPoints * 1e-3;
+          mazeGrid.forEach((row, y) => {
+            row.forEach((cell, x) => {
+              if (cell.type === cellTypes.FLOOR && !(x === 1 && y === 1) && cell.content === null) {
+                const rand = Math.random();
+                if (rand < config.enemyRate) {
+                  cell.content = "ENEMY";
+                  cell.enemyType = config.enemyPool[Math.floor(Math.random() * config.enemyPool.length)];
+                } else if (rand < config.enemyRate + effectiveTreasureRate) {
+                  cell.content = "ITEM";
+                }
+              }
+            });
+          });
+          mapFound = false;
+          floorXpGained = 0;
+          floorGoldGained = 0;
+          floorStartLevel = player ? player.level : 1;
+          floorStartXp = player ? player.xp : 0;
+          const emptyFloorCells = [];
+          mazeGrid.forEach((row, y) => {
+            row.forEach((cell, x) => {
+              if (cell.type === cellTypes.FLOOR && cell.content === null && !(x === 1 && y === 1)) {
+                emptyFloorCells.push({ x, y });
+              }
+            });
+          });
+          function popRandomEmptyCell() {
+            if (emptyFloorCells.length === 0) return null;
+            const idx = Math.floor(Math.random() * emptyFloorCells.length);
+            return emptyFloorCells.splice(idx, 1)[0];
+          }
+          function findAnyOverridableCell() {
+            const candidates = [];
+            mazeGrid.forEach((row, y) => {
+              row.forEach((cell, x) => {
+                if (cell.type === cellTypes.FLOOR && !(x === 1 && y === 1) && cell.content !== "STAIRS") candidates.push({ x, y });
+              });
+            });
+            if (candidates.length === 0) return null;
+            return candidates[Math.floor(Math.random() * candidates.length)];
+          }
+          let mapCell = popRandomEmptyCell();
+          if (!mapCell) mapCell = findAnyOverridableCell();
+          if (mapCell) mazeGrid[mapCell.y][mapCell.x].content = "ITEM_MAP";
+          if (pendingXpRecovery > 0) {
+            let recCell = popRandomEmptyCell();
+            if (!recCell) recCell = findAnyOverridableCell();
+            if (recCell) {
+              mazeGrid[recCell.y][recCell.x].content = "ITEM_XP_RECOVERY";
+              mazeGrid[recCell.y][recCell.x].recoveryAmount = pendingXpRecovery;
+            }
+            pendingXpRecovery = 0;
+          }
+          buildMeshesFromGrid();
+          syncMazeStateToSave();
+        }
+        function restoreFloorFromSave(state) {
+          mazeWidth = state.width;
+          mazeHeight = state.height;
+          mazeGrid = state.grid.map((row, y) => row.map((cellData, x) => ({
+            x,
+            y,
+            type: cellData.type,
+            content: cellData.content,
+            enemyType: cellData.enemyType || null,
+            recoveryAmount: cellData.recoveryAmount != null ? cellData.recoveryAmount : void 0,
+            visited: true
+          })));
+          playerPos = { x: state.playerPos.x, z: state.playerPos.z };
+          currentRotation = 0;
+          targetRotation = 0;
+          mapFound = !!state.mapFound;
+          floorXpGained = state.floorXpGained || 0;
+          floorGoldGained = state.floorGoldGained || 0;
+          floorStartLevel = state.floorStartLevel || (player ? player.level : 1);
+          floorStartXp = state.floorStartXp || 0;
+          buildMeshesFromGrid();
+        }
+        function syncMazeStateToSave() {
+          const save = GameData.saves[GameData.activeSlot];
+          if (!save) return;
+          save.mazeState = {
+            width: mazeWidth,
+            height: mazeHeight,
+            grid: mazeGrid.map((row) => row.map((cell) => ({
+              type: cell.type,
+              content: cell.content,
+              enemyType: cell.enemyType || null,
+              recoveryAmount: cell.recoveryAmount != null ? cell.recoveryAmount : null
+            }))),
+            playerPos: { x: playerPos.x, z: playerPos.z },
+            mapFound,
+            floorXpGained,
+            floorGoldGained,
+            floorStartLevel,
+            floorStartXp
+          };
+          localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+        }
+        function resetAndGenerateNextFloor() {
+          currentFloor++;
+          const save = GameData.saves[GameData.activeSlot];
+          if (save) {
+            save.floor = currentFloor;
+            localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+          }
+          lifetimeStats.pianoMax = Math.max(lifetimeStats.pianoMax, currentFloor);
+          syncLifetimeStats();
+          buildFloor();
+          addJournalEntry("piano", `Sei sceso al piano ${currentFloor}.`);
+        }
+        let combatActive = false;
+        let combatTurn = null;
+        let enemyMaxHp = 0, enemyHp = 0;
+        let qteTimer = null;
+        let qteFeedbackTimer = null;
+        let countdownTimer = null;
+        function updateEnemyHpBar() {
+          document.getElementById("encounter-hp-fill").style.width = `${Math.max(0, enemyHp / enemyMaxHp * 100)}%`;
+          document.getElementById("encounter-hp-label").innerText = `${Math.max(0, enemyHp)} / ${enemyMaxHp} HP`;
+        }
+        function updatePlayerHpInEncounter() {
+          if (!player) return;
+          document.getElementById("encounter-player-hp-fill").style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
+          document.getElementById("encounter-player-hp-label").innerText = `Tu: ${Math.max(0, player.hp)} / ${player.maxHp} HP`;
+        }
+        function showQteFeedback(text, success) {
+          const el = document.getElementById("qte-feedback");
+          el.innerText = text;
+          el.className = "qte-feedback " + (success ? "qte-feedback-good" : "qte-feedback-bad");
+          el.style.display = "block";
+          clearTimeout(qteFeedbackTimer);
+          qteFeedbackTimer = setTimeout(() => {
+            el.style.display = "none";
+          }, 750);
+        }
+        function startCombatCountdown(onDone) {
+          const overlay = document.getElementById("countdown-overlay");
+          const circle = document.getElementById("countdown-circle");
+          const numberEl = document.getElementById("countdown-number");
+          const fightText = document.getElementById("countdown-fight-text");
+          overlay.style.display = "flex";
+          circle.style.display = "flex";
+          fightText.style.display = "none";
+          fightText.classList.remove("fight-pop");
+          let remaining = 3;
+          function showNumber() {
+            numberEl.innerText = remaining;
+            circle.classList.remove("countdown-anim");
+            void circle.offsetWidth;
+            circle.classList.add("countdown-anim");
+            countdownTimer = setTimeout(() => {
+              remaining--;
+              if (remaining > 0) {
+                showNumber();
+              } else {
+                circle.style.display = "none";
+                fightText.style.display = "flex";
+                fightText.classList.add("fight-pop");
+                countdownTimer = setTimeout(() => {
+                  overlay.style.display = "none";
+                  fightText.style.display = "none";
+                  onDone();
+                }, 667);
+              }
+            }, 500);
+          }
+          showNumber();
+        }
+        function spawnQteReticle(turnType) {
+          combatTurn = turnType;
+          const cells = getActiveQteCells();
+          const cellIndex = cells[Math.floor(Math.random() * cells.length)];
+          const pos = qteCellPosition(cellIndex);
+          let duration = turnType === "attack" ? Math.max(650, 1100 - (currentFloor - 1) * 30) : Math.max(550, 950 - (currentFloor - 1) * 25);
+          if (turnType === "attack") {
+            const weaponKey = getEquippedWeaponDefKey();
+            const factor = WEAPON_ATTACK_DURATION_FACTOR[weaponKey];
+            if (factor) duration = Math.round(duration * factor);
+            if (hasEquippedItem("armor_guanti")) duration = Math.round(duration * GUANTI_ATTACK_DURATION_FACTOR);
+          } else {
+            if (hasEquippedItem("armor_elmo")) duration = Math.round(duration * ELMO_DEFENSE_DURATION_FACTOR);
+          }
+          if (isTouchInputDevice) duration = Math.round(duration * TOUCH_QTE_DURATION_FACTOR);
+          const label = document.getElementById("qte-turn-label");
+          label.innerText = turnType === "attack" ? "\u2694\uFE0F Attacca il nemico!" : "\u{1F6E1}\uFE0F Difenditi dal nemico!";
+          label.className = "qte-label " + (turnType === "attack" ? "qte-label-attack" : "qte-label-defense");
+          const reticle = document.getElementById("qte-reticle");
+          reticle.style.left = `${pos.leftPct}%`;
+          reticle.style.top = `${pos.topPct}%`;
+          reticle.innerText = turnType === "attack" ? "\u2694\uFE0F" : "\u{1F6E1}\uFE0F";
+          reticle.className = turnType === "attack" ? "qte-attack" : "qte-defense";
+          reticle.style.animationDuration = `${duration}ms`;
+          reticle.style.display = "flex";
+          let resolved = false;
+          reticle.onclick = () => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(qteTimer);
+            reticle.style.display = "none";
+            resolveTurn(turnType, true);
+          };
+          qteTimer = setTimeout(() => {
+            if (resolved) return;
+            resolved = true;
+            reticle.style.display = "none";
+            resolveTurn(turnType, false);
+          }, duration);
+        }
+        function resolveTurn(turnType, success) {
+          if (!combatActive) return;
+          if (turnType === "attack") {
+            const variance = 1 + (Math.random() * 0.3 - 0.15);
+            const dmg = success ? Math.max(1, Math.round(player.atk * variance)) : 0;
+            enemyHp = Math.max(0, enemyHp - dmg);
+            updateEnemyHpBar();
+            let feedbackText = success ? `Colpito! -${dmg} HP nemico` : "Mancato!";
+            if (success && getEquippedWeaponDefKey() === "weapon_bacchetta" && player.hp < player.maxHp) {
+              const healAmount = Math.max(1, Math.round(player.maxHp * BACCHETTA_LIFESTEAL_PCT));
+              player.hp = Math.min(player.maxHp, player.hp + healAmount);
+              syncPlayerToSave();
+              updateHudBars();
+              updatePlayerHpInEncounter();
+              feedbackText += ` (+${healAmount} HP)`;
+            }
+            showQteFeedback(feedbackText, success);
+            if (enemyHp <= 0) {
+              onCombatVictory();
+              return;
+            }
+            qteTimer = setTimeout(() => spawnQteReticle("defense"), 500);
+          } else {
+            const info = ENEMY_INFO[encounterCell.enemyType] || ENEMY_INFO.goblin;
+            const rawDmg = info.atkBase + (currentFloor - 1) * info.atkScale;
+            const mitigated = success ? rawDmg * 0.3 : rawDmg;
+            const dmgTaken = Math.max(success ? 0 : 1, Math.round(mitigated - player.def));
+            player.hp = Math.max(0, player.hp - dmgTaken);
+            syncPlayerToSave();
+            updateHudBars();
+            updatePlayerHpInEncounter();
+            showQteFeedback(success ? "Parato! Guadagni il contrattacco!" : `Colpito! -${dmgTaken} HP`, success);
+            if (player.hp <= 0) {
+              onCombatDefeat();
+              return;
+            }
+            qteTimer = setTimeout(() => spawnQteReticle(success ? "attack" : "defense"), 500);
+          }
+        }
+        function stopCombat() {
+          combatActive = false;
+          combatTurn = null;
+          clearTimeout(qteTimer);
+          clearTimeout(qteFeedbackTimer);
+          clearTimeout(countdownTimer);
+          const reticle = document.getElementById("qte-reticle");
+          if (reticle) reticle.style.display = "none";
+          const feedback = document.getElementById("qte-feedback");
+          if (feedback) feedback.style.display = "none";
+          const countdownOverlay = document.getElementById("countdown-overlay");
+          if (countdownOverlay) countdownOverlay.style.display = "none";
+        }
+        function endEncounterState() {
+          stopCombat();
+          document.getElementById("encounter-overlay").style.display = "none";
+          gameState = "EXPLORE";
+          cameraMode = "explore";
+          encounterTarget = null;
+          encounterCell = null;
+          setUnderlyingControlsInteractive(true);
+        }
+        function onCombatVictory() {
+          combatActive = false;
+          clearTimeout(qteTimer);
+          const enemyTypeKey = encounterCell.enemyType;
+          const info = ENEMY_INFO[enemyTypeKey] || ENEMY_INFO.goblin;
+          const mesh = worldGroup.getObjectByName(`enemy_${encounterTarget.x}_${encounterTarget.y}`);
+          if (mesh) worldGroup.remove(mesh);
+          encounterCell.content = null;
+          encounterCell.enemyType = null;
+          addXp(info.xp);
+          if (lifetimeStats[enemyTypeKey] != null) lifetimeStats[enemyTypeKey] += 1;
+          syncLifetimeStats();
+          syncMazeStateToSave();
+          addJournalEntry("nemico", `Hai sconfitto ${getEnemyDisplayName(enemyTypeKey)} e guadagnato ${info.xp} XP.`);
+          document.getElementById("qte-turn-label").innerText = "";
+          showQteFeedback(`Vittoria! +${info.xp} XP`, true);
+          qteTimer = setTimeout(() => {
+            endEncounterState();
+          }, 1100);
+        }
+        function onCombatDefeat() {
+          combatActive = false;
+          clearTimeout(qteTimer);
+          triggerPlayerDeath();
+        }
+        let deathTinRingProtected = false;
+        function triggerPlayerDeath() {
+          stopCombat();
+          document.getElementById("encounter-overlay").style.display = "none";
+          gameState = "DEATH";
+          cameraMode = "explore";
+          encounterTarget = null;
+          encounterCell = null;
+          setUnderlyingControlsInteractive(false);
+          const lostXp = floorXpGained;
+          const lostGold = floorGoldGained;
+          document.getElementById("death-lost-xp").innerText = lostXp;
+          document.getElementById("death-lost-gold").innerText = lostGold;
+          addJournalEntry("nemico", `Sei morto in questo labirinto. Perderai ${lostXp} XP e ${lostGold} oro guadagnati qui (a meno che l'Anello di Latta non ti protegga).`);
+          const activeSave = GameData.saves[GameData.activeSlot];
+          const staminaPoints = activeSave && activeSave.stats && activeSave.stats.stamina || 0;
+          let degradationPct = staminaPoints > 0 ? 100 / staminaPoints * 2 : 100;
+          if (hasEquippedItem("armor_schinieri")) degradationPct *= 1 - SCHINIERI_DEGRADATION_REDUCTION;
+          deathTinRingProtected = false;
+          const brokenItemNames = [];
+          Object.keys(equipSlots).forEach((slotKey) => {
+            const itemId = equipSlots[slotKey];
+            if (!itemId) return;
+            const item = inventory.find((it) => it.id === itemId);
+            if (!item) return;
+            const def = ITEM_DEFS[item.defKey];
+            if (item.defKey === "ring_tin") {
+              deathTinRingProtected = true;
+              equipSlots[slotKey] = null;
+              inventory = inventory.filter((it) => it.id !== itemId);
+              return;
+            }
+            const before = item.durability != null ? item.durability : 1;
+            const after = Math.max(0, before - degradationPct / 100);
+            if (after < 0.1) {
+              brokenItemNames.push(def.name);
+              equipSlots[slotKey] = null;
+              inventory = inventory.filter((it) => it.id !== item.id);
+            } else {
+              item.durability = after;
+            }
+          });
+          syncInventoryToSave();
+          syncEquipToSave();
+          recomputePlayerEffectiveStats(false);
+          syncPlayerToSave();
+          const brokenListEl = document.getElementById("death-broken-list");
+          if (brokenListEl) {
+            if (brokenItemNames.length > 0) {
+              brokenListEl.innerHTML = `Si \xE8 rotto e perso per sempre: <strong>${brokenItemNames.join(", ")}</strong>.`;
+              brokenListEl.style.display = "block";
+              brokenItemNames.forEach((name) => addJournalEntry("oggetto", `${name} si \xE8 rotto ed \xE8 andato perso per sempre.`));
+            } else {
+              brokenListEl.style.display = "none";
+            }
+          }
+          const overlay = document.getElementById("death-overlay");
+          const title = document.getElementById("death-title");
+          const backBtn = document.getElementById("btn-death-back");
+          overlay.style.display = "flex";
+          backBtn.style.display = "none";
+          title.classList.remove("death-grow");
+          void title.offsetWidth;
+          title.classList.add("death-grow");
+          clearTimeout(deathTimer);
+          deathTimer = setTimeout(() => {
+            backBtn.style.display = "block";
+          }, 4e3);
+        }
+        function resolveDeath() {
+          document.getElementById("death-overlay").style.display = "none";
+          setUnderlyingControlsInteractive(true);
+          const recoveryAmount = floorXpGained;
+          const goldLost = floorGoldGained;
+          if (!deathTinRingProtected) {
+            player.level = floorStartLevel;
+            player.xp = floorStartXp;
+            const save = GameData.saves[GameData.activeSlot];
+            if (save) {
+              save.gold = Math.max(0, save.gold - goldLost);
+              document.getElementById("hud-gold").innerText = save.gold;
+            }
+            pendingXpRecovery = recoveryAmount;
+            addJournalEntry("oggetto", `Hai perso ${recoveryAmount} XP e ${goldLost} oro guadagnati in questo labirinto.`);
+          } else {
+            addJournalEntry("oggetto", "L'Anello di Latta si \xE8 rotto, proteggendoti dalla perdita di XP e oro!");
+            addLootNotice("\u{1F48D} Anello di Latta rotto: XP e oro salvi!");
+          }
+          recomputePlayerEffectiveStats(true);
+          syncPlayerToSave();
+          syncInventoryToSave();
+          syncEquipToSave();
+          updateHudBars();
+          gameState = "EXPLORE";
+          buildFloor();
+        }
+        document.getElementById("btn-death-back").onclick = () => resolveDeath();
+        function openEncounter(cell, x, y) {
+          gameState = "ENCOUNTER";
+          cameraMode = "encounter";
+          encounterTarget = { x, y };
+          encounterCell = cell;
+          setUnderlyingControlsInteractive(false);
+          const info = ENEMY_INFO[cell.enemyType] || ENEMY_INFO.goblin;
+          enemyMaxHp = Math.round(info.hpBase + (currentFloor - 1) * info.hpScale);
+          enemyHp = enemyMaxHp;
+          document.getElementById("encounter-name").innerText = getEnemyDisplayName(cell.enemyType);
+          updateEnemyHpBar();
+          updatePlayerHpInEncounter();
+          document.getElementById("qte-turn-label").innerText = "";
+          document.getElementById("qte-feedback").style.display = "none";
+          updateFleeButtonPosition();
+          const activeArtKey = getEnemyArtKey(cell.enemyType);
+          ["goblin", "scheletro", "ragno", "orco"].forEach((t) => {
+            document.getElementById(`art-${t}`).style.display = t === activeArtKey ? "block" : "none";
+          });
+          document.getElementById("encounter-overlay").style.display = "flex";
+          combatTurn = null;
+          combatActive = false;
+          clearTimeout(qteTimer);
+          clearTimeout(countdownTimer);
+          startCombatCountdown(() => {
+            combatActive = true;
+            spawnQteReticle("defense");
+          });
+        }
+        window.closeEncounter = function() {
+          if (encounterCell && encounterCell.enemyType) {
+            addJournalEntry("nemico", `Sei fuggito da ${getEnemyDisplayName(encounterCell.enemyType)}.`);
+            lifetimeStats.fughe += 1;
+            syncLifetimeStats();
+          }
+          endEncounterState();
+        };
+        function canFitLootInInventory(lootType) {
+          if (lootType === "GOLD" || lootType === "XP") return true;
+          if (lootType === "POTION_HP") {
+            if (inventory.some((it) => it.defKey === "potion_hp" && it.qty < MAX_STACK_SIZE)) return true;
+            return inventory.length < INVENTORY_MAX_SLOTS;
+          }
+          if (lootType === "POTION_ATK") {
+            if (inventory.some((it) => it.defKey === "potion_atk" && it.qty < MAX_STACK_SIZE)) return true;
+            return inventory.length < INVENTORY_MAX_SLOTS;
+          }
+          return inventory.length < INVENTORY_MAX_SLOTS;
+        }
+        function applyLootPickup(lootType) {
+          switch (lootType) {
+            case "GOLD": {
+              const amount = 15;
+              let currentGold = parseInt(document.getElementById("hud-gold").innerText) || 0;
+              document.getElementById("hud-gold").innerText = currentGold + amount;
+              const save = GameData.saves[GameData.activeSlot];
+              if (save) {
+                save.gold = currentGold + amount;
+                localStorage.setItem("maze_rogue_saves", JSON.stringify(GameData.saves));
+              }
+              lifetimeStats.monete += amount;
+              floorGoldGained += amount;
+              syncLifetimeStats();
+              addJournalEntry("oggetto", `Hai trovato ${amount} Monete d'Oro.`);
+              addLootNotice(`\u{1FA99} +${amount} Oro`);
+              break;
+            }
+            case "XP": {
+              const amount = 20;
+              addXp(amount);
+              addJournalEntry("oggetto", `Hai trovato ${amount} Punti Esperienza.`);
+              addLootNotice(`\u2728 +${amount} XP`);
+              break;
+            }
+            case "POTION_HP":
+              addItemToInventory("potion_hp", 1);
+              addJournalEntry("oggetto", "Hai trovato una Pozione Curativa.");
+              addLootNotice("\u{1F9EA} Pozione Curativa trovata");
+              break;
+            case "POTION_ATK":
+              addItemToInventory("potion_atk", 1);
+              addJournalEntry("oggetto", "Hai trovato una Pozione del Potere.");
+              addLootNotice("\u2697\uFE0F Pozione del Potere trovata");
+              break;
+            case "RING_GOLD":
+              grantGearItem("ring_gold");
+              break;
+            case "RING_SILVER":
+              grantGearItem("ring_silver");
+              break;
+            case "RING_BRONZE":
+              grantGearItem("ring_bronze");
+              break;
+            case "RING_TIN":
+              grantGearItem("ring_tin");
+              break;
+            case "SHIELD":
+              grantGearItem("shield");
+              break;
+            case "WEAPON": {
+              const kind = WEAPON_KINDS[Math.floor(Math.random() * WEAPON_KINDS.length)];
+              grantGearItem(`weapon_${kind}`);
+              break;
+            }
+            case "ARMOR_PIECE": {
+              const kind = ARMOR_KINDS[Math.floor(Math.random() * ARMOR_KINDS.length)];
+              grantGearItem(`armor_${kind}`);
+              break;
+            }
+            default:
+              break;
+          }
+        }
+        function grantGearItem(defKey) {
+          const def = ITEM_DEFS[defKey];
+          const linkedStatKey = STAT_LINKED_ITEMS[defKey];
+          const activeSave = GameData.saves[GameData.activeSlot];
+          const linkedStatValue = linkedStatKey && activeSave && activeSave.stats ? activeSave.stats[linkedStatKey] || 0 : 0;
+          const scaledEffect = computeScaledEffect(defKey, currentFloor, linkedStatValue);
+          addItemToInventory(defKey, 1, scaledEffect);
+          addJournalEntry("oggetto", `Hai trovato: ${def.name} (piano ${currentFloor}).`);
+          addLootNotice(`${def.icon} ${def.name} trovato`);
+        }
+        function handleCellArrival(x, z) {
+          const cell = mazeGrid[z][x];
+          if (!cell) return;
+          if (cell.content === "ENEMY") {
+            openEncounter(cell, x, z);
+          } else if (cell.content === "ITEM") {
+            const lootType = rollLoot(currentFloor);
+            if (!canFitLootInInventory(lootType)) {
+              addLootNotice("\u{1F392} Inventario pieno! Libera uno slot per aprire questa cassa.");
+              return;
+            }
+            applyLootPickup(lootType);
+            const itemMesh = worldGroup.getObjectByName(`item_${x}_${z}`);
+            if (itemMesh) worldGroup.remove(itemMesh);
+            cell.content = null;
+            lifetimeStats.oggetti += 1;
+            syncLifetimeStats();
+          } else if (cell.content === "ITEM_MAP") {
+            const mapMesh = worldGroup.getObjectByName(`map_${x}_${z}`);
+            if (mapMesh) worldGroup.remove(mapMesh);
+            cell.content = null;
+            mapFound = true;
+            updateMapButtonState();
+            lifetimeStats.mappe += 1;
+            syncLifetimeStats();
+            addJournalEntry("oggetto", `Hai trovato una Mappa del Piano ${currentFloor}!`);
+            addLootNotice("\u{1F5FA}\uFE0F Mappa trovata!");
+          } else if (cell.content === "ITEM_XP_RECOVERY") {
+            const rMesh = worldGroup.getObjectByName(`xprecovery_${x}_${z}`);
+            if (rMesh) worldGroup.remove(rMesh);
+            const amount = cell.recoveryAmount || 0;
+            cell.content = null;
+            addXp(amount);
+            addJournalEntry("oggetto", `Hai ritrovato ${amount} XP perduta nel labirinto precedente.`);
+            addLootNotice(`\u2728 +${amount} XP recuperata!`);
+          }
+        }
+        function movePlayer(stepForward, stepRight) {
+          if (gameState !== "EXPLORE") return;
+          let angle = Math.round(currentRotation / (Math.PI / 2)) * (Math.PI / 2);
+          let cos = Math.round(Math.cos(angle));
+          let sin = Math.round(Math.sin(angle));
+          let dirX = sin * stepForward + cos * stepRight;
+          let dirY = -cos * stepForward + sin * stepRight;
+          let nextX = playerPos.x + dirX;
+          let nextY = playerPos.z + dirY;
+          if (nextY >= 0 && nextY < mazeHeight && nextX >= 0 && nextX < mazeWidth) {
+            if (mazeGrid[nextY][nextX].type !== cellTypes.WALL) {
+              playerPos.x = nextX;
+              playerPos.z = nextY;
+              const playerMesh = worldGroup.getObjectByName("player");
+              if (playerMesh) playerMesh.position.set(playerPos.x, 0, playerPos.z);
+              handleCellArrival(nextX, nextY);
+              updateStairsHint();
+              syncMazeStateToSave();
+            }
+          }
+        }
+        window.handleVirtualMove = function(stepRight, stepForward) {
+          movePlayer(-stepForward, stepRight);
+        };
+        window.rotateView = function(direction) {
+          if (gameState === "EXPLORE") targetRotation += direction * (Math.PI / 2);
+        };
+        let lastWheelTime = 0;
+        function onWheel(e) {
+          if (gameState !== "EXPLORE") return;
+          const now = Date.now();
+          if (now - lastWheelTime < 220) return;
+          lastWheelTime = now;
+          window.rotateView(e.deltaY > 0 ? 1 : -1);
+        }
+        container.addEventListener("wheel", onWheel, { passive: true });
+        const SWIPE_MIN_DISTANCE = 35;
+        const SWIPE_MAX_DURATION = 900;
+        let swipeStartX = null, swipeStartY = null, swipeStartTime = 0;
+        let lastGestureWasSwipe = false;
+        function onCanvasTouchStart(e) {
+          const t = e.changedTouches && e.changedTouches[0];
+          if (!t) return;
+          swipeStartX = t.clientX;
+          swipeStartY = t.clientY;
+          swipeStartTime = Date.now();
+        }
+        function onCanvasTouchEnd(e) {
+          if (swipeStartX === null || gameState !== "EXPLORE") {
+            swipeStartX = null;
+            return;
+          }
+          const t = e.changedTouches && e.changedTouches[0];
+          if (!t) {
+            swipeStartX = null;
+            return;
+          }
+          const dx = t.clientX - swipeStartX;
+          const dy = t.clientY - swipeStartY;
+          const elapsed = Date.now() - swipeStartTime;
+          swipeStartX = null;
+          if (elapsed > SWIPE_MAX_DURATION) return;
+          const absDx = Math.abs(dx), absDy = Math.abs(dy);
+          if (absDx >= SWIPE_MIN_DISTANCE && absDx > absDy * 1.2) {
+            lastGestureWasSwipe = true;
+            window.rotateView(dx < 0 ? -1 : 1);
+          } else if (absDy >= SWIPE_MIN_DISTANCE && absDy > absDx * 1.2) {
+            lastGestureWasSwipe = true;
+            movePlayer(dy < 0 ? 1 : -1, 0);
+          }
+        }
+        renderer.domElement.addEventListener("touchstart", onCanvasTouchStart, { passive: true });
+        renderer.domElement.addEventListener("touchend", onCanvasTouchEnd, { passive: true });
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        function onCanvasClick(event) {
+          if (lastGestureWasSwipe) {
+            lastGestureWasSwipe = false;
+            return;
+          }
+          if (gameState !== "EXPLORE") return;
+          const rect = renderer.domElement.getBoundingClientRect();
+          const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+          const clientY = event.changedTouches ? event.changedTouches[0].clientY : event.clientY;
+          pointer.x = (clientX - rect.left) / rect.width * 2 - 1;
+          pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(pointer, camera);
+          const playerMesh = worldGroup.getObjectByName("player");
+          if (playerMesh) {
+            const hits = raycaster.intersectObject(playerMesh, true);
+            if (hits.length > 0) {
+              const currentCell = mazeGrid[playerPos.z] && mazeGrid[playerPos.z][playerPos.x];
+              if (currentCell && currentCell.content === "STAIRS") {
+                resetAndGenerateNextFloor();
+              }
+              return;
+            }
+          }
+          if (isTouchInputDevice) {
+            const relativeY = (clientY - rect.top) / rect.height;
+            if (relativeY > 0.5) movePlayer(1, 0);
+          }
+        }
+        renderer.domElement.addEventListener("click", onCanvasClick);
+        function onKeyDown(e) {
+          switch (e.key.toLowerCase()) {
+            case "arrowup":
+            case "w":
+              movePlayer(1, 0);
+              break;
+            case "arrowdown":
+            case "s":
+              movePlayer(-1, 0);
+              break;
+            case "arrowleft":
+            case "a":
+              movePlayer(0, -1);
+              break;
+            case "arrowright":
+            case "d":
+              movePlayer(0, 1);
+              break;
+            case "q":
+              window.rotateView(-1);
+              break;
+            case "e":
+              window.rotateView(1);
+              break;
+            case "escape": {
+              const openOverlayId = DETAIL_OVERLAY_IDS.find(
+                (id) => document.getElementById(id).style.display === "flex"
+              );
+              if (openOverlayId) {
+                closeDetailOverlay(openOverlayId);
+              } else {
+                openExitConfirm();
+              }
+              break;
+            }
+          }
+        }
+        window.addEventListener("keydown", onKeyDown);
+        let rafId;
+        function animate() {
+          rafId = requestAnimationFrame(animate);
+          if (gameState === "EXPLORE") {
+            currentRotation += (targetRotation - currentRotation) * 0.1;
+          }
+          const facingMesh = worldGroup.getObjectByName("player-facing");
+          if (facingMesh) {
+            const fwdX = Math.sin(currentRotation);
+            const fwdZ = -Math.cos(currentRotation);
+            facingMesh.position.set(playerPos.x + fwdX * 0.42, 0.6, playerPos.z + fwdZ * 0.42);
+            facingMesh.rotation.y = Math.atan2(fwdX, fwdZ);
+          }
+          const stairsMesh = worldGroup.getObjectByName("stairs");
+          if (stairsMesh) {
+            const s = 1 + Math.sin(Date.now() * 4e-3) * 0.18;
+            stairsMesh.scale.set(s, s, s);
+          }
+          let desiredPos, desiredLook;
+          if (cameraMode === "encounter" && encounterTarget) {
+            desiredPos = new THREE.Vector3(playerPos.x, 1.1, playerPos.z);
+            desiredLook = new THREE.Vector3(encounterTarget.x, 1.1, encounterTarget.y);
+          } else {
+            desiredPos = new THREE.Vector3(
+              playerPos.x - Math.sin(currentRotation) * CHASE_DIST,
+              CHASE_HEIGHT,
+              playerPos.z + Math.cos(currentRotation) * CHASE_DIST
+            );
+            const lookFwdX = Math.sin(currentRotation);
+            const lookFwdZ = -Math.cos(currentRotation);
+            desiredLook = new THREE.Vector3(
+              playerPos.x + lookFwdX * CAMERA_LOOK_AHEAD_DIST,
+              0,
+              playerPos.z + lookFwdZ * CAMERA_LOOK_AHEAD_DIST
+            );
+          }
+          camPos.lerp(desiredPos, 0.12);
+          camLook.lerp(desiredLook, 0.12);
+          camera.position.copy(camPos);
+          camera.lookAt(camLook);
+          renderer.render(scene, camera);
+        }
+        checkContinueButton();
+        applyHandedness();
+        animate();
+        return function cleanupInitGame() {
+          cancelAnimationFrame(rafId);
+          window.removeEventListener("keydown", onKeyDown);
+          window.removeEventListener("resize", setAppViewportHeight);
+          window.removeEventListener("orientationchange", setAppViewportHeight);
+          container.removeEventListener("wheel", onWheel);
+          renderer.domElement.removeEventListener("click", onCanvasClick);
+          renderer.domElement.removeEventListener("touchstart", onCanvasTouchStart);
+          renderer.domElement.removeEventListener("touchend", onCanvasTouchEnd);
+          clearTimeout(levelUpToastTimer);
+          clearTimeout(qteTimer);
+          clearTimeout(qteFeedbackTimer);
+          clearTimeout(countdownTimer);
+          clearTimeout(lootToastTimer);
+          clearTimeout(deathTimer);
+          delete window.deleteCustomBuild;
+          delete window.applyPreset;
+          delete window.applyCustomPreset;
+          delete window.modifyStat;
+          delete window.updateModalComparison;
+          delete window.handleVirtualMove;
+          delete window.rotateView;
+          delete window.closeEncounter;
+        };
+      }
+    }, []);
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("style", null, GAME_STYLE), /* @__PURE__ */ React.createElement("div", { id: "game-container", ref: containerRef, dangerouslySetInnerHTML: { __html: GAME_HTML } }));
+  }
+  const rootElement = document.getElementById("root");
+  if (window.ReactDOM && window.ReactDOM.createRoot) {
+    ReactDOM.createRoot(rootElement).render(React.createElement(MazeGame));
+  } else {
+    ReactDOM.render(React.createElement(MazeGame), rootElement);
+  }
+})();
+</script>
+</body>
+</html>

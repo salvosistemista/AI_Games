@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Retro Top-Down Racer - Clean HUD</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            background-color: #11001c;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 800px;
+            background: #220033;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(255, 0, 128, 0.5);
+            border: 4px solid #ff007f;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            background: radial-gradient(circle, #220033 0%, #050010 100%);
+            z-index: 10;
+        }
+        .hidden { display: none !important; }
+        h1 {
+            font-size: 2.5rem;
+            color: #00ffff;
+            text-shadow: 3px 3px #ff007f;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        h2 {
+            font-size: 1.8rem;
+            color: #ff007f;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px #00ffff;
+        }
+        button {
+            background: #ff007f;
+            color: white;
+            border: 3px solid #00ffff;
+            padding: 12px 24px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            text-transform: uppercase;
+            box-shadow: 3px 3px 0px #00ffff;
+            transition: 0.1s;
+        }
+        button:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0px #00ffff;
+        }
+        
+        /* STRUTTURA LAYOUT DI GIOCO */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 83%;
+        }
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #150022;
+        }
+        #flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.03s ease-out;
+            z-index: 5;
+        }
+        #pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 0, 16, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 8;
+            pointer-events: none;
+        }
+        #pause-text {
+            font-size: 4rem;
+            color: #00ffff;
+            text-shadow: 4px 4px #ff007f;
+            letter-spacing: 4px;
+        }
+
+        /* HUD LAYOUT SIDEBARS */
+        .hud-sidebar {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 20%;
+            pointer-events: none;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0 25px 0;
+            box-sizing: border-box;
+        }
+        #hud-left { left: 0; }
+        #hud-right { right: 0; }
+
+        /* BLOCCHI CONTENITORI POSIZIONATI PIÙ IN BASSO */
+        .hud-lowered-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin-top: 150px;
+            gap: 20px;
+        }
+
+        /* ELEMENTI SINISTRA */
+        #hud-race-box {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+        }
+        #hud-race-num {
+            font-size: 3.2rem;
+            color: #ffffff;
+            text-shadow: 2px 2px #000;
+            line-height: 0.85;
+        }
+        #hud-race-total {
+            font-size: 1.1rem;
+            color: #888;
+            text-shadow: 1px 1px #000;
+            margin-left: 1px;
+            margin-top: 2px;
+        }
+        .hud-container-bar {
+            width: 22px;
+            height: 140px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ff0055;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+        }
+        .hud-bar-fill {
+            width: 100%;
+            height: 100%;
+            transition: height 0.1s linear;
+        }
+        .hud-bar-label {
+            position: absolute;
+            top: -18px;
+            width: 100px;
+            text-align: center;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* ELEMENTI DESTRA */
+        .hud-stat-item {
+            text-align: center;
+            width: 100%;
+        }
+        .hud-label-cyan {
+            font-size: 0.60rem;
+            color: #00ffff;
+            display: block;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        .hud-val-large {
+            font-size: 1.2rem;
+            color: #fff;
+            text-shadow: 1px 1px #000;
+        }
+
+        /* CONTROLLI MOBILE */
+        #mobile-controls-wrapper {
+            position: relative;
+            height: 17%;
+            background: #000;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 2px solid #ff007f;
+        }
+        #mobile-controls-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            height: 100%;
+            width: 65%;
+            padding: 12px 0;
+        }
+        .touch-btn {
+            background: #222;
+            border: 2px solid #ff007f;
+            color: #ff007f;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .touch-btn:active { background: #330022; color: #00ffff; border-color: #00ffff;}
+        
+        #btn-left { width: 30%; }
+        #btn-gas { width: 40%; border-color: #00ffff; color: #00ffff; }
+        #btn-gas:active { background: #002222; }
+        #btn-right { width: 30%; }
+        
+        #btn-pause-ui { 
+            position: absolute;
+            right: 15px;
+            width: 50px;
+            height: calc(100% - 24px);
+            background: #110022;
+            border: 2px solid #ffff00;
+            color: #ffff00;
+            font-size: 1.3rem;
+            border-radius: 10px;
+            z-index: 20;
+        }
+        #btn-pause-ui:active { background: #222200; color: #ff007f; border-color: #ff007f; }
+        
+        .list-container {
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px;
+            border: 2px solid #330055;
+        }
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #555;
+        }
+        .shop-info { font-size: 1.1rem; margin-bottom: 15px; color: #ffff00; }
+        
+        input[type="text"] {
+            background: #110022;
+            border: 2px solid #00ffff;
+            color: #fff;
+            padding: 10px;
+            font-size: 1.1rem;
+            font-family: inherit;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+
+    <div id="screen-menu" class="screen">
+        <h1>Retro Top-Down<br>Racer</h1>
+        <button id="btn-start-game">Nuovo Gioco</button>
+        <button id="btn-view-leaderboard">Classifica</button>
+    </div>
+
+    <div id="screen-leaderboard" class="screen hidden">
+        <h2>Classifica</h2>
+        <div class="list-container" id="leaderboard-list"></div>
+        <button id="btn-menu-back">Indietro</button>
+    </div>
+
+    <div id="screen-shop" class="screen hidden">
+        <h2>Meccanico</h2>
+        <p class="shop-info">Rinforzi Attuali: <span id="shop-reinforcements" style="color:#fff">0</span></p>
+        <p class="shop-info">Le tue Monete: <span id="shop-coins" style="color:#ffff00">0</span></p>
+        <div id="shop-error" style="color: #ff3333; margin-bottom: 10px; min-height: 20px;"></div>
+        <button id="btn-buy-upgrade">Compra (+1) <br><span style="color:#ffff00">10 Monete</span></button>
+        <button id="btn-next-race" style="background:#00cc66; border-color:#fff; box-shadow: 3px 3px 0px #fff;">Gara Successiva</button>
+    </div>
+
+    <div id="screen-win-race" class="screen hidden">
+        <h2 style="color:#00ffff;">Gara Completata!</h2>
+        <p id="win-race-text" style="font-size:1.2rem; margin-bottom:30px;"></p>
+        <button id="btn-continue">Continua</button>
+    </div>
+
+    <div id="screen-gameover" class="screen hidden">
+        <h2 id="gameover-title">Game Over</h2>
+        <p id="gameover-text" style="font-size:1.1rem; margin-bottom:20px;"></p>
+        
+        <div id="record-input-box" class="hidden">
+            <p style="color:#ffff00; margin-bottom:10px;">Nuovo Record!</p>
+            <input type="text" id="player-name-input" maxlength="10" placeholder="TUO NOME">
+            <button id="btn-save-record">Salva Punteggio</button>
+        </div>
+        <button id="btn-restart">Menu Principale</button>
+    </div>
+
+    <div id="screen-game" class="screen hidden" style="padding:0;">
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+            
+            <div id="hud-left" class="hud-sidebar">
+                <div class="hud-lowered-box">
+                    <div id="hud-race-box">
+                        <span id="hud-race-num">1</span>
+                        <span id="hud-race-total">/10</span>
+                    </div>
+                </div>
+                <div class="hud-container-bar" style="border-color: #ff3333;">
+                    <span class="hud-bar-label" style="color:#ff3333">FUEL</span>
+                    <div id="hud-fuel-bar" class="hud-bar-fill" style="background-color: #ff3333;"></div>
+                </div>
+            </div>
+
+            <div id="hud-right" class="hud-sidebar">
+                <div class="hud-lowered-box">
+                    <div class="hud-stat-item">
+                        <span class="hud-label-cyan">MONETE</span>
+                        <span class="hud-val-large" id="hud-coins-val" style="color:#ffff00">0</span>
+                    </div>
+                    <div class="hud-stat-item">
+                        <span class="hud-label-cyan">PARAURTI</span>
+                        <span class="hud-val-large" id="hud-shield-val" style="color:#00ff00">1</span>
+                    </div>
+                </div>
+                <div class="hud-container-bar" style="border-color: #00ffff;">
+                    <span class="hud-bar-label" style="color:#00ffff;">TIME</span>
+                    <div id="hud-time-bar" class="hud-bar-fill" style="background-color: #ffffff;"></div>
+                </div>
+            </div>
+
+            <div id="flash-overlay"></div>
+            <div id="pause-overlay" class="hidden">
+                <div id="pause-text">PAUSA</div>
+            </div>
+        </div>
+
+        <div id="mobile-controls-wrapper">
+            <div id="mobile-controls-center">
+                <div class="touch-btn" id="btn-left">◀</div>
+                <div class="touch-btn" id="btn-gas">GAS (▲)</div>
+                <div class="touch-btn" id="btn-right">▶</div>
+            </div>
+            <div class="touch-btn" id="btn-pause-ui">P</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const flashOverlay = document.getElementById('flash-overlay');
+    const pauseOverlay = document.getElementById('pause-overlay');
+
+    const hudRaceNum = document.getElementById('hud-race-num');
+    const hudFuelBar = document.getElementById('hud-fuel-bar');
+    const hudCoinsVal = document.getElementById('hud-coins-val');
+    const hudShieldVal = document.getElementById('hud-shield-val');
+    const hudTimeBar = document.getElementById('hud-time-bar');
+
+    function resizeCanvas() {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
+
+    let gameState = {
+        currentRace: 1,
+        totalRaces: 10,
+        coins: 0,
+        reinforcements: 1, 
+        score: 0, 
+        
+        targetDistance: 1600,
+        distanceTraveled: 0,
+        timeLeft: 90,
+        fuel: 100,
+        playerX: 0, 
+        playerSpeed: 0,
+        maxSpeed: 1500, 
+        
+        obstacles: [],
+        items: [],
+        dashedLineY: -200,   
+        checkeredLineY: -200, 
+        dashedSpawned: false,
+        checkeredSpawned: false,
+        
+        lastTime: 0,
+        fuelTimer: 0,
+        spawnTimer: 0,
+        roadScroll: 0,
+        offroadFlashTimer: 0,
+        isPaused: false,
+        
+        blinkToggle: false,
+        blinkTimer: 0
+    };
+
+    let keys = { Left: false, Right: false, Up: false };
+    let finalScorePending = 0; 
+
+    let leaderboard = JSON.parse(localStorage.getItem('retro_racer_board')) || [
+        {name: "OUTRUNNER", score: 5000},
+        {name: "TURBO", score: 3000},
+        {name: "8BIT_HERO", score: 1000}
+    ];
+
+    function togglePause() {
+        if (document.getElementById('screen-game').classList.contains('hidden')) return;
+        gameState.isPaused = !gameState.isPaused;
+        
+        if (gameState.isPaused) {
+            pauseOverlay.classList.remove('hidden');
+        } else {
+            pauseOverlay.classList.add('hidden');
+            gameState.lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function triggerFlash(color, duration = 80) {
+        flashOverlay.style.backgroundColor = color;
+        flashOverlay.style.opacity = "0.5";
+        setTimeout(() => {
+            if(flashOverlay.style.backgroundColor !== 'rgb(255, 0, 0)' || gameState.playerX >= canvas.width * 0.20 && gameState.playerX <= canvas.width * 0.80) {
+                flashOverlay.style.opacity = "0";
+            }
+        }, duration);
+    }
+
+    function triggerFourColorBump() {
+        const colors = ['#ffff00', '#ff0033', '#ffffff', '#0055ff'];
+        let delay = 0;
+        colors.forEach((color) => {
+            setTimeout(() => {
+                triggerFlash(color, 60);
+            }, delay);
+            delay += 65; 
+        });
+    }
+
+    function checkAndShowRecordOption(score) {
+        finalScorePending = Math.floor(score);
+        let isRecord = leaderboard.length < 5 || finalScorePending > leaderboard[leaderboard.length - 1].score;
+        if (isRecord && finalScorePending > 0) {
+            document.getElementById('record-input-box').classList.remove('hidden');
+        } else {
+            document.getElementById('record-input-box').classList.add('hidden');
+        }
+    }
+
+    document.getElementById('btn-save-record').addEventListener('click', () => {
+        let input = document.getElementById('player-name-input');
+        let name = input.value.trim().toUpperCase() || "PILOTA";
+        leaderboard.push({name: name, score: finalScorePending});
+        leaderboard.sort((a,b) => b.score - a.score);
+        leaderboard = leaderboard.slice(0, 5);
+        localStorage.setItem('retro_racer_board', JSON.stringify(leaderboard));
+        input.value = "";
+        document.getElementById('record-input-box').classList.add('hidden');
+        renderLeaderboard();
+        showScreen('screen-leaderboard');
+    });
+
+    function renderLeaderboard() {
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = '';
+        leaderboard.forEach((entry, i) => {
+            list.innerHTML += `<div class="list-item"><span>${i+1}. ${entry.name}</span><span>${entry.score} pts</span></div>`;
+        });
+    }
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById(screenId).classList.remove('hidden');
+        if(screenId === 'screen-game') {
+            resizeCanvas();
+            gameState.playerX = canvas.width / 2; 
+        }
+    }
+
+    document.getElementById('btn-start-game').addEventListener('click', () => {
+        gameState.currentRace = 1;
+        gameState.coins = 0;
+        gameState.reinforcements = 1;
+        gameState.score = 0;
+        startRace();
+    });
+    document.getElementById('btn-view-leaderboard').addEventListener('click', () => {
+        renderLeaderboard();
+        showScreen('screen-leaderboard');
+    });
+    document.getElementById('btn-menu-back').addEventListener('click', () => showScreen('screen-menu'));
+    document.getElementById('btn-restart').addEventListener('click', () => showScreen('screen-menu'));
+    document.getElementById('btn-continue').addEventListener('click', () => {
+        if (gameState.currentRace % 2 === 0) {
+            openShop();
+        } else {
+            gameState.currentRace++;
+            startRace();
+        }
+    });
+    document.getElementById('btn-next-race').addEventListener('click', () => {
+        gameState.currentRace++;
+        startRace();
+    });
+    
+    document.getElementById('btn-buy-upgrade').addEventListener('click', () => {
+        const errBox = document.getElementById('shop-error');
+        if (gameState.coins >= 10) {
+            gameState.coins -= 10;
+            gameState.reinforcements++;
+            errBox.innerText = ""; 
+            updateShopUI();
+        } else {
+            errBox.innerText = "Monete insufficienti! Costo: 10 monete.";
+        }
+    });
+
+    document.getElementById('btn-pause-ui').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        togglePause();
+    });
+    document.getElementById('btn-pause-ui').addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePause();
+    });
+
+    function openShop() {
+        document.getElementById('shop-error').innerText = ""; 
+        updateShopUI();
+        showScreen('screen-shop');
+    }
+
+    function updateShopUI() {
+        document.getElementById('shop-reinforcements').innerText = gameState.reinforcements;
+        document.getElementById('shop-coins').innerText = gameState.coins;
+    }
+
+    function startRace() {
+        gameState.targetDistance = 1600 + ((gameState.currentRace - 1) * 150);
+        gameState.distanceTraveled = 0;
+        gameState.timeLeft = 90;
+        gameState.fuel = 100;
+        gameState.playerSpeed = 650; 
+        gameState.obstacles = [];
+        gameState.items = [];
+        gameState.dashedLineY = -200;
+        gameState.checkeredLineY = -200;
+        gameState.dashedSpawned = false;
+        gameState.checkeredSpawned = false;
+        gameState.fuelTimer = 0;
+        gameState.spawnTimer = 0;
+        gameState.roadScroll = 0;
+        gameState.offroadFlashTimer = 0;
+        gameState.isPaused = false; 
+        gameState.blinkTimer = 0;
+        gameState.blinkToggle = false;
+        gameState.lastTime = performance.now();
+        flashOverlay.style.opacity = "0";
+        pauseOverlay.classList.add('hidden');
+        
+        showScreen('screen-game');
+        updateHUD();
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if(e.key === 'ArrowLeft' || e.key === 'a') keys.Left = true;
+        if(e.key === 'ArrowRight' || e.key === 'd') keys.Right = true;
+        if(e.key === 'ArrowUp' || e.key === 'w') keys.Up = true;
+        if(e.key === 'p' || e.key === 'P') togglePause();
+    });
+    window.addEventListener('keyup', (e) => {
+        if(e.key === 'ArrowLeft' || e.key === 'a') keys.Left = false;
+        if(e.key === 'ArrowRight' || e.key === 'd') keys.Right = false;
+        if(e.key === 'ArrowUp' || e.key === 'w') keys.Up = false;
+    });
+
+    const setupTouch = (id, keyName) => {
+        const btn = document.getElementById(id);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+    };
+    setupTouch('btn-left', 'Left');
+    setupTouch('btn-right', 'Right');
+    setupTouch('btn-gas', 'Up');
+
+    let secondAccumulator = 0;
+
+    function gameLoop(timestamp) {
+        if (document.getElementById('screen-game').classList.contains('hidden')) return;
+        if (gameState.isPaused) return; 
+
+        let dt = (timestamp - gameState.lastTime) / 1000;
+        if(dt > 0.1) dt = 0.1;
+        gameState.lastTime = timestamp;
+
+        gameState.blinkTimer += dt;
+        if (gameState.blinkTimer > 0.15) {
+            gameState.blinkToggle = !gameState.blinkToggle;
+            gameState.blinkTimer = 0;
+        }
+
+        secondAccumulator += dt;
+        if(secondAccumulator >= 1) {
+            gameState.timeLeft--;
+            gameState.fuelTimer++;
+            secondAccumulator -= 1;
+            
+            if(gameState.timeLeft <= 0) {
+                endGame(false, "Tempo Scaduto!");
+                return;
+            }
+        }
+
+        updatePhysics(dt);
+        spawnObjects(dt);
+        checkCollisions();
+        drawEverything();
+        updateHUD();
+
+        if (gameState.distanceTraveled >= gameState.targetDistance) {
+            gameState.score += gameState.targetDistance;
+            if (gameState.currentRace === gameState.totalRaces) {
+                endGame(true, "VITTORIA CAMPIONATO!");
+            } else {
+                document.getElementById('win-race-text').innerHTML = `Gara ${gameState.currentRace} superata!<br>Monete: ${gameState.coins}`;
+                showScreen('screen-win-race');
+            }
+            return;
+        }
+
+        if (gameState.fuel <= 0) {
+            endGame(false, "Finito il carburante!");
+            return;
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function updatePhysics(dt) {
+        let roadLeftBound = canvas.width * 0.20;
+        let roadRightBound = canvas.width * 0.80;
+        let sideSpeed = 550; 
+
+        if (keys.Up) {
+            gameState.playerSpeed = Math.min(gameState.playerSpeed + 850 * dt, gameState.maxSpeed); 
+            gameState.fuel -= 7.5 * dt; 
+        } else {
+            gameState.playerSpeed = Math.max(gameState.playerSpeed - 400 * dt, 500); 
+            gameState.fuel -= 2.5 * dt; 
+        }
+
+        if (gameState.playerX < roadLeftBound || gameState.playerX > roadRightBound) {
+            gameState.playerSpeed = Math.min(gameState.playerSpeed, 400);
+            gameState.fuel -= 8 * dt;
+
+            gameState.offroadFlashTimer += dt;
+            if (gameState.offroadFlashTimer > 0.08) { 
+                flashOverlay.style.backgroundColor = '#ff0000';
+                flashOverlay.style.opacity = flashOverlay.style.opacity === "0.5" ? "0" : "0.5";
+                gameState.offroadFlashTimer = 0;
+            }
+        } else {
+            if (flashOverlay.style.backgroundColor === 'rgb(255, 0, 0)') {
+                flashOverlay.style.opacity = "0";
+            }
+        }
+
+        if (keys.Left) gameState.playerX -= sideSpeed * dt;
+        if (keys.Right) gameState.playerX += sideSpeed * dt;
+
+        if (gameState.playerX < 20) gameState.playerX = 20;
+        if (gameState.playerX > canvas.width - 20) gameState.playerX = canvas.width - 20;
+
+        gameState.distanceTraveled += (gameState.playerSpeed * 0.04) * dt;
+        gameState.roadScroll = (gameState.roadScroll + gameState.playerSpeed * dt) % canvas.height;
+
+        gameState.obstacles.forEach(obs => {
+            obs.y += (gameState.playerSpeed - obs.absoluteSpeed) * dt;
+        }); 
+        gameState.items.forEach(item => item.y += gameState.playerSpeed * dt);
+
+        if (gameState.dashedSpawned) gameState.dashedLineY += gameState.playerSpeed * dt;
+        if (gameState.checkeredSpawned) gameState.checkeredLineY += gameState.playerSpeed * dt;
+
+        gameState.obstacles = gameState.obstacles.filter(obs => obs.y < canvas.height + 50 && obs.y > -150);
+        gameState.items = gameState.items.filter(item => item.y < canvas.height + 50);
+    }
+
+    function updateHUD() {
+        hudRaceNum.innerText = gameState.currentRace;
+        hudFuelBar.style.height = `${gameState.fuel}%`;
+        
+        if (gameState.fuel < 15) {
+            hudFuelBar.style.backgroundColor = gameState.blinkToggle ? '#ff3333' : '#ffff00';
+        } else {
+            hudFuelBar.style.backgroundColor = '#ff3333';
+        }
+
+        hudCoinsVal.innerText = gameState.coins;
+        hudShieldVal.innerText = gameState.reinforcements;
+
+        let timePercent = (gameState.timeLeft / 90) * 100;
+        hudTimeBar.style.height = `${Math.max(0, timePercent)}%`;
+        if (timePercent < 15) {
+            hudTimeBar.style.backgroundColor = gameState.blinkToggle ? '#ffffff' : '#ffff00';
+        } else {
+            hudTimeBar.style.backgroundColor = '#ffffff';
+        }
+    }
+
+    function spawnObjects(dt) {
+        let remainingDistance = gameState.targetDistance - gameState.distanceTraveled;
+        
+        // Abbassato lo spawn del traguardo per evitare l'HUD superiore ingrandito
+        if (remainingDistance <= 60 && !gameState.dashedSpawned) {
+            gameState.dashedLineY = -50;
+            gameState.dashedSpawned = true;
+        }
+        if (remainingDistance <= 25 && !gameState.checkeredSpawned) {
+            gameState.checkeredLineY = -50;
+            gameState.checkeredSpawned = true;
+        }
+
+        if (remainingDistance < 40) return; 
+
+        gameState.spawnTimer += dt;
+        if (gameState.spawnTimer > 1.2) {
+            gameState.spawnTimer = 0;
+            
+            let minX = canvas.width * 0.23;
+            let maxX = canvas.width * 0.70;
+            let spawnX = Math.random() * (maxX - minX) + minX;
+
+            let isFast = Math.random() < 0.35;
+            let enemyAbsoluteSpeed = isFast ? 550 : 150; 
+            
+            let safeColors = isFast ? ['#ff00ff', '#ffffff'] : ['#0055ff', '#00ff44'];
+            let randomColor = safeColors[Math.floor(Math.random() * safeColors.length)];
+
+            gameState.obstacles.push({
+                x: spawnX,
+                y: -70,
+                w: 45,
+                h: 65,
+                color: randomColor,
+                absoluteSpeed: enemyAbsoluteSpeed,
+                isFast: isFast
+            });
+
+            if (Math.random() < 0.40) {
+                let itemX = Math.random() * (maxX - minX) + minX;
+                gameState.items.push({
+                    x: itemX,
+                    y: -100,
+                    w: 35,
+                    h: 35,
+                    type: 'COIN',
+                    color: '#ffff00'
+                });
+            }
+        }
+
+        if (gameState.fuelTimer >= 10) {
+            gameState.fuelTimer = 0;
+            let minX = canvas.width * 0.23;
+            let maxX = canvas.width * 0.70;
+            let fuelX = Math.random() * (maxX - minX) + minX;
+            gameState.items.push({
+                x: fuelX,
+                y: -60,
+                w: 40,
+                h: 40,
+                type: 'FUEL',
+                color: '#ff3333'
+            });
+        }
+    }
+
+    function checkCollisions() {
+        let pW = 45;
+        let pH = 65;
+        let pX = gameState.playerX - pW / 2;
+        let pY = canvas.height * 0.75;
+
+        for (let i = 0; i < gameState.obstacles.length; i++) {
+            let o = gameState.obstacles[i];
+            if (pX < o.x + o.w && pX + pW > o.x && pY < o.y + o.h && pY + pH > o.y) {
+                if (gameState.reinforcements > 0) {
+                    gameState.reinforcements--;
+                    triggerFourColorBump(); 
+                    gameState.obstacles.splice(i, 1);
+                    i--;
+                } else {
+                    endGame(false, "Schianto frontale!");
+                    return;
+                }
+            }
+        }
+
+        for (let i = 0; i < gameState.items.length; i++) {
+            let item = gameState.items[i];
+            if (pX < item.x + item.w && pX + pW > item.x && pY < item.y + item.h && pY + pH > item.y) {
+                if (item.type === 'COIN') {
+                    gameState.coins++;
+                    triggerFlash('#ffff00');
+                } else if (item.type === 'FUEL') {
+                    gameState.fuel = Math.min(gameState.fuel + 35, 100);
+                    triggerFlash('#ff3333');
+                }
+                gameState.items.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+    function drawEverything() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Banchine laterali scure protette
+        ctx.fillStyle = '#110022';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Pista stradale centrale
+        let roadW = canvas.width * 0.60;
+        let roadX = canvas.width * 0.20;
+        ctx.fillStyle = '#251c3a';
+        ctx.fillRect(roadX, 0, roadW, canvas.height);
+
+        // Bordi stradali (fucsia neon)
+        ctx.fillStyle = '#ff0055';
+        ctx.fillRect(roadX - 4, 0, 4, canvas.height);
+        ctx.fillRect(roadX + roadW, 0, 4, canvas.height);
+
+        // Linea tratteggiata centrale (Disegnata solo sotto l'HUD superiore)
+        ctx.fillStyle = '#00ffff';
+        let lineH = 40;
+        let gap = 30;
+        let totalH = lineH + gap;
+        let startY = (gameState.roadScroll % totalH) - totalH;
+
+        for (let y = startY; y < canvas.height; y += totalH) {
+            if (y > 110) { // Non disegna sotto la nuova altezza della barra
+                ctx.fillRect(canvas.width / 2 - 3, y, 6, lineH);
+            }
+        }
+
+        // Linea traguardo imminente (Dashed)
+        if (gameState.dashedSpawned && gameState.dashedLineY < canvas.height + 50) {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(roadX, gameState.dashedLineY, roadW, 16);
+            ctx.fillStyle = '#ffff00';
+            let segs = 9;
+            let segW = roadW / segs;
+            for (let s = 0; s < segs; s += 2) {
+                ctx.fillRect(roadX + (s * segW), gameState.dashedLineY, segW, 16);
+            }
+        }
+
+        // Linea di arrivo a scacchi (Checkered)
+        if (gameState.checkeredSpawned && gameState.checkeredLineY < canvas.height + 50) {
+            let th = 24;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(roadX, gameState.checkeredLineY, roadW, th);
+            ctx.fillStyle = '#fff';
+            let blocks = 12;
+            let bW = roadW / blocks;
+            for (let b = 0; b < blocks; b++) {
+                if (b % 2 === 0) {
+                    ctx.fillRect(roadX + (b * bW), gameState.checkeredLineY, bW, th / 2);
+                } else {
+                    ctx.fillRect(roadX + (b * bW), gameState.checkeredLineY + (th / 2), bW, th / 2);
+                }
+            }
+            ctx.fillStyle = '#ff00ff';
+            ctx.font = 'bold 20px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText("🏁 FINISH 🏁", canvas.width / 2, gameState.checkeredLineY - 15);
+        }
+
+        // Disegno Ostacoli/Nemici (tagliati se salgono sopra la barra HUD)
+        gameState.obstacles.forEach(o => {
+            if (o.y > 105) {
+                ctx.fillStyle = o.color;
+                ctx.fillRect(o.x, o.y, o.w, o.h); 
+                ctx.fillStyle = '#111';
+                ctx.fillRect(o.x + 4, o.y + 12, o.w - 8, 14); 
+                ctx.fillStyle = '#ffffff'; 
+                ctx.fillRect(o.x + 6, o.y + 2, 8, 5); 
+                ctx.fillRect(o.x + o.w - 14, o.y + 2, 8, 5);
+                
+                if (o.isFast) {
+                    ctx.fillStyle = '#ff0055';
+                    ctx.fillRect(o.x + 2, o.y + o.h - 6, o.w - 4, 4);
+                }
+            }
+        });
+
+        // Disegno Oggetti (Monete / Carburante)
+        gameState.items.forEach(item => {
+            if (item.y > 105) {
+                ctx.fillStyle = item.color;
+                if (item.type === 'COIN') {
+                    ctx.beginPath();
+                    ctx.arc(item.x + item.w/2, item.y + item.h/2, item.w/2, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText("$", item.x + item.w/2, item.y + item.h/2);
+                } else {
+                    ctx.fillRect(item.x, item.y, item.w, item.h);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 10px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("GAS", item.x + item.w/2, item.y + item.h/2 + 3);
+                }
+            }
+        });
+
+        // Disegno Giocatore (Macchina Arancione)
+        let pW = 45;
+        let pH = 65;
+        let pX = gameState.playerX - pW / 2;
+        let pY = canvas.height * 0.75;
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(pX - 4, pY + 8, 4, 14);
+        ctx.fillRect(pX + pW, pY + 8, 4, 14);
+        ctx.fillRect(pX - 4, pY + pH - 22, 4, 14);
+        ctx.fillRect(pX + pW, pY + pH - 22, 4, 14);
+
+        ctx.fillStyle = '#ff6600';
+        ctx.fillRect(pX, pY, pW, pH);
+
+        ctx.fillStyle = '#00ffff';
+        ctx.fillRect(pX + 6, pY + 22, pW - 12, 16);
+
+        ctx.fillStyle = '#ff0055';
+        ctx.fillRect(pX + pW/2 - 3, pY, 6, pH);
+
+        if (gameState.reinforcements > 0) {
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(pX - 8, pY - 8, pW + 16, pH + 16);
+        }
+
+        // ===================================================
+        //  HUD BARRA DISTANZA SU CANVAS (CORRETTA ALTEZZA 75px)
+        // ===================================================
+        let hudW = roadW;       
+        let hudX = roadX;       
+        let hudY = 30;          
+        let hudH = 75; // Altezza espansa per non sovrapporre gli elementi
+
+        // Sfondo contenitore
+        ctx.fillStyle = "rgba(5, 0, 16, 0.95)";
+        ctx.fillRect(hudX, hudY - 15, hudW, hudH);
+        ctx.strokeStyle = "#ff007f";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(hudX, hudY - 15, hudW, hudH);
+
+        let rem = Math.ceil(gameState.targetDistance - gameState.distanceTraveled);
+        
+        // 1. Titolo HUD
+        ctx.fillStyle = "#00ffff";
+        ctx.font = "bold 11px Courier New";
+        ctx.textAlign = "center";
+        ctx.fillText("DISTANZA", canvas.width / 2, hudY + 2);
+
+        // 2. Metri Mancanti Grandi (30px) - Ben distanziati sotto il titolo
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 30px Courier New";
+        ctx.fillText(`${rem < 0 ? 0 : rem}m`, canvas.width / 2, hudY + 34);
+
+        // Bandierine di Traguardo della Mini-Barra
+        ctx.font = "14px Courier New";
+        ctx.textAlign = "left";
+        ctx.fillText("🏁", hudX + 8, hudY + 48);
+        ctx.textAlign = "right";
+        ctx.fillText("🏁", hudX + hudW - 8, hudY + 48);
+
+        // Calcoli Mini-Barra interna inferiore
+        let trackStartX = hudX + 32;
+        let trackEndX = hudX + hudW - 32;
+        let trackWidth = trackEndX - trackStartX;
+
+        let pct = gameState.distanceTraveled / gameState.targetDistance;
+        if (pct > 1) pct = 1;
+        if (pct < 0) pct = 0;
+
+        // Disegno Linea Progresso della Mini-Barra
+        ctx.fillStyle = "#331144";
+        ctx.fillRect(trackStartX, hudY + 48, trackWidth, 3);
+        ctx.fillStyle = "#00ffff";
+        ctx.fillRect(trackStartX, hudY + 48, trackWidth * pct, 3);
+
+        // 3. Macchinina Ingrandita (24px) sulla Mini-Barra
+        let carProgressX = trackStartX + (trackWidth * pct);
+        ctx.save();
+        ctx.translate(carProgressX, hudY + 48);
+        ctx.scale(-1, 1); 
+        ctx.font = "24px Courier New";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🏎️", 0, -4);
+        ctx.restore();
+    }
+
+    function endGame(isVictory, message) {
+        showScreen('screen-gameover');
+        const title = document.getElementById('gameover-title');
+        const text = document.getElementById('gameover-text');
+        let finalScore = isVictory ? gameState.score : (gameState.score + gameState.distanceTraveled);
+        
+        if (isVictory) {
+            title.innerText = "CAMPIONE!";
+            title.style.color = "#00ff00";
+            text.innerHTML = `${message}<br><br>Punteggio: ${Math.floor(finalScore)} m!`;
+        } else {
+            title.innerText = "GAME OVER";
+            title.style.color = "#ff0000";
+            text.innerHTML = `${message}<br><br>Gara interrotta alla numero ${gameState.currentRace}.<br>Punteggio: ${Math.floor(finalScore)} punti.`;
+        }
+        checkAndShowRecordOption(finalScore);
+    }
+
+    showScreen('screen-menu');
+</script>
+
+</body>
+</html>

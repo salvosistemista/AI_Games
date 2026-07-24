@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Frogger 3D - Tartarughe più a galla</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #050510;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            touch-action: none;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-size: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .highlight {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        #coin-score {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        #level-indicator {
+            color: #ffcc00;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        #screen-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px 50px;
+            border-radius: 15px;
+            border: 2px solid #4CAF50;
+            display: none;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+            z-index: 20;
+            min-width: 280px;
+        }
+        h1 { margin-top: 0; color: #4CAF50; font-size: 36px; text-transform: uppercase; }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 15px 2px 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover { background-color: #45a049; transform: scale(1.05); }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            text-align: center;
+            pointer-events: none;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 20px;
+            z-index: 10;
+            width: 80%;
+            max-width: 500px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui">
+        <div>LIVELLO: <span id="level-indicator">1 / 5</span></div>
+        <div>Punti: <span id="score" class="highlight">0</span></div>
+        <div>Monete: <span id="coin-score">0</span></div>
+        <div>Vite: <span id="lives" class="highlight">3</span></div>
+    </div>
+
+    <div id="screen-overlay">
+        <h1 id="overlay-title">Frogger 3D</h1>
+        <p id="overlay-msg">Benvenuto!</p>
+        <button id="overlay-btn" onclick="handleOverlayClick()">Inizia</button>
+    </div>
+
+    <div id="instructions">Frecce/WASD per muoverti. **Doppio Tap/Spazio** per lanciare la moneta. Tartarughe a galla il 20% in più!</div>
+
+    <script>
+        let scene, camera, renderer;
+        let frog;
+        let lanes = [];
+        let coins = [];
+        let score = 0;
+        let coinCount = 0;
+        let lives = 3;
+        let currentLevel = 1;
+        const maxLevels = 5;
+        let gameState = 'START';
+
+        const gridCount = 21; 
+        const gridWidth = 26; 
+        const stepSize = 2;   
+        
+        const levelSpeedMultipliers = {
+            1: 0.35,
+            2: 0.55,
+            3: 0.80,
+            4: 1.10,
+            5: 1.45
+        };
+
+        const TYPE_SAFE = 'safe';
+        const TYPE_ROAD = 'road';
+        const TYPE_TRAIN = 'train';
+        const TYPE_WATER = 'water';
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const minSwipeDistance = 25;
+        
+        let lastTapTime = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+            scene.fog = new THREE.FogExp2(0x050510, 0.015);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+            dirLight.position.set(10, 24, 10);
+            scene.add(dirLight);
+
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            generateMap();
+            createFrog();
+            updateCamera();
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', handleKeyDown);
+
+            window.addEventListener('touchstart', handleTouchStart, { passive: false });
+            window.addEventListener('touchend', handleTouchEnd, { passive: false });
+            window.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+            
+            window.addEventListener('dblclick', throwCoinAction);
+
+            showOverlay('Frogger 3D', 'Bilanciamento superato: ora le tartarughe restano emerse il 20% del tempo in più per facilitare i passaggi.', 'Inizia Partita', 'START');
+
+            animate();
+        }
+
+        function createFrog() {
+            if (frog) scene.remove(frog);
+
+            const geometry = new THREE.BoxGeometry(1.3, 1.1, 1.3);
+            const material = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+            frog = new THREE.Mesh(geometry, material);
+            
+            const eyeGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-0.35, 0.55, -0.45);
+            const eyeR = eyeL.clone();
+            eyeR.position.x = 0.35;
+            frog.add(eyeL, eyeR);
+
+            resetFrogPosition();
+            scene.add(frog);
+        }
+
+        function resetFrogPosition() {
+            if (frog) {
+                frog.position.set(0, 0.55, (gridCount/2) * stepSize); 
+                frog.rotation.y = 0;
+            }
+        }
+
+        function generateMap() {
+            lanes.forEach(lane => {
+                lane.obstacles.forEach(obs => scene.remove(obs));
+                if (lane.trainMesh) scene.remove(lane.trainMesh);
+                if (lane.pole) scene.remove(lane.pole);
+            });
+            lanes = [];
+
+            coins.forEach(coin => scene.remove(coin));
+            coins = [];
+
+            const toRemove = [];
+            scene.traverse(child => {
+                if (child instanceof THREE.Mesh && child !== frog && !child.parent.isGroup) {
+                    toRemove.push(child);
+                }
+            });
+            toRemove.forEach(mesh => scene.remove(mesh));
+
+            const laneTypes = [
+                TYPE_SAFE, TYPE_ROAD, TYPE_ROAD, TYPE_ROAD, TYPE_SAFE, 
+                TYPE_TRAIN, TYPE_SAFE, TYPE_WATER, TYPE_WATER, TYPE_WATER, 
+                TYPE_WATER, TYPE_SAFE, TYPE_ROAD, TYPE_ROAD, TYPE_SAFE,
+                TYPE_TRAIN, TYPE_ROAD, TYPE_WATER, TYPE_WATER, TYPE_SAFE, TYPE_SAFE
+            ];
+
+            const speedMult = levelSpeedMultipliers[currentLevel];
+
+            for(let i=0; i<gridCount; i++) {
+                let type = laneTypes[i];
+                let zPos = (gridCount/2 - i) * stepSize;
+                
+                let terrainGeo = new THREE.BoxGeometry(gridWidth, 0.2, stepSize);
+                let terrainMat;
+
+                if (type === TYPE_SAFE) terrainMat = new THREE.MeshLambertMaterial({ color: 0x1e4620 }); 
+                if (type === TYPE_ROAD) terrainMat = new THREE.MeshLambertMaterial({ color: 0x282828 }); 
+                if (type === TYPE_TRAIN) terrainMat = new THREE.MeshLambertMaterial({ color: 0x3d2b1f }); 
+                if (type === TYPE_WATER) terrainMat = new THREE.MeshLambertMaterial({ color: 0x1034a6 }); 
+
+                let terrain = new THREE.Mesh(terrainGeo, terrainMat);
+                terrain.position.set(0, -0.1, zPos);
+                scene.add(terrain);
+
+                let baseSpeed = 0.06 + Math.random() * 0.08;
+                let laneData = {
+                    type: type,
+                    z: zPos,
+                    obstacles: [],
+                    direction: Math.random() > 0.5 ? 1 : -1,
+                    speed: baseSpeed * speedMult,
+                    hasTurtles: false
+                };
+
+                if (type === TYPE_ROAD) {
+                    let count = 2; 
+                    for(let j=0; j<count; j++) {
+                        let car = createCar();
+                        car.position.set(-gridWidth/2 + (gridWidth/count)*j + Math.random()*3, 0.5, zPos);
+                        scene.add(car);
+                        laneData.obstacles.push(car);
+                    }
+                } else if (type === TYPE_TRAIN) {
+                    laneData.speed = 0.38 * speedMult; 
+                    laneData.trainTimer = Math.random() * 4;
+                    laneData.trainActive = false;
+                    
+                    let poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8);
+                    let poleMat = new THREE.MeshLambertMaterial({color: 0x888888});
+                    let pole = new THREE.Mesh(poleGeo, poleMat);
+                    pole.position.set(gridWidth/2 - 1.5, 0.9, zPos);
+                    
+                    let lightGeo = new THREE.SphereGeometry(0.25, 16, 16);
+                    let lightMat = new THREE.MeshBasicMaterial({color: 0x00ff00});
+                    let light = new THREE.Mesh(lightGeo, lightMat);
+                    light.position.set(0, 0.9, 0);
+                    pole.add(light);
+                    scene.add(pole);
+                    
+                    laneData.pole = pole;
+                    laneData.light = light;
+                } else if (type === TYPE_WATER) {
+                    let previousLane = lanes[i - 1];
+                    let isTurtle = Math.random() > 0.4;
+                    
+                    if (previousLane && previousLane.type === TYPE_WATER && previousLane.hasTurtles) {
+                        isTurtle = false; 
+                    }
+
+                    let count = 3;
+                    laneData.speed = (0.03 + Math.random()*0.03) * speedMult;
+                    if(isTurtle) laneData.hasTurtles = true;
+
+                    for(let j=0; j<count; j++) {
+                        let obs;
+                        if(isTurtle) {
+                            obs = createTurtleGroup();
+                            obs.isTurtle = true;
+                            obs.diveTimer = Math.random() * 3; 
+                            obs.isSubmerged = false;
+                        } else {
+                            obs = createLog();
+                            obs.isLog = true;
+                        }
+                        obs.position.set(-gridWidth/2 + (gridWidth/count)*j, 0.2, zPos);
+                        scene.add(obs);
+                        laneData.obstacles.push(obs);
+                    }
+                }
+                lanes.push(laneData);
+            }
+
+            spawnCoins();
+        }
+
+        function createCar() {
+            const car = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(1.9, 0.7, 1.1);
+            const colors = [0xd32f2f, 0x1976d2, 0xfbc02d, 0x388e3c, 0x7b1fa2];
+            const bodyMat = new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random()*colors.length)] });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.35;
+            car.add(body);
+
+            const cabinGeo = new THREE.BoxGeometry(1.0, 0.45, 0.9);
+            const cabinMat = new THREE.MeshLambertMaterial({ color: 0xeeeeee });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(-0.1, 0.8, 0);
+            car.add(cabin);
+            return car;
+        }
+
+        function createLog() {
+            const geo = new THREE.CylinderGeometry(0.4, 0.4, 3.8, 8);
+            geo.rotateZ(Math.PI / 2); 
+            const mat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
+            return new THREE.Mesh(geo, mat);
+        }
+
+        function createTurtleGroup() {
+            const group = new THREE.Group();
+            const geo = new THREE.SphereGeometry(0.45, 8, 8);
+            const mat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
+            for(let i=0; i<2; i++) {
+                let t = new THREE.Mesh(geo, mat);
+                t.scale.set(1.3, 0.55, 0.9);
+                t.position.x = i * 1.1;
+                group.add(t);
+            }
+            return group;
+        }
+
+        function createTrain() {
+            const train = new THREE.Group();
+            const mat = new THREE.MeshLambertMaterial({ color: 0xb71c1c });
+            for(let i=0; i<3; i++) {
+                let vagone = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.4, 1.3), mat);
+                vagone.position.set(i * 5.2, 0.7, 0);
+                train.add(vagone);
+            }
+            return train;
+        }
+
+        function spawnCoins() {
+            const coinGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16);
+            coinGeo.rotateX(Math.PI / 2); 
+            const coinMat = new THREE.MeshPhongMaterial({ color: 0xffd700, shininess: 80, emissive: 0x3a3000 });
+
+            let validLanes = lanes.filter(l => l.type === TYPE_SAFE || l.type === TYPE_WATER);
+            
+            for(let i = 0; i < 6; i++) {
+                let targetLane = validLanes[Math.floor(Math.random() * validLanes.length)];
+                let coin = new THREE.Mesh(coinGeo, coinMat);
+                let gridX = (Math.floor(Math.random() * 10) - 5) * 2; 
+                
+                coin.position.set(gridX, 0.6, targetLane.z);
+                scene.add(coin);
+                coins.push(coin);
+            }
+        }
+
+        function throwCoinAction() {
+            if (gameState !== 'PLAYING' || coinCount <= 0) return;
+
+            coinCount--;
+            updateScoreUI();
+
+            let targetZAhead = frog.position.z - stepSize;
+            let targetZCurrent = frog.position.z;
+
+            lanes.forEach(lane => {
+                let isAhead = Math.abs(lane.z - targetZAhead) < 0.5;
+                let isCurrent = Math.abs(lane.z - targetZCurrent) < 0.5;
+                
+                if ((isAhead || isCurrent) && lane.type === TYPE_WATER && lane.hasTurtles) {
+                    lane.direction *= -1;
+
+                    lane.obstacles.forEach(turt => {
+                        if(turt.position.y > -0.1) {
+                            turt.position.y += 0.4;
+                            setTimeout(() => { turt.position.y -= 0.4; }, 150);
+                        }
+                    });
+                }
+            });
+        }
+
+        function moveFrog(direction) {
+            if (gameState !== 'PLAYING') return;
+
+            let nextX = frog.position.x;
+            let nextZ = frog.position.z;
+            let moved = false;
+
+            if (direction === 'up') {
+                nextZ -= stepSize;
+                frog.rotation.y = 0;
+                moved = true;
+            }
+            if (direction === 'down') {
+                nextZ += stepSize;
+                frog.rotation.y = Math.PI;
+                moved = true;
+            }
+            if (direction === 'left') {
+                nextX -= stepSize;
+                frog.rotation.y = Math.PI / 2;
+                moved = true;
+            }
+            if (direction === 'right') {
+                nextX += stepSize;
+                frog.rotation.y = -Math.PI / 2;
+                moved = true;
+            }
+
+            if (moved) {
+                if (Math.abs(nextX) < gridWidth / 2 && nextZ <= (gridCount/2)*stepSize) {
+                    frog.position.x = nextX;
+                    frog.position.z = nextZ;
+                    
+                    let currentLaneIndex = gridCount/2 - (nextZ / stepSize);
+                    if (currentLaneIndex > score) {
+                        score = Math.floor(currentLaneIndex);
+                        updateScoreUI();
+                    }
+                }
+                
+                if (nextZ < -(gridCount/2 - 1) * stepSize) {
+                    advanceLevel();
+                }
+            }
+        }
+
+        function updateScoreUI() {
+            let totalScore = score + ((currentLevel - 1) * 20) + (coinCount * 10);
+            document.getElementById('score').innerText = totalScore;
+            document.getElementById('coin-score').innerText = coinCount;
+        }
+
+        function showOverlay(title, msg, btnText, state) {
+            gameState = state;
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-msg').innerText = msg;
+            document.getElementById('overlay-btn').innerText = btnText;
+            document.getElementById('screen-overlay').style.display = 'block';
+        }
+
+        function handleOverlayClick() {
+            document.getElementById('screen-overlay').style.display = 'none';
+            if (gameState === 'START' || gameState === 'GAMEOVER' || gameState === 'WIN') {
+                currentLevel = 1;
+                lives = 3;
+                score = 0;
+                coinCount = 0;
+                document.getElementById('lives').innerText = lives;
+                updateScoreUI();
+                document.getElementById('level-indicator').innerText = currentLevel + " / " + maxLevels;
+                generateMap();
+                resetFrogPosition();
+                gameState = 'PLAYING';
+            } else if (gameState === 'NEXT_LEVEL') {
+                resetFrogPosition();
+                gameState = 'PLAYING';
+            }
+        }
+
+        function advanceLevel() {
+            if (currentLevel < maxLevels) {
+                currentLevel++;
+                document.getElementById('level-indicator').innerText = currentLevel + " / " + maxLevels;
+                generateMap();
+                showOverlay(
+                    `Livello ${currentLevel} Completato!`, 
+                    `Ottimo lavoro! Preparati, la velocità degli ostacoli è aumentata.`, 
+                    'Continua', 
+                    'NEXT_LEVEL'
+                );
+            } else {
+                let finale = document.getElementById('score').innerText;
+                showOverlay(
+                    'VITTORIA FINALE!', 
+                    `Hai superato tutti e 5 i livelli! Punteggio finale: ${finale}`, 
+                    'Rigioca', 
+                    'WIN'
+                );
+            }
+        }
+
+        function triggerDeath(msg) {
+            lives--;
+            document.getElementById('lives').innerText = lives;
+            
+            if(lives <= 0) {
+                showOverlay('Game Over', `${msg} Hai esaurito tutte le vite al Livello ${currentLevel}.`, "Riprova dall'inizio", 'GAMEOVER');
+            } else {
+                resetFrogPosition();
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') moveFrog('up');
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') moveFrog('down');
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveFrog('left');
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveFrog('right');
+            if (e.key === ' ') throwCoinAction();
+        }
+
+        function handleTouchStart(e) {
+            let currentTime = new Date().getTime();
+            let tapLength = currentTime - lastTapTime;
+            
+            if (tapLength < 300 && tapLength > 0) {
+                throwCoinAction();
+                e.preventDefault();
+                touchStartX = 0;
+                touchStartY = 0;
+                return; 
+            }
+            
+            lastTapTime = currentTime;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchStartX || !touchStartY) return;
+
+            let touchEndX = e.changedTouches[0].clientX;
+            let touchEndY = e.changedTouches[0].clientY;
+
+            let diffX = touchEndX - touchStartX;
+            let diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > minSwipeDistance) {
+                    if (diffX > 0) moveFrog('right');
+                    else moveFrog('left');
+                }
+            } else {
+                if (Math.abs(diffY) > minSwipeDistance) {
+                    if (diffY > 0) moveFrog('down');
+                    else moveFrog('up');
+                }
+            }
+            touchStartX = 0;
+            touchStartY = 0;
+        }
+
+        function updateCamera() {
+            if (!frog) return;
+            camera.position.set(frog.position.x, frog.position.y + 13, frog.position.z + 11);
+            camera.lookAt(frog.position.x, frog.position.y, frog.position.z - 2.2);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameState === 'PLAYING') {
+                const delta = 0.016; 
+                let onPlatform = false;
+                let platformSpeed = 0;
+                let platformDir = 1;
+
+                coins.forEach((coin, index) => {
+                    coin.rotation.y += 0.04; 
+
+                    let coinLane = lanes.find(l => Math.abs(coin.position.z - l.z) < 0.5);
+                    if (coinLane && coinLane.type === TYPE_WATER) {
+                        coin.position.x += coinLane.speed * coinLane.direction;
+                        if (coinLane.direction === 1 && coin.position.x > gridWidth/2) coin.position.x = -gridWidth/2;
+                        if (coinLane.direction === -1 && coin.position.x < -gridWidth/2) coin.position.x = gridWidth/2;
+                    }
+
+                    let dist = frog.position.distanceTo(coin.position);
+                    if (dist < 1.1) {
+                        scene.remove(coin);
+                        coins.splice(index, 1);
+                        coinCount++;
+                        updateScoreUI();
+                    }
+                });
+
+                lanes.forEach(lane => {
+                    if (lane.type === TYPE_ROAD || lane.type === TYPE_WATER) {
+                        lane.obstacles.forEach(obs => {
+                            obs.position.x += lane.speed * lane.direction;
+
+                            if (lane.direction === 1 && obs.position.x > gridWidth/2 + 2) obs.position.x = -gridWidth/2 - 2;
+                            if (lane.direction === -1 && obs.position.x < -gridWidth/2 - 2) obs.position.x = gridWidth/2 + 2;
+
+                            // MODIFICA TARTARUGHE: Modificato il ciclo di immersione (+20% emersione)
+                            if (obs.isTurtle) {
+                                obs.diveTimer += delta;
+                                let cycleTime = currentLevel === 1 ? 5 : 4;
+                                let cycle = obs.diveTimer % cycleTime;
+                                
+                                // Prima la soglia di immersione era al 55%/65% del tempo di ciclo.
+                                // Abbassando la soglia in cui vanno sotto (ora dal 72% in poi), rimangono a galla il 20% in più.
+                                if (cycle > (cycleTime * 0.79)) {
+                                    obs.position.y = -0.8; 
+                                    obs.isSubmerged = true;
+                                } else if (cycle > (cycleTime * 0.72)) {
+                                    obs.position.y = -0.2;
+                                    obs.isSubmerged = false; 
+                                } else {
+                                    if(obs.position.y < 0.3) obs.position.y = 0.2;
+                                    obs.isSubmerged = false;
+                                }
+                            }
+
+                            if (Math.abs(frog.position.z - lane.z) < 0.5) {
+                                let distanceX = Math.abs(frog.position.x - obs.position.x);
+                                
+                                if (lane.type === TYPE_ROAD && distanceX < 1.4) {
+                                    triggerDeath("Sei stato investito!");
+                                }
+                                
+                                if (lane.type === TYPE_WATER) {
+                                    if (obs.isLog && distanceX < 2.1) {
+                                        onPlatform = true;
+                                        platformSpeed = lane.speed;
+                                        platformDir = lane.direction;
+                                    }
+                                    if (obs.isTurtle && !obs.isSubmerged && (frog.position.x >= obs.position.x - 0.2 && frog.position.x <= obs.position.x + 1.3)) {
+                                        onPlatform = true;
+                                        platformSpeed = lane.speed;
+                                        platformDir = lane.direction;
+                                    }
+                                }
+                            }
+                        });
+
+                        if (Math.abs(frog.position.z - lane.z) < 0.5 && lane.type === TYPE_WATER && !onPlatform) {
+                            triggerDeath("Sei caduto in acqua!");
+                        }
+                    }
+
+                    if (lane.type === TYPE_TRAIN) {
+                        lane.trainTimer += delta;
+                        let trainPeriod = currentLevel === 1 ? 9 : 7;
+                        let cycle = lane.trainTimer % trainPeriod;
+                        
+                        if (cycle > (trainPeriod - 2.5)) {
+                            lane.light.material.color.setHex(0xff0000); 
+                        } else {
+                            lane.light.material.color.setHex(0x00ff00); 
+                        }
+
+                        if (cycle > (trainPeriod - 2.0) && !lane.trainActive) {
+                            lane.trainMesh = createTrain();
+                            lane.trainMesh.position.set(lane.direction === 1 ? -gridWidth : gridWidth, 0, lane.z);
+                            scene.add(lane.trainMesh);
+                            lane.trainActive = true;
+                        }
+
+                        if (lane.trainActive) {
+                            lane.trainMesh.position.x += lane.speed * lane.direction;
+                            
+                            if (Math.abs(frog.position.z - lane.z) < 0.5) {
+                                let hitTrain = false;
+                                
+                                for(let w = 0; w < 3; w++) {
+                                    let vagoneX = lane.trainMesh.position.x + (w * 5.2);
+                                    if (Math.abs(frog.position.x - vagoneX) < 2.4) {
+                                        hitTrain = true;
+                                        break;
+                                    }
+                                }
+
+                                if (hitTrain) {
+                                    triggerDeath("Travolto dal treno!");
+                                }
+                            }
+
+                            if (Math.abs(lane.trainMesh.position.x) > gridWidth * 1.8) {
+                                scene.remove(lane.trainMesh);
+                                lane.trainActive = false;
+                            }
+                        }
+                    }
+                });
+
+                if (onPlatform) {
+                    frog.position.x += platformSpeed * platformDir;
+                    if (Math.abs(frog.position.x) > gridWidth / 2) {
+                        triggerDeath("Trascinato fuori dai bordi!");
+                    }
+                }
+
+                updateCamera();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

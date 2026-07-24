@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Orbit & Echoes — I Sentieri delle Stelle</title>
+<style>
+:root{
+  --bg:#12112a; --panel:#1c1a38; --panel2:#242150; --line:#3d3a6e;
+  --ink:#e8e6ff; --dim:#9b98c9; --gold:#ffc46b; --teal:#5fe0c8;
+  --danger:#ff7b6b; --ok:#7fe08a;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:none}
+#cv{position:fixed;inset:0;display:block}
+.narr{font-family:Palatino,"Palatino Linotype",Georgia,serif;line-height:1.55}
+/* ---------- HUD ---------- */
+#hud{position:fixed;top:0;left:0;right:0;padding:8px 10px;display:flex;gap:6px;align-items:center;
+  pointer-events:none;z-index:5;flex-wrap:wrap}
+.hudBox{background:#14122bd9;border:1px solid var(--line);border-radius:10px;padding:5px 9px;
+  font-size:12px;display:flex;align-items:center;gap:6px;pointer-events:auto}
+.bar{width:70px;height:9px;border-radius:6px;background:#0c0b1d;overflow:hidden;border:1px solid #34315f}
+.bar>i{display:block;height:100%;border-radius:6px;transition:width .25s}
+#fuelBar>i{background:linear-gradient(90deg,#5fb0e0,var(--teal))}
+#hullBar>i{background:linear-gradient(90deg,#e0663f,#ffc46b)}
+#credChip{color:var(--gold);font-weight:700}
+#dayChip{color:var(--dim)}
+#navChip{cursor:pointer;color:var(--teal);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:40vw}
+#hudBtns{position:fixed;bottom:14px;display:flex;flex-direction:column;gap:10px;z-index:5}
+#hudBtns.right{right:12px}#hudBtns.left{left:12px}
+.round{width:54px;height:54px;border-radius:50%;background:#1c1a38ee;border:1px solid var(--line);
+  color:var(--ink);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:2px;cursor:pointer;user-select:none}
+.round:active{background:var(--panel2)}
+.round b{font-size:17px;line-height:1}
+#dockBtn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:5;display:none;
+  background:var(--teal);color:#0b2822;border:none;border-radius:24px;padding:12px 26px;
+  font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 18px #5fe0c855}
+#toasts{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:50;display:flex;
+  flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(92vw,420px)}
+.toast{background:#201d44f0;border:1px solid var(--line);border-left:3px solid var(--gold);
+  border-radius:10px;padding:8px 14px;font-size:13px;max-width:100%;animation:tin .3s ease}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+/* ---------- Overlay ---------- */
+#ov{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+  background:#0a0920c9;padding:12px}
+#ov.show{display:flex}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:min(94vw,460px);
+  max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px #000a}
+.pHead{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.pHead h2{font-size:17px;flex:1}
+.pHead .sub{font-size:12px;color:var(--dim)}
+.pBody{padding:14px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.btn{display:block;width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+  border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:9px;
+  text-align:left}
+.btn:active{background:#2e2a66}
+.btn.small{padding:8px 10px;font-size:13px;width:auto;display:inline-block;margin:0}
+.btn.gold{background:#3a2f16;border-color:#6e5a2c;color:var(--gold)}
+.btn.teal{background:#153531;border-color:#2c6e63;color:var(--teal)}
+.btn.red{background:#3a1c18;border-color:#6e3a2c;color:var(--danger)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.xBtn{background:none;border:none;color:var(--dim);font-size:22px;cursor:pointer;padding:2px 8px}
+.row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed #2e2b58;font-size:13px}
+.row:last-child{border-bottom:none}
+.row .grow{flex:1}
+.tag{font-size:11px;color:var(--dim)}
+.gd{color:var(--gold)} .tl{color:var(--teal)} .rd{color:var(--danger)} .gr{color:var(--ok)}
+.trustBar{height:8px;border-radius:5px;background:#0c0b1d;border:1px solid #34315f;overflow:hidden;margin:6px 0}
+.trustBar>i{display:block;height:100%;background:linear-gradient(90deg,#8a7bd8,var(--gold))}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:none;color:var(--dim);padding:11px 4px;font-size:13px;
+  font-weight:700;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+.gloss{color:var(--gold);border-bottom:1px dotted var(--gold);cursor:pointer}
+table.merc{width:100%;border-collapse:collapse;font-size:11.5px}
+table.merc th,table.merc td{padding:5px 4px;text-align:right;border-bottom:1px solid #2e2b58}
+table.merc th:first-child,table.merc td:first-child{text-align:left}
+table.merc th{color:var(--dim);font-weight:600}
+/* ---------- Titolo ---------- */
+#title{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;background:radial-gradient(ellipse at 50% 30%,#221f4d 0%,#12112a 60%);gap:6px;
+  padding:20px;text-align:center}
+#title h1{font-family:Palatino,Georgia,serif;font-size:clamp(28px,7vw,44px);color:var(--gold);
+  letter-spacing:1px;text-shadow:0 0 30px #ffc46b33}
+#title .st{color:var(--teal);font-size:clamp(14px,3.5vw,18px);font-style:italic;margin-bottom:22px;
+  font-family:Palatino,Georgia,serif}
+#title .btn{width:min(78vw,280px);text-align:center}
+#title .ver{position:absolute;bottom:12px;color:var(--dim);font-size:11px}
+#orbits{position:absolute;inset:0;pointer-events:none;opacity:.5}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud" style="display:none">
+  <div class="hudBox">⛽<span class="bar" id="fuelBar"><i></i></span></div>
+  <div class="hudBox">🛡<span class="bar" id="hullBar"><i></i></span></div>
+  <div class="hudBox" id="credChip">0 ¢</div>
+  <div class="hudBox" id="dayChip">G.1</div>
+  <div class="hudBox" id="navChip" title="Cambia destinazione">➤ —</div>
+</div>
+<div id="hudBtns" class="right" style="display:none">
+  <div class="round" id="btnCargo"><b>📦</b><span id="cargoN">0/20</span></div>
+  <div class="round" id="btnDiary"><b>📖</b><span>Diario</span></div>
+  <div class="round" id="btnMenu"><b>≡</b><span>Menu</span></div>
+</div>
+<button id="dockBtn">Attracca</button>
+<div id="toasts"></div>
+<div id="ov"></div>
+<div id="title">
+  <canvas id="orbits"></canvas>
+  <h1>Orbit &amp; Echoes</h1>
+  <div class="st">I Sentieri delle Stelle</div>
+  <button class="btn gold" id="tNew">Nuova partita</button>
+  <button class="btn teal" id="tCont" style="display:none">Continua il viaggio</button>
+  <button class="btn" id="tInfo">INFO — Il diario del Cronista</button>
+  <button class="btn" id="tOpt">Opzioni</button>
+  <div class="ver" id="verLbl"></div>
+</div>
+<script>
+"use strict";
+/* ============================================================
+   ORBIT & ECHOES — I Sentieri delle Stelle
+   ============================================================ */
+const GAME_VERSION = "1.2";
+const SAVE_KEY = "orbitEchoes_save";
+const OPT_KEY  = "orbitEchoes_opt";
+
+/* ---------- Costanti di bilanciamento (validate in simulazione) ---------- */
+const CELL=32, MAP=80, W=MAP*CELL;             // mondo 80x80 celle
+const DAY_LEN=100;                              // secondi reali per giornata
+const START_CREDITS=50, HOLD_BASE=20;
+const FUEL_MAX=100, FUEL_PER_CREDIT=2, FUEL_PER_PX=0.0088;
+const HULL_BASE=100, REPAIR_PER_CREDIT=1.5;
+const DAILY_CAP=15, OSC=0.20, SPOIL_DAYS=3;
+const PIRATE_CHANCE=0.20, PIRATE_COOLDOWN=55;
+const FLEE_BASE=0.50, FLEE_PER_ENGINE=0.15, TRICK=0.35;
+const PAY_CRED=0.20, PAY_CARGO=0.30;
+const UPG = {
+  motore:{name:"Motore",     desc:"+15% velocità e fuga per livello", cost:[150,300,600]},
+  stiva :{name:"Stiva",      desc:"+10 unità di carico per livello",  cost:[120,280,550]},
+  scafo :{name:"Scafo rinf.",desc:"+25 scafo max e −20% danni",       cost:[130,300,600]}
+};
+const TRUST_PER=15, T_OSPITE=40, T_CUSTODE=120;
+const WRECK_RESPAWN=2, WRECK_TIME=5, WRECK_R=52;
+
+/* ---------- Merci ---------- */
+const GOODS = {
+  frutti:  {name:"Frutti stellari", icon:"🍑", perish:true},
+  spezie:  {name:"Spezie",          icon:"🌶"},
+  minerale:{name:"Minerale ferroso",icon:"⛏"},
+  ghiaccio:{name:"Ghiaccio d'acqua",icon:"🧊"},
+  tessuti: {name:"Tessuti lumin.",  icon:"🧵"},
+  manufatti:{name:"Manufatti antichi",icon:"🏺"}
+};
+const GOOD_IDS = Object.keys(GOODS);
+
+/* ---------- Pianeti ----------
+   buy: merci prodotte (prezzo base d'acquisto per il giocatore)
+   sell: prezzo base di vendita per ogni merce (quanto il pianeta ti paga) */
+const PLANETS = [
+ {id:"verdalia", name:"Verdalia", short:"Verdalia", people:"I Radicati", col:"#6fce7e", col2:"#3f9b52",
+  cx:14, cy:61, r:66, kind:"garden",
+  buy:{frutti:8, spezie:6},
+  sell:{frutti:6, spezie:5, minerale:10, ghiaccio:6, tessuti:14, manufatti:15},
+  intro:"Pianeta-giardino dalle foreste che cantano. I Radicati misurano il tempo in fioriture e non piantano mai un seme da soli."},
+ {id:"brace", name:"Brace", short:"Brace", people:"I Forgiatori", col:"#e0663f", col2:"#a13c22",
+  cx:64, cy:58, r:62, kind:"forge",
+  buy:{minerale:5},
+  sell:{frutti:20, spezie:8, minerale:4, ghiaccio:9, tessuti:9, manufatti:15},
+  intro:"Mondo vulcanico di miniere e forge. I Forgiatori parlano poco: battono il ferro come fosse un linguaggio."},
+ {id:"velo", name:"Velo", short:"Velo", people:"I Sussurranti", col:"#a8d8f0", col2:"#6fa8cf",
+  cx:15, cy:14, r:60, kind:"ice",
+  buy:{ghiaccio:4},
+  sell:{frutti:13, spezie:12, minerale:7, ghiaccio:3, tessuti:14, manufatti:15},
+  intro:"Pianeta di ghiacci e nebbie perenni. I Sussurranti comunicano a gesti: qui il silenzio è sacro."},
+ {id:"telaria", name:"Telaria", short:"Telaria", people:"I Tessitori", col:"#b98ee0", col2:"#8659b5",
+  cx:58, cy:15, r:60, kind:"loom",
+  buy:{tessuti:7},
+  sell:{frutti:20, spezie:8, minerale:10, ghiaccio:6, tessuti:5, manufatti:15},
+  intro:"Città-alveare di telai sospesi. Per i Tessitori ogni stoffa È un racconto: ogni nodo una sillaba, ogni colore un tono di voce."},
+ {id:"approdo", name:"L'Approdo di Ruggine", short:"Approdo", people:"I Recuperanti", col:"#b06a45", col2:"#7a4527",
+  cx:67, cy:35, r:52, kind:"station",
+  buy:{},
+  sell:{frutti:13, spezie:8, minerale:7, ghiaccio:6, tessuti:10, manufatti:[55,95]},
+  intro:"Non un pianeta: una stazione costruita dentro un relitto colossale. Gente pratica, mezzo mercanti e mezzo contrabbandieri."}
+];
+const PIDX = {}; PLANETS.forEach((p,i)=>PIDX[p.id]=i);
+
+/* ---------- Zone del mondo (in celle) ---------- */
+const BELT = {x0:34, x1:46};                                  // fascia detriti verticale
+const AST_FIELDS = [ {x:30,y:28,rx:9,ry:6}, {x:52,y:44,rx:8,ry:5}, {x:22,y:40,rx:7,ry:5} ];
+const STORM_N = 2;
+const WRECK_POS = [ [36,10],[42,20],[38,33],[44,47],[37,58],[43,69] ];
+const APPRODO_DANGER_R = 14;                                  // celle
+
+/* ---------- I 15 racconti — La Mappa dei Ricordi ---------- */
+const STORIES = {
+verdalia:[
+{t:"Il Tempo delle Fioriture", x:"Ti siedono davanti senza fretta, come fanno con tutto. «Voi contate i giorni», dice l'anziana, e le sue dita verdi sfiorano il muschio del tavolo. «Noi contiamo le fioriture. Una fioritura è il tempo che serve a un fiore per aprirsi, guardare il cielo, e decidere che ne è valsa la pena.» Ti spiega che i Radicati non piantano mai un seme da soli: servono due mani, perché nessuna vita dovrebbe cominciare in solitudine.\nQuando te ne vai, ti accorgi che qualcuno ti ha infilato nella tasca un seme piccolissimo, avvolto in una foglia. Non sai chi. Sul retro della foglia, inciso col pollice: «Per quando troverai la terra giusta.»"},
+{t:"La Foresta che Canta", x:"C'è una valle, su Verdalia, dove gli alberi hanno il tronco cavo e forato dal vento. Quando la brulla stagione secca arriva, la valle canta: un suono basso, lungo, che si sente nel petto prima che nelle orecchie. I Radicati vi portano i loro morti.\n«Non li seppelliamo», ti dice il custode della valle. «Li affidiamo. Le radici li bevono piano, e la voce dell'albero cambia di un soffio. Se ascolti bene, in questa valle ci sono tutte le voci di chi ci ha lasciato.» Poi sorride: «Per questo non abbiamo cimiteri. Abbiamo cori.»"},
+{t:"Il Seme Caduto dalle Stelle", x:"L'anziana ti porta nel cuore della foresta, dove nessun mercante è mai entrato. In mezzo a una radura cresce un albero che non somiglia a nessun altro: la corteccia ha riflessi di metallo, e le foglie sono orientate tutte verso lo stesso punto del cielo, giorno e notte.\n«Il Primo Seme non è nato qui», sussurra. «Cadde dal cielo in una notte senza luna, dentro un guscio che bruciava. I nostri antenati lo piantarono, e da lui discende ogni verde di Verdalia.»\nTi guarda a lungo prima di aggiungere l'ultima cosa: «Il guscio parlava. Ripeteva una parola sola, finché non si spense. La parola era un nome. Il nome di un luogo che non è su nessuna mappa.»"}],
+brace:[
+{t:"Il Linguaggio del Martello", x:"Il fabbro non ti rivolge la parola per tutta la contrattazione. Batte il ferro, e la sua apprendista traduce. Solo dopo, quando ha finito, ti spiega lei: «Non è scortesia. Su Brace le parole si consumano come tutto il resto: il calore le mangia, la cenere le copre. Il metallo invece ricorda ogni colpo per sempre.»\nI Forgiatori hanno un ritmo per il saluto, uno per il lutto, uno per la gioia. Il colpo più lungo e lento, quello che fa vibrare tutta la forgia, significa «benvenuto a casa». Quando riparti, il fabbro lo batte una volta, guardandoti."},
+{t:"La Colata delle Promesse", x:"Due Forgiatori che stringono un patto non firmano nulla. Fondono insieme due frammenti dei loro metalli di famiglia — ogni casata ne custodisce una barra, tramandata da generazioni — e ne colano uno solo, che viene spezzato in due metà. «Finché le metà combaciano, il patto vive», ti dice la maestra di colata.\nLe chiedi cosa succede se qualcuno tradisce. Lei posa la sua metà sul banco, e per la prima volta da quando sei su Brace, il rumore delle forge intorno a voi si ferma. «Rifondiamo la sua metà. E il suo nome non viene mai più battuto sul metallo. Su Brace, è l'unico modo di morire due volte.»"},
+{t:"Il Fuoco che Respirava", x:"Ti portano giù, sotto le forge, dove il caldo diventa una cosa viva. Nella roccia c'è una camera antica, e al centro un cratere spento, largo come una piazza.\n«Il Primo Fuoco non l'abbiamo acceso noi», dice il decano, e la sua voce trema in un modo che non c'entra col caldo. «Quando i nostri antenati arrivarono, ardeva già. E respirava: cresceva e calava, come un petto che dorme. Forgiava da solo, capisci? Trovavamo forme nel cratere, al mattino. Forme che non sapevamo ancora fare.»\nIndica una nicchia: dentro c'è un oggetto di metallo scuro, senza saldature, perfetto. «Poi una notte il respiro si fermò. Ma l'ultima forma che ci lasciò era questa: una freccia. E indica sempre lo stesso punto del cielo, ovunque tu la posi.»"}],
+velo:[
+{t:"La Grammatica delle Mani", x:"Il primo giorno su Velo credi che il mercato sia vuoto: poi capisci che è pieno, solo silenzioso. I Sussurranti contrattano con le dita, il polso, l'angolo delle spalle. Un gesto lento vale più di uno rapido; distogliere lo sguardo, qui, è un modo di dare fiducia, non di toglierla.\nUna bambina ti insegna il tuo primo segno, ridendo senza suono del tuo polso rigido: pugno chiuso che si apre piano, come un fiore di ghiaccio. Significa «sono arrivato intero». È il saluto che si scambiano i viaggiatori, su un pianeta dove arrivare interi non è mai scontato."},
+{t:"Il Prezzo della Voce", x:"Ti sorprende una cosa: i Sussurranti sanno parlare. Semplicemente, non lo fanno quasi mai. «La voce è l'unica cosa che il freddo non può congelare», ti spiega la guida, con un filo di fiato che è già una confidenza enorme. «Per questo la risparmiamo. La spendiamo solo per ciò che merita di restare caldo.»\nOgni Sussurrante, in tutta la vita, pronuncia ad alta voce solo poche decine di frasi: la prima parola a un figlio, un addio, una verità che non può essere detta con le mani. Ti racconta di sua nonna, che conservò la sua ultima frase per trent'anni. La disse una notte di tempesta, al marito che non riusciva a dormire: «Anche il ghiaccio, una volta, è stato pioggia.»"},
+{t:"Le Voci sotto il Ghiaccio", x:"Ti conducono sulla piana grande, dove il ghiaccio è così antico da essere blu. Ti fanno sdraiare, l'orecchio contro la superficie. All'inizio niente. Poi le senti: voci. Lontane, sovrapposte, pazienti.\n«Non sono spiriti», segna la guida, lentissima perché tu capisca ogni gesto. «Sono arrivate col ghiaccio. Prima di noi.» Le leggende dicono che Velo vagava, cometa spenta, e che il ghiaccio raccolse le voci di ogni luogo che attraversò. I Sussurranti tacciono per questo: per sentirle, e impararle.\n«C'è una voce più profonda delle altre», aggiunge, e per la prima volta usa il fiato: «Ripete una rotta. L'abbiamo trascritta per generazioni. Porta a un luogo che chiamiamo il Punto Fermo: il posto da cui tutte le voci vennero.»"}],
+telaria:[
+{t:"Ogni Stoffa è un Racconto", x:"Sbagli subito, il primo giorno: chiami «merce» un rotolo di tessuto, e la venditrice ti corregge con dolcezza feroce. «Questo è il raccolto cattivo di dodici stagioni fa. Questo è il matrimonio di mia sorella. Questo — lo srotola appena, e la trama luminescente si accende di figure — è la notte in cui la terza luna non sorse.»\nSu Telaria non esistono tessuti decorati: esistono tessuti scritti. Comprare una stoffa significa portarsi via una storia, e i Tessitori vogliono sapere a chi la stai affidando. Ora capisci perché, prima di venderti qualunque cosa, ti hanno chiesto il nome della tua nave."},
+{t:"Il Nodo del Disaccordo", x:"Nella grande sala dei telai sospesi, due famiglie stanno litigando: lo capisci perché tessono furiosamente lo stesso arazzo, dai due lati opposti. «È così che discutiamo», ti spiega il maestro dei telai. «Ognuno tesse la propria versione. Dove le trame si incontrano, in mezzo, si forma il Nodo del Disaccordo.»\nIl litigio finisce quando il nodo regge: se è abbastanza forte da non strapparsi, le due verità possono convivere, e l'arazzo è finito. Se si strappa, si ricomincia. «Alcuni disaccordi durano generazioni», sorride il maestro, indicando un arazzo enorme, ancora aperto al centro. «Ma nessuna storia viene mai cancellata. Nemmeno quelle sbagliate. Soprattutto quelle sbagliate.»"},
+{t:"L'Arazzo Incompiuto", x:"C'è una torre, a Telaria, dove i telai lavorano da prima che esistesse la memoria dei Tessitori. Dentro, un solo arazzo: sale a spirale lungo i muri, piano dopo piano, ed è la storia di tutto.\nIl maestro ti mostra il principio, in basso, dove i fili sono così vecchi che la luce li attraversa: la prima figura tessuta è una porta nel cielo, e da essa scendono cinque fili — uno verde, uno rosso, uno bianco, uno dorato, uno grigio. «Cinque fili, cinque popoli», dice. «Tutti dallo stesso telaio.»\nIn cima alla torre, l'arazzo si interrompe di colpo: manca l'ultima figura, e il telaio finale è vuoto, i fili pronti da generazioni. «Non è incompiuto per trascuratezza. Aspetta. La regola più antica dice che l'ultima figura può tesserla solo chi avrà ritrovato il telaio da cui scesero i cinque fili.» Ti porge una navetta di legno consumato. «Tu viaggi. Noi aspettiamo.»"}],
+approdo:[
+{t:"La Legge del Recupero", x:"All'Approdo c'è una sola legge scritta, incisa a fiamma sopra il portello d'ingresso: «Ciò che la deriva porta è di chi lo riporta.» Tutto il resto è contrattazione.\nIl vecchio Sindaco-di-fatto — nessuno l'ha eletto, tutti gli obbediscono — ti spiega la regola mentre mastica qualcosa di irriconoscibile: «Là fuori è pieno di roba morta, ragazzo. Navi, stazioni, sogni interi andati a pezzi. Noi non rubiamo ai morti: li ereditiamo. È diverso. Rubare è prendere e scappare. Ereditare è prendere e ricordare.»\nOgni pezzo recuperato che passa dal mercato viene registrato: da quale relitto viene, e quando. Il registro è l'unica cosa, all'Approdo, che nessuno ha mai provato a vendere."},
+{t:"Il Brindisi dei Nomi", x:"Ogni volta che una squadra torna da un recupero, alla taverna si fa il Brindisi dei Nomi. Il capo squadra legge ad alta voce il nome della nave spolpata — se il nome non si trova, se ne inventa uno, «perché nessuno scafo deve restare anonimo» — e tutti bevono. Poi il nome viene inciso su una lastra alla parete, insieme a migliaia di altri.\nTi aspetti cinismo, da gente che vive di rottami; trovi invece la cerimonia più sentita che tu abbia visto nel sistema. «Prima o poi qualcuno brinderà anche alla mia nave», ti dice la donna al bancone, alzando il bicchiere verso la parete. «Spero le trovino un bel nome. E spero bevano fino in fondo.»"},
+{t:"Il Relitto che ci Ospita", x:"Alla fine, il Sindaco ti mostra ciò che nessun estraneo vede: i ponti profondi, il cuore del relitto colossale dentro cui l'Approdo è costruito. Più scendi, più la nave smette di somigliare a una nave. Niente saldature. Niente comandi. Corridoi che sembrano cresciuti, non costruiti.\n«Tre generazioni di Recuperanti hanno spolpato questo gigante», dice, «e non abbiamo ancora capito chi l'ha fatto. Né come. Sappiamo solo due cose.» Alza un dito: «Primo: stava viaggiando verso qualcosa quando è morta, non scappando. La spinta era tutta in avanti.» Secondo dito, e la voce gli si abbassa: «Secondo: nella sala più profonda c'è una mappa, incisa nella parete. A tutti i pianeti del sistema manca un pezzo di storia, ragazzo. Sulla mappa i pianeti ci sono tutti. Più uno.»"}]
+};
+
+/* ---------- Lettera INFO + glossario ---------- */
+const LETTER = [
+"Diario di bordo — Appunto primo.",
+"Dicono che ogni cronista dovrebbe cominciare dal principio. Io comincio da qui: una nave piccola, una stiva quasi vuota, e {g1|un intero sistema che aspetta di essere ascoltato}.",
+"La nave regge, per ora. Ho imparato in fretta che quassù si vive di due numeri: {g2|il propellente nel serbatoio e l'integrità dello scafo}. Finché entrambi respirano, respiro anch'io.",
+"Lo spazio tra i pianeti non è vuoto come sembra dai porti. Ci sono {g3|campi di asteroidi, fasce di detriti e tempeste} che non perdonano la fretta. E c'è di peggio: nelle rotte più ricche {g4|qualcuno aspetta i mercanti al varco}. Ho già sentito le storie, alla taverna. Chi fugge, chi paga, chi la racconta così bene da cavarsela.",
+"Ma è per le rotte ricche che sono qui. {g5|Comprare dove abbonda, vendere dove manca}: la vecchia legge di ogni mercante, con una clausola in più — {g6|certe merci non aspettano}, e un carico di frutti profuma di fortuna solo per pochi giorni.",
+"C'è poi la parte del lavoro che non si pesa in crediti. Su ogni pianeta vive un popolo, e ogni popolo custodisce storie che nessuno ha mai scritto. {g7|La fiducia si guadagna piano}, mi hanno detto: prima sei uno sconosciuto, poi un ospite, e se meriti davvero, un custode. È per quelle storie che tengo questo diario: voglio riempire {g8|l'Enciclopedia delle Stelle} prima che il silenzio arrivi prima di me.",
+"Un'ultima nota, per il coraggio dei giorni buoni: nella fascia dei detriti dormono {g9|i relitti delle navi che non ce l'hanno fatta}. Chi li visita torna con manufatti che all'Approdo pagano bene. O non torna.",
+"Il serbatoio è pieno. Il diario è aperto.\nSi parte.",
+"— Il Cronista"
+];
+const GLOSSARY_TERMS = {
+g1:{t:"Il gioco",x:"Sei un Mercante-Cronista: viaggi tra i 5 approdi del sistema, commerci per vivere e raccogli le storie dei popoli prima che vadano perdute. Non ci sono conquiste né guerre: solo rotte, incontri e memorie. Scegli tu il ritmo del viaggio."},
+g2:{t:"I sistemi della nave",x:"Il propellente si consuma navigando: se finisce, resti alla deriva finché non chiami i soccorsi. Lo scafo si danneggia con gli impatti: se arriva a zero, vieni trainato al pianeta più vicino ma perdi metà del carico.\nEntrambi si ripristinano a pagamento in qualunque porto. Tienili d'occhio: sono le due barre in alto."},
+g3:{t:"I pericoli dello spazio",x:"Gli asteroidi danneggiano lo scafo all'impatto: si attraversano, ma con prudenza. Le tempeste cosmiche logorano la nave secondo per secondo: meglio aggirarle o uscirne in fretta.\nLa fascia dei detriti, al centro del sistema, è la zona più pericolosa — e la più ricca."},
+g4:{t:"I pirati",x:"Nelle zone pericolose puoi subire un'imboscata. Tre vie d'uscita: fuggire (più facile con un motore potenziato, ma se fallisci prendi danni e paghi comunque), pagare (una parte di crediti e carico), o ingannarli (rischioso: se ti scoprono, va peggio).\nNessuna scelta è sempre giusta: dipende da cosa trasporti e da quanto vale la tua nave."},
+g5:{t:"Il commercio",x:"Ogni pianeta produce alcune merci (che lì costano poco) e ne desidera altre (che lì pagano bene). I prezzi oscillano ogni giorno e ogni pianeta limita gli acquisti giornalieri: nessuna rotta è una miniera infinita.\nIl diario, alla scheda Mercuriale, tiene nota dei prezzi che hai visto."},
+g6:{t:"Le merci deperibili",x:"I Frutti stellari sono la merce più redditizia del sistema, ma marciscono in 3 giorni: la stiva mostra il tempo rimasto. Un carico di frutti è una scommessa contro l'orologio — e contro chiunque ti rallenti lungo la rotta."},
+g7:{t:"Fiducia e racconti",x:"Ogni scambio e ogni consegna completata fanno crescere la fiducia di quel popolo verso di te: da Sconosciuto a Ospite, fino a Custode della Memoria. Ogni livello sblocca un racconto di quel popolo, trascritto nella Mappa dei Ricordi del diario."},
+g8:{t:"L'Enciclopedia delle Stelle",x:"Il traguardo del viaggio: diventare Custode della Memoria di tutti e cinque i popoli e completare la Mappa dei Ricordi con i 15 racconti.\nNessuno ti obbliga a riuscirci in fretta — ma le storie più profonde si confidano solo a chi è rimasto abbastanza a lungo."},
+g9:{t:"Relitti e manufatti",x:"Nella fascia dei detriti giacciono relitti esplorabili: fermati accanto a uno per qualche secondo e recupererai un Manufatto antico. Sono l'unica merce che non si compra, e L'Approdo di Ruggine li paga a peso d'oro.\nMa la fascia è territorio di pirati e asteroidi: valuta sempre se il gioco vale la candela."}
+};
+
+/* ============================================================
+   STATO
+   ============================================================ */
+let S=null;                 // stato di gioco
+let OPT={sound:true, hand:"right"};
+let running=false, lastT=0, docked=false;
+const keys={};
+
+function newState(){
+  const st={
+    ver:GAME_VERSION,
+    x:PLANETS[0].cx*CELL+120, y:PLANETS[0].cy*CELL-60, vx:0, vy:0,
+    fuel:FUEL_MAX, hull:HULL_BASE, credits:START_CREDITS,
+    upg:{motore:0,stiva:0,scafo:0},
+    cargo:[],               // {g,q,exp?}  exp = giorno di scadenza (frutti)
+    mCargo:[],              // carichi di consegna {g,q,to,from}
+    day:1, t:32,            // secondi nella giornata (parte al mattino)
+    trust:{}, acc:{}, stories:{}, visited:{},
+    missions:{},            // per pianeta: offerta o attiva
+    wrecks:WRECK_POS.map(w=>({cx:w[0],cy:w[1],ok:true,back:0})),
+    bought:{day:1, map:{}},
+    seen:{},                // mercuriale: seen[pid][gid]={b,s,day}
+    log:[], navT:1, pirCd:0, inDanger:false, storms:[],
+    encEnc:0, towed:0
+  };
+  PLANETS.forEach(p=>{st.trust[p.id]=0;st.acc[p.id]=0;st.stories[p.id]=0;});
+  for(let i=0;i<STORM_N;i++) st.storms.push({x:rand(20,60)*CELL,y:rand(20,60)*CELL,
+    r:CELL*rand(4,6),vx:rand(-6,6),vy:rand(-6,6)});
+  return st;
+}
+
+/* ---------- util ---------- */
+function rand(a,b){return a+Math.random()*(b-a)}
+function irand(a,b){return Math.floor(rand(a,b+1))}
+function clamp(v,a,b){return v<a?a:v>b?b:v}
+function dist(x1,y1,x2,y2){const dx=x1-x2,dy=y1-y2;return Math.hypot(dx,dy)}
+function hash(n){let x=Math.sin(n)*43758.5453;return x-Math.floor(x)}
+function priceOsc(day,pi,gi){return 1-OSC+2*OSC*hash(day*97.13+pi*13.7+gi*5.31)}
+function fmt(n){return Math.round(n)}
+
+function holdMax(){return HOLD_BASE+10*S.upg.stiva}
+function hullMax(){return HULL_BASE+25*S.upg.scafo}
+function dmgMult(){return Math.max(.4,1-.2*S.upg.scafo)}
+function speedMax(){return 118*(1+.15*S.upg.motore)}
+function cargoCount(){let n=0;S.cargo.forEach(c=>n+=c.q);S.mCargo.forEach(c=>n+=c.q);return n}
+
+function buyPrice(p,g){const b=p.buy[g];if(b==null)return null;
+  return Math.max(1,Math.round(b*priceOsc(S.day,PIDX[p.id],GOOD_IDS.indexOf(g))))}
+function sellPrice(p,g){let b=p.sell[g];if(b==null)return null;
+  if(Array.isArray(b)){const r=hash(S.day*97.13+PIDX[p.id]*13.7+GOOD_IDS.indexOf(g)*5.31);
+    return Math.round(b[0]+(b[1]-b[0])*r)}
+  return Math.max(1,Math.round(b*priceOsc(S.day,PIDX[p.id],GOOD_IDS.indexOf(g)+3)))}
+
+function log(msg){S.log.unshift("G."+S.day+" — "+msg);if(S.log.length>60)S.log.length=60;}
+function toast(msg,ms){const d=document.createElement("div");d.className="toast";d.textContent=msg;
+  document.getElementById("toasts").appendChild(d);
+  setTimeout(()=>{d.style.opacity="0";d.style.transition="opacity .4s";
+    setTimeout(()=>d.remove(),420)},ms||2600);}
+
+/* ---------- suono ---------- */
+let AC=null, padOn=false;
+function audio(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(AC&&AC.state==="suspended")AC.resume();return AC}
+function beep(f,dur,type,vol){if(!OPT.sound)return;const ac=audio();if(!ac)return;
+  const o=ac.createOscillator(),g=ac.createGain();o.type=type||"sine";o.frequency.value=f;
+  g.gain.setValueAtTime((vol||0.07),ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+(dur||0.15));
+  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+(dur||0.15)+0.02);}
+function sBuy(){beep(660,.09,"triangle");beep(880,.12,"triangle")}
+function sSell(){beep(520,.09,"triangle");beep(390,.14,"triangle")}
+function sHit(){beep(110,.25,"sawtooth",.1)}
+function sStory(){beep(523,.15,"sine");setTimeout(()=>beep(659,.15,"sine"),120);
+  setTimeout(()=>beep(784,.3,"sine"),240)}
+function sAlarm(){beep(220,.2,"square",.08);setTimeout(()=>beep(220,.2,"square",.08),260)}
+function startPad(){if(!OPT.sound||padOn)return;const ac=audio();if(!ac)return;padOn=true;
+  const g=ac.createGain();g.gain.value=0.018;g.connect(ac.destination);
+  [110,164.8,220.5].forEach(f=>{const o=ac.createOscillator();o.type="sine";o.frequency.value=f;
+    const lfo=ac.createOscillator(),lg=ac.createGain();lfo.frequency.value=rand(.05,.12);
+    lg.gain.value=2;lfo.connect(lg);lg.connect(o.frequency);lfo.start();
+    o.connect(g);o.start();});}
+
+/* ---------- salvataggio ---------- */
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
+function loadSave(){try{const j=localStorage.getItem(SAVE_KEY);if(!j)return null;
+  const st=JSON.parse(j);if(!st||!st.ver)return null;return st}catch(e){return null}}
+function loadOpt(){try{const j=localStorage.getItem(OPT_KEY);if(j)OPT=Object.assign(OPT,JSON.parse(j))}catch(e){}}
+function saveOpt(){try{localStorage.setItem(OPT_KEY,JSON.stringify(OPT))}catch(e){}}
+
+/* ============================================================
+   LOGICA DI GIOCO
+   ============================================================ */
+let target=null;            // destinazione tap-to-move {x,y}
+let wreckTimer=0, wreckAt=-1, pendingPirate=0;
+
+function nearestPlanet(){let best=null,bd=1e9;
+  PLANETS.forEach(p=>{const d=dist(S.x,S.y,p.cx*CELL,p.cy*CELL);if(d<bd){bd=d;best=p}});
+  return {p:best,d:bd}}
+function dockablePlanet(){const n=nearestPlanet();return n.d<n.p.r+70?n.p:null}
+function inBelt(x){const c=x/CELL;return c>=BELT.x0&&c<=BELT.x1}
+function inAstField(x,y){return AST_FIELDS.some(f=>{
+  const dx=(x/CELL-f.x)/f.rx, dy=(y/CELL-f.y)/f.ry; return dx*dx+dy*dy<=1})}
+function inStorm(x,y){return S.storms.some(st=>dist(x,y,st.x,st.y)<st.r)}
+function inDangerZone(x,y){const a=PLANETS[PIDX.approdo];
+  return inBelt(x)||dist(x,y,a.cx*CELL,a.cy*CELL)<APPRODO_DANGER_R*CELL}
+
+function damage(amount,why){if(S.hull<=0)return;
+  S.hull-=amount*dmgMult();sHit();shake=8;
+  if(S.hull<=0){S.hull=0;tow(why)}
+  else if(S.hull<hullMax()*.25)toast("⚠ Scafo critico: "+fmt(S.hull)+"/"+hullMax());}
+
+function tow(why){
+  const n=nearestPlanet();S.towed++;
+  let lost=0, keep=[];
+  const half=Math.floor(cargoCount()/2);let toLose=half;
+  S.cargo.forEach(c=>{const l=Math.min(c.q,toLose);c.q-=l;toLose-=l;lost+=l;if(c.q>0)keep.push(c)});
+  S.cargo=keep;
+  S.mCargo=S.mCargo.filter(c=>{if(toLose>0){const l=Math.min(c.q,toLose);c.q-=l;toLose-=l;lost+=l}
+    return c.q>0});
+  S.x=n.p.cx*CELL; S.y=(n.p.cy)*CELL-n.p.r-60; S.vx=S.vy=0; target=null;
+  S.hull=Math.round(hullMax()*.5); S.fuel=Math.max(S.fuel,25);
+  log("Scafo distrutto ("+why+"). Trainato a "+n.p.name+": persa metà del carico ("+lost+" unità).");
+  toast("🛟 Trainato a "+n.p.name+" — perse "+lost+" unità di carico",4200);
+}
+
+function rescue(){ // propellente a zero
+  const n=nearestPlanet();const cost=Math.min(S.credits,15);S.credits-=cost;
+  S.x=n.p.cx*CELL;S.y=n.p.cy*CELL-n.p.r-60;S.vx=S.vy=0;target=null;S.fuel=30;
+  log("Rimasto a secco: soccorso fino a "+n.p.name+" ("+cost+" ¢).");
+  toast("⛽ Rimorchiato a "+n.p.name+" (−"+cost+" ¢)",3600);
+}
+
+/* ---------- pirati ---------- */
+function triggerPirate(){
+  running=false;sAlarm();S.encEnc++;
+  const fleeP=Math.round(100*Math.min(.95,FLEE_BASE+FLEE_PER_ENGINE*S.upg.motore));
+  const cv=cargoValueEst();
+  openOverlay(`
+   <div class="pHead"><h2 class="rd">☠ Imboscata pirata!</h2></div>
+   <div class="pBody">
+    <p class="narr" style="margin-bottom:12px">Una sagoma scura si stacca dai detriti e ti taglia la rotta.
+    La radio gracchia: <i>«Bel carico, mercante. Parliamone.»</i></p>
+    <button class="btn teal" id="pFlee">🚀 Fuggi <span class="tag">(riuscita ${fleeP}% — se fallisci: danni e paghi comunque)</span></button>
+    <button class="btn gold" id="pPay">💰 Paga <span class="tag">(perdi ${fmt(S.credits*PAY_CRED)} ¢ e parte del carico)</span></button>
+    <button class="btn" id="pTrick">🎭 Ingannali <span class="tag">(riuscita 35% — se ti scoprono, va peggio)</span></button>
+   </div>`);
+  document.getElementById("pFlee").onclick=()=>pirateResolve("flee");
+  document.getElementById("pPay").onclick=()=>pirateResolve("pay");
+  document.getElementById("pTrick").onclick=()=>pirateResolve("trick");
+}
+function cargoValueEst(){let v=0;S.cargo.forEach(c=>{v+=c.q*(c.g==="manufatti"?60:12)});return v}
+function pirateLoss(dmg){
+  const cl=S.credits*PAY_CRED;S.credits-=cl;
+  let lost=0;
+  S.cargo.forEach(c=>{const l=Math.round(c.q*PAY_CARGO);c.q-=l;lost+=l});
+  S.cargo=S.cargo.filter(c=>c.q>0);
+  if(dmg)damage(irand(15,30),"pirati");
+  return {cl:fmt(cl),lost};
+}
+function pirateResolve(mode){
+  let txt="";
+  if(mode==="flee"){
+    if(Math.random()<FLEE_BASE+FLEE_PER_ENGINE*S.upg.motore){
+      txt="Spingi i motori al massimo e ti tuffi tra i detriti. Quando riemergi, di loro resta solo un'eco sul radar. <b class='gr'>Sei libero.</b>";
+      log("Imboscata pirata: fuga riuscita.");
+    }else{const r=pirateLoss(true);
+      txt="La nave geme, ma loro sono più veloci. Ti agganciano: <b class='rd'>−"+r.cl+" ¢, −"+r.lost+" unità di carico</b>, e lo scafo porta i segni dell'inseguimento.";
+      log("Fuga fallita: −"+r.cl+" ¢, −"+r.lost+" unità, danni allo scafo.");}
+  }else if(mode==="pay"){const r=pirateLoss(false);
+    txt="Apri la stiva senza discutere. Se ne vanno con <b class='rd'>"+r.cl+" ¢ e "+r.lost+" unità</b>. «Buon vento, mercante.» Nessun colpo sparato.";
+    log("Riscatto pagato ai pirati: −"+r.cl+" ¢, −"+r.lost+" unità.");
+  }else{
+    if(Math.random()<TRICK){
+      txt="Racconti di una stiva piena di ghiaccio andato a male e di un'ispezione sanitaria in corso. Ci cascano. <b class='gr'>Te ne vai pulito</b> — e con una storia in più da raccontare.";
+      log("Pirati ingannati: nessuna perdita.");
+    }else{const r=pirateLoss(false);damage(10,"pirati");
+      txt="La menzogna regge tre secondi. Poi ridono. <b class='rd'>−"+r.cl+" ¢, −"+r.lost+" unità</b> e un colpo d'avvertimento sullo scafo.";
+      log("Inganno fallito: −"+r.cl+" ¢, −"+r.lost+" unità, danni.");}
+  }
+  const b=document.querySelector("#ov .pBody");
+  b.innerHTML="<p class='narr' style='margin-bottom:14px'>"+txt+"</p><button class='btn teal' id='pOk'>Riprendi la rotta</button>";
+  document.getElementById("pOk").onclick=()=>{closeOverlay();running=true;lastT=performance.now()};
+  updateHud();
+}
+
+/* ---------- giornata, prezzi, scadenze ---------- */
+function newDay(){
+  S.day++;S.bought={day:S.day,map:{}};
+  // scadenza frutti
+  let spoiled=0;
+  S.cargo=S.cargo.filter(c=>{if(c.exp!=null&&S.day>=c.exp){spoiled+=c.q;return false}return true});
+  if(spoiled>0){toast("🍂 "+spoiled+" Frutti stellari sono marciti nella stiva",3800);
+    log(spoiled+" frutti marciti in stiva.")}
+  // consegne scadute
+  Object.keys(S.missions).forEach(pid=>{const m=S.missions[pid];
+    if(m&&m.active&&S.day>m.exp){
+      S.mCargo=S.mCargo.filter(c=>c.from!==pid);
+      log("Consegna per "+PLANETS[PIDX[m.to]].name+" scaduta.");
+      toast("⌛ Consegna scaduta: il carico è stato scaricato",3600);
+      delete S.missions[pid];}});
+  // relitti che ricompaiono
+  S.wrecks.forEach(w=>{if(!w.ok){w.back--;if(w.back<=0)w.ok=true}});
+  save();
+}
+function boughtToday(pid,g){const m=S.bought.map;return (m[pid]&&m[pid][g])||0}
+function addBought(pid,g,q){const m=S.bought.map;if(!m[pid])m[pid]={};m[pid][g]=(m[pid][g]||0)+q}
+
+/* ---------- fiducia e racconti ---------- */
+function trustLevel(pid){const t=S.trust[pid];
+  return t>=T_CUSTODE?2:t>=T_OSPITE?1:0}
+function trustName(pid){return ["Sconosciuto","Ospite","Custode della Memoria"][trustLevel(pid)]}
+function addTrust(pid,pts){const old=trustLevel(pid);
+  S.trust[pid]+=pts;const nw=trustLevel(pid);
+  if(nw>old){toast("🤝 "+PLANETS[PIDX[pid]].name+": ora sei "+trustName(pid),3600);
+    log(PLANETS[PIDX[pid]].name+": livello di fiducia raggiunto — "+trustName(pid)+".");}
+  checkStories(pid);}
+function exchange(pid,credits){S.acc[pid]+=credits;
+  const pts=Math.floor(S.acc[pid]/TRUST_PER);
+  if(pts>0){S.acc[pid]-=pts*TRUST_PER;addTrust(pid,pts)}}
+function checkStories(pid){
+  const lvl=trustLevel(pid), have=S.stories[pid];
+  const want=Math.min(3,(S.visited[pid]?1:0)+lvl);
+  if(want>have){S.stories[pid]=want;sStory();
+    const st=STORIES[pid][want-1];
+    toast("✒ Nuovo racconto nella Mappa dei Ricordi: «"+st.t+"»",4200);
+    log("Raccolto il racconto «"+st.t+"» ("+PLANETS[PIDX[pid]].name+").");
+    const tot=GOOD_IDS&&PLANETS.reduce((a,p)=>a+S.stories[p.id],0);
+    if(tot===15){setTimeout(showEnding,800)}
+  }
+}
+function showEnding(){
+  running=false;
+  openOverlay(`<div class="pHead"><h2 class="gd">✦ L'Enciclopedia delle Stelle</h2></div>
+   <div class="pBody narr">
+   <p>Quindici racconti. Cinque popoli. Un solo diario, pieno.</p>
+   <p style="margin-top:10px">Sei diventato ciò che nessun mercante era mai stato: il Custode della Memoria
+   dell'intero sistema. Le storie che hai raccolto non andranno più perdute — e in fondo alle pagine,
+   se le rileggi tutte insieme, cinque indizi puntano nella stessa direzione: un seme con un nome,
+   una freccia che indica il cielo, una rotta sotto il ghiaccio, cinque fili dello stesso telaio,
+   una mappa con un pianeta in più.</p>
+   <p style="margin-top:10px;color:var(--teal)"><i>Da qualche parte, là fuori, c'è L'Origine.
+   Ma questa è una storia per un altro viaggio.</i></p>
+   <p style="margin-top:12px;color:var(--dim);font-size:12px">Puoi continuare a giocare liberamente.</p>
+   <button class="btn gold" id="endOk" style="margin-top:10px">Continua il viaggio</button>
+   </div>`);
+  log("★ ENCICLOPEDIA COMPLETATA: tutti i 15 racconti raccolti! ★");
+  document.getElementById("endOk").onclick=()=>{closeOverlay();running=true;lastT=performance.now()};
+}
+
+/* ---------- consegne ---------- */
+function ensureMission(pid){
+  if(S.missions[pid])return;
+  const others=PLANETS.filter(p=>p.id!==pid);
+  const to=others[irand(0,others.length-1)];
+  const gs=["spezie","minerale","ghiaccio","tessuti","frutti"];
+  const g=gs[irand(0,gs.length-1)];
+  const q=irand(4,8);
+  const rw=Math.round(q*10+irand(10,30));
+  S.missions[pid]={from:pid,to:to.id,g,q,rw,tr:irand(15,20),exp:0,active:false};
+}
+function acceptMission(pid){
+  const m=S.missions[pid];
+  if(cargoCount()+m.q>holdMax()){toast("Stiva insufficiente per il carico della consegna");return}
+  m.active=true;m.exp=S.day+4;
+  S.mCargo.push({g:m.g,q:m.q,to:m.to,from:pid});
+  log("Accettata consegna: "+m.q+" "+GOODS[m.g].name+" per "+PLANETS[PIDX[m.to]].name+" (entro il G."+m.exp+").");
+  toast("📦 Carico di consegna imbarcato — entro il G."+m.exp);
+  openPort(PLANETS[PIDX[pid]],"city");
+}
+function checkDeliveries(p){
+  const del=S.mCargo.filter(c=>c.to===p.id);
+  del.forEach(c=>{
+    const m=S.missions[c.from];
+    S.mCargo=S.mCargo.filter(k=>k!==c);
+    if(m){S.credits+=m.rw;addTrust(p.id,m.tr);addTrust(c.from,8);
+      log("Consegna completata a "+p.name+": +"+m.rw+" ¢, fiducia guadagnata.");
+      toast("✅ Consegna completata: +"+m.rw+" ¢",3600);
+      delete S.missions[c.from];}
+  });
+}
+
+/* ============================================================
+   UPDATE
+   ============================================================ */
+let shake=0, hitCd=0;
+function update(dt){
+  // orologio
+  S.t+=dt; if(S.t>=DAY_LEN){S.t-=DAY_LEN;newDay()}
+  S.pirCd=Math.max(0,S.pirCd-dt); hitCd=Math.max(0,hitCd-dt);
+  // tempeste alla deriva
+  S.storms.forEach(st=>{st.x+=st.vx*dt;st.y+=st.vy*dt;
+    if(st.x<st.r||st.x>W-st.r)st.vx*=-1;if(st.y<st.r||st.y>W-st.r)st.vy*=-1;});
+  if(docked)return;
+  // input tastiera
+  let kx=0,ky=0;
+  if(keys.w||keys.arrowup)ky-=1; if(keys.s||keys.arrowdown)ky+=1;
+  if(keys.a||keys.arrowleft)kx-=1; if(keys.d||keys.arrowright)kx+=1;
+  const hasFuel=S.fuel>0;
+  const sp=speedMax();
+  if(hasFuel&&(kx||ky)){target=null;
+    const l=Math.hypot(kx,ky);S.vx+=(kx/l)*sp*3.2*dt;S.vy+=(ky/l)*sp*3.2*dt;}
+  else if(hasFuel&&target){
+    const d=dist(S.x,S.y,target.x,target.y);
+    if(d<14){target=null}
+    else{S.vx+=((target.x-S.x)/d)*sp*3.2*dt;S.vy+=((target.y-S.y)/d)*sp*3.2*dt;}
+  }
+  // attrito + limite
+  const fr=Math.pow(0.90,dt*60/16);S.vx*=fr;S.vy*=fr;
+  const v=Math.hypot(S.vx,S.vy);
+  if(v>sp){S.vx*=sp/v;S.vy*=sp/v}
+  const px=S.x,py=S.y;
+  S.x=clamp(S.x+S.vx*dt,20,W-20); S.y=clamp(S.y+S.vy*dt,20,W-20);
+  // consumo propellente
+  const moved=dist(S.x,S.y,px,py);
+  if(moved>0.1&&hasFuel){S.fuel=Math.max(0,S.fuel-moved*FUEL_PER_PX);
+    if(S.fuel===0){toast("⛽ Propellente esaurito — resti alla deriva",3600);
+      log("Propellente esaurito.");}}
+  // pericoli
+  const moving=v>18;
+  if(moving&&hitCd<=0){
+    if(inAstField(S.x,S.y)&&Math.random()<0.13*dt){hitCd=2.6;damage(irand(12,22),"asteroide");
+      toast("💥 Impatto con un asteroide!")}
+    else if(inBelt(S.x)&&Math.random()<0.09*dt){hitCd=2.6;damage(irand(8,16),"detriti");
+      toast("💥 Detrito contro lo scafo!")}
+  }
+  if(inStorm(S.x,S.y)){S.hull-=3*dt*dmgMult();
+    if(S.hull<=0){S.hull=0;tow("tempesta")}}
+  // pirati
+  const dz=inDangerZone(S.x,S.y);
+  if(dz&&!S.inDanger&&S.pirCd<=0){
+    S.pirCd=PIRATE_COOLDOWN;
+    if(Math.random()<PIRATE_CHANCE)pendingPirate=rand(1,2.4);
+  }
+  S.inDanger=dz;
+  if(pendingPirate>0){pendingPirate-=dt;
+    if(pendingPirate<=0&&!docked){pendingPirate=0;triggerPirate();return}}
+  // relitti
+  let nw=-1;
+  S.wrecks.forEach((wk,i)=>{if(wk.ok&&dist(S.x,S.y,wk.cx*CELL,wk.cy*CELL)<WRECK_R)nw=i});
+  if(nw>=0&&v<16){
+    if(wreckAt!==nw){wreckAt=nw;wreckTimer=0}
+    wreckTimer+=dt;
+    if(wreckTimer>=WRECK_TIME){
+      wreckTimer=0;const wk=S.wrecks[nw];
+      if(cargoCount()>=holdMax()){toast("Stiva piena: impossibile caricare il manufatto")}
+      else{wk.ok=false;wk.back=WRECK_RESPAWN;
+        addCargo("manufatti",1,null);sBuy();
+        toast("🏺 Recuperato un Manufatto antico dal relitto",3400);
+        log("Manufatto recuperato da un relitto nella fascia.");}
+    }
+  }else{wreckAt=-1;wreckTimer=0}
+}
+function addCargo(g,q,exp){
+  const same=S.cargo.find(c=>c.g===g&&c.exp===exp);
+  if(same)same.q+=q;else S.cargo.push({g,q,exp});
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+const cv=document.getElementById("cv"),cx2=cv.getContext("2d");
+let VW=0,VH=0,DPR=1;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);
+  VW=window.innerWidth;VH=window.innerHeight;
+  cv.width=VW*DPR;cv.height=VH*DPR;cv.style.width=VW+"px";cv.style.height=VH+"px";}
+window.addEventListener("resize",resize);resize();
+
+const stars=[],stars2=[];
+for(let i=0;i<420;i++)stars.push([Math.random()*W,Math.random()*W,rand(.5,1.6),Math.random()]);
+for(let i=0;i<160;i++)stars2.push([Math.random()*W,Math.random()*W,rand(1,2.2),Math.random()]);
+const rocks=[];
+AST_FIELDS.forEach(f=>{for(let i=0;i<26;i++){const a=Math.random()*6.28,rr=Math.sqrt(Math.random());
+  rocks.push([(f.x+Math.cos(a)*f.rx*rr)*CELL,(f.y+Math.sin(a)*f.ry*rr)*CELL,rand(4,13),Math.random()*6.28])}});
+const debris=[];
+for(let i=0;i<110;i++)debris.push([rand(BELT.x0,BELT.x1)*CELL,Math.random()*W,rand(1.5,5),Math.random()*6.28]);
+
+function cam(){return {x:clamp(S.x-VW/2,0,W-VW>0?W-VW:0),y:clamp(S.y-VH/2,0,W-VH>0?W-VH:0)}}
+let tGlobal=0;
+function draw(dt){
+  tGlobal+=dt;
+  const c=cam();
+  const g=cx2;g.setTransform(DPR,0,0,DPR,0,0);
+  // sfondo
+  const grd=g.createLinearGradient(0,0,0,VH);
+  grd.addColorStop(0,"#161436");grd.addColorStop(1,"#0e0d22");
+  g.fillStyle=grd;g.fillRect(0,0,VW,VH);
+  if(shake>0){g.translate(rand(-shake,shake),rand(-shake,shake));shake*=0.85;if(shake<.4)shake=0}
+  // stelle (parallasse)
+  g.fillStyle="#8f8cc9";
+  stars.forEach(s=>{const x=(s[0]-c.x*0.35)%W,y=(s[1]-c.y*0.35)%W;
+    if(x>-4&&x<VW+4&&y>-4&&y<VH+4){g.globalAlpha=.4+.5*Math.abs(Math.sin(tGlobal*.6+s[3]*9));
+      g.fillRect(x,y,s[2],s[2])}});
+  g.globalAlpha=1;g.fillStyle="#d8d5ff";
+  stars2.forEach(s=>{const x=(s[0]-c.x*0.65)%W,y=(s[1]-c.y*0.65)%W;
+    if(x>-4&&x<VW+4&&y>-4&&y<VH+4)g.fillRect(x,y,s[2],s[2])});
+  g.save();g.translate(-c.x,-c.y);
+  // fascia detriti
+  g.fillStyle="#2a264f55";g.fillRect(BELT.x0*CELL,0,(BELT.x1-BELT.x0)*CELL,W);
+  g.strokeStyle="#4a4585";g.setLineDash([10,14]);g.lineWidth=1;
+  g.strokeRect(BELT.x0*CELL,-2,(BELT.x1-BELT.x0)*CELL,W+4);g.setLineDash([]);
+  g.fillStyle="#6b668f";
+  debris.forEach(d=>{if(vis(d[0],d[1],c)){g.save();g.translate(d[0],d[1]);
+    g.rotate(d[3]+tGlobal*.1);g.fillRect(-d[2],-d[2]/2,d[2]*2,d[2]);g.restore()}});
+  // campi di asteroidi
+  rocks.forEach(r=>{if(vis(r[0],r[1],c)){g.save();g.translate(r[0],r[1]);g.rotate(r[3]+tGlobal*.05);
+    g.fillStyle="#5a5478";rockPath(g,r[2]);g.fill();
+    g.fillStyle="#726c94";rockPath(g,r[2]*.6);g.fill();g.restore()}});
+  // tempeste
+  S.storms.forEach(st=>{if(vis(st.x,st.y,c,st.r)){
+    for(let i=3;i>=1;i--){g.beginPath();
+      g.strokeStyle="rgba(159,140,255,"+(0.10*i)+")";g.lineWidth=7-i;
+      g.arc(st.x,st.y,st.r*i/3,tGlobal*(.4+i*.15),tGlobal*(.4+i*.15)+4.6);g.stroke();}
+    g.fillStyle="rgba(120,100,220,0.10)";g.beginPath();g.arc(st.x,st.y,st.r,0,6.29);g.fill();}});
+  // relitti
+  S.wrecks.forEach(wk=>{const x=wk.cx*CELL,y=wk.cy*CELL;
+    if(!vis(x,y,c,60))return;
+    g.save();g.translate(x,y);g.globalAlpha=wk.ok?1:.25;g.rotate(0.6);
+    g.fillStyle="#4d4a6b";g.fillRect(-22,-6,44,12);
+    g.fillStyle="#5f5b84";g.beginPath();g.moveTo(22,-6);g.lineTo(34,0);g.lineTo(22,6);g.fill();
+    g.strokeStyle="#7f7aa8";g.beginPath();g.moveTo(-22,0);g.lineTo(-32,-10);g.stroke();
+    if(wk.ok){g.globalAlpha=.5+.4*Math.sin(tGlobal*2);
+      g.fillStyle="#ffc46b";g.beginPath();g.arc(0,-14,3,0,6.29);g.fill();}
+    g.restore();g.globalAlpha=1;
+    if(wk.ok&&wreckAt>=0&&S.wrecks[wreckAt]===wk&&wreckTimer>0){
+      g.strokeStyle="#5fe0c8";g.lineWidth=3;g.beginPath();
+      g.arc(x,y,40,-1.57,-1.57+6.28*(wreckTimer/WRECK_TIME));g.stroke();}
+  });
+  // pianeti
+  PLANETS.forEach(p=>{const x=p.cx*CELL,y=p.cy*CELL;
+    if(!vis(x,y,c,p.r+80))return;
+    drawPlanet(g,p,x,y);
+    g.fillStyle="#e8e6ff";g.font="600 13px system-ui";g.textAlign="center";
+    g.fillText(p.name,x,y+p.r+22);
+  });
+  // nave
+  drawShip(g);
+  g.restore();
+  // freccia bussola verso destinazione
+  drawCompass(g,c);
+}
+function vis(x,y,c,m){m=m||20;return x>c.x-m&&x<c.x+VW+m&&y>c.y-m&&y<c.y+VH+m}
+function rockPath(g,r){g.beginPath();for(let i=0;i<7;i++){const a=i/7*6.28,
+  rr=r*(0.7+0.3*hash(i*3.7+r));g.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}g.closePath()}
+function drawPlanet(g,p,x,y){
+  g.save();
+  const glow=g.createRadialGradient(x,y,p.r*.7,x,y,p.r*1.7);
+  glow.addColorStop(0,p.col+"33");glow.addColorStop(1,"transparent");
+  g.fillStyle=glow;g.beginPath();g.arc(x,y,p.r*1.7,0,6.29);g.fill();
+  g.beginPath();g.arc(x,y,p.r,0,6.29);g.fillStyle=p.col;g.fill();
+  // dettagli cel-shaded per tipo
+  g.save();g.beginPath();g.arc(x,y,p.r,0,6.29);g.clip();
+  g.fillStyle=p.col2;
+  if(p.kind==="garden"){blob(g,x-p.r*.3,y-p.r*.2,p.r*.45);blob(g,x+p.r*.35,y+p.r*.3,p.r*.3);}
+  if(p.kind==="forge"){blob(g,x+p.r*.2,y-p.r*.3,p.r*.4);blob(g,x-p.r*.3,y+p.r*.25,p.r*.35);
+    g.fillStyle="#ffb36b";blob(g,x-p.r*.05,y+p.r*.05,p.r*.14);}
+  if(p.kind==="ice"){g.fillRect(x-p.r,y-p.r,p.r*2,p.r*.4);
+    g.fillRect(x-p.r,y+p.r*.6,p.r*2,p.r*.4);}
+  if(p.kind==="loom"){for(let i=-2;i<=2;i++){g.fillRect(x-p.r,y+i*p.r*.32-2,p.r*2,5)}}
+  if(p.kind==="station"){g.fillStyle=p.col2;g.fillRect(x-p.r,y-6,p.r*2,12);
+    g.fillRect(x-8,y-p.r,16,p.r*2);}
+  // ombra cel
+  g.fillStyle="rgba(10,8,30,0.35)";
+  g.beginPath();g.arc(x+p.r*.35,y+p.r*.3,p.r,0,6.29);
+  g.arc(x,y,p.r*1.02,0,6.29,true);g.fill();
+  g.restore();
+  // anello per la stazione
+  if(p.kind==="station"){g.strokeStyle="#d8a06b";g.lineWidth=4;
+    g.beginPath();g.ellipse(x,y,p.r*1.45,p.r*.5,-.4,0,6.29);g.stroke();}
+  g.strokeStyle="rgba(255,255,255,0.35)";g.lineWidth=2.5;
+  g.beginPath();g.arc(x,y,p.r,3.6,5.4);g.stroke();
+  g.restore();
+}
+function blob(g,x,y,r){g.beginPath();g.arc(x,y,r,0,6.29);g.fill()}
+function drawShip(g){
+  const ang=Math.atan2(S.vy,S.vx),v=Math.hypot(S.vx,S.vy);
+  g.save();g.translate(S.x,S.y);g.rotate(v>6?ang:lastAng);
+  if(v>6)lastAng=ang;
+  if(v>20&&S.fuel>0){g.fillStyle="rgba(95,224,200,"+(0.5+0.3*Math.sin(tGlobal*22))+")";
+    g.beginPath();g.moveTo(-13,0);g.lineTo(-24-6*Math.random(),4);g.lineTo(-24-6*Math.random(),-4);g.fill();}
+  g.fillStyle="#e8e6ff";g.beginPath();g.moveTo(16,0);g.lineTo(-11,9);g.lineTo(-6,0);g.lineTo(-11,-9);g.closePath();g.fill();
+  g.fillStyle="#5fe0c8";g.beginPath();g.arc(4,0,3.4,0,6.29);g.fill();
+  g.restore();
+  if(target){g.strokeStyle="rgba(95,224,200,0.6)";g.lineWidth=1.5;
+    g.beginPath();g.arc(target.x,target.y,9+3*Math.sin(tGlobal*5),0,6.29);g.stroke();}
+}
+let lastAng=-1.57;
+function drawCompass(g,c){
+  const p=PLANETS[S.navT];const tx=p.cx*CELL,ty=p.cy*CELL;
+  if(vis(tx,ty,c,-40))return;
+  const dx=tx-S.x,dy=ty-S.y,a=Math.atan2(dy,dx);
+  const cxs=VW/2,cys=VH/2,rr=Math.min(VW,VH)/2-46;
+  const x=cxs+Math.cos(a)*rr,y=cys+Math.sin(a)*rr;
+  g.save();g.translate(x,y);g.rotate(a);
+  g.fillStyle=p.col;g.beginPath();g.moveTo(12,0);g.lineTo(-6,7);g.lineTo(-6,-7);g.fill();
+  g.restore();
+  g.fillStyle=p.col;g.font="600 10px system-ui";g.textAlign="center";
+  g.fillText(Math.round(dist(S.x,S.y,tx,ty)/CELL)+" u.",x,y+18);
+}
+
+/* ============================================================
+   INTERFACCIA
+   ============================================================ */
+const ov=document.getElementById("ov");
+function openOverlay(html){ov.innerHTML='<div class="panel">'+html+'</div>';ov.classList.add("show")}
+function closeOverlay(){ov.classList.remove("show");ov.innerHTML="";
+  if(!S)return;
+  if(document.getElementById("title").style.display!=="none")return;
+  if(docked){openPort(nearestPlanet().p);return}
+  running=true;lastT=performance.now();}
+function head(t,sub,noX){return '<div class="pHead"><h2>'+t+'</h2>'+
+  (sub?'<span class="sub">'+sub+'</span>':'')+
+  (noX?'':'<button class="xBtn" onclick="closeOverlay()">✕</button>')+'</div>'}
+
+function updateHud(){
+  document.querySelector("#fuelBar i").style.width=(100*S.fuel/FUEL_MAX)+"%";
+  document.querySelector("#hullBar i").style.width=(100*S.hull/hullMax())+"%";
+  document.getElementById("credChip").textContent=fmt(S.credits)+" ¢";
+  const h=Math.floor(24*S.t/DAY_LEN);
+  document.getElementById("dayChip").textContent="G."+S.day+" · "+String(h).padStart(2,"0")+":00";
+  document.getElementById("navChip").textContent="➤ "+(PLANETS[S.navT].short||PLANETS[S.navT].name);
+  document.getElementById("cargoN").textContent=cargoCount()+"/"+holdMax();
+  const p=dockablePlanet();
+  document.getElementById("dockBtn").style.display=(p&&!docked)?"block":"none";
+  if(p)document.getElementById("dockBtn").textContent="Attracca — "+(p.short||p.name);
+}
+
+/* ---------- porto ---------- */
+function openPort(p,tab){
+  docked=true;running=true;S.vx=S.vy=0;target=null;
+  if(!S.visited[p.id]){S.visited[p.id]=true;
+    log("Primo sbarco su "+p.name+".");checkStories(p.id);}
+  checkDeliveries(p);ensureMission(p.id);
+  // registra prezzi nel mercuriale
+  if(!S.seen[p.id])S.seen[p.id]={};
+  GOOD_IDS.forEach(g=>{S.seen[p.id][g]={b:buyPrice(p,g),s:sellPrice(p,g),d:S.day}});
+  save();
+  tab=tab||"home";
+  if(tab==="home"){
+    openOverlay(head(p.name,p.people,true)+'<div class="pBody">'+
+     '<p class="narr" style="color:var(--dim);font-size:13px;margin-bottom:6px">'+p.intro+'</p>'+
+     '<div class="tag" style="margin-bottom:12px">Fiducia: <b class="gd">'+trustName(p.id)+'</b> ('+S.trust[p.id]+' punti)</div>'+
+     '<button class="btn gold" onclick="openPort(PLANETS['+PIDX[p.id]+'],\'market\')">🏪 Mercato</button>'+
+     '<button class="btn teal" onclick="openPort(PLANETS['+PIDX[p.id]+'],\'city\')">🏘 In città</button>'+
+     '<button class="btn" onclick="undock()">🚀 Decolla</button>'+
+     '</div>');
+  }else if(tab==="market")marketUI(p);
+  else if(tab==="city")cityUI(p);
+  updateHud();
+}
+function undock(){docked=false;closeOverlay();
+  const p=nearestPlanet();
+  const a=Math.atan2(S.y-p.p.cy*CELL,S.x-p.p.cx*CELL);
+  S.x=p.p.cx*CELL+Math.cos(a)*(p.p.r+80);S.y=p.p.cy*CELL+Math.sin(a)*(p.p.r+80);
+  save();updateHud();lastT=performance.now();}
+
+function marketUI(p){
+  let h=head("Mercato — "+p.name,"","")+'<div class="pBody">';
+  // merci
+  GOOD_IDS.forEach(g=>{
+    const bp=buyPrice(p,g),sp=sellPrice(p,g);
+    const owned=S.cargo.filter(c=>c.g===g).reduce((a,c)=>a+c.q,0);
+    h+='<div class="row"><span style="width:20px">'+GOODS[g].icon+'</span>'+
+       '<span class="grow">'+GOODS[g].name+
+       (owned?' <span class="tag">(in stiva: '+owned+')</span>':'')+'</span>';
+    if(bp!=null){const left=DAILY_CAP-boughtToday(p.id,g);
+      h+='<span class="tag">compra <b class="tl">'+bp+'¢</b> ('+left+')</span>'+
+         '<button class="btn small teal" onclick="doBuy(\''+p.id+'\',\''+g+'\',1)">+1</button>'+
+         '<button class="btn small teal" onclick="doBuy(\''+p.id+'\',\''+g+'\',5)">+5</button>';}
+    if(sp!=null&&owned>0){
+      h+='<span class="tag">vendi <b class="gd">'+sp+'¢</b></span>'+
+         '<button class="btn small gold" onclick="doSell(\''+p.id+'\',\''+g+'\',1)">−1</button>'+
+         '<button class="btn small gold" onclick="doSell(\''+p.id+'\',\''+g+'\',999)">tutto</button>';}
+    else if(sp!=null){h+='<span class="tag">vendi <b class="gd">'+sp+'¢</b></span>'}
+    h+='</div>';
+  });
+  // servizi
+  const fCost=Math.ceil((FUEL_MAX-S.fuel)/FUEL_PER_CREDIT);
+  const rCost=Math.ceil((hullMax()-S.hull)/REPAIR_PER_CREDIT);
+  h+='<div style="margin-top:12px"></div>';
+  h+='<button class="btn" '+(fCost<1?'disabled':'')+' onclick="doFuel(\''+p.id+'\')">⛽ Pieno di propellente <span class="tag">('+fCost+' ¢)</span></button>';
+  h+='<button class="btn" '+(rCost<1?'disabled':'')+' onclick="doRepair(\''+p.id+'\')">🔧 Ripara lo scafo <span class="tag">('+rCost+' ¢)</span></button>';
+  h+='<div style="margin:10px 0 4px;color:var(--dim);font-size:12px;font-weight:700">POTENZIAMENTI</div>';
+  Object.keys(UPG).forEach(u=>{
+    const lvl=S.upg[u],max=lvl>=3;
+    h+='<div class="row"><span class="grow"><b>'+UPG[u].name+'</b> <span class="tag">lv.'+lvl+'/3 — '+UPG[u].desc+'</span></span>'+
+      (max?'<span class="tag gr">MAX</span>':
+       '<button class="btn small'+(S.credits>=UPG[u].cost[lvl]?' teal':'')+'" '+
+       (S.credits<UPG[u].cost[lvl]?'disabled':'')+
+       ' onclick="doUpg(\''+p.id+'\',\''+u+'\')">'+UPG[u].cost[lvl]+' ¢</button>')+'</div>';
+  });
+  h+='<button class="btn" style="margin-top:12px" onclick="openPort(PLANETS['+PIDX[p.id]+'])">← Indietro</button></div>';
+  openOverlay(h);
+}
+function doBuy(pid,g,q){
+  const p=PLANETS[PIDX[pid]];const bp=buyPrice(p,g);
+  const left=DAILY_CAP-boughtToday(pid,g);
+  q=Math.min(q,left,holdMax()-cargoCount(),Math.floor(S.credits/bp));
+  if(q<=0){toast(left<=0?"Scorte giornaliere esaurite qui":"Crediti o stiva insufficienti");return}
+  S.credits-=q*bp;addBought(pid,g,q);
+  addCargo(g,q,GOODS[g].perish?S.day+SPOIL_DAYS:null);
+  exchange(pid,q*bp);sBuy();
+  log("Comprate "+q+" "+GOODS[g].name+" a "+p.name+" ("+(q*bp)+" ¢).");
+  marketUI(p);updateHud();
+}
+function doSell(pid,g,q){
+  const p=PLANETS[PIDX[pid]];const sp=sellPrice(p,g);
+  let tot=0;
+  // vendi prima i lotti più vicini alla scadenza
+  S.cargo.sort((a,b)=>(a.exp||9e9)-(b.exp||9e9));
+  S.cargo.forEach(c=>{if(c.g===g&&q>0){const s=Math.min(c.q,q);c.q-=s;q-=s;tot+=s}});
+  S.cargo=S.cargo.filter(c=>c.q>0);
+  if(tot<=0)return;
+  S.credits+=tot*sp;exchange(pid,tot*sp);sSell();
+  log("Vendute "+tot+" "+GOODS[g].name+" a "+p.name+" (+"+(tot*sp)+" ¢).");
+  marketUI(p);updateHud();
+}
+function doFuel(pid){const cost=Math.ceil((FUEL_MAX-S.fuel)/FUEL_PER_CREDIT);
+  if(S.credits<cost){ // parziale
+    const buy=Math.floor(S.credits*FUEL_PER_CREDIT);
+    if(buy<1){toast("Crediti insufficienti");return}
+    S.fuel+=buy;S.credits-=Math.ceil(buy/FUEL_PER_CREDIT);toast("Rifornimento parziale");}
+  else{S.credits-=cost;S.fuel=FUEL_MAX;}
+  sBuy();marketUI(PLANETS[PIDX[pid]]);updateHud();}
+function doRepair(pid){const need=hullMax()-S.hull;const cost=Math.ceil(need/REPAIR_PER_CREDIT);
+  if(S.credits<cost){const rep=S.credits*REPAIR_PER_CREDIT;
+    if(rep<1){toast("Crediti insufficienti");return}
+    S.hull+=rep;S.credits=0;toast("Riparazione parziale");}
+  else{S.credits-=cost;S.hull=hullMax();}
+  sBuy();marketUI(PLANETS[PIDX[pid]]);updateHud();}
+function doUpg(pid,u){const lvl=S.upg[u];if(lvl>=3)return;
+  const cost=UPG[u].cost[lvl];if(S.credits<cost){toast("Crediti insufficienti");return}
+  S.credits-=cost;S.upg[u]++;sBuy();
+  if(u==="scafo")S.hull=Math.min(hullMax(),S.hull+25);
+  log("Potenziamento: "+UPG[u].name+" livello "+S.upg[u]+".");
+  toast("⬆ "+UPG[u].name+" → livello "+S.upg[u]);
+  marketUI(PLANETS[PIDX[pid]]);updateHud();}
+
+function cityUI(p){
+  const pid=p.id, lvl=trustLevel(pid), nStories=S.stories[pid];
+  const next=lvl===0?T_OSPITE:lvl===1?T_CUSTODE:null;
+  let h=head("In città — "+p.name,p.people)+'<div class="pBody">'+
+   '<p class="narr" style="font-size:13px;color:var(--dim)">'+p.intro+'</p>'+
+   '<div style="margin:12px 0 4px"><b class="gd">'+trustName(pid)+'</b> — '+S.trust[pid]+' punti'+
+   (next?' <span class="tag">(prossimo livello a '+next+')</span>':'')+'</div>'+
+   '<div class="trustBar"><i style="width:'+Math.min(100,100*S.trust[pid]/T_CUSTODE)+'%"></i></div>';
+  h+='<div style="margin:12px 0 6px;color:var(--dim);font-size:12px;font-weight:700">RACCONTI RACCOLTI: '+nStories+'/3</div>';
+  for(let i=0;i<3;i++){
+    if(i<nStories)h+='<button class="btn" onclick="showStory(\''+pid+'\','+i+')">📜 «'+STORIES[pid][i].t+'»</button>';
+    else h+='<div class="row tag">🔒 Racconto '+(i+1)+' — '+
+      (i===0?"al primo sbarco":i===1?"al livello Ospite":"al livello Custode della Memoria")+'</div>';
+  }
+  // consegna
+  const m=S.missions[pid];
+  h+='<div style="margin:14px 0 6px;color:var(--dim);font-size:12px;font-weight:700">CONSEGNE</div>';
+  if(m&&m.active){h+='<div class="row"><span class="grow">📦 In corso: '+m.q+' '+GOODS[m.g].name+
+    ' → <b>'+PLANETS[PIDX[m.to]].name+'</b></span><span class="tag">entro G.'+m.exp+'</span></div>';}
+  else if(m){h+='<div class="row"><span class="grow">Porta <b>'+m.q+' '+GOODS[m.g].name+'</b> a <b>'+
+    PLANETS[PIDX[m.to]].name+'</b><br><span class="tag">Ricompensa: '+m.rw+' ¢ + fiducia (entro 4 giorni)</span></span>'+
+    '<button class="btn small teal" onclick="acceptMission(\''+pid+'\')">Accetta</button></div>';}
+  h+='<button class="btn" style="margin-top:12px" onclick="openPort(PLANETS['+PIDX[pid]+'])">← Indietro</button></div>';
+  openOverlay(h);
+}
+function showStory(pid,i){
+  const st=STORIES[pid][i];
+  openOverlay(head("«"+st.t+"»",PLANETS[PIDX[pid]].people)+
+   '<div class="pBody narr" style="white-space:pre-line;font-size:14.5px">'+st.x+
+   '</div><div style="padding:0 16px 14px"><button class="btn gold" onclick="reopenAfterStory(\''+pid+'\')">Chiudi</button></div>');
+}
+function reopenAfterStory(pid){
+  if(docked)openPort(PLANETS[PIDX[pid]],"city");else openDiary("ric");
+}
+
+/* ---------- stiva ---------- */
+function openCargo(){running=false;
+  let h=head("Stiva","("+cargoCount()+"/"+holdMax()+")")+'<div class="pBody">';
+  if(!S.cargo.length&&!S.mCargo.length)h+='<p class="tag">La stiva è vuota. Lo spazio aspetta.</p>';
+  S.cargo.forEach(c=>{h+='<div class="row"><span style="width:20px">'+GOODS[c.g].icon+'</span>'+
+    '<span class="grow">'+GOODS[c.g].name+'</span><b>'+c.q+'</b>'+
+    (c.exp!=null?'<span class="tag '+(c.exp-S.day<=1?'rd':'')+'">scade G.'+c.exp+'</span>':'')+'</div>';});
+  S.mCargo.forEach(c=>{h+='<div class="row"><span style="width:20px">📦</span>'+
+    '<span class="grow">'+GOODS[c.g].name+' <span class="tag">(consegna → '+PLANETS[PIDX[c.to]].name+')</span></span><b>'+c.q+'</b></div>';});
+  h+='</div>';openOverlay(h);
+}
+
+/* ---------- diario ---------- */
+function openDiary(tab){running=false;
+  tab=tab||"reg";
+  let body="";
+  if(tab==="reg"){
+    body=S.log.length?S.log.map(l=>'<div class="row" style="font-size:12.5px">'+l+'</div>').join("")
+      :'<p class="tag">Il registro è ancora bianco.</p>';
+  }else if(tab==="ric"){
+    const tot=PLANETS.reduce((a,p)=>a+S.stories[p.id],0);
+    body='<div style="margin-bottom:10px">Enciclopedia delle Stelle: <b class="gd">'+tot+'/15</b> racconti'+
+      '<div class="trustBar"><i style="width:'+(100*tot/15)+'%"></i></div></div>';
+    PLANETS.forEach(p=>{
+      body+='<div style="margin:10px 0 4px"><b style="color:'+p.col+'">'+p.name+'</b> '+
+        '<span class="tag">— '+p.people+' · '+trustName(p.id)+'</span></div>';
+      for(let i=0;i<3;i++){
+        if(i<S.stories[p.id])body+='<button class="btn small" style="margin:2px 4px 2px 0" onclick="showStory(\''+p.id+'\','+i+')">📜 '+STORIES[p.id][i].t+'</button>';
+        else body+='<span class="tag" style="margin-right:8px">🔒</span>';
+      }
+    });
+  }else{ // mercuriale
+    body='<p class="tag" style="margin-bottom:8px">Ultimi prezzi visti (compra / vendi — G. = giorno)</p>';
+    let any=false;
+    PLANETS.forEach(p=>{
+      if(!S.seen[p.id])return;any=true;
+      body+='<div style="margin:8px 0 3px"><b style="color:'+p.col+'">'+p.name+'</b></div><table class="merc"><tr><th>Merce</th><th>Compra</th><th>Vendi</th><th>G.</th></tr>';
+      GOOD_IDS.forEach(g=>{const s=S.seen[p.id][g];if(!s)return;
+        body+='<tr><td>'+GOODS[g].icon+' '+GOODS[g].name+'</td><td class="tl">'+(s.b!=null?s.b+"¢":"—")+
+          '</td><td class="gd">'+(s.s!=null?s.s+"¢":"—")+'</td><td class="tag">'+s.d+'</td></tr>';});
+      body+='</table>';
+    });
+    if(!any)body+='<p class="tag">Nessun prezzo annotato: sbarca in un porto per cominciare.</p>';
+  }
+  openOverlay(head("Diario di bordo","")+
+   '<div class="tabs">'+
+   '<button class="'+(tab==="reg"?"on":"")+'" onclick="openDiary(\'reg\')">Registro</button>'+
+   '<button class="'+(tab==="ric"?"on":"")+'" onclick="openDiary(\'ric\')">Mappa dei Ricordi</button>'+
+   '<button class="'+(tab==="mer"?"on":"")+'" onclick="openDiary(\'mer\')">Mercuriale</button>'+
+   '</div><div class="pBody">'+body+'</div>');
+}
+
+/* ---------- menu di pausa ---------- */
+function openMenu(){
+  running=false;
+  openOverlay(head("Menu","v"+GAME_VERSION)+'<div class="pBody">'+
+   '<button class="btn teal" onclick="resumeGame()">▶ Riprendi</button>'+
+   '<button class="btn" onclick="showInfo(true)">📜 INFO — Il diario del Cronista</button>'+
+   '<button class="btn" onclick="showOptions(true)">⚙ Opzioni</button>'+
+   '<button class="btn" onclick="save();toast(\'Partita salvata\')">💾 Salva</button>'+
+   '<button class="btn red" onclick="toTitle()">⏏ Torna al titolo</button>'+
+   '</div>');
+}
+function resumeGame(){closeOverlay();running=true;lastT=performance.now()}
+function toTitle(){save();running=false;docked=false;
+  document.getElementById("title").style.display="flex";
+  closeOverlay();
+  document.getElementById("hud").style.display="none";
+  document.getElementById("hudBtns").style.display="none";
+  document.getElementById("dockBtn").style.display="none";
+  refreshTitle();}
+
+/* ---------- INFO / lettera ---------- */
+function showInfo(fromGame){
+  const paras=LETTER.map(par=>{
+    const html=par.replace(/\{(g\d)\|([^}]+)\}/g,
+      '<span class="gloss" onclick="showGloss(\'$1\',' + (fromGame?1:0) + ')">$2</span>');
+    return '<p style="margin-bottom:11px;white-space:pre-line">'+html+'</p>';
+  }).join("");
+  openOverlay(head("Il diario del Cronista","INFO")+
+   '<div class="pBody narr" style="font-size:14.5px">'+paras+
+   '<button class="btn gold" onclick="'+(fromGame?'openMenu()':'closeOverlay()')+'">Chiudi</button></div>');
+}
+function showGloss(id,fromGame){
+  const t=GLOSSARY_TERMS[id];
+  openOverlay(head("✦ "+t.t,"Glossario")+
+   '<div class="pBody narr" style="white-space:pre-line;font-size:14px">'+t.x+
+   '</div><div style="padding:0 16px 14px"><button class="btn teal" onclick="showInfo('+fromGame+')">← Torna alla lettera</button></div>');
+}
+
+/* ---------- opzioni ---------- */
+function showOptions(fromGame){
+  openOverlay(head("Opzioni","")+'<div class="pBody">'+
+   '<button class="btn" onclick="OPT.sound=!OPT.sound;saveOpt();showOptions('+fromGame+')">🔊 Suono: <b class="tl">'+(OPT.sound?"attivo":"spento")+'</b></button>'+
+   '<button class="btn" onclick="OPT.hand=OPT.hand==\'right\'?\'left\':\'right\';applyHand();saveOpt();showOptions('+fromGame+')">✋ Comandi a: <b class="tl">'+(OPT.hand==="right"?"destra":"sinistra")+'</b></button>'+
+   '<button class="btn gold" onclick="'+(fromGame?'openMenu()':'closeOverlay()')+'">Chiudi</button></div>');
+}
+function applyHand(){const b=document.getElementById("hudBtns");
+  b.classList.toggle("right",OPT.hand==="right");b.classList.toggle("left",OPT.hand==="left");}
+
+/* ============================================================
+   INPUT
+   ============================================================ */
+cv.addEventListener("pointerdown",e=>{
+  if(!running||docked)return;
+  startPad();
+  const c=cam();target={x:e.clientX+c.x,y:e.clientY+c.y};
+});
+window.addEventListener("keydown",e=>{const k=e.key.toLowerCase();keys[k]=true;
+  if(k==="e"){const p=dockablePlanet();if(p&&running&&!docked)openPort(p)}
+  if(k==="escape"&&running&&!docked)openMenu();});
+window.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false});
+document.getElementById("dockBtn").addEventListener("click",()=>{
+  const p=dockablePlanet();if(p)openPort(p)});
+document.getElementById("btnCargo").addEventListener("click",()=>{if(running)openCargo()});
+document.getElementById("btnDiary").addEventListener("click",()=>{if(running)openDiary()});
+document.getElementById("btnMenu").addEventListener("click",()=>{if(running)openMenu()});
+document.getElementById("navChip").addEventListener("click",()=>{
+  S.navT=(S.navT+1)%PLANETS.length;updateHud();});
+ov.addEventListener("click",e=>{ // niente chiusura su tap fuori durante i pirati
+  if(e.target===ov&&!document.querySelector("#ov .rd"))return;});
+
+/* ============================================================
+   LOOP E AVVIO
+   ============================================================ */
+function frame(now){
+  const dt=Math.min(0.05,(now-lastT)/1000);lastT=now;
+  if(!S){requestAnimationFrame(frame);return}
+  if(running){
+    update(dt);
+    if(S.fuel<=0&&Math.hypot(S.vx,S.vy)<4&&!docked&&!document.querySelector("#ov .panel")){
+      running=false;
+      openOverlay(head("⛽ Alla deriva","",true)+'<div class="pBody narr">'+
+       '<p>Il serbatoio è vuoto e la nave scivola in silenzio tra le stelle.</p>'+
+       '<button class="btn teal" style="margin-top:12px" onclick="rescue();resumeGame()">📡 Chiama i soccorsi (15 ¢)</button></div>');
+    }
+    updateHud();
+  }
+  draw(dt);
+  requestAnimationFrame(frame);
+}
+setInterval(()=>{if(running)save()},5000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&S)save()});
+
+function startGame(st){
+  S=st;
+  document.getElementById("title").style.display="none";
+  document.getElementById("hud").style.display="flex";
+  document.getElementById("hudBtns").style.display="flex";
+  applyHand();updateHud();startPad();
+  running=true;docked=false;lastT=performance.now();
+}
+function refreshTitle(){
+  document.getElementById("verLbl").textContent="Orbit & Echoes — I Sentieri delle Stelle · v"+GAME_VERSION;
+  document.getElementById("tCont").style.display=loadSave()?"block":"none";
+}
+document.getElementById("tNew").addEventListener("click",()=>{
+  if(loadSave()&&!confirm("Iniziare una nuova partita? Il viaggio salvato andrà perduto."))return;
+  const st=newState();startGame(st);
+  log("Inizio del viaggio. Il diario è aperto.");
+  toast("Benvenuto, Cronista. Tocca lo spazio per muoverti.",4200);
+  save();
+});
+document.getElementById("tCont").addEventListener("click",()=>{
+  const st=loadSave();if(st)startGame(st);});
+document.getElementById("tInfo").addEventListener("click",()=>showInfo(false));
+document.getElementById("tOpt").addEventListener("click",()=>showOptions(false));
+
+/* stelline animate nel titolo */
+(function(){const oc=document.getElementById("orbits"),og=oc.getContext("2d");
+ function rs(){oc.width=innerWidth;oc.height=innerHeight}rs();addEventListener("resize",rs);
+ const ss=[];for(let i=0;i<90;i++)ss.push([Math.random(),Math.random(),rand(.5,2),Math.random()*7]);
+ (function tick(t){og.clearRect(0,0,oc.width,oc.height);og.fillStyle="#cfcaff";
+  ss.forEach(s=>{og.globalAlpha=.25+.6*Math.abs(Math.sin(t/900+s[3]));
+   og.fillRect(s[0]*oc.width,s[1]*oc.height,s[2],s[2])});
+  og.globalAlpha=1;requestAnimationFrame(tick)})(0);})();
+
+loadOpt();refreshTitle();
+requestAnimationFrame(t=>{lastT=t;requestAnimationFrame(frame)});
+</script>
+</body>
+</html>

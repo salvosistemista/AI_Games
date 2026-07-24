@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>THE FACILITY: Vertical Escape v2</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #08090c;
+            font-family: 'Courier New', Courier, monospace; color: #3ade7d;
+        }
+        #game-container {
+            position: relative; width: 100%; height: 100%;
+            max-width: 500px; margin: 0 auto; background: #11141a;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* SCREEN MENU */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; background: rgba(13, 16, 23, 0.95); z-index: 10; padding: 20px;
+        }
+        h1 { font-size: 26px; text-align: center; color: #3ade7d; margin-bottom: 40px; }
+        .menu-btn {
+            background: #18202c; color: #3ade7d; border: 2px solid #3ade7d;
+            padding: 15px 30px; margin: 10px; font-size: 16px; font-family: inherit;
+            font-weight: bold; width: 80%; max-width: 300px; border-radius: 4px;
+        }
+        .menu-btn:disabled { border-color: #445349; color: #445349; }
+        
+        /* UI GAME */
+        #ui-layer {
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            display: flex; justify-content: space-between; pointer-events: none; z-index: 5;
+        }
+        .ui-box { background: rgba(17, 20, 26, 0.9); padding: 6px 12px; border: 1px solid #3ade7d; border-radius: 4px; font-size: 12px; font-weight: bold;}
+        
+        #msg-box {
+            position: absolute; bottom: 170px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); border: 1px solid #ff5555; color: #ff5555;
+            padding: 8px 16px; font-size: 11px; border-radius: 4px; display: none; text-align: center; z-index: 4;
+        }
+
+        /* D-PAD A 4 DIREZIONI + TASTO AZIONE */
+        #controls-layout {
+            position: absolute; bottom: 15px; left: 0; width: 100%;
+            display: flex; justify-content: space-around; align-items: center; padding: 0 10px;
+        }
+        .dpad {
+            display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px); gap: 5px;
+        }
+        .ctrl-btn {
+            width: 50px; height: 50px; background: rgba(24, 32, 44, 0.85);
+            border: 2px solid #3ade7d; color: #3ade7d; border-radius: 8px;
+            font-size: 18px; display: flex; justify-content: center; align-items: center; font-weight: bold;
+        }
+        .action-btn {
+            width: 70px; height: 70px; background: rgba(58, 222, 125, 0.2);
+            border: 2px solid #3ade7d; color: #3ade7d; border-radius: 50%;
+            font-size: 14px; font-weight: bold; display: flex; justify-content: center; align-items: center;
+        }
+        .ctrl-btn:active, .action-btn:active { background: #3ade7d; color: #000; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui-layer">
+        <div class="ui-box">PIANO: <span id="ui-floor">1</span>/10</div>
+        <div class="ui-box">CHIAVE BLU: <span id="ui-keys">NO</span></div>
+    </div>
+    
+    <div id="msg-box">PORTA BLOCCATA! Trova la chiave negli armadietti o rubala alle guardie (Tasto A).</div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Nuovi Controlli Ottimizzati -->
+    <div id="controls-layout">
+        <div class="dpad">
+            <div></div><div class="ctrl-btn" id="btn-up">▲</div><div></div>
+            <div class="ctrl-btn" id="btn-left">◀</div><div></div><div class="ctrl-btn" id="btn-right">▶</div>
+            <div></div><div class="ctrl-btn" id="btn-down">▼</div><div></div>
+        </div>
+        <div class="action-btn" id="btn-action">AZIONE<br>[ A ]</div>
+    </div>
+
+    <!-- Menu Principale -->
+    <div id="main-menu" class="screen">
+        <h1>THE FACILITY<br><span style="font-size:14px; color:#888;">STEALTH INFILTRATION V2</span></h1>
+        <button class="menu-btn" id="btn-continue" disabled>CONTINUA PARTITA</button>
+        <button class="menu-btn" id="btn-new">NUOVA PARTITA</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const menuScreen = document.getElementById('main-menu');
+const btnContinue = document.getElementById('btn-continue');
+const btnNew = document.getElementById('btn-new');
+const uiFloor = document.getElementById('ui-floor');
+const uiKeys = document.getElementById('ui-keys');
+const msgBox = document.getElementById('msg-box');
+
+const TILE_SIZE = 40;
+const MAP_COLS = 10;
+const MAP_ROWS = 9;
+const START_Y_OFFSET = 120;
+
+let gameState = 'menu';
+let currentFloor = 1;
+let mapGrid = [];
+let guards = [];
+let items = [];
+let player = { x: 0, y: 0, hasKey: false };
+
+function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+if (localStorage.getItem('facility_v2_floor')) {
+    btnContinue.disabled = false;
+}
+
+function saveGame() {
+    localStorage.setItem('facility_v2_floor', currentFloor);
+}
+
+// --- GENERATORE PROCEDURALE DI LIVELLI COMPLETO ---
+function generateProceduralFloor(floorNum) {
+    mapGrid = [];
+    items = [];
+    guards = [];
+    player.hasKey = false;
+    uiKeys.innerText = "NO";
+    uiFloor.innerText = floorNum;
+
+    // 1. Riempi di spazio vuoto racchiuso da mura esterne
+    for (let r = 0; r < MAP_ROWS; r++) {
+        mapGrid[r] = [];
+        for (let c = 0; c < MAP_COLS; c++) {
+            if (r === 0 || r === MAP_ROWS - 1 || c === 0 || c === MAP_COLS - 1) {
+                mapGrid[r][c] = 1; // Muro perimetrale
+            } else {
+                mapGrid[r][c] = 0; // Vuoto
+            }
+        }
+    }
+
+    // 2. Genera stanze interne/muri divisori casuali in base al piano
+    let wallClusters = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < wallClusters; i++) {
+        let startR = Math.floor(Math.random() * (MAP_ROWS - 4)) + 2;
+        let startC = Math.floor(Math.random() * (MAP_COLS - 4)) + 1;
+        let length = 2 + Math.floor(Math.random() * 3);
+        let horizontal = Math.random() > 0.5;
+
+        for (let j = 0; j < length; j++) {
+            let r = horizontal ? startR : startR + j;
+            let c = horizontal ? startC + j : startC;
+            if (r < MAP_ROWS - 1 && c < MAP_COLS - 1 && r > 0 && c > 0) {
+                mapGrid[r][c] = 1;
+            }
+        }
+    }
+
+    // 3. Posiziona il Giocatore in una zona libera in basso
+    player.x = TILE_SIZE + 20;
+    player.y = (MAP_ROWS - 2) * TILE_SIZE + START_Y_OFFSET;
+    mapGrid[MAP_ROWS - 2][1] = 0; // Assicura che sia vuoto
+
+    // 4. Posiziona l'Uscita (Porta) in alto
+    let doorC = Math.floor(Math.random() * (MAP_COLS - 2)) + 1;
+    mapGrid[0][doorC] = 0; // Apri il muro perimetrale in alto per la porta
+    items.push({ x: doorC * TILE_SIZE + 20, y: START_Y_OFFSET, type: 'door' });
+
+    // 5. Posiziona 2 Armadietti in punti casuali liberi
+    let closetsPlaced = 0;
+    let keyInCloset = Math.random() > 0.4; // 60% probabilità che sia nell'armadio, altrimenti ce l'ha una guardia
+    
+    while (closetsPlaced < 2) {
+        let rc = Math.floor(Math.random() * (MAP_ROWS - 2)) + 1;
+        let cc = Math.floor(Math.random() * (MAP_COLS - 2)) + 1;
+        if (mapGrid[rc][cc] === 0 && (rc !== MAP_ROWS-2 || cc !== 1)) {
+            items.push({
+                x: cc * TILE_SIZE + 20,
+                y: rc * TILE_SIZE + START_Y_OFFSET,
+                type: 'closet',
+                hasKey: (closetsPlaced === 0 && keyInCloset),
+                searched: false
+            });
+            closetsPlaced++;
+        }
+    }
+
+    // 6. Genera Guardie (Aumentano con il piano)
+    let totalGuards = floorNum >= 5 ? 3 : 2;
+    let guardSpawned = 0;
+    while (guardSpawned < totalGuards) {
+        let rg = Math.floor(Math.random() * (MAP_ROWS - 3)) + 1; // Evita l'ultimo piano del player
+        if (mapGrid[rg].filter(v => v === 0).length > 4) { // Cerca una riga abbastanza libera
+            let startC = mapGrid[rg].indexOf(0);
+            let endC = mapGrid[rg].lastIndexOf(0);
+            
+            guards.push({
+                x: startC * TILE_SIZE + 20,
+                y: rg * TILE_SIZE + START_Y_OFFSET,
+                startX: startC * TILE_SIZE + 20,
+                endX: (endC - 1) * TILE_SIZE + 20,
+                dir: 1,
+                speed: 1.0 + (floorNum * 0.15),
+                stunned: false,
+                stunTimer: 0,
+                hasKey: (guardSpawned === 0 && !keyInCloset) // Se non è nell'armadio, la tiene la prima guardia
+            });
+            guardSpawned++;
+        }
+    }
+}
+
+function movePlayer(dx, dy) {
+    if (gameState !== 'playing') return;
+
+    let targetX = player.x + dx * TILE_SIZE;
+    let targetY = player.y + dy * TILE_SIZE;
+
+    // Calcola indici griglia
+    let gridC = Math.floor((targetX - 20) / TILE_SIZE);
+    let gridR = Math.floor((targetY - START_Y_OFFSET) / TILE_SIZE);
+
+    // Gestione Uscita dal perimetro alto (Porta)
+    if (gridR === 0) {
+        let door = items.find(i => i.type === 'door' && i.x === targetX && i.y === targetY);
+        if (door) {
+            if (player.hasKey) {
+                currentFloor++;
+                if (currentFloor > 10) {
+                    alert("COMPLIMENTI! Sei fuggito dal complesso!");
+                    gameState = 'menu'; menuScreen.style.display = 'flex';
+                } else {
+                    generateProceduralFloor(currentFloor);
+                    saveGame();
+                }
+                return;
+            } else {
+                msgBox.style.display = 'block';
+                setTimeout(() => msgBox.style.display = 'none', 3000);
+                return;
+            }
+        }
+    }
+
+    // Controllo collisione muri standard
+    if (gridR < 0 || gridR >= MAP_ROWS || gridC < 0 || gridC >= MAP_COLS) return;
+    if (mapGrid[gridR][gridC] === 1) return;
+
+    player.x = targetX;
+    player.y = targetY;
+}
+
+// --- NUOVA MECCANICA: TASTO AZIONE ATTIVA ---
+function executeAction() {
+    if (gameState !== 'playing') return;
+
+    // Rileva se c'è un oggetto o una guardia nelle caselle adiacenti o sopra il giocatore
+    let interacted = false;
+
+    // 1. Cerca Armadietti
+    items.forEach(item => {
+        if (Math.abs(player.x - item.x) <= TILE_SIZE && Math.abs(player.y - item.y) <= TILE_SIZE) {
+            if (item.type === 'closet' && !item.searched) {
+                item.searched = true;
+                interacted = true;
+                if (item.hasKey) {
+                    player.hasKey = true; uiKeys.innerText = "SI";
+                    alert("Hai trovato la chiave magnetica nell'armadietto!");
+                } else {
+                    alert("Questo armadietto è vuoto.");
+                }
+            }
+        }
+    });
+
+    // 2. Stordimento Guardie (Solo se ti trovi dietro di lei o vicinissimo di fianco)
+    if (!interacted) {
+        guards.forEach(g => {
+            if (!g.stunned && Math.abs(player.x - g.x) <= TILE_SIZE && Math.abs(player.y - g.y) <= TILE_SIZE) {
+                // Controllo se il giocatore non è davanti al suo cono visivo
+                let davanti = false;
+                if (g.dir === 1 && player.x > g.x) davanti = true;
+                if (g.dir === -1 && player.x < g.x) davanti = true;
+
+                if (!davanti || Math.abs(player.y - g.y) > 10) { 
+                    g.stunned = true;
+                    g.stunTimer = 30 * 60; // 30 Secondi
+                    interacted = true;
+                    if (g.hasKey) {
+                        player.hasKey = true; uiKeys.innerText = "SI";
+                        g.hasKey = false;
+                        alert("Guardia stordita! Le hai rubato la chiave!");
+                    } else {
+                        alert("Guardia stordita per 30 secondi!");
+                    }
+                }
+            }
+        });
+    }
+}
+
+// --- ASSOCIAZIONE CONTROLLI TOUCH D-PAD ---
+document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(-1, 0); });
+document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(1, 0); });
+document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(0, -1); });
+document.getElementById('btn-down').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(0, 1); });
+document.getElementById('btn-action').addEventListener('touchstart', (e) => { e.preventDefault(); executeAction(); });
+
+// Supporto tastiera PC (Spazio o E per azione)
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
+    if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
+    if (e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
+    if (e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
+    if (e.key === ' ' || e.key === 'e') executeAction();
+});
+
+btnNew.addEventListener('click', () => {
+    menuScreen.style.display = 'none';
+    gameState = 'playing';
+    currentFloor = 1;
+    generateProceduralFloor(currentFloor);
+    saveGame();
+    startGameLoop();
+});
+
+btnContinue.addEventListener('click', () => {
+    menuScreen.style.display = 'none';
+    gameState = 'playing';
+    currentFloor = parseInt(localStorage.getItem('facility_v2_floor')) || 1;
+    generateProceduralFloor(currentFloor);
+    startGameLoop();
+});
+
+function startGameLoop() {
+    function loop() {
+        if (gameState === 'playing') { update(); draw(); }
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+}
+
+function update() {
+    guards.forEach(g => {
+        if (g.stunned) {
+            g.stunTimer--;
+            if (g.stunTimer <= 0) g.stunned = false;
+            return;
+        }
+
+        g.x += g.speed * g.dir;
+        if (g.x >= g.endX) { g.x = g.endX; g.dir = -1; }
+        if (g.x <= g.startX) { g.x = g.startX; g.dir = 1; }
+
+        // Linea di vista (3 caselle)
+        let viewDist = TILE_SIZE * 3;
+        let spotted = false;
+        if (g.dir === 1 && player.y === g.y && player.x > g.x && player.x < g.x + viewDist) spotted = true;
+        if (g.dir === -1 && player.y === g.y && player.x < g.x && player.x > g.x - viewDist) spotted = true;
+
+        if (spotted) {
+            gameState = 'gameover';
+            alert("ALLARME ROSSO! La guardia ti ha visto. Riparti dall'inizio del piano.");
+            generateProceduralFloor(currentFloor);
+            gameState = 'playing';
+        }
+    });
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Muri
+    ctx.fillStyle = '#222936';
+    for (let r = 0; r < MAP_ROWS; r++) {
+        for (let c = 0; c < MAP_COLS; c++) {
+            if (mapGrid[r][c] === 1) {
+                ctx.fillRect(c * TILE_SIZE + 20, r * TILE_SIZE + START_Y_OFFSET, TILE_SIZE, TILE_SIZE);
+                ctx.strokeStyle = '#11141a';
+                ctx.strokeRect(c * TILE_SIZE + 20, r * TILE_SIZE + START_Y_OFFSET, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+
+    // Oggetti
+    items.forEach(item => {
+        if (item.type === 'closet') {
+            ctx.fillStyle = item.searched ? '#445349' : '#cca353';
+            ctx.fillRect(item.x + 4, item.y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+            ctx.fillStyle = '#fff'; ctx.font = '9px Arial';
+            ctx.fillText("ARM", item.x + 8, item.y + 24);
+        } else if (item.type === 'door') {
+            ctx.fillStyle = player.hasKey ? '#3ade7d' : '#ff5555';
+            ctx.fillRect(item.x, item.y, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = '#000'; ctx.font = '10px Arial';
+            ctx.fillText("USCITA", item.x + 2, item.y + 24);
+        }
+    });
+
+    // Guardie
+    guards.forEach(g => {
+        if (g.stunned) {
+            ctx.fillStyle = '#687980';
+            ctx.fillRect(g.x + 6, g.y + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+            ctx.fillStyle = '#55aaff'; ctx.font = '11px Courier New';
+            ctx.fillText(Math.ceil(g.stunTimer / 60) + "s", g.x + 8, g.y - 4);
+        } else {
+            // Cono visivo rosso trasparente
+            ctx.fillStyle = 'rgba(255, 85, 85, 0.12)';
+            if (g.dir === 1) ctx.fillRect(g.x + TILE_SIZE, g.y, TILE_SIZE * 3, TILE_SIZE);
+            else ctx.fillRect(g.x - TILE_SIZE * 3, g.y, TILE_SIZE * 3, TILE_SIZE);
+
+            ctx.fillStyle = '#ff5555';
+            ctx.fillRect(g.x + 6, g.y + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+            ctx.fillStyle = '#fff';
+            if (g.dir === 1) ctx.fillRect(g.x + TILE_SIZE - 10, g.y + 16, 4, 8);
+            else ctx.fillRect(g.x + 6, g.y + 16, 4, 8);
+        }
+    });
+
+    // Giocatore
+    ctx.fillStyle = '#3ade7d';
+    ctx.fillRect(player.x + 8, player.y + 8, TILE_SIZE - 16, TILE_SIZE - 16);
+}
+</script>
+</body>
+</html>

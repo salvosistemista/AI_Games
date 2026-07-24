@@ -1,0 +1,3639 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasures of the Ocean (v.1.54)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #010a15;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #debug-panel {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(20, 5, 5, 0.78);
+            border: 1px solid rgba(255, 100, 100, 0.5);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #ffd6d6;
+            font-size: 13px;
+            line-height: 1.7;
+            z-index: 20;
+            display: none;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+        }
+        #UI-Overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            color: white;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            background: rgba(1, 18, 38, 0.55);
+            border: 1px solid rgba(0, 210, 255, 0.35);
+            border-radius: 14px;
+            padding: 12px 16px;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.15);
+            min-width: 230px;
+        }
+        #UI-Records {
+            font-size: 11px;
+            color: #7dd3fc;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+            padding-bottom: 6px;
+        }
+        .hud-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px 14px;
+            margin-bottom: 10px;
+        }
+        .hud-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+            font-size: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+        }
+        .hud-stat .icon { font-size: 14px; }
+        .hud-stat.gold-bank { color: #ffd43b; }
+        .hud-stat.gold-bag { color: #fbbf24; opacity: 0.85; }
+        .hud-stat.harpoons { color: #ff9f5a; }
+        .hud-stat.medkits { color: #4ade80; }
+        .hud-gauge { margin-top: 7px; }
+        .hud-gauge-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+        .bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.25);
+            margin-top: 0;
+            border-radius: 6px;
+            overflow: hidden;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        #oxygen-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #0088c4, #6fe4ff);
+            transition: width 0.1s linear;
+        }
+        #battery-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ca8a04, #ffd43b);
+            transition: width 0.1s linear;
+        }
+        #health-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #b91c1c, #fb7185);
+            transition: width 0.1s linear;
+        }
+        .hud-gauge.critical .bar {
+            border-color: #ef4444;
+            animation: hudCriticalPulse 0.8s infinite;
+        }
+        @keyframes hudCriticalPulse {
+            0%, 100% { box-shadow: 0 0 3px rgba(239,68,68,0.25); }
+            50% { box-shadow: 0 0 12px rgba(239,68,68,0.95); }
+        }
+        #supply-menu {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(160deg, rgba(9, 30, 40, 0.96), rgba(4, 14, 22, 0.97));
+            border: 2px solid #ffd43b;
+            border-radius: 14px;
+            padding: 24px 28px;
+            color: white;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            pointer-events: auto;
+            z-index: 25;
+            max-width: 420px;
+            box-shadow: 0 0 30px rgba(255, 212, 59, 0.35);
+            text-align: center;
+        }
+        #supply-menu-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffd43b;
+        }
+        #supply-menu-body p {
+            margin: 6px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        #supply-menu-body {
+            max-height: 340px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        .supply-boat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 212, 59, 0.25);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        .supply-boat-card.active {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.08);
+        }
+        .supply-boat-name {
+            font-weight: bold;
+            color: #ffd43b;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        .supply-boat-card.active .supply-boat-name { color: #4ade80; }
+        .supply-boat-desc {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .supply-boat-btn {
+            width: 100%;
+            padding: 7px;
+            font-size: 12px;
+        }
+        .supply-section-title {
+            font-weight: bold;
+            color: #7dd3fc;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 14px 0 6px;
+            text-align: left;
+            border-bottom: 1px solid rgba(125, 211, 252, 0.25);
+            padding-bottom: 3px;
+        }
+        #shop-menu {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(1, 18, 38, 0.9);
+            border: 2px solid #00d2ff;
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            display: none; 
+            gap: 15px;
+            pointer-events: auto;
+            z-index: 10;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 92vw;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+        }
+        .shop-btn {
+            background: #004477;
+            color: white;
+            border: 1px solid #00d2ff;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .shop-btn:hover { background: #0066aa; }
+        .shop-btn:disabled { background: #333; border-color: #555; cursor: not-allowed; }
+        .gamepad-hint {
+            font-size: 10px;
+            color: #00d2ff;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-top: 2px;
+            font-weight: normal;
+        }
+        .close-hint {
+            font-size: 11px;
+            color: #ef4444;
+            border: 1px solid #ef4444;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* STRUTTURA BASE DEI MENU E MODALI */
+        .menu-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 20; color: white; pointer-events: none;
+            background: rgba(0, 0, 0, 0);
+            transition: background 0.2s ease;
+        }
+        .menu-container.modal-active {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .menu-content {
+            background: rgba(1, 10, 21, 0.92);
+            border: 2px solid #00d2ff;
+            padding: 40px; border-radius: 15px;
+            display: flex; flex-direction: column; gap: 15px;
+            align-items: center; pointer-events: auto;
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.3);
+            min-width: 340px;
+            max-width: 450px;
+        }
+        .menu-title {
+            font-size: 32px; font-weight: bold; color: #fff;
+            text-shadow: 0 0 10px #00d2ff; margin-bottom: 20px; text-align: center;
+        }
+        .menu-text {
+            font-size: 16px; color: #cbd5e0; text-align: center; margin-bottom: 15px; line-height: 1.5;
+        }
+        .menu-btn {
+            width: 100%; background: #002244; color: white;
+            border: 1px solid #00d2ff; padding: 12px 20px;
+            cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 16px;
+            transition: all 0.2s ease;
+        }
+        .menu-btn:hover, .menu-btn.selected { 
+            background: #005599; 
+            box-shadow: 0 0 10px #00d2ff;
+            border-color: #fff;
+            outline: none;
+        }
+        .menu-btn:disabled { background: #222; border-color: #444; color: #666; cursor: not-allowed; box-shadow: none !important; }
+        
+        .modal-buttons-row {
+            display: flex; gap: 15px; width: 100%;
+        }
+
+        /* OVERLAY PER DISSOLVENZA (FADE EFFECT) */
+        #fade-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 40;
+            transition: opacity 1.0s ease-in-out;
+        }
+        #fade-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="fade-overlay"></div>
+
+    <div id="debug-panel">
+        <div style="color:#ff8080; font-weight:bold; margin-bottom:4px;">DEBUG v1.54</div>
+        <div>🗿 Statue: <span id="dbg-statues">0</span></div>
+        <div>🚢 Relitti: <span id="dbg-wrecks">0</span></div>
+        <div>💎 Tesori: <span id="dbg-treasures">0</span></div>
+        <div>🐙 Polipi: <span id="dbg-octopus">0</span></div>
+        <div style="border-top:1px solid rgba(255,100,100,0.3); margin-top:4px; padding-top:4px;">🕳️ Grotte: <span id="dbg-caves">0</span></div>
+        <div>🪸 Barriere: <span id="dbg-reefs">0</span></div>
+        <div>🌑 Fosse: <span id="dbg-trenches">0</span></div>
+        <div style="border-top:1px solid rgba(255,100,100,0.3); margin-top:4px; padding-top:4px;">👻 Relitti sfondo: <span id="dbg-bgwrecks">0</span></div>
+        <div>🐋 Balene: <span id="dbg-whales">0</span></div>
+        <div>🐟 Banchi lontani: <span id="dbg-schools">0</span></div>
+        <div>☀️ Fasci di luce: <span id="dbg-beams">0</span></div>
+        <div>🫧 Colonne di bolle: <span id="dbg-bubblecols">0</span></div>
+    </div>
+
+    <div id="UI-Overlay">
+        <div id="UI-Records">🏆 <span id="ui-rec-dist">0</span>m · Max oro <span id="ui-rec-gold">0</span>$</div>
+        <div class="hud-stats">
+            <div class="hud-stat"><span class="icon">📏</span><span id="ui-distance">0</span>m</div>
+            <div class="hud-stat gold-bank"><span class="icon">🏦</span><span id="ui-gold">0</span>$</div>
+            <div class="hud-stat gold-bag"><span class="icon">💰</span><span id="ui-current-gold">0</span>$</div>
+            <div class="hud-stat harpoons"><span class="icon">🔱</span><span id="ui-harpoons">0</span></div>
+            <div class="hud-stat medkits"><span class="icon">🩹</span><span id="ui-medkits">0</span></div>
+        </div>
+        <div class="hud-gauge" id="health-gauge">
+            <div class="hud-gauge-label">❤️ Vita · C</div>
+            <div class="bar"><div id="health-fill"></div></div>
+        </div>
+        <div class="hud-gauge" id="oxygen-gauge">
+            <div class="hud-gauge-label">🫧 Ossigeno</div>
+            <div class="bar"><div id="oxygen-fill"></div></div>
+        </div>
+        <div class="hud-gauge">
+            <div class="hud-gauge-label">🔦 Torcia · T</div>
+            <div class="bar"><div id="battery-fill"></div></div>
+        </div>
+    </div>
+
+    <div id="main-menu" class="menu-container">
+        <div class="menu-content">
+            <div class="menu-title">Treasures of the Ocean<br><span style="font-size:18px; color:#00d2ff;">The Hawaiian Dream v.1.54</span></div>
+            <button class="menu-btn" id="btn-continue" onclick="continueGameClick()" disabled>Continua</button>
+            <button class="menu-btn" id="btn-newgame" onclick="startNewGameClick()">Nuova Partita</button>
+            <button class="menu-btn" id="btn-options" onclick="showCustomAlert('Opzioni', 'Funzionalità non ancora disponibile.<br>Configurazioni grafiche e audio prossimamente!')">Opzioni</button>
+            <button class="menu-btn" id="btn-info" onclick="showCustomAlert('Informazioni', 'Sviluppato in HTML5/Canvas.<br>Usa WASD o la levetta del Gamepad per muoverti, SPAZIO o tasto A/X per sparare le fiocine.')">Info</button>
+        </div>
+    </div>
+
+    <div id="pause-menu" class="menu-container" style="display:none;">
+        <div class="menu-content" style="border-color: #eab308; box-shadow: 0 0 25px rgba(234, 179, 8, 0.3);">
+            <div class="menu-title" style="color: #eab308; text-shadow: 0 0 10px #eab308;">GIOCO IN PAUSA</div>
+            <div style="font-size:14px; color:#aaa; margin-bottom:10px;">Partita salvata temporaneamente</div>
+            <button class="menu-btn" id="btn-resume" style="border-color:#eab308;" onclick="resumeGame()">Riprendi</button>
+            <button class="menu-btn" id="btn-exit" style="border-color:#e63946;" onclick="backToMainMenu()">Torna al Menu Principale</button>
+        </div>
+    </div>
+
+    <div id="custom-alert" class="menu-container modal-active" style="display:none; z-index: 30;">
+        <div class="menu-content" style="border-color: #00d2ff;">
+            <div class="menu-title" id="alert-title">Avviso</div>
+            <div class="menu-text" id="alert-text">Messaggio di testo</div>
+            <button class="menu-btn" id="btn-alert-ok" onclick="closeCustomAlert()">OK</button>
+        </div>
+    </div>
+
+    <div id="custom-confirm" class="menu-container modal-active" style="display:none; z-index: 30;">
+        <div class="menu-content" style="border-color: #e63946; box-shadow: 0 0 25px rgba(230, 57, 70, 0.3);">
+            <div class="menu-title" id="confirm-title" style="color: #e63946; text-shadow: 0 0 10px #e63946;">Attenzione</div>
+            <div class="menu-text" id="confirm-text">Sei sicuro di voler procedere?</div>
+            <div class="modal-buttons-row">
+                <button class="menu-btn" id="btn-confirm-cancel" style="border-color: #666; background: #222;" onclick="closeCustomConfirm(false)">Annulla</button>
+                <button class="menu-btn" id="btn-confirm-action" style="border-color: #e63946; background: #4a121a;" onclick="closeCustomConfirm(true)">Conferma</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shop-menu">
+        <div style="font-size: 12px; color: #00d2ff; font-weight: bold; margin-right: 5px;">OFFICINA BARCA:</div>
+        <button class="shop-btn" id="btn-ox" onclick="buyUpgrade('oxygen')">
+            <span>+Ossigeno (50$)</span>
+            <span class="gamepad-hint">Tasto 1 · D-Pad ⬅</span>
+        </button>
+        <button class="shop-btn" id="btn-speed" onclick="buyUpgrade('speed')">
+            <span>+Pinne (70$)</span>
+            <span class="gamepad-hint">Tasto 2 · D-Pad ⬆</span>
+        </button>
+        <button class="shop-btn" id="btn-harpoon" onclick="buyUpgrade('harpoon')">
+            <span>+1 Fiocina (30$)</span>
+            <span class="gamepad-hint">Tasto 3 · D-Pad ➡</span>
+        </button>
+        <button class="shop-btn" id="btn-medkit" onclick="buyUpgrade('medkit')">
+            <span>+Kit Pronto Soccorso (40$)</span>
+            <span class="gamepad-hint">Tasto 4 · D-Pad ⬇</span>
+        </button>
+        <div class="close-hint">
+            <span>CHIUDI OFFICINA</span>
+            <span style="font-size: 10px; font-weight: normal; margin-top: 2px; color: #f87171;">Tastiera ⬇ / Levetta ⬇ o B/⭕</span>
+        </div>
+    </div>
+
+    <div id="supply-menu">
+        <div id="supply-menu-title">🎁 Forniture Speciali</div>
+        <div id="supply-menu-body">
+            <p>Nuove forniture sono arrivate con la corrente! Presto qui troverai imbarcazioni, bombole, fiocine speciali e altro ancora.</p>
+            <p style="opacity:0.7; font-size:12px;">(Sezione in costruzione — per ora puoi solo chiuderla e continuare l'immersione.)</p>
+        </div>
+        <button class="menu-btn" id="btn-supply-close" onclick="closeSupplyMenu()">Chiudi Forniture</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let recordDistance = parseFloat(localStorage.getItem('sub_record_distance')) || 0;
+let recordGold = parseInt(localStorage.getItem('sub_record_gold')) || 0;
+
+const gameState = {
+    screen: 'main-menu', 
+    hasActiveSession: false,
+    distance: 0,
+    gold: 0,
+    currentGold: 0,
+    baseGameSpeed: 1.3, 
+    gameSpeed: 1.3,
+    harpoons: 5, 
+    maxHarpoons: 5, 
+    medkits: 0,
+    maxMedkits: 3,
+    ownedBoats: ['pedalo'],
+    currentBoatType: 'pedalo',
+    ownedTanks: ['standard'],
+    currentTank: 'standard',
+    tankSpeedMod: 0,
+    tankRefillRate: 8,
+    oxygenUpgradeBonus: 0,
+    ownedHarpoonTypes: ['standard'],
+    currentHarpoonType: 'standard',
+    ownedSkins: ['standard'],
+    currentSkin: 'standard',
+    hasCompass: false,
+    hasInsurance: false,
+    hasCompanionFish: false,
+    upgrades: {
+        oxygenMax: 525, 
+        speed: 4
+    },
+    shopForceClosed: false 
+};
+
+// --- GESTIONE AUDIO DI SOTTOFONDO PROCEDURALE (Ambient 1) ---
+let menuAudioCtx = null;
+let menuNoiseNode = null;
+let menuLfoNode = null;
+
+function startMenuAmbient() {
+    if (gameState.screen !== 'main-menu') return;
+    try {
+        if (!menuAudioCtx) {
+            menuAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (menuAudioCtx.state === 'suspended') {
+            menuAudioCtx.resume();
+        }
+        if (menuNoiseNode) return; // Già in riproduzione
+
+        const bufferDuration = 10; 
+        const bufferSize = menuAudioCtx.sampleRate * bufferDuration;
+        const buffer = menuAudioCtx.createBuffer(1, bufferSize, menuAudioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            data[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = data[i];
+            data[i] *= 3.5; 
+        }
+
+        menuNoiseNode = menuAudioCtx.createBufferSource();
+        menuNoiseNode.buffer = buffer;
+        menuNoiseNode.loop = true; 
+
+        const filter = menuAudioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(130, menuAudioCtx.currentTime);
+
+        menuLfoNode = menuAudioCtx.createOscillator();
+        menuLfoNode.type = 'sine';
+        menuLfoNode.frequency.setValueAtTime(0.1, menuAudioCtx.currentTime); 
+
+        const lfoGain = menuAudioCtx.createGain();
+        lfoGain.gain.setValueAtTime(40, menuAudioCtx.currentTime);
+
+        menuLfoNode.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        const gainNode = menuAudioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.7, menuAudioCtx.currentTime);
+
+        menuNoiseNode.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(menuAudioCtx.destination);
+
+        menuLfoNode.start(menuAudioCtx.currentTime);
+        menuNoiseNode.start(menuAudioCtx.currentTime, 0);
+    } catch(e) {
+        console.log("Audio in attesa di sblocco interazione utente.");
+    }
+}
+
+function stopMenuAmbient() {
+    if (menuNoiseNode) {
+        try { menuNoiseNode.stop(); } catch(e){}
+        menuNoiseNode = null;
+    }
+    if (menuLfoNode) {
+        try { menuLfoNode.stop(); } catch(e){}
+        menuLfoNode = null;
+    }
+}
+
+// Interazioni per aggirare le restrizioni browser sulla riproduzione audio iniziale
+['click', 'keydown', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, () => {
+        if (gameState.screen === 'main-menu') {
+            startMenuAmbient();
+        }
+    });
+});
+
+// Suono di click per i pulsanti dei menu (esclusi quelli del negozio, che hanno già il suono "upgrade")
+window.addEventListener('click', (e) => {
+    if (e.target.closest && e.target.closest('.menu-btn') && !e.target.closest('#supply-menu')) {
+        playSoundFX('click'); // SUONO CLICK MENU/INTERFACCIA
+    }
+});
+
+// ============================================================================
+// SISTEMA AUDIO DI SOTTOFONDO (BGM) IN LOOP PER LA PARTITA
+// ============================================================================
+
+let localAudioCtx = (typeof audioCtx !== 'undefined') ? audioCtx : null;
+let bgmIsPlaying = false;
+let currentPlaylistIndex = 0;
+let bgmPlaybackTime = 0; 
+let bgmTimerInterval = null;
+const BGM_TRACK_DURATION = 60; // Durata di ogni brano (60 secondi)
+
+let bgmActiveNodes = [];
+let bgmScheduledTimers = [];
+
+// Sequenza esatta dei 7 brani richiesti che andranno in loop continuo
+const bgmPlaylist = [
+    'coral',   // 1) Ambient 4: Barriera corallina viva
+    'upbeat',  // 2) Ambient 6: Festa sulla spiaggia
+    'coral',   // 3) Ambient 4: Barriera corallina viva
+    'relax',   // 4) Ambient 5: Barriera Hula
+    'coral',   // 5) Ambient 4: Barriera corallina viva
+    'sunrise', // 6) Ambient 7: Alba a Oahu
+    'romance'  // 7) Ambient 8: Aloha Love
+];
+
+function initBGMAudio() {
+    if (typeof audioCtx !== 'undefined') { localAudioCtx = audioCtx; }
+    if (!localAudioCtx) {
+        localAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (typeof audioCtx === 'undefined') { window.audioCtx = localAudioCtx; }
+    }
+    if (localAudioCtx.state === 'suspended') { localAudioCtx.resume(); }
+}
+
+// Funzione da attivare quando inizia la partita o quando si esce dalla pausa
+function startBGMPlaylist() {
+    if (bgmIsPlaying) return;
+    initBGMAudio();
+    bgmIsPlaying = true;
+
+    playBGMTrack(currentPlaylistIndex, bgmPlaybackTime);
+
+    bgmTimerInterval = setInterval(() => {
+        bgmPlaybackTime += 0.2;
+        if (bgmPlaybackTime >= BGM_TRACK_DURATION) {
+            stopBGMNodeEngine();
+            bgmPlaybackTime = 0;
+            currentPlaylistIndex++;
+            if (currentPlaylistIndex >= bgmPlaylist.length) {
+                currentPlaylistIndex = 0; // Finito il giro, ricomincia dal brano 1 (Ambient 4)
+            }
+            playBGMTrack(currentPlaylistIndex, 0);
+        }
+    }, 200);
+}
+
+// Funzione da attivare quando il gioco viene messo in pausa o termina
+function pauseBGMPlaylist() {
+    if (!bgmIsPlaying) return;
+    bgmIsPlaying = false;
+    clearInterval(bgmTimerInterval);
+    stopBGMNodeEngine();
+}
+
+function stopBGMNodeEngine() {
+    bgmActiveNodes.forEach(node => { try { node.stop(); } catch(e){} });
+    bgmActiveNodes = [];
+    bgmScheduledTimers.forEach(timer => clearTimeout(timer));
+    bgmScheduledTimers = [];
+}
+
+function playBGMTrack(index, offset) {
+    const now = localAudioCtx.currentTime;
+    const trackType = bgmPlaylist[index];
+    
+    if (trackType === 'coral') playCoralReefLifeBGM(now, offset);
+    else if (trackType === 'relax') playHawaiianRelaxBGM(now, offset);
+    else if (trackType === 'upbeat') playHawaiianUpbeatBGM(now, offset);
+    else if (trackType === 'sunrise') playHawaiianSunriseBGM(now, offset);
+    else if (trackType === 'romance') playHawaiianRomanceBGM(now, offset);
+}
+
+// --- EFFETTI SONORI PROCEDURALI (NATIVI SENZA FILE ESTERNI) ---
+function playSoundFX(type) {
+    if (!localAudioCtx) initBGMAudio();
+    const now = localAudioCtx.currentTime;
+    
+    switch(type) {
+        case 'harpoon': // Sparo fiocina
+            const oscH = localAudioCtx.createOscillator();
+            const gainH = localAudioCtx.createGain();
+            oscH.type = 'triangle';
+            oscH.frequency.setValueAtTime(400, now);
+            oscH.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+            gainH.gain.setValueAtTime(0.3, now);
+            gainH.gain.linearRampToValueAtTime(0.01, now + 0.15);
+            oscH.connect(gainH);
+            gainH.connect(localAudioCtx.destination);
+            oscH.start(now);
+            oscH.stop(now + 0.16);
+            break;
+            
+        case 'collect': // Raccolta tesoro
+            const oscC = localAudioCtx.createOscillator();
+            const gainC = localAudioCtx.createGain();
+            oscC.type = 'sine';
+            oscC.frequency.setValueAtTime(587.33, now); // Nota Re
+            oscC.frequency.setValueAtTime(880, now + 0.08);   // Nota La
+            gainC.gain.setValueAtTime(0.2, now);
+            gainC.gain.linearRampToValueAtTime(0.01, now + 0.25);
+            oscC.connect(gainC);
+            gainC.connect(localAudioCtx.destination);
+            oscC.start(now);
+            oscC.stop(now + 0.26);
+            break;
+
+        case 'hit': // Danno / Impatto nemico
+            const oscHit = localAudioCtx.createOscillator();
+            const gainHit = localAudioCtx.createGain();
+            oscHit.type = 'sawtooth';
+            oscHit.frequency.setValueAtTime(120, now);
+            oscHit.frequency.linearRampToValueAtTime(40, now + 0.25);
+            const filterHit = localAudioCtx.createBiquadFilter();
+            filterHit.type = 'lowpass';
+            filterHit.frequency.setValueAtTime(300, now);
+            gainHit.gain.setValueAtTime(0.4, now);
+            gainHit.gain.linearRampToValueAtTime(0.01, now + 0.25);
+            oscHit.connect(filterHit);
+            filterHit.connect(gainHit);
+            gainHit.connect(localAudioCtx.destination);
+            oscHit.start(now);
+            oscHit.stop(now + 0.26);
+            break;
+
+        case 'upgrade': // Acquisto officina
+            const oscU = localAudioCtx.createOscillator();
+            const gainU = localAudioCtx.createGain();
+            oscU.type = 'sine';
+            oscU.frequency.setValueAtTime(523.25, now); // Do
+            oscU.frequency.setValueAtTime(659.25, now + 0.07); // Mi
+            oscU.frequency.setValueAtTime(783.99, now + 0.14); // Sol
+            oscU.frequency.setValueAtTime(1046.50, now + 0.21); // Do Alto
+            gainU.gain.setValueAtTime(0.25, now);
+            gainU.gain.linearRampToValueAtTime(0.01, now + 0.35);
+            oscU.connect(gainU);
+            gainU.connect(localAudioCtx.destination);
+            oscU.start(now);
+            oscU.stop(now + 0.36);
+            break;
+
+        case 'gameover': // Fine aria
+            const oscG = localAudioCtx.createOscillator();
+            const gainG = localAudioCtx.createGain();
+            oscG.type = 'sawtooth';
+            oscG.frequency.setValueAtTime(180, now);
+            oscG.frequency.linearRampToValueAtTime(60, now + 0.8);
+            gainG.gain.setValueAtTime(0.3, now);
+            gainG.gain.linearRampToValueAtTime(0.001, now + 0.8);
+            oscG.connect(gainG);
+            gainG.connect(localAudioCtx.destination);
+            oscG.start(now);
+            oscG.stop(now + 0.85);
+            break;
+
+        case 'deposit': // Deposito oro alla barca
+            const oscD = localAudioCtx.createOscillator();
+            const gainD = localAudioCtx.createGain();
+            oscD.type = 'triangle';
+            oscD.frequency.setValueAtTime(880, now);
+            oscD.frequency.exponentialRampToValueAtTime(1320, now + 0.2);
+            gainD.gain.setValueAtTime(0.2, now);
+            gainD.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            oscD.connect(gainD);
+            gainD.connect(localAudioCtx.destination);
+            oscD.start(now);
+            oscD.stop(now + 0.22);
+            break;
+            
+        case 'bubble': // Raccolta bolla d'aria
+            const oscB = localAudioCtx.createOscillator();
+            const gainB = localAudioCtx.createGain();
+            oscB.type = 'sine';
+            oscB.frequency.setValueAtTime(300, now);
+            oscB.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+            gainB.gain.setValueAtTime(0.15, now);
+            gainB.gain.linearRampToValueAtTime(0.01, now + 0.08);
+            oscB.connect(gainB);
+            gainB.connect(localAudioCtx.destination);
+            oscB.start(now);
+            oscB.stop(now + 0.09);
+            break;
+            
+        case 'break': // Colonna rotta
+            const oscBr = localAudioCtx.createOscillator();
+            const gainBr = localAudioCtx.createGain();
+            oscBr.type = 'triangle';
+            oscBr.frequency.setValueAtTime(90, now);
+            oscBr.frequency.linearRampToValueAtTime(30, now + 0.3);
+            gainBr.gain.setValueAtTime(0.5, now);
+            gainBr.gain.linearRampToValueAtTime(0.01, now + 0.3);
+            oscBr.connect(gainBr);
+            gainBr.connect(localAudioCtx.destination);
+            oscBr.start(now);
+            oscBr.stop(now + 0.32);
+            break;
+
+        case 'columnHit': // Colpo a colonna non ancora distrutta
+            const oscCh = localAudioCtx.createOscillator();
+            const gainCh = localAudioCtx.createGain();
+            oscCh.type = 'triangle';
+            oscCh.frequency.setValueAtTime(150, now);
+            oscCh.frequency.linearRampToValueAtTime(90, now + 0.08);
+            gainCh.gain.setValueAtTime(0.28, now);
+            gainCh.gain.linearRampToValueAtTime(0.01, now + 0.09);
+            oscCh.connect(gainCh);
+            gainCh.connect(localAudioCtx.destination);
+            oscCh.start(now);
+            oscCh.stop(now + 0.1);
+            break;
+
+        case 'torchOn': // Accensione torcia
+            const oscTOn = localAudioCtx.createOscillator();
+            const gainTOn = localAudioCtx.createGain();
+            oscTOn.type = 'sine';
+            oscTOn.frequency.setValueAtTime(320, now);
+            oscTOn.frequency.exponentialRampToValueAtTime(760, now + 0.1);
+            gainTOn.gain.setValueAtTime(0.16, now);
+            gainTOn.gain.linearRampToValueAtTime(0.01, now + 0.12);
+            oscTOn.connect(gainTOn);
+            gainTOn.connect(localAudioCtx.destination);
+            oscTOn.start(now);
+            oscTOn.stop(now + 0.13);
+            break;
+
+        case 'torchOff': // Spegnimento torcia
+            const oscTOff = localAudioCtx.createOscillator();
+            const gainTOff = localAudioCtx.createGain();
+            oscTOff.type = 'sine';
+            oscTOff.frequency.setValueAtTime(520, now);
+            oscTOff.frequency.exponentialRampToValueAtTime(200, now + 0.09);
+            gainTOff.gain.setValueAtTime(0.13, now);
+            gainTOff.gain.linearRampToValueAtTime(0.01, now + 0.1);
+            oscTOff.connect(gainTOff);
+            gainTOff.connect(localAudioCtx.destination);
+            oscTOff.start(now);
+            oscTOff.stop(now + 0.11);
+            break;
+
+        case 'heal': // Uso kit di pronto soccorso
+            const oscHl1 = localAudioCtx.createOscillator();
+            const oscHl2 = localAudioCtx.createOscillator();
+            const gainHl = localAudioCtx.createGain();
+            oscHl1.type = 'sine'; oscHl2.type = 'sine';
+            oscHl1.frequency.setValueAtTime(440, now);
+            oscHl1.frequency.setValueAtTime(660, now + 0.12);
+            oscHl2.frequency.setValueAtTime(880, now);
+            oscHl2.frequency.setValueAtTime(1320, now + 0.12);
+            gainHl.gain.setValueAtTime(0.001, now);
+            gainHl.gain.linearRampToValueAtTime(0.22, now + 0.05);
+            gainHl.gain.linearRampToValueAtTime(0.01, now + 0.5);
+            oscHl1.connect(gainHl); oscHl2.connect(gainHl);
+            gainHl.connect(localAudioCtx.destination);
+            oscHl1.start(now); oscHl2.start(now);
+            oscHl1.stop(now + 0.52); oscHl2.stop(now + 0.52);
+            break;
+
+        case 'click': // Click interfaccia/menu
+            const oscCl = localAudioCtx.createOscillator();
+            const gainCl = localAudioCtx.createGain();
+            oscCl.type = 'sine';
+            oscCl.frequency.setValueAtTime(700, now);
+            gainCl.gain.setValueAtTime(0.1, now);
+            gainCl.gain.linearRampToValueAtTime(0.01, now + 0.05);
+            oscCl.connect(gainCl);
+            gainCl.connect(localAudioCtx.destination);
+            oscCl.start(now);
+            oscCl.stop(now + 0.06);
+            break;
+
+        case 'fishKill': // Pesce nemico eliminato dalla fiocina
+            const oscFk = localAudioCtx.createOscillator();
+            const gainFk = localAudioCtx.createGain();
+            oscFk.type = 'triangle';
+            oscFk.frequency.setValueAtTime(260, now);
+            oscFk.frequency.exponentialRampToValueAtTime(50, now + 0.14);
+            gainFk.gain.setValueAtTime(0.3, now);
+            gainFk.gain.linearRampToValueAtTime(0.01, now + 0.15);
+            oscFk.connect(gainFk);
+            gainFk.connect(localAudioCtx.destination);
+            oscFk.start(now);
+            oscFk.stop(now + 0.16);
+            break;
+
+        case 'puffInflate': // Pesce palla che si gonfia
+            const oscPf = localAudioCtx.createOscillator();
+            const gainPf = localAudioCtx.createGain();
+            oscPf.type = 'sine';
+            oscPf.frequency.setValueAtTime(180, now);
+            oscPf.frequency.linearRampToValueAtTime(420, now + 0.22);
+            gainPf.gain.setValueAtTime(0.001, now);
+            gainPf.gain.linearRampToValueAtTime(0.18, now + 0.1);
+            gainPf.gain.linearRampToValueAtTime(0.01, now + 0.24);
+            oscPf.connect(gainPf);
+            gainPf.connect(localAudioCtx.destination);
+            oscPf.start(now);
+            oscPf.stop(now + 0.25);
+            break;
+    }
+}
+
+// --- SINTESI BRANI ---
+
+function playDeepSeaNoiseBGM(startTime, offset) {
+    const bufferDuration = 10; 
+    const bufferSize = localAudioCtx.sampleRate * bufferDuration;
+    const buffer = localAudioCtx.createBuffer(1, bufferSize, localAudioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = data[i];
+        data[i] *= 3.5; 
+    }
+    const noiseNode = localAudioCtx.createBufferSource();
+    noiseNode.buffer = buffer;
+    noiseNode.loop = true; 
+    const filter = localAudioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(130, localAudioCtx.currentTime);
+    const lfo = localAudioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(0.1, localAudioCtx.currentTime); 
+    const lfoGain = localAudioCtx.createGain();
+    lfoGain.gain.setValueAtTime(40, localAudioCtx.currentTime);
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    const gainNode = localAudioCtx.createGain();
+    gainNode.gain.setValueAtTime(0.7, localAudioCtx.currentTime);
+    noiseNode.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(localAudioCtx.destination);
+    lfo.start(startTime);
+    noiseNode.start(startTime, offset % bufferDuration);
+    bgmActiveNodes.push(noiseNode, lfo);
+}
+
+function playCoralReefLifeBGM(startTime, offset, isSubLayer = false) {
+    const loopDuration = BGM_TRACK_DURATION;
+    playDeepSeaNoiseBGM(startTime, offset);
+    const reefMasterGain = localAudioCtx.createGain();
+    reefMasterGain.gain.setValueAtTime(isSubLayer ? 0.38 : 0.45, localAudioCtx.currentTime);
+    reefMasterGain.connect(localAudioCtx.destination);
+    bgmActiveNodes.push(reefMasterGain);
+    const mammalEvents = [4, 14, 28, 42, 53];
+    mammalEvents.forEach(sec => {
+        if (sec >= offset && sec < loopDuration) {
+            const timerMammal = setTimeout(() => {
+                if (!bgmIsPlaying) return;
+                const baseFreq = 180 + (Math.random() * 120); 
+                createMammalWhaleSongBGM(baseFreq, localAudioCtx.currentTime, reefMasterGain);
+            }, (sec - offset) * 1000);
+            bgmScheduledTimers.push(timerMammal);
+        }
+    });
+    for (let secStep = Math.floor(offset); secStep < loopDuration; secStep++) {
+        const clicksThisSecond = 2 + (secStep % 3);
+        for (let i = 0; i < clicksThisSecond; i++) {
+            const subSecondOffset = (i / clicksThisSecond) + ((secStep * 7) % 10) * 0.03;
+            const totalRelativeSec = secStep + subSecondOffset;
+            if (totalRelativeSec >= offset && totalRelativeSec < loopDuration) {
+                const timerClick = setTimeout(() => {
+                    if (!bgmIsPlaying) return;
+                    createFishReefClickBGM(localAudioCtx.currentTime, reefMasterGain);
+                }, (totalRelativeSec - offset) * 1000);
+                bgmScheduledTimers.push(timerClick);
+            }
+        }
+    }
+}
+
+function playHawaiianRelaxBGM(startTime, offset) {
+    playCoralReefLifeBGM(startTime, offset, true);
+    const bpm = 75; const beat = 60 / bpm; const loopDuration = BGM_TRACK_DURATION;
+    const hawaiianGain = localAudioCtx.createGain();
+    hawaiianGain.gain.setValueAtTime(0.12, localAudioCtx.currentTime);
+    hawaiianGain.connect(localAudioCtx.destination);
+    bgmActiveNodes.push(hawaiianGain);
+    const melody = [329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 329.63, 0, 349.23, 440.00, 523.25, 698.46, 523.25, 440.00, 349.23, 0];
+    const totalBeats = Math.ceil(loopDuration / beat);
+    for (let i = 0; i < totalBeats; i++) {
+        const noteTimeRelative = i * beat;
+        if (noteTimeRelative < offset || noteTimeRelative >= loopDuration) continue;
+        const currentNote = melody[i % melody.length];
+        if (currentNote > 0) {
+            const timerMel = setTimeout(() => {
+                if (!bgmIsPlaying) return;
+                createHawaiianSteelGuitarBGM(currentNote, localAudioCtx.currentTime, hawaiianGain);
+            }, (noteTimeRelative - offset) * 1000);
+            bgmScheduledTimers.push(timerMel);
+        }
+    }
+}
+
+function playHawaiianUpbeatBGM(startTime, offset) {
+    playCoralReefLifeBGM(startTime, offset, true);
+    const bpm = 125; const step = 60 / bpm / 2; const loopDuration = BGM_TRACK_DURATION;
+    const luauGain = localAudioCtx.createGain();
+    luauGain.gain.setValueAtTime(0.10, localAudioCtx.currentTime);
+    luauGain.connect(localAudioCtx.destination);
+    bgmActiveNodes.push(luauGain);
+    const upbeatMelody = [261.63, 329.63, 392.00, 329.63, 293.66, 392.00, 440.00, 392.00, 349.23, 440.00, 523.25, 440.00, 392.00, 440.00, 523.25, 0];
+    const totalSteps = Math.ceil(loopDuration / step);
+    for (let i = 0; i < totalSteps; i++) {
+        const noteTimeRelative = i * step;
+        if (noteTimeRelative < offset || noteTimeRelative >= loopDuration) continue;
+        const currentNote = upbeatMelody[i % upbeatMelody.length];
+        if (currentNote > 0 && i % 3 !== 0) {
+            const timerMel = setTimeout(() => {
+                if (!bgmIsPlaying) return;
+                createUkulelePluckBGM(currentNote, localAudioCtx.currentTime, luauGain);
+            }, (noteTimeRelative - offset) * 1000);
+            bgmScheduledTimers.push(timerMel);
+        }
+    }
+}
+
+function playHawaiianSunriseBGM(startTime, offset) {
+    playCoralReefLifeBGM(startTime, offset, true);
+    const bpm = 80; const beat = 60 / bpm; const loopDuration = BGM_TRACK_DURATION;
+    const sunriseGain = localAudioCtx.createGain();
+    sunriseGain.gain.setValueAtTime(0.12, localAudioCtx.currentTime);
+    sunriseGain.connect(localAudioCtx.destination);
+    bgmActiveNodes.push(sunriseGain);
+    const sunriseMelody = [261.63, 329.63, 392.00, 0, 293.66, 349.23, 440.00, 0, 329.63, 392.00, 523.25, 0, 392.00, 493.88, 587.33, 783.99];
+    const totalBeats = Math.ceil(loopDuration / beat);
+    for (let i = 0; i < totalBeats; i++) {
+        const noteTimeRelative = i * beat;
+        if (noteTimeRelative < offset || noteTimeRelative >= loopDuration) continue;
+        const note = sunriseMelody[i % sunriseMelody.length];
+        if (note > 0) {
+            const timerMel = setTimeout(() => {
+                if (!bgmIsPlaying) return;
+                createHawaiianSteelGuitarBGM(note, localAudioCtx.currentTime, sunriseGain, 1.2); 
+                if (noteTimeRelative >= 30 && i % 2 === 0) {
+                    createUkulelePluckBGM(note * 2, localAudioCtx.currentTime + 0.1, sunriseGain);
+                }
+            }, (noteTimeRelative - offset) * 1000);
+            bgmScheduledTimers.push(timerMel);
+        }
+    }
+}
+
+function playHawaiianRomanceBGM(startTime, offset) {
+    playCoralReefLifeBGM(startTime, offset, true);
+    const bpm = 68; const beat = 60 / bpm; const loopDuration = BGM_TRACK_DURATION;
+    const romanceGain = localAudioCtx.createGain();
+    romanceGain.gain.setValueAtTime(0.13, localAudioCtx.currentTime);
+    romanceGain.connect(localAudioCtx.destination);
+    bgmActiveNodes.push(romanceGain);
+    const romanceMelody = [329.63, 392.00, 523.25, 392.00, 440.00, 523.25, 659.25, 523.25, 293.66, 440.00, 587.33, 440.00, 392.00, 440.00, 587.33, 0];
+    const totalBeats = Math.ceil(loopDuration / beat);
+    for (let i = 0; i < totalBeats; i++) {
+        const noteTimeRelative = i * beat;
+        if (noteTimeRelative < offset || noteTimeRelative >= loopDuration) continue;
+        const note = romanceMelody[i % romanceMelody.length];
+        if (note > 0) {
+            const timerMel = setTimeout(() => {
+                if (!bgmIsPlaying) return;
+                createUkulelePluckBGM(note, localAudioCtx.currentTime, romanceGain);
+                if (i % 4 === 0 || i % 7 === 0) {
+                    createHawaiianSteelGuitarBGM(note, localAudioCtx.currentTime + 0.05, romanceGain, 2.0);
+                }
+            }, (noteTimeRelative - offset) * 1000);
+            bgmScheduledTimers.push(timerMel);
+        }
+    }
+}
+
+// --- STRUMENTI ---
+
+function createHawaiianSteelGuitarBGM(freq, time, destination, attackTime = 0.15) {
+    const osc = localAudioCtx.createOscillator(); const gainNode = localAudioCtx.createGain();
+    const lfo = localAudioCtx.createOscillator(); const lfoGain = localAudioCtx.createGain();
+    lfo.type = 'sine'; lfo.frequency.setValueAtTime(4.2, time); lfoGain.gain.setValueAtTime(freq * 0.018, time);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, time);
+    lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+    gainNode.gain.setValueAtTime(0, time);
+    gainNode.gain.linearRampToValueAtTime(0.45, time + attackTime);
+    gainNode.gain.linearRampToValueAtTime(0.28, time + 0.6);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, time + 1.2);
+    osc.connect(gainNode); gainNode.connect(destination);
+    lfo.start(time); osc.start(time); lfo.stop(time + 1.25); osc.stop(time + 1.25);
+    bgmActiveNodes.push(osc, lfo);
+}
+
+function createUkulelePluckBGM(freq, time, destination) {
+    const osc = localAudioCtx.createOscillator(); const gainNode = localAudioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time);
+    gainNode.gain.setValueAtTime(0.5, time); gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.24);
+    osc.connect(gainNode); gainNode.connect(destination);
+    osc.start(time); osc.stop(time + 0.26);
+}
+
+function createMammalWhaleSongBGM(baseFreq, time, destination) {
+    const osc = localAudioCtx.createOscillator(); const gainNode = localAudioCtx.createGain(); const filter = localAudioCtx.createBiquadFilter();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(baseFreq, time);
+    osc.frequency.linearRampToValueAtTime(baseFreq * 1.3, time + 0.8); osc.frequency.linearRampToValueAtTime(baseFreq * 0.9, time + 1.8); osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.1, time + 2.8);
+    filter.type = 'lowpass'; filter.frequency.setValueAtTime(600, time);
+    gainNode.gain.setValueAtTime(0.0, time); gainNode.gain.linearRampToValueAtTime(0.25, time + 0.6); gainNode.gain.setValueAtTime(0.25, time + 2.2); gainNode.gain.exponentialRampToValueAtTime(0.001, time + 3.0);
+    osc.connect(filter); filter.connect(gainNode); gainNode.connect(destination);
+    osc.start(time); osc.stop(time + 3.1); bgmActiveNodes.push(osc);
+}
+
+function createFishReefClickBGM(time, destination) {
+    const osc = localAudioCtx.createOscillator(); const gainNode = localAudioCtx.createGain(); const filter = localAudioCtx.createBiquadFilter();
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(1200 + (Math.random() * 800), time);
+    filter.type = 'bandpass'; filter.frequency.setValueAtTime(1500, time); filter.Q.setValueAtTime(5, time);
+    gainNode.gain.setValueAtTime(0.06 + (Math.random() * 0.05), time); gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.015);
+    osc.connect(filter); filter.connect(gainNode); gainNode.connect(destination);
+    osc.start(time); osc.stop(time + 0.02);
+}
+
+// NAVIGAZIONE MENU E MODALI VIA GAMEPAD
+let mainMenuSelectedIndex = 1; 
+const mainMenuButtons = ['btn-continue', 'btn-newgame', 'btn-options', 'btn-info'];
+let pauseMenuSelectedIndex = 0;
+const pauseMenuButtons = ['btn-resume', 'btn-exit'];
+let confirmSelectedIndex = 0; 
+const confirmButtons = ['btn-confirm-cancel', 'btn-confirm-action'];
+
+let gamepadDirectionCooldown = 0; 
+let gamepadAPressed = false;
+let gamepadBPressed = false;
+
+// Stati per tracciare la pressione singola del D-Pad nel negozio ed evitare acquisti a raffica involontari
+let gamepadDpadUpPressed = false;
+let gamepadDpadRightPressed = false;
+let gamepadDpadDownPressed = false;
+let gamepadDpadLeftPressed = false;
+
+let gamepadTopButtonPressed = false; 
+let gamepadXPressed = false; 
+let gamepadStartPressed = false; 
+let gamepadMedkitPressed = false;
+
+let confirmCallback = null;
+
+const diver = {
+    x: 200, y: 300, width: 50, height: 30, oxygen: 525, 
+    isDead: false, hitTimer: 0, isHeavy: false, inSeaweed: false,
+    flashlightOn: false, flashlightTimer: 0, battery: 100, batteryMax: 100,
+    baseLightRadius: 240, currentLightRadius: 240, blindnessTimer: 0,
+    facing: 1, swimCycle: 0, tilt: 0, harpoonAnimTimer: 0,
+    health: 100, healthMax: 100
+};
+
+const OXYGEN_TANKS = {
+    standard:       { name: "Bombola Standard", cost: 0,   oxygenMax: 525, speedMod: 0,    refillRate: 8,  desc: "Equilibrata in tutto. Si ricarica in barca a velocità normale." },
+    leggera:        { name: "Bombola Leggera", cost: 120, oxygenMax: 420, speedMod: 1.0,  refillRate: 8,  desc: "Meno autonomia, ma nuoti più veloce." },
+    lungaAutonomia: { name: "Lunga Autonomia", cost: 180, oxygenMax: 680, speedMod: -0.8, refillRate: 6,  desc: "Molta più autonomia, ma nuoto più lento." },
+    ricaricaRapida: { name: "Ricarica Rapida", cost: 200, oxygenMax: 525, speedMod: 0,    refillRate: 45, desc: "Autonomia nella media, ma si riempie quasi subito in barca." }
+};
+const WETSUIT_SKINS = {
+    standard: { name: "Muta Standard", cost: 0,  suitColor: '#173b5e', suitShade: '#0e2740', accent: '#ffd43b', desc: "La muta classica blu con banda gialla." },
+    corallo:  { name: "Muta Corallo", cost: 80,  suitColor: '#7c2d12', suitShade: '#431407', accent: '#fb923c', desc: "Toni caldi corallo/arancio." },
+    abisso:   { name: "Muta Abisso", cost: 100, suitColor: '#1e1b4b', suitShade: '#0f0c2e', accent: '#a78bfa', desc: "Viola profondo, per chi ama la fossa abissale." },
+    corallina: { name: "Muta Corallina", cost: 90,  suitColor: '#065f46', suitShade: '#022c22', accent: '#5eead4', desc: "Verde smeraldo con accenti turchesi." }
+};
+const UTILITY_ITEMS = {
+    compass:       { name: "Bussola dei Ritrovamenti", cost: 150, desc: "Un indicatore ti avvisa quando un relitto o una statua è nei paraggi." },
+    insurance:     { name: "Assicurazione sul Carico", cost: 200, desc: "Se muori, conservi metà dell'oro che avevi nel sacco invece di perderlo tutto." },
+    companionFish: { name: "Pesciolino Compagno", cost: 180, desc: "Un piccolo pesce ti segue e raccoglie da solo le bolle d'ossigeno vicine." }
+};
+const HARPOON_TYPES = {
+    standard:     { name: "Fiocina Standard", cost: 0,   speed: 7,  desc: "Elimina il pesce nemico colpito." },
+    stordente:    { name: "Fiocina Stordente", cost: 150, speed: 7,  desc: "Non uccide: stordisce il pesce colpito per qualche secondo." },
+    rete:         { name: "Fiocina a Rete", cost: 180, speed: 7,  desc: "Cattura il pesce vivo: bottino extra invece di eliminarlo." },
+    lungoRaggio:  { name: "Fiocina a Lungo Raggio", cost: 160, speed: 13, desc: "Proiettile molto più veloce e a maggiore gittata." },
+    spaccaRoccia: { name: "Fiocina Spacca-Roccia", cost: 140, speed: 7,  desc: "Abbatte le colonne rompibili in un solo colpo." }
+};
+const BOAT_TYPES = {
+    pedalo:       { name: "Pedalò", cost: 0,   patrol: false, speed: 0,   medkitBonus: 0,  dockRadius: 80,  healthRegenMult: 1,   width: 90,  height: 34, desc: "Gratuito. Resta fermo in un punto fisso, non ti viene incontro." },
+    barca:        { name: "Barca da Pesca", cost: 150, patrol: true, speed: 1.5, medkitBonus: 0,  dockRadius: 80,  healthRegenMult: 1,   width: 180, height: 60, desc: "La barca classica: pattuglia la zona e ti viene incontro." },
+    peschereccio: { name: "Peschereccio", cost: 300, patrol: true, speed: 0.9, medkitBonus: 1,  dockRadius: 80,  healthRegenMult: 1,   width: 230, height: 78, desc: "Un kit di pronto soccorso in più da trasportare, ma ti raggiunge più lentamente." },
+    motoscafo:    { name: "Motoscafo", cost: 280, patrol: true, speed: 2.8, medkitBonus: -1, dockRadius: 80,  healthRegenMult: 1,   width: 150, height: 42, desc: "Velocissimo a raggiungerti ovunque tu sia, ma meno spazio per i kit." },
+    ricerca:      { name: "Nave da Ricerca", cost: 450, patrol: true, speed: 1.3, medkitBonus: 0,  dockRadius: 80,  healthRegenMult: 2,   width: 200, height: 70, desc: "Il recupero della vita in banchina è doppio. La più costosa." },
+    catamarano:   { name: "Catamarano", cost: 400, patrol: true, speed: 1.8, medkitBonus: 0,  dockRadius: 130, healthRegenMult: 1,   width: 220, height: 52, desc: "Area di attracco molto più ampia: comodo da raggiungere in fretta." }
+};
+const boat = { x: canvas.width / 2 - 45, y: 56, width: 90, height: 34, direction: 1, speed: 0, type: 'pedalo', patrol: false, dockRadius: 80, healthRegenMult: 1 };
+
+let backgroundRocks = [];
+let caveCeilings = []; 
+let parallaxRocks = []; 
+const marineSnow = [];    
+let treasures = [];
+let goodFish = [];
+let badFish = [];
+let jellyfishArray = []; 
+let bubbles = [];
+let companionFish = null;
+let seaweeds = [];
+let giantOctopus = null;
+let landmarks = [];
+let distantWrecks = [];
+let nextDistantWreckSpawn = 2000;
+let distantWhales = [];
+let nextWhaleSpawn = 2600;
+let distantSchools = [];
+let nextSchoolSpawn = 1800;
+let lightSweeps = [];
+let nextLightSweepSpawn = 2400;
+let bubbleColumns = [];
+let nextBubbleColumnSpawn = 2200;
+let nextLandmarkSpawn = 750;
+let debugCounters = { treasures: 0, statues: 0, wrecks: 0, octopuses: 0, caves: 0, reefs: 0, trenches: 0, bgWrecks: 0, whales: 0, fishSchools: 0, lightBeams: 0, bubbleColumns: 0 };
+let debugPanelVisible = false;
+const SUPPLY_INTERVAL_DURATION = 36000; // 10 minuti a 60fps
+let supplyIntervalTimer = 0;
+let supplyIntervalReady = false;
+let supplyIntervalsPassed = 0;
+let supplyMenuForceClosed = false;
+
+function updateDebugPanel() {
+    document.getElementById('dbg-statues').innerText = debugCounters.statues;
+    document.getElementById('dbg-wrecks').innerText = debugCounters.wrecks;
+    document.getElementById('dbg-treasures').innerText = debugCounters.treasures;
+    document.getElementById('dbg-octopus').innerText = debugCounters.octopuses;
+    document.getElementById('dbg-caves').innerText = debugCounters.caves;
+    document.getElementById('dbg-reefs').innerText = debugCounters.reefs;
+    document.getElementById('dbg-trenches').innerText = debugCounters.trenches;
+    document.getElementById('dbg-bgwrecks').innerText = debugCounters.bgWrecks;
+    document.getElementById('dbg-whales').innerText = debugCounters.whales;
+    document.getElementById('dbg-schools').innerText = debugCounters.fishSchools;
+    document.getElementById('dbg-beams').innerText = debugCounters.lightBeams;
+    document.getElementById('dbg-bubblecols').innerText = debugCounters.bubbleColumns;
+}
+let geysers = []; 
+let harpoonsProjectiles = [];
+let floatingTexts = []; 
+let oceanCurrents = []; 
+let lanternFishArray = []; 
+let caveAnemones = [];
+let pufferFishArray = [];
+let ghostJellySwarm = [];
+let breakableColumns = [];
+
+let spawnTimer = 0;
+let environmentTimer = 0; 
+let nextGeyserSpawn = 200; 
+const MIN_GEYSER_INTERVAL = 180; 
+
+for (let i = 0; i < 60; i++) {
+    marineSnow.push({
+        x: Math.random() * window.innerWidth,
+        y: 90 + Math.random() * (window.innerHeight - 90),
+        size: Math.random() * 2.5 + 1,
+        speedX: Math.random() * 0.4 + 0.1,
+        swaySpeed: Math.random() * 0.02 + 0.01,
+        swayOffset: Math.random() * Math.PI * 2
+    });
+}
+
+let currentPhase = 'open-sea'; 
+let phaseTimer = 500;          
+let currentFloorTarget = 40;
+let currentCeilingTarget = 0;
+let lastFloorHeight = 40;
+let lastCeilingHeight = 0;
+let reefBlend = 0;
+let trenchBlend = 0;
+
+function spawnDistantWreck() {
+    const width = 260 + Math.random() * 180;
+    const height = width * 0.34;
+    const y = 140 + Math.random() * (canvas.height - 340);
+    distantWrecks.push({ x: canvas.width + 120, y: y, width: width, height: height, speed: 0.4 + Math.random() * 0.15, mastSide: Math.random() < 0.5 ? 1 : -1 });
+    debugCounters.bgWrecks++;
+    if (debugPanelVisible) updateDebugPanel();
+}
+
+function spawnDistantWhale() {
+    const width = 220 + Math.random() * 120;
+    const height = width * 0.42;
+    const y = 140 + Math.random() * (canvas.height - 340);
+    distantWhales.push({ x: canvas.width + 150, y: y, width: width, height: height, speed: 0.35 + Math.random() * 0.15, bobPhase: Math.random() * 10 });
+    debugCounters.whales++;
+    if (debugPanelVisible) updateDebugPanel();
+}
+
+function spawnDistantSchool() {
+    const y = 140 + Math.random() * (canvas.height - 340);
+    const dots = [];
+    const dotCount = 14 + Math.floor(Math.random() * 10);
+    for (let i = 0; i < dotCount; i++) { dots.push({ dx: (Math.random() - 0.5) * 150, dy: (Math.random() - 0.5) * 70, phase: Math.random() * 10 }); }
+    distantSchools.push({ x: canvas.width + 150, y: y, speed: 0.5 + Math.random() * 0.2, dots: dots });
+    debugCounters.fishSchools++;
+    if (debugPanelVisible) updateDebugPanel();
+}
+
+function spawnLightSweep() {
+    lightSweeps.push({ x: canvas.width + 250, width: 180 + Math.random() * 100, speed: 4 + Math.random() * 2 });
+    debugCounters.lightBeams++;
+    if (debugPanelVisible) updateDebugPanel();
+}
+
+function spawnBubbleColumn() {
+    bubbleColumns.push({ x: canvas.width, width: 25 + Math.random() * 20, age: 0, lifespan: 500 + Math.random() * 300, particles: [] });
+    debugCounters.bubbleColumns++;
+    if (debugPanelVisible) updateDebugPanel();
+}
+
+function spawnLandmark() {
+    const type = Math.random() < 0.5 ? 'wreck' : 'statue';
+    const wreckScale = 1 + Math.random(); // relitti tra il 100% e il 200% della dimensione base
+    const width = type === 'wreck' ? 260 * wreckScale : 100;
+    const height = type === 'wreck' ? 150 * wreckScale : 260;
+    const y = canvas.height - lastFloorHeight - height;
+    const lm = { x: canvas.width, y: y, width: width, height: height, type: type, algaeSpots: [] };
+    for (let i = 0; i < 10; i++) { lm.algaeSpots.push({ dx: Math.random() * width, dy: height * 0.35 + Math.random() * height * 0.55, r: 6 + Math.random() * 8 }); }
+    landmarks.push(lm);
+    if (type === 'wreck') debugCounters.wrecks++; else debugCounters.statues++;
+    if (debugPanelVisible) updateDebugPanel();
+
+    const countRoll = Math.random();
+    let treasureCount;
+    if (countRoll < 0.45) treasureCount = 2;
+    else if (countRoll < 0.80) treasureCount = 3;
+    else if (countRoll < 0.90) treasureCount = 4;
+    else if (countRoll < 0.96) treasureCount = 5;
+    else treasureCount = 6;
+    for (let i = 0; i < treasureCount; i++) {
+        const rand = Math.random();
+        let ltype = 'oro', val = Math.floor(Math.random() * 21) + 50, name = "Lingotto d'Oro", heavy = false;
+        if (rand > 0.6) { ltype = 'mitico'; val = Math.floor(Math.random() * 51) + 250; name = "Manufatto Antico"; }
+        else if (rand > 0.3) { ltype = 'pesante'; val = Math.floor(Math.random() * 31) + 120; name = "Scatola di Piombo"; heavy = true; }
+        treasures.push({
+            x: canvas.width + width * 0.15 + i * 30, y: canvas.height - lastFloorHeight - 30 - Math.random() * 25,
+            width: ltype === 'oro' ? 24 : 30, height: ltype === 'oro' ? 14 : 25, value: val, label: name, lootType: ltype, isHeavy: heavy, collected: false
+        });
+        debugCounters.treasures++;
+    }
+    if (debugPanelVisible) updateDebugPanel();
+}
+
+function spawnProceduralElements() {
+    spawnTimer++;
+    phaseTimer--;
+
+    if (phaseTimer <= 0) {
+        if (currentPhase === 'open-sea') {
+            const biomeOptions = [{ id: 'reef', weight: 0.32 }];
+            if (debugCounters.reefs >= 1) biomeOptions.push({ id: 'cave', weight: 0.32 });
+            if (debugCounters.caves >= 3) biomeOptions.push({ id: 'trench', weight: 0.22 });
+            if (debugCounters.trenches >= 2) biomeOptions.push({ id: 'octopus', weight: 0.14 });
+            const totalWeight = biomeOptions.reduce((s, o) => s + o.weight, 0);
+            let biomeRoll = Math.random() * totalWeight;
+            let chosenBiome = biomeOptions[0].id;
+            for (const o of biomeOptions) { if (biomeRoll < o.weight) { chosenBiome = o.id; break; } biomeRoll -= o.weight; }
+
+            if (chosenBiome === 'cave') {
+                currentPhase = 'entering-cave';
+                debugCounters.caves++;
+                if (debugPanelVisible) updateDebugPanel();
+                phaseTimer = 160; 
+                const thickness = 360; 
+                const maxShift = (canvas.height - 90 - thickness) / 2; 
+                const randomShift = (Math.random() * maxShift * 2) - maxShift; 
+                
+                currentCeilingTarget = ((canvas.height - 90 - thickness) / 2) + randomShift;
+                currentFloorTarget = ((canvas.height - 90 - thickness) / 2) - randomShift;
+                
+                if (currentCeilingTarget < 10) { currentCeilingTarget = 10; currentFloorTarget = canvas.height - 90 - thickness - 10; }
+                if (currentFloorTarget < 10) { currentFloorTarget = 10; currentCeilingTarget = canvas.height - 90 - thickness - 10; }
+            } else if (chosenBiome === 'reef') {
+                currentPhase = 'entering-reef';
+                debugCounters.reefs++;
+                if (debugPanelVisible) updateDebugPanel();
+                phaseTimer = 160;
+                currentCeilingTarget = 0;
+                currentFloorTarget = 75;
+            } else if (chosenBiome === 'trench') {
+                currentPhase = 'entering-trench';
+                debugCounters.trenches++;
+                if (debugPanelVisible) updateDebugPanel();
+                phaseTimer = 160;
+                currentCeilingTarget = 0;
+                currentFloorTarget = 100;
+            } else {
+                currentPhase = 'octopus-encounter';
+                phaseTimer = 500;
+                giantOctopus = { x: canvas.width + 150, y: canvas.height / 2, bodyRadius: 55, age: 0, duration: 480, tentacleCount: 7, seed: Math.random() * 1000 };
+                debugCounters.octopuses++;
+                if (debugPanelVisible) updateDebugPanel();
+            }
+        } else if (currentPhase === 'entering-cave') {
+            currentPhase = 'cave';
+            phaseTimer = Math.floor(Math.random() * 600 + 400); 
+        } else if (currentPhase === 'cave') {
+            currentPhase = 'exiting-cave';
+            phaseTimer = 160; 
+            currentFloorTarget = 40;
+            currentCeilingTarget = 0;
+        } else if (currentPhase === 'exiting-cave') {
+            currentPhase = 'open-sea';
+            phaseTimer = Math.random() * 1200 + 1800; 
+        } else if (currentPhase === 'entering-reef') {
+            currentPhase = 'reef';
+            phaseTimer = Math.floor(Math.random() * 500 + 500);
+        } else if (currentPhase === 'reef') {
+            currentPhase = 'exiting-reef';
+            phaseTimer = 160;
+            currentFloorTarget = 40;
+        } else if (currentPhase === 'exiting-reef') {
+            currentPhase = 'open-sea';
+            phaseTimer = Math.random() * 1200 + 1800;
+        } else if (currentPhase === 'entering-trench') {
+            currentPhase = 'trench';
+            phaseTimer = Math.floor(Math.random() * 500 + 500);
+        } else if (currentPhase === 'trench') {
+            currentPhase = 'exiting-trench';
+            phaseTimer = 160;
+            currentFloorTarget = 40;
+        } else if (currentPhase === 'exiting-trench') {
+            currentPhase = 'open-sea';
+            phaseTimer = Math.random() * 1200 + 1800;
+        } else if (currentPhase === 'octopus-encounter') {
+            currentPhase = 'open-sea';
+            phaseTimer = Math.random() * 1200 + 1800;
+            giantOctopus = null;
+        }
+    }
+
+    const isReefPhase = (currentPhase === 'reef' || currentPhase === 'entering-reef' || currentPhase === 'exiting-reef');
+    const isTrenchPhase = (currentPhase === 'trench' || currentPhase === 'entering-trench' || currentPhase === 'exiting-trench');
+    const isOctopusPhase = (currentPhase === 'octopus-encounter');
+    const reefBlendTarget = (currentPhase === 'reef' || currentPhase === 'entering-reef') ? 1 : 0;
+    reefBlend += (reefBlendTarget - reefBlend) * 0.02;
+    const trenchBlendTarget = (currentPhase === 'trench' || currentPhase === 'entering-trench') ? 1 : 0;
+    trenchBlend += (trenchBlendTarget - trenchBlend) * 0.02;
+
+    if (currentPhase === 'cave' && spawnTimer % 50 === 0) {
+        const centerOffset = Math.sin(spawnTimer * 0.015) * 40;
+        const thickness = 260 + Math.sin(spawnTimer * 0.03) * 110; 
+        const availableHeight = canvas.height - 90;
+        currentCeilingTarget = (availableHeight - thickness) / 2 + (currentCeilingTarget - currentFloorTarget)/2 + centerOffset;
+        currentFloorTarget = (availableHeight - thickness) / 2 - (currentCeilingTarget - currentFloorTarget)/2 - centerOffset;
+        
+        if (currentCeilingTarget < 25) currentCeilingTarget = 25;
+        if (currentFloorTarget < 25) currentFloorTarget = 25;
+    }
+
+    lastFloorHeight += (currentFloorTarget - lastFloorHeight) * 0.03;
+    lastCeilingHeight += (currentCeilingTarget - lastCeilingHeight) * 0.03;
+
+    const blockWidth = Math.ceil(gameState.gameSpeed) + 1;
+
+    backgroundRocks.push({ x: canvas.width, y: canvas.height - lastFloorHeight, width: blockWidth, height: lastFloorHeight });
+    caveCeilings.push({ x: canvas.width, y: 90, width: blockWidth, height: lastCeilingHeight });
+
+    if (spawnTimer % 4 === 0) {
+        parallaxRocks.push({
+            x: canvas.width, ceilY: 90, ceilH: lastCeilingHeight * 1.3 + 15,
+            floorY: canvas.height - (lastFloorHeight * 1.3 + 15), floorH: lastFloorHeight * 1.3 + 15,
+            width: blockWidth * 4
+        });
+    }
+
+    if (currentPhase === 'cave' && spawnTimer % 140 === 0 && Math.random() < 0.6) {
+        const attachToCeiling = Math.random() < 0.5;
+        caveAnemones.push({
+            x: canvas.width,
+            y: attachToCeiling ? (90 + lastCeilingHeight) : (canvas.height - lastFloorHeight - 30),
+            width: 35, height: 30, isCeiling: attachToCeiling, isOpen: false, bubbleTimer: 0
+        });
+    }
+
+    if (!isReefPhase && !isOctopusPhase && spawnTimer % 200 === 0 && Math.random() < 0.5) {
+        let spawnY = 150 + Math.random() * (canvas.height - 300);
+        if (currentPhase === 'cave') spawnY = 90 + lastCeilingHeight + 30 + Math.random() * (canvas.height - lastCeilingHeight - lastFloorHeight - 120);
+        pufferFishArray.push({ x: canvas.width, y: spawnY, baseSize: 18, currentSize: 18, isInflated: false, swimCycle: Math.random() * 50 });
+    }
+
+    if (currentPhase === 'open-sea' && spawnTimer % 400 === 0 && Math.random() < 0.45) {
+        let startY = 150 + Math.random() * (canvas.height - 350);
+        for(let j=0; j<8; j++) {
+            ghostJellySwarm.push({ x: canvas.width + (Math.random() * 60), y: startY + (Math.random() * 120), width: 10, height: 14, speedX: gameState.gameSpeed + 0.8 + Math.random()*0.4 });
+        }
+    }
+
+    if (currentPhase === 'cave' && spawnTimer % 320 === 0 && Math.random() < 0.65) {
+        let topY = 90 + lastCeilingHeight; let bottomY = canvas.height - lastFloorHeight;
+        if (bottomY - topY > 180) { 
+            breakableColumns.push({ x: canvas.width, topY: topY, bottomY: bottomY, width: 40, hp: 1 });
+        }
+    }
+
+    if (!isReefPhase && !isOctopusPhase && spawnTimer >= nextGeyserSpawn) {
+        if (Math.random() < 0.75) { geysers.push({ x: canvas.width, y: canvas.height - lastFloorHeight, width: 45, particles: [] }); }
+        nextGeyserSpawn = spawnTimer + MIN_GEYSER_INTERVAL + Math.floor(Math.random() * 400);
+    }
+
+    if (currentPhase === 'open-sea' && spawnTimer >= nextLandmarkSpawn) {
+        if (Math.random() < 0.5) { spawnLandmark(); }
+        nextLandmarkSpawn = spawnTimer + 1250 + Math.floor(Math.random() * 1000);
+    }
+
+    if (spawnTimer >= nextDistantWreckSpawn) {
+        if (Math.random() < 0.2) { spawnDistantWreck(); }
+        nextDistantWreckSpawn = spawnTimer + 3200 + Math.floor(Math.random() * 3000);
+    }
+
+    if (spawnTimer >= nextWhaleSpawn) {
+        if (Math.random() < 0.18) { spawnDistantWhale(); }
+        nextWhaleSpawn = spawnTimer + 4000 + Math.floor(Math.random() * 3400);
+    }
+
+    if (spawnTimer >= nextSchoolSpawn) {
+        if (Math.random() < 0.22) { spawnDistantSchool(); }
+        nextSchoolSpawn = spawnTimer + 2800 + Math.floor(Math.random() * 2600);
+    }
+
+    if (spawnTimer >= nextLightSweepSpawn) {
+        if (Math.random() < 0.18) { spawnLightSweep(); }
+        nextLightSweepSpawn = spawnTimer + 3800 + Math.floor(Math.random() * 3200);
+    }
+
+    if (spawnTimer >= nextBubbleColumnSpawn) {
+        if (Math.random() < 0.22) { spawnBubbleColumn(); }
+        nextBubbleColumnSpawn = spawnTimer + 3000 + Math.floor(Math.random() * 2600);
+    }
+
+    if (currentPhase !== 'cave' && spawnTimer % 90 === 0 && Math.random() < 0.35) {
+        bubbles.push({ x: canvas.width, y: 150 + Math.random() * (canvas.height - 300), radius: Math.random() * 4 + 4, speedY: Math.random() * 1.5 + 1 });
+    }
+
+    if (currentPhase === 'open-sea' && spawnTimer % 350 === 0 && Math.random() < 0.5 && oceanCurrents.length === 0) {
+        const currentDir = Math.random() < 0.5 ? -1 : 1; 
+        oceanCurrents.push({ x: canvas.width, y: 90 + Math.random() * (canvas.height - 250), width: 400, height: 120, forceX: currentDir * 1.2, duration: 400 });
+    }
+
+    if ((currentPhase === 'cave' || currentPhase === 'trench') && spawnTimer % 220 === 0 && Math.random() < (currentPhase === 'trench' ? 0.75 : 0.6)) {
+        const spawnY = currentPhase === 'cave' ? (90 + lastCeilingHeight + (canvas.height - 90 - lastCeilingHeight - lastFloorHeight) / 2) : (150 + Math.random() * (canvas.height - 300));
+        lanternFishArray.push({ x: canvas.width, y: spawnY + (Math.random() * 40 - 20), width: 35, height: 22, speedX: gameState.gameSpeed + 0.6, waveSpeed: 0.04, waveAmp: 20, seed: Math.random() * 100, swimCycle: Math.random() * 100 });
+    }
+
+    const floraChance = isReefPhase ? 0.45 : 0.25;
+    if (spawnTimer % 65 === 0 && Math.random() < floraChance) {
+        if (canvas.height - lastFloorHeight - 85 > 90 + lastCeilingHeight) {
+            const variant = isReefPhase ? (Math.random() < 0.6 ? 2 : Math.floor(Math.random() * 3)) : Math.floor(Math.random() * 3);
+            seaweeds.push({ x: canvas.width, y: canvas.height - lastFloorHeight - 85, width: 30, height: 90, sway: Math.random() * 100, variant: variant });
+        }
+    }
+
+    if (!isReefPhase && !isOctopusPhase && spawnTimer % 240 === 0 && Math.random() < 0.65) {
+        const isBigBank = Math.random() < 0.35;
+        const jellyCount = isBigBank ? Math.floor(Math.random() * 4) + 5 : Math.floor(Math.random() * 3) + 2; 
+        let bankCenterY = Math.random() * (canvas.height - 300) + 180;
+        if (currentPhase === 'cave') bankCenterY = 90 + lastCeilingHeight + (canvas.height - 90 - lastCeilingHeight - lastFloorHeight) / 2;
+
+        for (let i = 0; i < jellyCount; i++) {
+            const size = Math.random() * 12 + (isBigBank ? 16 : 10); 
+            jellyfishArray.push({ x: canvas.width + (i * Math.random() * 45), y: bankCenterY + (Math.random() * 100 - 50), width: size, height: size * 1.2, speedX: gameState.gameSpeed + Math.random() * 0.4 + 0.2, pulseTimer: Math.random() * Math.PI * 2, pulseSpeed: 0.05 + Math.random() * 0.03, swimY: 0 });
+        }
+    }
+
+    if (spawnTimer % 160 === 0) {
+        if (Math.random() < (currentPhase === 'cave' ? 0.45 : 0.2)) {
+            let spawnY = canvas.height - lastFloorHeight - 35;
+            if (currentPhase === 'cave' || currentPhase === 'entering-cave') {
+                const minY = 90 + lastCeilingHeight + 20; const maxY = canvas.height - lastFloorHeight - 40;
+                if (maxY > minY) spawnY = minY + Math.random() * (maxY - minY);
+            }
+            const rand = Math.random();
+            let type = 'comune'; let val = Math.floor(Math.random() * 16) + 15; let name = "Monete Antiche"; let heavy = false;
+
+            if (rand > 0.95) { type = 'mitico'; val = Math.floor(Math.random() * 51) + 250; name = "Manufatto Antico"; }
+            else if (rand > 0.85) { type = 'pesante'; val = Math.floor(Math.random() * 31) + 120; name = "Scatola di Piombo"; heavy = true; }
+            else if (rand > 0.70) { type = 'oro'; val = Math.floor(Math.random() * 21) + 50; name = "Lingotto d'Oro"; }
+
+            treasures.push({ x: canvas.width, y: spawnY, width: type === 'oro' ? 24 : 30, height: type === 'oro' ? 14 : 25, value: val, label: name, lootType: type, isHeavy: heavy, collected: false });
+            debugCounters.treasures++;
+            if (debugPanelVisible) updateDebugPanel();
+        }
+    }
+
+    if (spawnTimer % 140 === 0) {
+        let spawnY = Math.random() * (canvas.height - 250) + 150;
+        if (currentPhase === 'cave') spawnY = 90 + lastCeilingHeight + (canvas.height - 90 - lastCeilingHeight - lastFloorHeight) / 2;
+        const fishCount = (isReefPhase || isOctopusPhase) ? Math.floor(Math.random() * 3) + 3 : Math.floor(Math.random() * 2) + 1;
+        for(let i = 0; i < fishCount; i++) {
+            goodFish.push({ x: canvas.width + (i * 40), y: spawnY + (Math.random() * 30 - 15), width: 20, height: 12, speed: gameState.gameSpeed + Math.random() * 0.8 + 1, swimCycle: Math.random() * 100 });
+        }
+    }
+
+    const badSpawnRate = (currentPhase === 'cave') ? 180 : 320; 
+    if (!isReefPhase && !isOctopusPhase && spawnTimer % badSpawnRate === 0) {
+        let spawnY = Math.random() * (canvas.height - 240) + 120;
+        if (currentPhase === 'cave') {
+            const minY = 90 + lastCeilingHeight; const maxY = canvas.height - lastFloorHeight - 30;
+            if (maxY > minY) spawnY = minY + Math.random() * (maxY - minY);
+        }
+        badFish.push({ x: canvas.width, y: spawnY, width: 45, height: 22, speed: gameState.gameSpeed + Math.random() * 1.4 + 1.2, swimCycle: Math.random() * 100 });
+    }
+}
+
+const keys = { w: false, a: false, s: false, d: false };
+let spacePressed = false;
+let tabPressed = false; 
+
+window.addEventListener('keydown', (e) => {
+    if(gameState.screen === 'gameplay') {
+        const isShopOpen = (document.getElementById('shop-menu').style.display === 'flex');
+        
+        // Se il negozio è aperto ed premiamo FRECCIA GIÙ della tastiera, chiudiamo il negozio
+        if (isShopOpen && e.key === "ArrowDown") {
+            gameState.shopForceClosed = true;
+            document.getElementById('shop-menu').style.display = 'none';
+            return;
+        }
+
+        // Acquisti rapidi da tastiera (1=Ossigeno, 2=Pinne, 3=Fiocina, 4=Kit), solo a negozio aperto
+        if (isShopOpen && !e.repeat) {
+            if (e.key === "1") { buyUpgrade('oxygen'); return; }
+            if (e.key === "2") { buyUpgrade('speed'); return; }
+            if (e.key === "3") { buyUpgrade('harpoon'); return; }
+            if (e.key === "4") { buyUpgrade('medkit'); return; }
+        }
+
+        if(e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = true;
+        if(e.key === " " && !spacePressed) { spacePressed = true; fireHarpoon(); }
+        if(e.key.toLowerCase() === "t") {
+            diver.flashlightOn = !diver.flashlightOn;
+            if(diver.flashlightOn) diver.flashlightTimer = 0; 
+            playSoundFX(diver.flashlightOn ? 'torchOn' : 'torchOff'); // SUONO TORCIA
+        }
+        if(e.key.toLowerCase() === "c" && !e.repeat) { useMedkit(); }
+        if(e.key === "ò" && !e.repeat) {
+            debugPanelVisible = !debugPanelVisible;
+            document.getElementById('debug-panel').style.display = debugPanelVisible ? 'block' : 'none';
+            if (debugPanelVisible) updateDebugPanel();
+        }
+    }
+    if(e.key === "Tab") {
+        e.preventDefault(); 
+        if(!tabPressed) { tabPressed = true; togglePause(); }
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if(e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = false;
+    if(e.key === " ") spacePressed = false;
+    if(e.key === "Tab") tabPressed = false;
+});
+
+// FUNZIONI DI GESTIONE DELLE MODALI PERSONALIZZATE
+function showCustomAlert(title, message) {
+    this.previousScreenState = gameState.screen; 
+    gameState.screen = 'modal-alert';
+    document.getElementById('alert-title').innerHTML = title;
+    document.getElementById('alert-text').innerHTML = message;
+    document.getElementById('custom-alert').style.display = 'flex';
+    updateMenuVisualSelection();
+}
+
+function closeCustomAlert() {
+    document.getElementById('custom-alert').style.display = 'none';
+    gameState.screen = this.previousScreenState || 'main-menu';
+    updateMenuVisualSelection();
+}
+
+function showCustomConfirm(title, message, callback) {
+    this.previousScreenState = gameState.screen;
+    gameState.screen = 'modal-confirm';
+    confirmSelectedIndex = 0; 
+    confirmCallback = callback;
+    document.getElementById('confirm-title').innerHTML = title;
+    document.getElementById('confirm-text').innerHTML = message;
+    document.getElementById('custom-confirm').style.display = 'flex';
+    updateMenuVisualSelection();
+}
+
+function closeCustomConfirm(proceed) {
+    document.getElementById('custom-confirm').style.display = 'none';
+    gameState.screen = this.previousScreenState || 'main-menu';
+    if (confirmCallback) {
+        confirmCallback(proceed);
+        confirmCallback = null;
+    }
+    updateMenuVisualSelection();
+}
+
+function updateMenuVisualSelection() {
+    if (gameState.screen === 'main-menu') {
+        mainMenuButtons.forEach((btnId, idx) => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                if (idx === mainMenuSelectedIndex) btn.classList.add('selected');
+                else btn.classList.remove('selected');
+            }
+        });
+    } else if (gameState.screen === 'pause') {
+        pauseMenuButtons.forEach((btnId, idx) => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                if (idx === pauseMenuSelectedIndex) btn.classList.add('selected');
+                else btn.classList.remove('selected');
+            }
+        });
+    } else if (gameState.screen === 'modal-alert') {
+        document.getElementById('btn-alert-ok').classList.add('selected');
+    } else if (gameState.screen === 'modal-confirm') {
+        confirmButtons.forEach((btnId, idx) => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                if (idx === confirmSelectedIndex) btn.classList.add('selected');
+                else btn.classList.remove('selected');
+            }
+        });
+    }
+}
+
+function handleGamepadInputs() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = gamepads[0]; if (!gp) return null;
+    
+    if (gamepadDirectionCooldown > 0) gamepadDirectionCooldown--;
+
+    if (gameState.screen === 'modal-alert') {
+        if (gp.buttons[0].pressed || gp.buttons[1].pressed) { 
+            if (!gamepadAPressed && !gamepadBPressed) {
+                if(gp.buttons[0].pressed) gamepadAPressed = true;
+                if(gp.buttons[1].pressed) gamepadBPressed = true;
+                document.getElementById('btn-alert-ok').click();
+            }
+        } else {
+            gamepadAPressed = false; gamepadBPressed = false;
+        }
+        return null;
+    }
+
+    if (gameState.screen === 'modal-confirm') {
+        let leftPressed = gp.buttons[14].pressed || gp.axes[0] < -0.5;
+        let rightPressed = gp.buttons[15].pressed || gp.axes[0] > 0.5;
+
+        if (gamepadDirectionCooldown === 0) {
+            if (leftPressed && confirmSelectedIndex > 0) {
+                confirmSelectedIndex = 0;
+                gamepadDirectionCooldown = 15;
+            } else if (rightPressed && confirmSelectedIndex < 1) {
+                confirmSelectedIndex = 1;
+                gamepadDirectionCooldown = 15;
+            }
+        }
+
+        if (gp.buttons[1].pressed) { 
+            if (!gamepadBPressed) {
+                gamepadBPressed = true;
+                closeCustomConfirm(false);
+            }
+        } else { gamepadBPressed = false; }
+
+        if (gp.buttons[0].pressed) { 
+            if (!gamepadAPressed) {
+                gamepadAPressed = true;
+                const activeBtn = document.getElementById(confirmButtons[confirmSelectedIndex]);
+                if (activeBtn) activeBtn.click();
+            }
+        } else { gamepadAPressed = false; }
+
+        updateMenuVisualSelection();
+        return null;
+    }
+
+    if (gameState.screen === 'main-menu') {
+        let upPressed = gp.buttons[12].pressed || gp.axes[1] < -0.5;
+        let downPressed = gp.buttons[13].pressed || gp.axes[1] > 0.5;
+
+        if (gamepadDirectionCooldown === 0) {
+            if (upPressed) {
+                let initialIndex = mainMenuSelectedIndex;
+                do {
+                    mainMenuSelectedIndex = (mainMenuSelectedIndex - 1 + mainMenuButtons.length) % mainMenuButtons.length;
+                } while (document.getElementById(mainMenuButtons[mainMenuSelectedIndex]).disabled && mainMenuSelectedIndex !== initialIndex);
+                gamepadDirectionCooldown = 15; 
+            } else if (downPressed) {
+                let initialIndex = mainMenuSelectedIndex;
+                do {
+                    mainMenuSelectedIndex = (mainMenuSelectedIndex + 1) % mainMenuButtons.length;
+                } while (document.getElementById(mainMenuButtons[mainMenuSelectedIndex]).disabled && mainMenuSelectedIndex !== initialIndex);
+                gamepadDirectionCooldown = 15;
+            }
+        }
+
+        if (gp.buttons[0].pressed) {
+            if (!gamepadAPressed) {
+                gamepadAPressed = true;
+                const activeBtn = document.getElementById(mainMenuButtons[mainMenuSelectedIndex]);
+                if (activeBtn && !activeBtn.disabled) activeBtn.click();
+            }
+        } else {
+            gamepadAPressed = false;
+        }
+
+        updateMenuVisualSelection();
+        return null;
+    }
+
+    if (gameState.screen === 'pause') {
+        let upPressed = gp.buttons[12].pressed || gp.axes[1] < -0.5;
+        let downPressed = gp.buttons[13].pressed || gp.axes[1] > 0.5;
+
+        if (gamepadDirectionCooldown === 0) {
+            if (upPressed) {
+                pauseMenuSelectedIndex = (pauseMenuSelectedIndex - 1 + pauseMenuButtons.length) % pauseMenuButtons.length;
+                gamepadDirectionCooldown = 15;
+            } else if (downPressed) {
+                pauseMenuSelectedIndex = (pauseMenuSelectedIndex + 1) % pauseMenuButtons.length;
+                gamepadDirectionCooldown = 15;
+            }
+        }
+
+        if (gp.buttons[1].pressed) {
+            if (!gamepadBPressed) {
+                gamepadBPressed = true;
+                resumeGame();
+            }
+        } else {
+            gamepadBPressed = false;
+        }
+
+        if (gp.buttons[0].pressed) {
+            if (!gamepadAPressed) {
+                gamepadAPressed = true;
+                const activeBtn = document.getElementById(pauseMenuButtons[pauseMenuSelectedIndex]);
+                if (activeBtn) activeBtn.click();
+            }
+        } else {
+            gamepadAPressed = false;
+        }
+
+        updateMenuVisualSelection();
+        return null;
+    }
+
+    if (gameState.screen === 'gameplay') {
+        const isShopOpen = (document.getElementById('shop-menu').style.display === 'flex');
+
+        if (isShopOpen) {
+            // Sgancio/Chiusura Negozio da Gamepad: 
+            if (gp.buttons[1].pressed || gp.axes[1] > 0.5) {
+                if (!gamepadBPressed) {
+                    gameState.shopForceClosed = true;
+                    document.getElementById('shop-menu').style.display = 'none';
+                    if (gp.buttons[1].pressed) gamepadBPressed = true;
+                }
+                return { x: 0, y: 0 };
+            } else {
+                gamepadBPressed = false;
+            }
+
+            // --- FUNZIONALITÀ DEI 4 TASTI DPAD RIPRISTINATI SOLO PER SHOPPING ---
+            if (gp.buttons[14].pressed) {
+                if (!gamepadDpadLeftPressed) { buyUpgrade('oxygen'); gamepadDpadLeftPressed = true; }
+            } else { gamepadDpadLeftPressed = false; }
+
+            if (gp.buttons[12].pressed) {
+                if (!gamepadDpadUpPressed) { buyUpgrade('speed'); gamepadDpadUpPressed = true; }
+            } else { gamepadDpadUpPressed = false; }
+
+            if (gp.buttons[15].pressed) {
+                if (!gamepadDpadRightPressed) { buyUpgrade('harpoon'); gamepadDpadRightPressed = true; }
+            } else { gamepadDpadRightPressed = false; }
+
+            if (gp.buttons[13].pressed) {
+                if (!gamepadDpadDownPressed) { buyUpgrade('medkit'); gamepadDpadDownPressed = true; }
+            } else { gamepadDpadDownPressed = false; }
+            
+            return { x: 0, y: 0 }; // Blocca il movimento durante la consultazione del negozio
+        }
+
+        // Fuoco della fiocina (A o X del Gamepad)
+        if ((gp.buttons[0].pressed || gp.buttons[2].pressed) && !spacePressed && !gamepadXPressed) { 
+            spacePressed = true; gamepadXPressed = true; fireHarpoon(); 
+        } 
+        if (!gp.buttons[0].pressed && !gp.buttons[2].pressed) { spacePressed = false; gamepadXPressed = false; }
+
+        // Controllo della torcia associato al tasto superiore (Y / Triangolo -> gp.buttons[3])
+        const topButton = gp.buttons[3];
+        if (topButton && topButton.pressed) {
+            if (!gamepadTopButtonPressed) {
+                diver.flashlightOn = !diver.flashlightOn;
+                if(diver.flashlightOn) diver.flashlightTimer = 0;
+                playSoundFX(diver.flashlightOn ? 'torchOn' : 'torchOff'); // SUONO TORCIA
+                gamepadTopButtonPressed = true; 
+            }
+        } else { gamepadTopButtonPressed = false; }
+
+        // Uso del kit di pronto soccorso (D-Pad ⬇ durante l'immersione)
+        if (gp.buttons[13] && gp.buttons[13].pressed) {
+            if (!gamepadMedkitPressed) { useMedkit(); gamepadMedkitPressed = true; }
+        } else { gamepadMedkitPressed = false; }
+    }
+
+    if (gp.buttons[9].pressed) {
+        if (!gamepadStartPressed) { gamepadStartPressed = true; togglePause(); }
+    } else { gamepadStartPressed = false; }
+
+    return {
+        x: Math.abs(gp.axes[0]) > 0.1 ? gp.axes[0] : 0,
+        y: Math.abs(gp.axes[1]) > 0.1 ? gp.axes[1] : 0
+    };
+}
+
+function togglePause() {
+    if (gameState.screen === 'gameplay') {
+        saveGameState();
+		pauseBGMPlaylist();		
+        gameState.screen = 'pause';
+        pauseMenuSelectedIndex = 0; 
+        document.getElementById('pause-menu').style.display = 'flex';
+        document.getElementById('shop-menu').style.display = 'none';
+        updateMenuVisualSelection();
+    } else if (gameState.screen === 'pause') {
+        resumeGame();
+    }
+}
+
+function resumeGame() {
+    startBGMPlaylist();
+	gameState.screen = 'gameplay';
+	
+    document.getElementById('pause-menu').style.display = 'none';
+}
+
+function startTransitionSequence(actionCallback) {
+    const overlay = document.getElementById('fade-overlay');
+    overlay.classList.add('active');
+    setTimeout(() => {
+        stopMenuAmbient(); // Interrompiamo l'audio procedurale del menu prima di iniziare il gameplay
+        actionCallback();
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('UI-Overlay').style.display = 'block';
+        overlay.classList.remove('active');
+    }, 1000);
+}
+
+function continueGameClick() {
+    if (gameState.hasActiveSession) {
+        startTransitionSequence(() => {
+            loadGameState();
+            startBGMPlaylist();
+			gameState.screen = 'gameplay';
+        });
+    }
+}
+
+function startNewGameClick() {
+    if (gameState.hasActiveSession) {
+        showCustomConfirm("Ricominciare?", "C'è già una sessione attiva. Vuoi sovrascriverla e iniziare una nuova esplorazione?", function(confirmed) {
+            if (confirmed) {
+                startTransitionSequence(() => {
+                    resetAndStartNewSession();
+                });
+            }
+        });
+    } else {
+        startTransitionSequence(() => {
+            resetAndStartNewSession();
+        });
+    }
+}
+
+function resetAndStartNewSession() {
+    gameState.distance = 0; gameState.gold = 100; gameState.currentGold = 0;
+    gameState.gameSpeed = gameState.baseGameSpeed; gameState.harpoons = 5; 
+    gameState.upgrades.oxygenMax = 525; gameState.upgrades.speed = 4;
+    gameState.shopForceClosed = false; gameState.medkits = 1;
+    supplyIntervalTimer = 0; supplyIntervalReady = false; supplyIntervalsPassed = 0; supplyMenuForceClosed = false;
+    gameState.ownedBoats = ['pedalo'];
+    gameState.ownedTanks = ['standard']; gameState.oxygenUpgradeBonus = 0;
+    gameState.ownedHarpoonTypes = ['standard'];
+    gameState.ownedSkins = ['standard']; gameState.currentSkin = 'standard';
+    gameState.hasCompass = false; gameState.hasInsurance = false; gameState.hasCompanionFish = false;
+    companionFish = null;
+    boat.direction = 1;
+    setBoatType('pedalo');
+    setTankType('standard');
+    setHarpoonType('standard');
+    boat.x = canvas.width / 2 - boat.width / 2;
+
+    diver.x = 200; diver.y = 300; diver.oxygen = gameState.upgrades.oxygenMax;
+    diver.isDead = false; diver.isHeavy = false; diver.inSeaweed = false;
+    diver.flashlightOn = false; diver.battery = 100; diver.blindnessTimer = 0;
+    diver.facing = 1; diver.swimCycle = 0; diver.tilt = 0; diver.harpoonAnimTimer = 0;
+    diver.health = diver.healthMax;
+
+    backgroundRocks = []; caveCeilings = []; parallaxRocks = []; treasures = [];
+    goodFish = []; badFish = []; jellyfishArray = []; bubbles = []; seaweeds = [];
+    geysers = []; harpoonsProjectiles = []; floatingTexts = []; oceanCurrents = []; lanternFishArray = [];
+    caveAnemones = []; pufferFishArray = []; ghostJellySwarm = []; breakableColumns = [];
+    
+    spawnTimer = 0; currentPhase = 'open-sea'; phaseTimer = 500; giantOctopus = null; reefBlend = 0; trenchBlend = 0;
+    landmarks = []; nextLandmarkSpawn = 750;
+    distantWrecks = []; nextDistantWreckSpawn = 2000;
+    distantWhales = []; nextWhaleSpawn = 2600;
+    distantSchools = []; nextSchoolSpawn = 1800;
+    lightSweeps = []; nextLightSweepSpawn = 2400;
+    bubbleColumns = []; nextBubbleColumnSpawn = 2200;
+    debugCounters = { treasures: 0, statues: 0, wrecks: 0, octopuses: 0, caves: 0, reefs: 0, trenches: 0, bgWrecks: 0, whales: 0, fishSchools: 0, lightBeams: 0, bubbleColumns: 0 };
+    if (debugPanelVisible) updateDebugPanel();
+    lastFloorHeight = 40; lastCeilingHeight = 0;
+
+    gameState.hasActiveSession = true;
+    document.getElementById('btn-continue').disabled = false;
+    
+    startBGMPlaylist();
+	gameState.screen = 'gameplay';
+    updateUI();
+}
+
+function backToMainMenu() {
+    document.getElementById('pause-menu').style.display = 'none';
+    document.getElementById('UI-Overlay').style.display = 'none';
+    document.getElementById('shop-menu').style.display = 'none';
+    gameState.screen = 'main-menu';
+    document.getElementById('main-menu').style.display = 'flex';
+    mainMenuSelectedIndex = gameState.hasActiveSession ? 0 : 1;
+    updateMenuVisualSelection();
+    startMenuAmbient(); // Facciamo ripartire il sottofondo del mare profondo nel menu
+}
+
+let savedSessionData = null;
+function saveGameState() {
+    savedSessionData = {
+        gameState: JSON.parse(JSON.stringify(gameState)),
+        diver: JSON.parse(JSON.stringify(diver)),
+        boat: JSON.parse(JSON.stringify(boat)),
+        spawnTimer, environmentTimer, currentPhase, phaseTimer,
+        lastFloorHeight, lastCeilingHeight, currentFloorTarget, currentCeilingTarget,
+        backgroundRocks: [...backgroundRocks], caveCeilings: [...caveCeilings], parallaxRocks: [...parallaxRocks],
+        treasures: [...treasures], goodFish: [...goodFish], badFish: [...badFish], jellyfishArray: [...jellyfishArray],
+        bubbles: [...bubbles], seaweeds: [...seaweeds], geysers: [...geysers], lanternFishArray: [...lanternFishArray],
+        caveAnemones: [...caveAnemones], pufferFishArray: [...pufferFishArray], ghostJellySwarm: [...ghostJellySwarm],
+        breakableColumns: [...breakableColumns],
+        giantOctopus: giantOctopus ? JSON.parse(JSON.stringify(giantOctopus)) : null,
+        reefBlend, trenchBlend,
+        landmarks: [...landmarks], nextLandmarkSpawn,
+        distantWrecks: [...distantWrecks], nextDistantWreckSpawn,
+        distantWhales: [...distantWhales], nextWhaleSpawn,
+        distantSchools: [...distantSchools], nextSchoolSpawn,
+        lightSweeps: [...lightSweeps], nextLightSweepSpawn,
+        bubbleColumns: [...bubbleColumns], nextBubbleColumnSpawn,
+        debugCounters: { ...debugCounters },
+        supplyIntervalTimer, supplyIntervalReady, supplyIntervalsPassed
+    };
+}
+
+function loadGameState() {
+    if (!savedSessionData) return;
+    Object.assign(gameState, savedSessionData.gameState);
+    setBoatType(gameState.currentBoatType || 'pedalo');
+    if (gameState.currentTank) { gameState.tankSpeedMod = OXYGEN_TANKS[gameState.currentTank].speedMod; gameState.tankRefillRate = OXYGEN_TANKS[gameState.currentTank].refillRate; }
+    if (!gameState.currentHarpoonType) { gameState.currentHarpoonType = 'standard'; gameState.ownedHarpoonTypes = ['standard']; }
+    Object.assign(diver, savedSessionData.diver);
+    Object.assign(boat, savedSessionData.boat);
+    spawnTimer = savedSessionData.spawnTimer;
+    environmentTimer = savedSessionData.environmentTimer;
+    currentPhase = savedSessionData.currentPhase;
+    phaseTimer = savedSessionData.phaseTimer;
+    lastFloorHeight = savedSessionData.lastFloorHeight;
+    lastCeilingHeight = savedSessionData.lastCeilingHeight;
+    currentFloorTarget = savedSessionData.currentFloorTarget;
+    currentCeilingTarget = savedSessionData.currentCeilingTarget;
+    
+    backgroundRocks = [...savedSessionData.backgroundRocks];
+    caveCeilings = [...savedSessionData.caveCeilings];
+    parallaxRocks = [...savedSessionData.parallaxRocks];
+    treasures = [...savedSessionData.treasures];
+    goodFish = [...savedSessionData.goodFish];
+    badFish = [...savedSessionData.badFish];
+    jellyfishArray = [...savedSessionData.jellyfishArray];
+    bubbles = [...savedSessionData.bubbles];
+    seaweeds = [...savedSessionData.seaweeds];
+    geysers = [...savedSessionData.geysers];
+    lanternFishArray = [...savedSessionData.lanternFishArray];
+    caveAnemones = [...savedSessionData.caveAnemones];
+    pufferFishArray = [...savedSessionData.pufferFishArray];
+    ghostJellySwarm = [...savedSessionData.ghostJellySwarm];
+    breakableColumns = [...savedSessionData.breakableColumns];
+    giantOctopus = savedSessionData.giantOctopus || null;
+    reefBlend = savedSessionData.reefBlend || 0;
+    trenchBlend = savedSessionData.trenchBlend || 0;
+    landmarks = savedSessionData.landmarks ? [...savedSessionData.landmarks] : [];
+    nextLandmarkSpawn = savedSessionData.nextLandmarkSpawn || (spawnTimer + 1500);
+    distantWrecks = savedSessionData.distantWrecks ? [...savedSessionData.distantWrecks] : [];
+    nextDistantWreckSpawn = savedSessionData.nextDistantWreckSpawn || (spawnTimer + 2000);
+    distantWhales = savedSessionData.distantWhales ? [...savedSessionData.distantWhales] : [];
+    nextWhaleSpawn = savedSessionData.nextWhaleSpawn || (spawnTimer + 2600);
+    distantSchools = savedSessionData.distantSchools ? [...savedSessionData.distantSchools] : [];
+    nextSchoolSpawn = savedSessionData.nextSchoolSpawn || (spawnTimer + 1800);
+    lightSweeps = savedSessionData.lightSweeps ? [...savedSessionData.lightSweeps] : [];
+    nextLightSweepSpawn = savedSessionData.nextLightSweepSpawn || (spawnTimer + 2400);
+    bubbleColumns = savedSessionData.bubbleColumns ? [...savedSessionData.bubbleColumns] : [];
+    nextBubbleColumnSpawn = savedSessionData.nextBubbleColumnSpawn || (spawnTimer + 2200);
+    if (savedSessionData.debugCounters) { debugCounters = { ...savedSessionData.debugCounters }; if (debugPanelVisible) updateDebugPanel(); }
+    supplyIntervalTimer = savedSessionData.supplyIntervalTimer || 0;
+    supplyIntervalReady = savedSessionData.supplyIntervalReady || false;
+    supplyIntervalsPassed = savedSessionData.supplyIntervalsPassed || 0;
+    supplyMenuForceClosed = false;
+    
+    harpoonsProjectiles = []; 
+    floatingTexts = [];
+    oceanCurrents = [];
+}
+
+function fireHarpoon() {
+    if (gameState.harpoons > 0 && !diver.isDead && gameState.screen === 'gameplay') {
+        gameState.harpoons--;
+        const originX = diver.facing === 1 ? diver.x + diver.width : diver.x - 15;
+        const hCfg = HARPOON_TYPES[gameState.currentHarpoonType] || HARPOON_TYPES.standard;
+        harpoonsProjectiles.push({ x: originX, y: diver.y + diver.height / 2, width: 15, height: 4, speed: hCfg.speed, dir: diver.facing, harpoonType: gameState.currentHarpoonType });
+        diver.harpoonAnimTimer = 16;
+        playSoundFX('harpoon'); // SUONO SPARO FIOCINA
+        updateUI();
+    }
+}
+
+function setTankType(type) {
+    const cfg = OXYGEN_TANKS[type];
+    if (!cfg) return;
+    gameState.currentTank = type;
+    gameState.tankSpeedMod = cfg.speedMod;
+    gameState.tankRefillRate = cfg.refillRate;
+    gameState.upgrades.oxygenMax = cfg.oxygenMax + gameState.oxygenUpgradeBonus;
+    if (diver.oxygen > gameState.upgrades.oxygenMax) diver.oxygen = gameState.upgrades.oxygenMax;
+    updateUI();
+}
+
+function purchaseTank(type) {
+    const cfg = OXYGEN_TANKS[type];
+    if (!cfg) return;
+    if (gameState.ownedTanks.includes(type)) {
+        setTankType(type);
+        playSoundFX('click'); // SUONO CAMBIO BOMBOLA
+    } else if (gameState.gold >= cfg.cost) {
+        gameState.gold -= cfg.cost;
+        gameState.ownedTanks.push(type);
+        setTankType(type);
+        playSoundFX('upgrade'); // SUONO ACQUISTO BOMBOLA
+    }
+    renderSupplyMenu();
+    updateUI();
+}
+
+function setHarpoonType(type) {
+    if (!HARPOON_TYPES[type]) return;
+    gameState.currentHarpoonType = type;
+    updateUI();
+}
+
+function purchaseHarpoonType(type) {
+    const cfg = HARPOON_TYPES[type];
+    if (!cfg) return;
+    if (gameState.ownedHarpoonTypes.includes(type)) {
+        setHarpoonType(type);
+        playSoundFX('click'); // SUONO CAMBIO FIOCINA
+    } else if (gameState.gold >= cfg.cost) {
+        gameState.gold -= cfg.cost;
+        gameState.ownedHarpoonTypes.push(type);
+        setHarpoonType(type);
+        playSoundFX('upgrade'); // SUONO ACQUISTO FIOCINA
+    }
+    renderSupplyMenu();
+    updateUI();
+}
+
+function setSkin(type) {
+    if (!WETSUIT_SKINS[type]) return;
+    gameState.currentSkin = type;
+    updateUI();
+}
+
+function purchaseSkin(type) {
+    const cfg = WETSUIT_SKINS[type];
+    if (!cfg) return;
+    if (gameState.ownedSkins.includes(type)) {
+        setSkin(type);
+        playSoundFX('click'); // SUONO CAMBIO MUTA
+    } else if (gameState.gold >= cfg.cost) {
+        gameState.gold -= cfg.cost;
+        gameState.ownedSkins.push(type);
+        setSkin(type);
+        playSoundFX('upgrade'); // SUONO ACQUISTO MUTA
+    }
+    renderSupplyMenu();
+    updateUI();
+}
+
+function purchaseUtility(key) {
+    const cfg = UTILITY_ITEMS[key];
+    if (!cfg) return;
+    const flagName = key === 'compass' ? 'hasCompass' : (key === 'insurance' ? 'hasInsurance' : 'hasCompanionFish');
+    if (gameState[flagName]) return;
+    if (gameState.gold >= cfg.cost) {
+        gameState.gold -= cfg.cost;
+        gameState[flagName] = true;
+        playSoundFX('upgrade'); // SUONO ACQUISTO UTILITY
+        renderSupplyMenu();
+        updateUI();
+    }
+}
+
+function setBoatType(type) {
+    const cfg = BOAT_TYPES[type];
+    if (!cfg) return;
+    boat.type = type;
+    boat.width = cfg.width; boat.height = cfg.height;
+    boat.y = 90 - cfg.height;
+    boat.speed = cfg.speed;
+    boat.patrol = cfg.patrol;
+    boat.dockRadius = cfg.dockRadius;
+    boat.healthRegenMult = cfg.healthRegenMult;
+    gameState.currentBoatType = type;
+    gameState.maxMedkits = Math.max(1, 3 + cfg.medkitBonus);
+    if (gameState.medkits > gameState.maxMedkits) gameState.medkits = gameState.maxMedkits;
+    updateUI();
+}
+
+function purchaseBoat(type) {
+    const cfg = BOAT_TYPES[type];
+    if (!cfg) return;
+    if (gameState.ownedBoats.includes(type)) {
+        setBoatType(type);
+        playSoundFX('click'); // SUONO CAMBIO IMBARCAZIONE
+    } else if (gameState.gold >= cfg.cost) {
+        gameState.gold -= cfg.cost;
+        gameState.ownedBoats.push(type);
+        setBoatType(type);
+        playSoundFX('upgrade'); // SUONO ACQUISTO IMBARCAZIONE
+    }
+    renderSupplyMenu();
+    updateUI();
+}
+
+function renderSupplyMenu() {
+    const body = document.getElementById('supply-menu-body');
+    let html = '<p style="opacity:0.75; font-size:12px; margin-bottom:10px;">Le forniture arrivano ogni 10 minuti di immersione.</p>';
+
+    html += '<div class="supply-section-title">⚓ Imbarcazione</div>';
+    Object.keys(BOAT_TYPES).forEach(type => {
+        const cfg = BOAT_TYPES[type];
+        const owned = gameState.ownedBoats.includes(type);
+        const active = gameState.currentBoatType === type;
+        const canAfford = owned || gameState.gold >= cfg.cost;
+        html += '<div class="supply-boat-card' + (active ? ' active' : '') + '">'
+            + '<div class="supply-boat-name">' + cfg.name + (active ? ' ⚓ In uso' : '') + '</div>'
+            + '<div class="supply-boat-desc">' + cfg.desc + '</div>'
+            + '<button class="menu-btn supply-boat-btn" onclick="purchaseBoat(\'' + type + '\')" ' + ((active || !canAfford) ? 'disabled' : '') + '>'
+            + (active ? 'In uso' : (owned ? 'Usa questa imbarcazione' : ('Sblocca (' + cfg.cost + '$)')))
+            + '</button></div>';
+    });
+
+    html += '<div class="supply-section-title">🫧 Bombola d\'ossigeno</div>';
+    Object.keys(OXYGEN_TANKS).forEach(type => {
+        const cfg = OXYGEN_TANKS[type];
+        const owned = gameState.ownedTanks.includes(type);
+        const active = gameState.currentTank === type;
+        const canAfford = owned || gameState.gold >= cfg.cost;
+        html += '<div class="supply-boat-card' + (active ? ' active' : '') + '">'
+            + '<div class="supply-boat-name">' + cfg.name + (active ? ' 🫧 In uso' : '') + '</div>'
+            + '<div class="supply-boat-desc">' + cfg.desc + '</div>'
+            + '<button class="menu-btn supply-boat-btn" onclick="purchaseTank(\'' + type + '\')" ' + ((active || !canAfford) ? 'disabled' : '') + '>'
+            + (active ? 'In uso' : (owned ? 'Usa questa bombola' : ('Sblocca (' + cfg.cost + '$)')))
+            + '</button></div>';
+    });
+
+    html += '<div class="supply-section-title">🔱 Fiocina</div>';
+    Object.keys(HARPOON_TYPES).forEach(type => {
+        const cfg = HARPOON_TYPES[type];
+        const owned = gameState.ownedHarpoonTypes.includes(type);
+        const active = gameState.currentHarpoonType === type;
+        const canAfford = owned || gameState.gold >= cfg.cost;
+        html += '<div class="supply-boat-card' + (active ? ' active' : '') + '">'
+            + '<div class="supply-boat-name">' + cfg.name + (active ? ' 🔱 In uso' : '') + '</div>'
+            + '<div class="supply-boat-desc">' + cfg.desc + '</div>'
+            + '<button class="menu-btn supply-boat-btn" onclick="purchaseHarpoonType(\'' + type + '\')" ' + ((active || !canAfford) ? 'disabled' : '') + '>'
+            + (active ? 'In uso' : (owned ? 'Usa questa fiocina' : ('Sblocca (' + cfg.cost + '$)')))
+            + '</button></div>';
+    });
+
+    html += '<div class="supply-section-title">🎨 Muta</div>';
+    Object.keys(WETSUIT_SKINS).forEach(type => {
+        const cfg = WETSUIT_SKINS[type];
+        const owned = gameState.ownedSkins.includes(type);
+        const active = gameState.currentSkin === type;
+        const canAfford = owned || gameState.gold >= cfg.cost;
+        html += '<div class="supply-boat-card' + (active ? ' active' : '') + '">'
+            + '<div class="supply-boat-name">' + cfg.name + (active ? ' 🎨 In uso' : '') + '</div>'
+            + '<div class="supply-boat-desc">' + cfg.desc + '</div>'
+            + '<button class="menu-btn supply-boat-btn" onclick="purchaseSkin(\'' + type + '\')" ' + ((active || !canAfford) ? 'disabled' : '') + '>'
+            + (active ? 'In uso' : (owned ? 'Usa questa muta' : ('Sblocca (' + cfg.cost + '$)')))
+            + '</button></div>';
+    });
+
+    html += '<div class="supply-section-title">🧭 Utility</div>';
+    Object.keys(UTILITY_ITEMS).forEach(key => {
+        const cfg = UTILITY_ITEMS[key];
+        const flagName = key === 'compass' ? 'hasCompass' : (key === 'insurance' ? 'hasInsurance' : 'hasCompanionFish');
+        const owned = gameState[flagName];
+        const canAfford = owned || gameState.gold >= cfg.cost;
+        html += '<div class="supply-boat-card' + (owned ? ' active' : '') + '">'
+            + '<div class="supply-boat-name">' + cfg.name + (owned ? ' ✅ Posseduto' : '') + '</div>'
+            + '<div class="supply-boat-desc">' + cfg.desc + '</div>'
+            + '<button class="menu-btn supply-boat-btn" onclick="purchaseUtility(\'' + key + '\')" ' + ((owned || !canAfford) ? 'disabled' : '') + '>'
+            + (owned ? 'Posseduto' : ('Sblocca (' + cfg.cost + '$)'))
+            + '</button></div>';
+    });
+
+    body.innerHTML = html;
+}
+
+function buyUpgrade(type) {
+    if (type === 'oxygen' && gameState.gold >= 50) { 
+        gameState.gold -= 50; gameState.oxygenUpgradeBonus += 75; gameState.upgrades.oxygenMax = OXYGEN_TANKS[gameState.currentTank].oxygenMax + gameState.oxygenUpgradeBonus; diver.oxygen = gameState.upgrades.oxygenMax; 
+        playSoundFX('upgrade'); // SUONO UPGRADE
+    } 
+    else if (type === 'speed' && gameState.gold >= 70) { 
+        gameState.gold -= 70; gameState.upgrades.speed += 1.0; 
+        playSoundFX('upgrade'); // SUONO UPGRADE
+    } 
+    else if (type === 'harpoon' && gameState.gold >= 30 && gameState.harpoons < gameState.maxHarpoons) { 
+        gameState.gold -= 30; gameState.harpoons += 1; 
+        playSoundFX('upgrade'); // SUONO UPGRADE
+    }
+    else if (type === 'medkit' && gameState.gold >= 40 && gameState.medkits < gameState.maxMedkits) {
+        gameState.gold -= 40; gameState.medkits += 1;
+        playSoundFX('upgrade'); // SUONO UPGRADE
+    }
+    updateUI();
+}
+
+function useMedkit() {
+    if (gameState.screen === 'gameplay' && !diver.isDead && gameState.medkits > 0 && diver.health < diver.healthMax) {
+        gameState.medkits--;
+        diver.health = diver.healthMax;
+        playSoundFX('heal'); // SUONO USO KIT PRONTO SOCCORSO
+        updateUI();
+    }
+}
+
+function closeSupplyMenu() {
+    document.getElementById('supply-menu').style.display = 'none';
+    supplyMenuForceClosed = true;
+    supplyIntervalReady = false;
+    supplyIntervalTimer = 0;
+    supplyIntervalsPassed++;
+    playSoundFX('deposit'); // SUONO CHIUSURA FORNITURE
+}
+
+function updateUI() {
+    document.getElementById('ui-distance').innerText = Math.floor(gameState.distance);
+    document.getElementById('ui-gold').innerText = gameState.gold;
+    document.getElementById('ui-current-gold').innerText = gameState.currentGold;
+    document.getElementById('ui-harpoons').innerText = gameState.harpoons;
+    document.getElementById('ui-medkits').innerText = gameState.medkits;
+    document.getElementById('oxygen-fill').style.width = (diver.oxygen / gameState.upgrades.oxygenMax * 100) + '%';
+    document.getElementById('battery-fill').style.width = (diver.battery / diver.batteryMax * 100) + '%';
+    document.getElementById('health-fill').style.width = (diver.health / diver.healthMax * 100) + '%';
+    document.getElementById('oxygen-gauge').classList.toggle('critical', (diver.oxygen / gameState.upgrades.oxygenMax) < 0.2);
+    document.getElementById('health-gauge').classList.toggle('critical', (diver.health / diver.healthMax) < 0.25);
+    document.getElementById('ui-rec-dist').innerText = Math.floor(recordDistance);
+    document.getElementById('ui-rec-gold').innerText = recordGold;
+
+    document.getElementById('btn-ox').disabled = gameState.gold < 50;
+    document.getElementById('btn-speed').disabled = gameState.gold < 70;
+    document.getElementById('btn-harpoon').disabled = (gameState.gold < 30 || gameState.harpoons >= gameState.maxHarpoons);
+    document.getElementById('btn-medkit').disabled = (gameState.gold < 40 || gameState.medkits >= gameState.maxMedkits);
+
+    if (document.getElementById('supply-menu').style.display === 'flex') { renderSupplyMenu(); }
+}
+
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y;
+}
+
+function update() {
+    const gpInput = handleGamepadInputs();
+
+    if (gameState.screen === 'pause' || gameState.screen === 'modal-alert' || gameState.screen === 'modal-confirm') return;
+
+    if (gameState.screen === 'main-menu') {
+        environmentTimer += 0.02;
+        spawnProceduralElements();
+        
+        marineSnow.forEach(p => {
+            p.x -= (gameState.gameSpeed + p.speedX); p.swayOffset += p.swaySpeed; p.y += Math.sin(p.swayOffset) * 0.2;
+            if (p.x < -10) { p.x = canvas.width + 10; p.y = 90 + Math.random() * (canvas.height - 90); }
+        });
+        for (let i = parallaxRocks.length - 1; i >= 0; i--) { parallaxRocks[i].x -= gameState.gameSpeed * 0.35; if (parallaxRocks[i].x + parallaxRocks[i].width < -50) parallaxRocks.splice(i, 1); } for (let i = distantWrecks.length - 1; i >= 0; i--) { distantWrecks[i].x -= gameState.gameSpeed * distantWrecks[i].speed; if (distantWrecks[i].x + distantWrecks[i].width < -150) distantWrecks.splice(i, 1); }
+        for (let i = distantWhales.length - 1; i >= 0; i--) { distantWhales[i].x -= gameState.gameSpeed * distantWhales[i].speed; if (distantWhales[i].x + distantWhales[i].width < -150) distantWhales.splice(i, 1); }
+        for (let i = distantSchools.length - 1; i >= 0; i--) { distantSchools[i].x -= gameState.gameSpeed * distantSchools[i].speed; if (distantSchools[i].x < -250) distantSchools.splice(i, 1); }
+        for (let i = lightSweeps.length - 1; i >= 0; i--) { lightSweeps[i].x -= lightSweeps[i].speed; if (lightSweeps[i].x + lightSweeps[i].width < -250) lightSweeps.splice(i, 1); }
+        for (let i = bubbleColumns.length - 1; i >= 0; i--) {
+            const bc = bubbleColumns[i]; bc.x -= gameState.gameSpeed; bc.age++;
+            if (bc.age % 5 === 0) { bc.particles.push({ dx: Math.random() * bc.width, y: canvas.height - 15, speedY: 1.2 + Math.random() * 1 }); }
+            for (let p = bc.particles.length - 1; p >= 0; p--) { bc.particles[p].y -= bc.particles[p].speedY; if (bc.particles[p].y < 95) bc.particles.splice(p, 1); }
+            if (bc.age > bc.lifespan || bc.x < -60) bubbleColumns.splice(i, 1);
+        }
+        for (let i = seaweeds.length - 1; i >= 0; i--) { seaweeds[i].x -= gameState.gameSpeed; seaweeds[i].sway += 0.04; if (seaweeds[i].x + seaweeds[i].width < -60) seaweeds.splice(i, 1); }
+        for (let i = backgroundRocks.length - 1; i >= 0; i--) { backgroundRocks[i].x -= gameState.gameSpeed; if (backgroundRocks[i].x + backgroundRocks[i].width < -20) backgroundRocks.splice(i, 1); }
+        for (let i = landmarks.length - 1; i >= 0; i--) { landmarks[i].x -= gameState.gameSpeed; if (landmarks[i].x + landmarks[i].width < -50) landmarks.splice(i, 1); }
+        for (let i = caveCeilings.length - 1; i >= 0; i--) { caveCeilings[i].x -= gameState.gameSpeed; if (caveCeilings[i].x + caveCeilings[i].width < -20) caveCeilings.splice(i, 1); }
+        for (let i = lanternFishArray.length - 1; i >= 0; i--) { lanternFishArray[i].x -= lanternFishArray[i].speedX; lanternFishArray[i].y += Math.sin(spawnTimer * lanternFishArray[i].waveSpeed + lanternFishArray[i].seed) * 0.6; lanternFishArray[i].swimCycle += 0.15; if (lanternFishArray[i].x + lanternFishArray[i].width < -50) lanternFishArray.splice(i, 1); }
+        for (let i = goodFish.length - 1; i >= 0; i--) { goodFish[i].x -= goodFish[i].speed; goodFish[i].swimCycle += 0.15; if (goodFish[i].x + goodFish[i].width < -50) goodFish.splice(i, 1); }
+        for (let i = badFish.length - 1; i >= 0; i--) { badFish[i].x -= badFish[i].speed; badFish[i].swimCycle += 0.2; if (badFish[i].x + badFish[i].width < -50) badFish.splice(i, 1); }
+        for (let i = jellyfishArray.length - 1; i >= 0; i--) {
+            const jelly = jellyfishArray[i]; jelly.x -= jelly.speedX; jelly.pulseTimer += jelly.pulseSpeed;
+            let pulseSin = Math.sin(jelly.pulseTimer); if (pulseSin > 0.2) { jelly.y -= pulseSin * 1.4; jelly.x -= 0.3; } else { jelly.y += 0.5; }
+            if (jelly.x + jelly.width < -60) jellyfishArray.splice(i, 1);
+        }
+        for (let i = treasures.length - 1; i >= 0; i--) { treasures[i].x -= gameState.gameSpeed; if (treasures[i].x + treasures[i].width < -50) treasures.splice(i, 1); }
+        for (let i = caveAnemones.length - 1; i >= 0; i--) { caveAnemones[i].x -= gameState.gameSpeed; if (caveAnemones[i].x + caveAnemones[i].width < -50) caveAnemones.splice(i, 1); }
+        for (let i = pufferFishArray.length - 1; i >= 0; i--) { pufferFishArray[i].x -= (gameState.gameSpeed + 0.3); pufferFishArray[i].swimCycle += 0.1; if (pufferFishArray[i].x + 50 < -50) pufferFishArray.splice(i, 1); }
+        for (let i = ghostJellySwarm.length - 1; i >= 0; i--) { ghostJellySwarm[i].x -= ghostJellySwarm[i].speedX; ghostJellySwarm[i].y += Math.sin(spawnTimer * 0.05 + i) * 0.3; if (ghostJellySwarm[i].x + ghostJellySwarm[i].width < -50) ghostJellySwarm.splice(i, 1); }
+        for (let i = breakableColumns.length - 1; i >= 0; i--) { breakableColumns[i].x -= gameState.gameSpeed; if (breakableColumns[i].x + breakableColumns[i].width < -50) breakableColumns.splice(i, 1); }
+        for (let i = geysers.length - 1; i >= 0; i--) {
+            let g = geysers[i]; g.x -= gameState.gameSpeed;
+            if (Math.random() < 0.4) { g.particles.push({ x: g.x + Math.random() * g.width, y: canvas.height - 20, radius: Math.random() * 3 + 1, speedY: Math.random() * 3 + 2, color: 'rgba(255, 255, 255, 0.4)' }); }
+            for (let pIdx = g.particles.length - 1; pIdx >= 0; pIdx--) { g.particles[pIdx].y -= g.particles[pIdx].speedY; if (g.particles[pIdx].y < 90) g.particles.splice(pIdx, 1); }
+            if (g.x + g.width < -50) geysers.splice(i, 1);
+        }
+        return;
+    }
+
+    if (diver.isDead) return;
+
+    let moveX = 0; let moveY = 0;
+    if (keys.w) moveY = -1; if (keys.s) moveY = 1; if (keys.a) moveX = -1; if (keys.d) moveX = 1;
+    if (gpInput) { moveX = gpInput.x; moveY = gpInput.y; }
+
+    let currentSpeed = Math.max(1.5, gameState.upgrades.speed + gameState.tankSpeedMod);
+    if (diver.isHeavy) currentSpeed *= 0.65; 
+    if (diver.inSeaweed) currentSpeed *= 0.40; 
+
+    const isMoving = (moveX !== 0 || moveY !== 0);
+
+    if (moveX !== 0) diver.facing = moveX > 0 ? 1 : -1;
+    diver.swimCycle += isMoving ? 0.25 : 0.08;
+    const tiltTarget = moveY * 0.32;
+    diver.tilt += (tiltTarget - diver.tilt) * 0.15;
+    if (diver.harpoonAnimTimer > 0) diver.harpoonAnimTimer--;
+
+    if (moveX < 0) { gameState.gameSpeed += (0.1 - gameState.gameSpeed) * 0.015; } 
+    else { gameState.gameSpeed += (gameState.baseGameSpeed - gameState.gameSpeed) * 0.015; }
+
+    gameState.distance += gameState.gameSpeed * 0.02;
+
+    if (gameState.distance > recordDistance) {
+        recordDistance = gameState.distance;
+        localStorage.setItem('sub_record_distance', recordDistance);
+    }
+
+    environmentTimer += 0.02;
+    if (diver.blindnessTimer > 0) diver.blindnessTimer--;
+
+    spawnProceduralElements();
+
+    if (diver.hitTimer > 0) diver.hitTimer--;
+
+    // TIMER DELL'INTERVALLO FORNITURE (ogni 10 minuti di immersione)
+    if (!supplyIntervalReady) {
+        supplyIntervalTimer++;
+        if (supplyIntervalTimer >= SUPPLY_INTERVAL_DURATION) { supplyIntervalReady = true; }
+    }
+
+    // CONTROLLO INTERAZIONE CON LA BARCA E OFFICINA
+    const closeToBoat = Math.abs((diver.x + diver.width/2) - (boat.x + boat.width/2)) < boat.dockRadius && diver.y < 150;
+    const shopDiv = document.getElementById('shop-menu');
+    const supplyDiv = document.getElementById('supply-menu');
+
+    if (!closeToBoat) {
+        gameState.shopForceClosed = false;
+        supplyMenuForceClosed = false;
+        if (supplyDiv.style.display !== 'none') supplyDiv.style.display = 'none';
+    }
+
+    if (closeToBoat && supplyIntervalReady && !supplyMenuForceClosed) {
+        if (supplyDiv.style.display !== 'flex') supplyDiv.style.display = 'flex';
+    }
+
+    if (closeToBoat && !gameState.shopForceClosed) {
+        boat.x += 0; 
+        
+        diver.oxygen = Math.min(gameState.upgrades.oxygenMax, diver.oxygen + gameState.tankRefillRate);
+        diver.battery = diver.batteryMax; 
+        diver.health = Math.min(diver.healthMax, diver.health + 0.15 * boat.healthRegenMult);
+        if(shopDiv.style.display !== 'flex') shopDiv.style.display = 'flex';
+
+        if (gameState.currentGold > 0) {
+            gameState.gold += gameState.currentGold; gameState.currentGold = 0; diver.isHeavy = false; 
+            playSoundFX('deposit'); // SUONO DEPOSITO ORO ALLA BARCA
+            if (gameState.gold > recordGold) { recordGold = gameState.gold; localStorage.setItem('sub_record_gold', recordGold); }
+        }
+    } else {
+        if (boat.patrol) {
+            const boatBeyondThreeQuarters = boat.x > canvas.width * 0.75;
+            const boatAheadOfPlayer = boat.x > diver.x;
+
+            if (moveX < 0 && boatBeyondThreeQuarters && boatAheadOfPlayer) { 
+                boat.x += moveX * currentSpeed; 
+            } else {
+                boat.x += boat.speed * boat.direction;
+                if (boat.x > canvas.width - boat.width || boat.x < 0) boat.direction *= -1;
+            }
+        }
+
+        if(shopDiv.style.display !== 'none') shopDiv.style.display = 'none';
+        if (diver.y > 90) diver.oxygen -= 0.08;
+        if (diver.oxygen / gameState.upgrades.oxygenMax < 0.1) { diver.health = Math.max(0, diver.health - 0.05); }
+        
+        if (diver.oxygen <= 0) {
+            diver.oxygen = 0; diver.isDead = true;
+            if (gameState.hasInsurance && gameState.currentGold > 0) { gameState.gold += Math.floor(gameState.currentGold * 0.5); }
+            gameState.hasActiveSession = false;
+            document.getElementById('btn-continue').disabled = true;
+            
+            playSoundFX('gameover'); // SUONO FINE ARIA / MORTE
+            showCustomAlert("GAME OVER", "Aria terminata nei recessi marini!<br><br>Distanza raggiunta: <b style='color:#00d2ff'>" + Math.floor(gameState.distance) + "m</b>");
+            backToMainMenu();
+        }
+        if (diver.health <= 0) {
+            diver.health = 0; diver.isDead = true;
+            if (gameState.hasInsurance && gameState.currentGold > 0) { gameState.gold += Math.floor(gameState.currentGold * 0.5); }
+            gameState.hasActiveSession = false;
+            document.getElementById('btn-continue').disabled = true;
+            
+            playSoundFX('gameover'); // SUONO FERITE MORTALI
+            showCustomAlert("GAME OVER", "Le ferite subite sono state troppo gravi!<br><br>Distanza raggiunta: <b style='color:#00d2ff'>" + Math.floor(gameState.distance) + "m</b>");
+            backToMainMenu();
+        }
+    }
+
+    if (diver.flashlightOn && diver.battery > 0) {
+        diver.battery -= 0.06; 
+        if (diver.battery <= 0) { diver.battery = 0; diver.flashlightOn = false; playSoundFX('torchOff'); } // SUONO TORCIA SPENTA (BATTERIA ESAURITA)
+        if (lastCeilingHeight <= 10) {
+            diver.flashlightTimer++;
+            if (diver.flashlightTimer >= 180) { diver.flashlightOn = false; diver.flashlightTimer = 0; }
+        } else { diver.flashlightTimer = 0; }
+    } else { diver.flashlightTimer = 0; }
+
+    if (diver.flashlightOn && diver.battery > 0) {
+        if (diver.battery < 25) {
+            let flicker = Math.random() > 0.3 ? 1.0 : 0.4;
+            diver.currentLightRadius = diver.baseLightRadius * (0.4 + (diver.battery / 25) * 0.6) * flicker;
+        } else { diver.currentLightRadius = diver.baseLightRadius; }
+    }
+
+    for (let i = caveAnemones.length - 1; i >= 0; i--) {
+        let ane = caveAnemones[i]; ane.x -= gameState.gameSpeed;
+        let distToDiver = Math.hypot((diver.x+diver.width/2) - ane.x, (diver.y+diver.height/2) - ane.y);
+        let isIlluminated = diver.flashlightOn && (distToDiver < diver.currentLightRadius);
+
+        if (isIlluminated) {
+            ane.isOpen = true; ane.bubbleTimer++;
+            if (ane.bubbleTimer % 45 === 0) { bubbles.push({ x: ane.x + 10, y: ane.y, radius: Math.random() * 4 + 4, speedY: Math.random() * 1.5 + 1 }); }
+        } else { ane.isOpen = false; }
+
+        if (checkCollision(diver, { x: ane.x, y: ane.y, width: ane.width, height: ane.height })) {
+            if (!ane.isOpen && diver.hitTimer === 0) { 
+                diver.health = Math.max(0, diver.health - 14); diver.hitTimer = 40; diver.y += ane.isCeiling ? 20 : -20;
+                playSoundFX('hit'); // SUONO DANNO ANEMONE CHIUSO
+            }
+        }
+        if (ane.x + ane.width < -50) caveAnemones.splice(i, 1);
+    }
+
+    for (let i = pufferFishArray.length - 1; i >= 0; i--) {
+        let pf = pufferFishArray[i]; pf.x -= (gameState.gameSpeed + 0.3); pf.swimCycle += 0.1;
+        let dist = Math.hypot(diver.x - pf.x, diver.y - pf.y);
+        
+        if (dist < 140 && isMoving) { if (!pf.isInflated) playSoundFX('puffInflate'); pf.isInflated = true; } // SUONO PESCE PALLA GONFIATO
+        else if (dist > 220) { pf.isInflated = false; }
+
+        let targetSize = pf.isInflated ? pf.baseSize * 2.2 : pf.baseSize;
+        pf.currentSize += (targetSize - pf.currentSize) * 0.1;
+
+        if (diver.hitTimer === 0 && dist < (pf.currentSize + 20)) {
+            diver.health = Math.max(0, diver.health - (pf.isInflated ? 24.5 : 7)); diver.hitTimer = 50; diver.x -= 30;
+            playSoundFX('hit'); // SUONO DANNO PESCE PALLA
+        }
+        if (pf.x + 50 < -50) pufferFishArray.splice(i, 1);
+    }
+
+    if (giantOctopus) {
+        updateGiantOctopus();
+        if (diver.hitTimer === 0 && checkOctopusCollision()) {
+            diver.health = Math.max(0, diver.health - 17.5); diver.hitTimer = 55;
+            diver.x -= (giantOctopus.x > diver.x ? 35 : -35);
+            playSoundFX('hit'); // SUONO DANNO TENTACOLO POLIPO
+        }
+    }
+
+    for (let i = ghostJellySwarm.length - 1; i >= 0; i--) {
+        let gj = ghostJellySwarm[i]; gj.x -= gj.speedX; gj.y += Math.sin(spawnTimer * 0.05 + i) * 0.3;
+        if (checkCollision(diver, gj)) { 
+            diver.blindnessTimer = 180; 
+            ghostJellySwarm.splice(i, 1); 
+            playSoundFX('hit'); // SUONO DANNO MEDUSA PHANTOM
+            continue; 
+        }
+        if (gj.x + gj.width < -50) ghostJellySwarm.splice(i, 1);
+    }
+
+    for (let i = breakableColumns.length - 1; i >= 0; i--) {
+        let col = breakableColumns[i]; col.x -= gameState.gameSpeed;
+        let colRect = { x: col.x, y: col.topY, width: col.width, height: col.bottomY - col.topY };
+        if (checkCollision(diver, colRect)) { diver.x = col.x - diver.width; }
+
+        for (let hIdx = harpoonsProjectiles.length - 1; hIdx >= 0; hIdx--) {
+            if (checkCollision(harpoonsProjectiles[hIdx], colRect)) {
+                const hType = harpoonsProjectiles[hIdx].harpoonType || 'standard';
+                col.hp -= (hType === 'spaccaRoccia') ? col.hp : 1;
+                harpoonsProjectiles.splice(hIdx, 1);
+                if (col.hp <= 0) {
+                    for(let f=0; f<6; f++) { floatingTexts.push({ x: col.x + 10, y: col.topY + (f * 30), text: "🧱", color: '#4a5568', alpha: 1.0, life: 40 }); }
+                    playSoundFX('break'); // SUONO COLONNA ABBATTUTA
+                    breakableColumns.splice(i, 1); break;
+                } else {
+                    playSoundFX('columnHit'); // SUONO COLPO A COLONNA NON DISTRUTTA
+                }
+            }
+        }
+        if (col.x + col.width < -50) breakableColumns.splice(i, 1);
+    }
+
+    for (let i = oceanCurrents.length - 1; i >= 0; i--) {
+        let current = oceanCurrents[i]; current.x -= gameState.gameSpeed; current.duration--;
+        if (diver.x < current.x + current.width && diver.x + diver.width > current.x &&
+            diver.y < current.y + current.height && diver.y + diver.height > current.y) { diver.x += current.forceX; }
+        if (current.x + current.width < -50 || current.duration <= 0) oceanCurrents.splice(i, 1);
+    }
+
+    for (let i = lanternFishArray.length - 1; i >= 0; i--) {
+        let lf = lanternFishArray[i]; lf.x -= lf.speedX; lf.y += Math.sin(spawnTimer * lf.waveSpeed + lf.seed) * 0.6; lf.swimCycle += 0.15;
+        if (lf.x + lf.width < -50) lanternFishArray.splice(i, 1);
+    }
+
+    let geyserPushUp = 0;
+    for (let i = geysers.length - 1; i >= 0; i--) {
+        let g = geysers[i]; g.x -= gameState.gameSpeed; 
+        if (Math.random() < 0.4) { g.particles.push({ x: g.x + Math.random() * g.width, y: canvas.height - 20, radius: Math.random() * 3 + 1, speedY: Math.random() * 3 + 2, color: Math.random() < 0.3 ? '#ff7a00' : 'rgba(255, 255, 255, 0.4)' }); }
+        for (let pIdx = g.particles.length - 1; pIdx >= 0; pIdx--) { g.particles[pIdx].y -= g.particles[pIdx].speedY; if (g.particles[pIdx].y < 90) g.particles.splice(pIdx, 1); }
+        if (diver.x + diver.width > g.x && diver.x < g.x + g.width) { if (diver.y < g.y) geyserPushUp = -3.5; }
+        if (g.x + g.width < -50) geysers.splice(i, 1);
+    }
+
+    diver.x += moveX * currentSpeed; diver.y += (moveY * currentSpeed) + geyserPushUp;
+
+    if (diver.x < 0) diver.x = 0;
+    if (diver.x > canvas.width - diver.width) diver.x = canvas.width - diver.width;
+    if (diver.y < 90) diver.y = 90;
+    if (diver.y > canvas.height - diver.height) diver.y = canvas.height - diver.height;
+
+    diver.inSeaweed = false;
+
+    marineSnow.forEach(p => {
+        p.x -= (gameState.gameSpeed + p.speedX); p.swayOffset += p.swaySpeed; p.y += Math.sin(p.swayOffset) * 0.2;
+        if (p.x < -10) { p.x = canvas.width + 10; p.y = 90 + Math.random() * (canvas.height - 90); }
+    });
+
+    for (let i = parallaxRocks.length - 1; i >= 0; i--) { parallaxRocks[i].x -= gameState.gameSpeed * 0.35; if (parallaxRocks[i].x + parallaxRocks[i].width < -50) parallaxRocks.splice(i, 1); } for (let i = distantWrecks.length - 1; i >= 0; i--) { distantWrecks[i].x -= gameState.gameSpeed * distantWrecks[i].speed; if (distantWrecks[i].x + distantWrecks[i].width < -150) distantWrecks.splice(i, 1); }
+        for (let i = distantWhales.length - 1; i >= 0; i--) { distantWhales[i].x -= gameState.gameSpeed * distantWhales[i].speed; if (distantWhales[i].x + distantWhales[i].width < -150) distantWhales.splice(i, 1); }
+        for (let i = distantSchools.length - 1; i >= 0; i--) { distantSchools[i].x -= gameState.gameSpeed * distantSchools[i].speed; if (distantSchools[i].x < -250) distantSchools.splice(i, 1); }
+        for (let i = lightSweeps.length - 1; i >= 0; i--) { lightSweeps[i].x -= lightSweeps[i].speed; if (lightSweeps[i].x + lightSweeps[i].width < -250) lightSweeps.splice(i, 1); }
+        for (let i = bubbleColumns.length - 1; i >= 0; i--) {
+            const bc = bubbleColumns[i]; bc.x -= gameState.gameSpeed; bc.age++;
+            if (bc.age % 5 === 0) { bc.particles.push({ dx: Math.random() * bc.width, y: canvas.height - 15, speedY: 1.2 + Math.random() * 1 }); }
+            for (let p = bc.particles.length - 1; p >= 0; p--) { bc.particles[p].y -= bc.particles[p].speedY; if (bc.particles[p].y < 95) bc.particles.splice(p, 1); }
+            if (bc.age > bc.lifespan || bc.x < -60) bubbleColumns.splice(i, 1);
+        }
+    for (let i = seaweeds.length - 1; i >= 0; i--) { seaweeds[i].x -= gameState.gameSpeed; seaweeds[i].sway += 0.04; if (checkCollision(diver, seaweeds[i])) diver.inSeaweed = true; if (seaweeds[i].x + seaweeds[i].width < -60) seaweeds.splice(i, 1); }
+    for (let i = backgroundRocks.length - 1; i >= 0; i--) { backgroundRocks[i].x -= gameState.gameSpeed; if (checkCollision(diver, backgroundRocks[i])) diver.y = backgroundRocks[i].y - diver.height; if (backgroundRocks[i].x + backgroundRocks[i].width < -20) backgroundRocks.splice(i, 1); }
+    for (let i = landmarks.length - 1; i >= 0; i--) { landmarks[i].x -= gameState.gameSpeed; if (landmarks[i].x + landmarks[i].width < -50) landmarks.splice(i, 1); }
+    for (let i = caveCeilings.length - 1; i >= 0; i--) { caveCeilings[i].x -= gameState.gameSpeed; if (checkCollision(diver, caveCeilings[i])) diver.y = caveCeilings[i].y + caveCeilings[i].height; if (caveCeilings[i].x + caveCeilings[i].width < -20) caveCeilings.splice(i, 1); }
+
+    for (let i = jellyfishArray.length - 1; i >= 0; i--) {
+        const jelly = jellyfishArray[i]; jelly.x -= jelly.speedX; jelly.pulseTimer += jelly.pulseSpeed;
+        let pulseSin = Math.sin(jelly.pulseTimer); if (pulseSin > 0.2) { jelly.y -= pulseSin * 1.4; jelly.x -= 0.3; } else { jelly.y += 0.5; }
+        if (diver.hitTimer === 0 && checkCollision(diver, jelly)) {
+            diver.health = Math.max(0, diver.health - 10.5); diver.hitTimer = 50; if (isMoving) diver.x -= 20;
+            playSoundFX('hit'); // SUONO DANNO MEDUSA
+        }
+        if (jelly.x + jelly.width < -60) jellyfishArray.splice(i, 1);
+    }
+
+    for (let i = treasures.length - 1; i >= 0; i--) {
+        treasures[i].x -= gameState.gameSpeed;
+        if (!treasures[i].collected && checkCollision(diver, treasures[i])) {
+            treasures[i].collected = true; gameState.currentGold += treasures[i].value; if (treasures[i].isHeavy) diver.isHeavy = true; 
+            let txtColor = '#ffffff'; if(treasures[i].lootType === 'oro') txtColor = '#f59e0b'; if(treasures[i].lootType === 'pesante') txtColor = '#cbd5e0'; if(treasures[i].lootType === 'mitico') txtColor = '#d946ef';
+            floatingTexts.push({ x: treasures[i].x, y: treasures[i].y, text: `+${treasures[i].value}$ ${treasures[i].label}!`, color: txtColor, alpha: 1.0, life: 90 });
+            playSoundFX('collect'); // SUONO RACCOLTA ORO/MANUFATTI
+            treasures.splice(i, 1); continue;
+        }
+        if (treasures[i].x + treasures[i].width < -50) treasures.splice(i, 1);
+    }
+
+    for (let i = floatingTexts.length - 1; i >= 0; i--) { floatingTexts[i].y -= 0.8; floatingTexts[i].life--; floatingTexts[i].alpha = floatingTexts[i].life / 90; if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1); }
+
+    for (let i = harpoonsProjectiles.length - 1; i >= 0; i--) {
+        harpoonsProjectiles[i].x += harpoonsProjectiles[i].speed * harpoonsProjectiles[i].dir; let hitSomething = false;
+        for (let j = badFish.length - 1; j >= 0; j--) {
+            if (checkCollision(harpoonsProjectiles[i], badFish[j])) {
+                const hType = harpoonsProjectiles[i].harpoonType || 'standard';
+                if (hType === 'stordente') {
+                    badFish[j].stunned = true; badFish[j].stunTimer = 240;
+                    playSoundFX('hit'); // SUONO PESCE STORDITO
+                } else if (hType === 'rete') {
+                    gameState.currentGold += 15;
+                    floatingTexts.push({ x: badFish[j].x, y: badFish[j].y, text: "+15$ 🕸️", color: '#4ade80', alpha: 1.0, life: 50 });
+                    badFish.splice(j, 1);
+                    playSoundFX('fishKill'); // SUONO PESCE CATTURATO
+                } else {
+                    badFish.splice(j, 1);
+                    playSoundFX('fishKill'); // SUONO PESCE ELIMINATO
+                }
+                hitSomething = true; break;
+            }
+        }
+        if (hitSomething || harpoonsProjectiles[i].x > canvas.width + 20 || harpoonsProjectiles[i].x < -20) harpoonsProjectiles.splice(i, 1);
+    }
+
+    for (let i = goodFish.length - 1; i >= 0; i--) { goodFish[i].x -= goodFish[i].speed; goodFish[i].swimCycle += 0.15; if (goodFish[i].x + goodFish[i].width < -50) goodFish.splice(i, 1); }
+
+    for (let i = badFish.length - 1; i >= 0; i--) {
+        if (badFish[i].stunned) {
+            badFish[i].stunTimer--;
+            if (badFish[i].stunTimer <= 0) { badFish[i].stunned = false; }
+        } else {
+            badFish[i].x -= badFish[i].speed; badFish[i].swimCycle += 0.2;
+            if (diver.hitTimer === 0 && checkCollision(diver, badFish[i])) {
+                diver.health = Math.max(0, diver.health - 17.5); diver.hitTimer = 60; if (isMoving) diver.x -= 40;
+                playSoundFX('hit'); // SUONO DANNO PESCE NEMICO
+            }
+        }
+        if (badFish[i].x + badFish[i].width < -50) badFish.splice(i, 1);
+    }
+
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+        bubbles[i].x -= gameState.gameSpeed; bubbles[i].y -= bubbles[i].speedY; bubbles[i].x += Math.sin(bubbles[i].y / 10) * 0.5;
+        const bX = bubbles[i].x; const bY = bubbles[i].y;
+        if (bX > diver.x && bX < diver.x + diver.width && bY > diver.y && bY < diver.y + diver.height) {
+            diver.oxygen = Math.min(gameState.upgrades.oxygenMax, diver.oxygen + 8); 
+            playSoundFX('bubble'); // SUONO RACCOLTA BOLLA OSSIGENO
+            bubbles.splice(i, 1); 
+            continue;
+        }
+        let popped = false;
+        for (let c = 0; c < caveCeilings.length; c++) { if (bX > caveCeilings[c].x && bX < caveCeilings[c].x + caveCeilings[c].width && bY < caveCeilings[c].y + caveCeilings[c].height) { popped = true; break; } }
+        if (bubbles[i].y < 90 || popped || bubbles[i].x < -50) bubbles.splice(i, 1);
+    }
+
+    if (gameState.hasCompanionFish) {
+        if (!companionFish) { companionFish = { x: diver.x - 40, y: diver.y + 10, swimCycle: Math.random() * 100 }; }
+        const targetX = diver.x - (40 * diver.facing);
+        const targetY = diver.y + 15 + Math.sin(environmentTimer * 2) * 8;
+        companionFish.x += (targetX - companionFish.x) * 0.07;
+        companionFish.y += (targetY - companionFish.y) * 0.07;
+        companionFish.swimCycle += 0.2;
+
+        for (let i = bubbles.length - 1; i >= 0; i--) {
+            if (Math.hypot(bubbles[i].x - companionFish.x, bubbles[i].y - companionFish.y) < 90) {
+                diver.oxygen = Math.min(gameState.upgrades.oxygenMax, diver.oxygen + 8);
+                playSoundFX('bubble'); // SUONO RACCOLTA BOLLA (PESCE COMPAGNO)
+                bubbles.splice(i, 1);
+            }
+        }
+    } else {
+        companionFish = null;
+    }
+
+    updateUI();
+}
+
+function draw() {
+    if (!ctx) return;
+
+    ctx.save();
+    
+    if (gameState.screen === 'main-menu' || gameState.screen === 'modal-alert' || gameState.screen === 'modal-confirm') {
+        ctx.translate(-canvas.width * 0.1, -canvas.height * 0.1);
+        ctx.scale(1.2, 1.2);
+    }
+
+    ctx.fillStyle = '#010914'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    let isMenuBackground = (gameState.screen === 'main-menu' || gameState.screen === 'modal-alert' || gameState.screen === 'modal-confirm');
+    let startYOffset = isMenuBackground ? 0 : 90;
+    let oceanGrad = ctx.createLinearGradient(0, startYOffset, 0, canvas.height);
+    oceanGrad.addColorStop(0, lerpColor(lerpColor('#0b4468', '#5eead4', reefBlend), '#120a2e', trenchBlend));
+    oceanGrad.addColorStop(0.12, lerpColor(lerpColor('#073352', '#2dd4bf', reefBlend), '#0c0722', trenchBlend));
+    oceanGrad.addColorStop(0.4, lerpColor(lerpColor('#031c33', '#0e7490', reefBlend), '#060314', trenchBlend));
+    oceanGrad.addColorStop(0.7, lerpColor(lerpColor('#020f1f', '#075985', reefBlend), '#02010a', trenchBlend));
+    oceanGrad.addColorStop(1, lerpColor(lerpColor('#00040a', '#032a3d', reefBlend), '#000004', trenchBlend));
+    ctx.fillStyle = oceanGrad; ctx.fillRect(0, startYOffset, canvas.width, canvas.height - startYOffset);
+
+    ctx.fillStyle = '#091524';
+
+    lightSweeps.forEach(ls => {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        let sweepGrad = ctx.createLinearGradient(ls.x, 90, ls.x + ls.width, canvas.height);
+        sweepGrad.addColorStop(0, 'rgba(180, 235, 255, 0.16)');
+        sweepGrad.addColorStop(0.5, 'rgba(180, 235, 255, 0.07)');
+        sweepGrad.addColorStop(1, 'rgba(180, 235, 255, 0)');
+        ctx.fillStyle = sweepGrad;
+        ctx.beginPath();
+        ctx.moveTo(ls.x, 90);
+        ctx.lineTo(ls.x + ls.width, 90);
+        ctx.lineTo(ls.x + ls.width + 140, canvas.height);
+        ctx.lineTo(ls.x - 140, canvas.height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    });
+
+    distantWrecks.forEach(dw => {
+        const w = dw.width, h = dw.height;
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#04101c';
+        ctx.beginPath();
+        ctx.moveTo(dw.x, dw.y + h * 0.5);
+        ctx.lineTo(dw.x + w * 0.08, dw.y + h * 0.15);
+        ctx.lineTo(dw.x + w * 0.85, dw.y + h * 0.05);
+        ctx.lineTo(dw.x + w, dw.y + h * 0.4);
+        ctx.lineTo(dw.x + w * 0.9, dw.y + h);
+        ctx.lineTo(dw.x + w * 0.1, dw.y + h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#04101c'; ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(dw.x + w * 0.55, dw.y + h * 0.1);
+        ctx.lineTo(dw.x + w * (0.55 + 0.13 * dw.mastSide), dw.y - h * 0.6);
+        ctx.stroke();
+        ctx.restore();
+    });
+
+    distantWhales.forEach(dwh => {
+        const w = dwh.width, h = dwh.height;
+        const bob = Math.sin(environmentTimer * 0.6 + dwh.bobPhase) * 8;
+        ctx.save();
+        ctx.globalAlpha = 0.38;
+        ctx.fillStyle = '#071522';
+        ctx.beginPath();
+        ctx.ellipse(dwh.x + w * 0.42, dwh.y + bob, w * 0.42, h * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(dwh.x - w * 0.02, dwh.y + bob);
+        ctx.lineTo(dwh.x - w * 0.22, dwh.y + bob - h * 0.28);
+        ctx.lineTo(dwh.x - w * 0.22, dwh.y + bob + h * 0.28);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    });
+
+    distantSchools.forEach(ds => {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#0a1a28';
+        ds.dots.forEach(d => {
+            const wiggle = Math.sin(environmentTimer * 1.5 + d.phase) * 4;
+            ctx.beginPath();
+            ctx.ellipse(ds.x + d.dx, ds.y + d.dy + wiggle, 7, 3.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    });
+
+    bubbleColumns.forEach(bc => {
+        ctx.save();
+        ctx.fillStyle = 'rgba(180, 220, 255, 0.28)';
+        bc.particles.forEach(p => { ctx.beginPath(); ctx.arc(bc.x + p.dx, p.y, 2.4, 0, Math.PI * 2); ctx.fill(); });
+        ctx.restore();
+    });
+
+    parallaxRocks.forEach(pRock => { ctx.fillRect(pRock.x, pRock.ceilY, pRock.width, pRock.ceilH); ctx.fillRect(pRock.x, pRock.floorY, pRock.width, pRock.floorH); });
+
+    geysers.forEach(g => {
+        let colGrad = ctx.createLinearGradient(g.x, 90, g.x + g.width, 90); colGrad.addColorStop(0, 'rgba(230, 92, 0, 0.0)'); colGrad.addColorStop(0.5, 'rgba(230, 92, 0, 0.08)'); colGrad.addColorStop(1, 'rgba(230, 92, 0, 0.0)');
+        ctx.fillStyle = colGrad; ctx.fillRect(g.x, 90, g.width, canvas.height - 90);
+        g.particles.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); });
+        ctx.fillStyle = '#3a221d'; ctx.beginPath(); ctx.moveTo(g.x - 5, canvas.height); ctx.lineTo(g.x + 10, g.y - 12); ctx.lineTo(g.x + g.width - 10, g.y - 12); ctx.lineTo(g.x + g.width + 5, canvas.height); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ff5100'; ctx.fillRect(g.x + 12, g.y - 12, g.width - 24, 4);
+    });
+
+    if (!isMenuBackground) {
+        oceanCurrents.forEach(c => {
+            ctx.fillStyle = 'rgba(0, 210, 255, 0.2)';
+            for (let offset = 0; offset < c.width; offset += 80) { let pX = c.x + ((spawnTimer * 1.5 + offset) % c.width); ctx.beginPath(); ctx.arc(pX, c.y + (offset % c.height), 2, 0, Math.PI * 2); ctx.fill(); }
+        });
+    }
+
+    let currentTimer = environmentTimer;
+    for(let i = 0; i < 7; i++) {
+        let angleOffset = Math.sin(currentTimer * 0.8 + i * 1.3) * 30; let startX = 100 + (i * 230) + Math.cos(currentTimer * 0.6 + i) * 20;
+        let rayLength = 420 + Math.sin(currentTimer + i * 2) * 60; let baseAlpha = (0.09 + (i % 3) * 0.025) * (1 - trenchBlend * 0.85);
+        let rayGrad = ctx.createLinearGradient(startX, 90, startX + angleOffset, 90 + rayLength); rayGrad.addColorStop(0, `rgba(170, 230, 255, ${baseAlpha})`); rayGrad.addColorStop(1, 'rgba(170, 230, 255, 0.0)');
+        ctx.fillStyle = rayGrad; ctx.beginPath(); ctx.moveTo(startX, 90); ctx.lineTo(startX + 70, 90); ctx.lineTo(startX + angleOffset + 130, 90 + rayLength); ctx.lineTo(startX + angleOffset, 90 + rayLength); ctx.closePath(); ctx.fill();
+    }
+
+    seaweeds.forEach(weed => { drawFloraItem(weed); });
+
+    landmarks.forEach(lm => { drawLandmark(lm); });
+
+    if (!isMenuBackground && gameState.hasCompass && landmarks.length > 0) {
+        const pulse = 0.75 + Math.sin(environmentTimer * 4) * 0.25;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(255, 212, 59, 0.8)'; ctx.shadowBlur = 8;
+        ctx.fillText("🧭", canvas.width - 40, 50);
+        ctx.restore();
+    }
+
+    caveAnemones.forEach(ane => { drawAnemoneShape(ane); });
+
+    ctx.fillStyle = lerpColor(lerpColor('#162538', '#c2703d', reefBlend), '#0a0620', trenchBlend); backgroundRocks.forEach(rock => { ctx.fillRect(rock.x, rock.y, rock.width, rock.height); });
+    ctx.fillStyle = lerpColor(lerpColor('#2c435e', '#f0a868', reefBlend), '#2e1a5c', trenchBlend); backgroundRocks.forEach(rock => { ctx.fillRect(rock.x, rock.y, rock.width, 3); });
+    ctx.fillStyle = '#101c2b'; caveCeilings.forEach(ceil => { ctx.fillRect(ceil.x, ceil.y, ceil.width, ceil.height); });
+    ctx.fillStyle = '#2c435e'; caveCeilings.forEach(ceil => { ctx.fillRect(ceil.x, ceil.y + ceil.height - 3, ceil.width, 3); });
+
+    breakableColumns.forEach(col => {
+        ctx.fillStyle = '#2d3748'; ctx.fillRect(col.x, col.topY, col.width, col.bottomY - col.topY);
+        ctx.strokeStyle = '#718096'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(col.x, col.topY + 40); ctx.lineTo(col.x + col.width, col.topY + 70); ctx.moveTo(col.x, col.bottomY - 80); ctx.lineTo(col.x + col.width, col.bottomY - 50); ctx.stroke();
+    });
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)'; marineSnow.forEach(p => { ctx.fillRect(p.x, p.y, p.size, p.size); });
+
+    treasures.forEach(tr => { drawTreasureItem(tr); });
+
+    goodFish.forEach(fish => { drawFishBody(fish.x, fish.y, fish.width, fish.height, fish.swimCycle, '#5fd0ff', '#0284c7', '#0284c7', {}); });
+    if (companionFish) { drawFishBody(companionFish.x, companionFish.y, 18, 11, companionFish.swimCycle, '#fbbf24', '#b45309', '#b45309', {}); }
+    if (giantOctopus) drawGiantOctopus();
+    lanternFishArray.forEach(lf => { drawFishBody(lf.x, lf.y, lf.width, lf.height, lf.swimCycle, '#2dd4bf', '#0f766e', '#0d9488', { glowDot: true }); });
+    badFish.forEach(fish => {
+        if (fish.stunned) {
+            drawFishBody(fish.x, fish.y, fish.width, fish.height, fish.swimCycle, '#94a3b8', '#475569', '#64748b', { spiky: true, teeth: true });
+            ctx.save(); ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('💫', fish.x + fish.width / 2, fish.y - 6 + Math.sin(environmentTimer * 4) * 3);
+            ctx.restore();
+        } else {
+            drawFishBody(fish.x, fish.y, fish.width, fish.height, fish.swimCycle, '#ff5d6c', '#8f0d1a', '#b70918', { spiky: true, teeth: true });
+        }
+    });
+
+    pufferFishArray.forEach(pf => { drawPufferBody(pf); });
+
+    ghostJellySwarm.forEach(gj => {
+        let gGrad = ctx.createRadialGradient(gj.x + gj.width / 2, gj.y + gj.height / 2, 1, gj.x + gj.width / 2, gj.y + gj.height / 2, gj.width * 1.6);
+        gGrad.addColorStop(0, 'rgba(150, 240, 255, 0.55)'); gGrad.addColorStop(1, 'rgba(150, 240, 255, 0)');
+        ctx.fillStyle = gGrad; ctx.beginPath(); ctx.arc(gj.x + gj.width / 2, gj.y + gj.height / 2, gj.width * 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(220, 250, 255, 0.55)'; ctx.beginPath(); ctx.ellipse(gj.x + gj.width / 2, gj.y + gj.height / 2, gj.width / 2, gj.height / 2, 0, 0, Math.PI * 2); ctx.fill();
+    });
+
+    jellyfishArray.forEach(jelly => {
+        const tentacleSway = Math.sin(jelly.pulseTimer * 1.5) * 5;
+        drawJellyBell(jelly.x + jelly.width / 2, jelly.y + jelly.height / 2, jelly.width, jelly.height, jelly.pulseTimer, tentacleSway,
+            { inner: 'rgba(255, 200, 230, 0.75)', outer: 'rgba(244, 143, 177, 0.55)' }, 'rgba(244, 143, 177, 0.12)');
+    });
+
+    bubbles.forEach(bubble => { ctx.strokeStyle = 'rgba(0, 210, 255, 0.5)'; ctx.fillStyle = 'rgba(0, 210, 255, 0.15)'; ctx.beginPath(); ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); });
+
+    let maskCanvas = document.createElement('canvas'); maskCanvas.width = canvas.width; maskCanvas.height = canvas.height;
+    let mCtx = maskCanvas.getContext('2d'); let hasCaveOnScreen = false; const openSeaHeight = canvas.height - 90;
+    
+    let loopLength = Math.min(caveCeilings.length, backgroundRocks.length);
+    for (let i = 0; i < loopLength; i++) {
+        let ceil = caveCeilings[i]; let floor = backgroundRocks[i];
+        if (ceil && ceil.height > 5) {
+            hasCaveOnScreen = true; let waterTop = ceil.y + ceil.height; let waterBottom = floor.y; let waterHeight = waterBottom - waterTop;
+            let dynamicDarkness = (1 - (waterHeight / openSeaHeight)) * Math.min(1, ceil.height / 140) * 0.95;
+            dynamicDarkness = Math.max(0, Math.min(0.95, dynamicDarkness));
+            if (dynamicDarkness > 0.01) { mCtx.fillStyle = 'rgba(0, 2, 8, ' + dynamicDarkness + ')'; mCtx.fillRect(ceil.x, waterTop, ceil.width, waterHeight); }
+        }
+    }
+    
+    if (hasCaveOnScreen) {
+        mCtx.globalCompositeOperation = 'destination-out';
+        lanternFishArray.forEach(lf => {
+            let fishGrad = mCtx.createRadialGradient(lf.x - 4, lf.y + 6, 2, lf.x - 4, lf.y + 6, 100); fishGrad.addColorStop(0, 'rgba(0,0,0,1)'); fishGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            mCtx.fillStyle = fishGrad; mCtx.beginPath(); mCtx.arc(lf.x - 4, lf.y + 6, 100, 0, Math.PI * 2); mCtx.fill();
+        });
+        caveAnemones.forEach(ane => {
+            if (ane.isOpen) {
+                let aneGrad = mCtx.createRadialGradient(ane.x + 15, ane.y + 15, 5, ane.x + 15, ane.y + 15, 90); aneGrad.addColorStop(0, 'rgba(0,0,0,1)'); aneGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                mCtx.fillStyle = aneGrad; mCtx.beginPath(); mCtx.arc(ane.x + 15, ane.y + 15, 90, 0, Math.PI * 2); mCtx.fill();
+            }
+        });
+    }
+    ctx.drawImage(maskCanvas, 0, 0);
+
+    floatingTexts.forEach(txt => {
+        ctx.save(); ctx.globalAlpha = txt.alpha; ctx.fillStyle = txt.color; ctx.font = 'bold 14px Arial'; ctx.shadowColor = 'black'; ctx.shadowBlur = 4; ctx.fillText(txt.text, txt.x, txt.y); ctx.restore();
+    });
+
+    let vignette = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.height * 0.32, canvas.width / 2, canvas.height / 2, canvas.height * 0.78);
+    vignette.addColorStop(0, 'rgba(0, 3, 8, 0)'); vignette.addColorStop(1, 'rgba(0, 3, 8, 0.4)');
+    ctx.fillStyle = vignette; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (isMenuBackground) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+        ctx.fillRect(0, 0, canvas.width * 1.5, canvas.height * 1.5);
+    }
+
+    ctx.restore();
+
+    if (!isMenuBackground) {
+        drawFlashlightBeam();
+        if (diver.hitTimer === 0 || Math.floor(diver.hitTimer / 4) % 2 === 0) {
+            drawDiver();
+        }
+        harpoonsProjectiles.forEach(proj => { ctx.fillStyle = '#ff9f1c'; ctx.fillRect(proj.x, proj.y, proj.width, proj.height); });
+        if (diver.blindnessTimer > 0) { ctx.fillStyle = `rgba(0, 40, 70, ${Math.min(0.85, diver.blindnessTimer / 60)})`; ctx.fillRect(0, 90, canvas.width, canvas.height - 90); }
+        
+        ctx.fillStyle = '#4ba3e3'; ctx.fillRect(0, 0, canvas.width, 90);
+        let surfGrad = ctx.createLinearGradient(0, 0, 0, 90);
+        surfGrad.addColorStop(0, lerpColor(lerpColor('#8fe0f5', '#c7fff2', reefBlend), '#1a1035', trenchBlend));
+        surfGrad.addColorStop(0.55, lerpColor(lerpColor('#4ba3e3', '#3dd6c4', reefBlend), '#120a26', trenchBlend));
+        surfGrad.addColorStop(1, lerpColor(lerpColor('#2e7ec9', '#1ba8a0', reefBlend), '#0a0518', trenchBlend));
+        ctx.fillStyle = surfGrad; ctx.fillRect(0, 0, canvas.width, 90);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+        for (let s = 0; s < 6; s++) {
+            let sx = ((environmentTimer * 45) + (s * 240)) % (canvas.width + 200) - 100;
+            ctx.save(); ctx.translate(sx, 18 + Math.sin(environmentTimer * 2 + s) * 8); ctx.rotate(-0.2);
+            ctx.beginPath(); ctx.ellipse(0, 0, 55, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
+        if (typeof boat !== 'undefined') {
+            ctx.fillStyle = 'rgba(0, 210, 255, 0.10)'; ctx.fillRect(boat.x - 20, 90, boat.width + 40, 70);
+            if (boat.type === 'pedalo') drawPedalo(); else drawBoat();
+            ctx.save();
+            ctx.textAlign = 'center'; ctx.fillStyle = 'white'; ctx.font = 'bold 11px sans-serif';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
+            ctx.fillText("DEPONI / RICARICA", boat.x + boat.width / 2, boat.y + boat.height + 24);
+            ctx.restore();
+
+            if (!isMenuBackground && supplyIntervalReady) {
+                const bob = Math.sin(environmentTimer * 3) * 4;
+                const pulse = 0.7 + Math.sin(environmentTimer * 5) * 0.3;
+                ctx.save();
+                ctx.globalAlpha = pulse;
+                ctx.font = 'bold 22px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(255, 212, 59, 0.9)'; ctx.shadowBlur = 12;
+                ctx.fillText("🎁", boat.x + boat.width / 2, boat.y - 30 + bob);
+                ctx.restore();
+            }
+        }
+    }
+}
+
+function drawFlashlightBeam() {
+    if (!diver.flashlightOn || diver.battery <= 0) return;
+    const headX = diver.x + diver.width / 2 + diver.facing * diver.width * 0.34;
+    const headY = diver.y + diver.height * 0.32 + diver.tilt * diver.width * 0.32;
+    const range = diver.currentLightRadius;
+    const spread = range * 0.42;
+    const tipX = headX + diver.facing * range;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const grad = ctx.createLinearGradient(headX, headY, tipX, headY);
+    grad.addColorStop(0, 'rgba(255, 244, 200, 0.32)');
+    grad.addColorStop(0.6, 'rgba(255, 244, 200, 0.10)');
+    grad.addColorStop(1, 'rgba(255, 244, 200, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(headX, headY - diver.height * 0.15);
+    ctx.lineTo(tipX, headY - spread);
+    ctx.lineTo(tipX, headY + spread);
+    ctx.lineTo(headX, headY + diver.height * 0.15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+function getOctopusTentaclePoints(octo, tentacleIndex) {
+    const angle = (tentacleIndex / octo.tentacleCount) * Math.PI * 2 + octo.seed * 0.01;
+    const wobble = Math.sin(octo.age * 0.025 + tentacleIndex * 1.7 + octo.seed) * 0.6;
+    const length = 100 + Math.sin(octo.age * 0.02 + tentacleIndex + octo.seed) * 22;
+    const points = [];
+    const segs = 6;
+    for (let s = 0; s <= segs; s++) {
+        const f = s / segs;
+        const wave = Math.sin(octo.age * 0.09 + tentacleIndex * 1.3 + f * 4.2) * (16 * f);
+        const dist = f * length;
+        const a = angle + wobble * f;
+        const px = octo.x + Math.cos(a) * dist + Math.cos(a + Math.PI / 2) * wave;
+        const py = octo.y + Math.sin(a) * dist + Math.sin(a + Math.PI / 2) * wave;
+        points.push({ x: px, y: py });
+    }
+    return points;
+}
+
+function updateGiantOctopus() {
+    if (!giantOctopus) return;
+    giantOctopus.age++;
+    const t = giantOctopus.age;
+    const progress = Math.min(1, t / giantOctopus.duration);
+    const baseX = (canvas.width + 150) - progress * (canvas.width + 400);
+    giantOctopus.x = baseX + Math.sin(t * 0.028 + giantOctopus.seed) * 70;
+    let targetY = (canvas.height / 2) + Math.sin(t * 0.018 + giantOctopus.seed) * 170 + Math.sin(t * 0.043 + giantOctopus.seed * 2) * 100;
+    giantOctopus.y = Math.max(150, Math.min(canvas.height - 90, targetY));
+}
+
+function checkOctopusCollision() {
+    if (!giantOctopus) return false;
+    const dCenterX = diver.x + diver.width / 2, dCenterY = diver.y + diver.height / 2;
+    if (Math.hypot(dCenterX - giantOctopus.x, dCenterY - giantOctopus.y) < giantOctopus.bodyRadius + 16) return true;
+    for (let ti = 0; ti < giantOctopus.tentacleCount; ti++) {
+        const pts = getOctopusTentaclePoints(giantOctopus, ti);
+        for (const p of pts) {
+            if (Math.hypot(dCenterX - p.x, dCenterY - p.y) < 20) return true;
+        }
+    }
+    return false;
+}
+
+function drawGiantOctopus() {
+    if (!giantOctopus) return;
+    const o = giantOctopus;
+
+    for (let ti = 0; ti < o.tentacleCount; ti++) {
+        const pts = getOctopusTentaclePoints(o, ti);
+        ctx.strokeStyle = '#7a2048'; ctx.lineWidth = 10; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+        for (let p = 1; p < pts.length; p++) { ctx.lineTo(pts[p].x, pts[p].y); }
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(230, 170, 190, 0.75)';
+        for (let p = 1; p < pts.length; p++) { ctx.beginPath(); ctx.arc(pts[p].x, pts[p].y, 3.2, 0, Math.PI * 2); ctx.fill(); }
+    }
+
+    let mantleGrad = ctx.createRadialGradient(o.x - o.bodyRadius * 0.3, o.y - o.bodyRadius * 0.3, 1, o.x, o.y, o.bodyRadius);
+    mantleGrad.addColorStop(0, '#b23a63'); mantleGrad.addColorStop(1, '#6b1638');
+    ctx.fillStyle = mantleGrad;
+    ctx.beginPath(); ctx.ellipse(o.x, o.y, o.bodyRadius, o.bodyRadius * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.arc(o.x - o.bodyRadius * 0.32, o.y - o.bodyRadius * 0.15, o.bodyRadius * 0.22, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(o.x + o.bodyRadius * 0.32, o.y - o.bodyRadius * 0.15, o.bodyRadius * 0.22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#12060d';
+    ctx.beginPath(); ctx.arc(o.x - o.bodyRadius * 0.32, o.y - o.bodyRadius * 0.15, o.bodyRadius * 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(o.x + o.bodyRadius * 0.32, o.y - o.bodyRadius * 0.15, o.bodyRadius * 0.1, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawShipwreck(lm) {
+    const w = lm.width, h = lm.height;
+    ctx.save();
+    ctx.translate(lm.x, lm.y);
+
+    ctx.fillStyle = '#3a2a20';
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.55);
+    ctx.lineTo(w * 0.08, h * 0.32);
+    ctx.lineTo(w * 0.85, h * 0.18);
+    ctx.lineTo(w, h * 0.5);
+    ctx.lineTo(w * 0.92, h);
+    ctx.lineTo(w * 0.1, h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#241810'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.strokeStyle = '#241810'; ctx.lineWidth = 4;
+    for (let i = 0; i < 6; i++) {
+        const rx = w * 0.16 + i * (w * 0.62 / 5);
+        ctx.beginPath(); ctx.moveTo(rx, h * 0.28 + i * 2); ctx.lineTo(rx, h * 0.88); ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#2c1d14'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(w * 0.58, h * 0.22); ctx.lineTo(w * 0.74, -h * 0.55); ctx.stroke();
+    ctx.strokeStyle = '#4a3526'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(w * 0.6, -h * 0.1); ctx.lineTo(w * 0.9, -h * 0.02); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(120, 210, 170, 0.4)';
+    lm.algaeSpots.forEach(a => { ctx.beginPath(); ctx.ellipse(a.dx, a.dy, a.r, a.r * 0.5, 0.3, 0, Math.PI * 2); ctx.fill(); });
+
+    ctx.restore();
+}
+
+function drawNavigatorStatue(lm) {
+    const w = lm.width, h = lm.height;
+    ctx.save();
+    ctx.translate(lm.x, lm.y);
+
+    const stone = '#5c6470', stoneShade = '#3d434c';
+    ctx.fillStyle = stoneShade;
+    ctx.fillRect(w * 0.1, h * 0.92, w * 0.8, h * 0.08);
+
+    ctx.fillStyle = stone;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.32, h);
+    ctx.lineTo(w * 0.28, h * 0.5);
+    ctx.lineTo(w * 0.36, h * 0.28);
+    ctx.lineTo(w * 0.64, h * 0.28);
+    ctx.lineTo(w * 0.72, h * 0.5);
+    ctx.lineTo(w * 0.68, h);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(w * 0.5, h * 0.17, w * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = stoneShade;
+    ctx.save();
+    ctx.translate(w * 0.66, h * 0.32);
+    ctx.rotate(-0.9);
+    ctx.fillRect(-6, -h * 0.32, 12, h * 0.32);
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(120, 210, 170, 0.35)';
+    lm.algaeSpots.forEach(a => { ctx.beginPath(); ctx.ellipse(a.dx, a.dy, a.r * 0.6, a.r * 0.9, 0, 0, Math.PI * 2); ctx.fill(); });
+
+    ctx.restore();
+}
+
+function drawLandmark(lm) {
+    if (lm.type === 'wreck') drawShipwreck(lm); else drawNavigatorStatue(lm);
+}
+
+function drawFishBody(x, y, w, h, swimCycle, bodyColor, bellyColor, finColor, opts) {
+    opts = opts || {};
+    const cx = x + w / 2, cy = y + h / 2;
+    const tailWag = Math.sin(swimCycle) * (h * 0.3);
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Pinna caudale (dietro, sul lato destro: il pesce nuota verso sinistra)
+    ctx.fillStyle = finColor;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.3, 0);
+    ctx.lineTo(w * 0.62, -h * 0.4 + tailWag);
+    ctx.lineTo(w * 0.62, h * 0.4 + tailWag);
+    ctx.closePath();
+    ctx.fill();
+
+    // Pinna dorsale
+    if (opts.spiky) {
+        ctx.fillStyle = finColor;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.02, -h * 0.46);
+        ctx.lineTo(w * 0.12, -h * 0.8);
+        ctx.lineTo(w * 0.2, -h * 0.42);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Corpo con gradiente (dorso più scuro, ventre più chiaro)
+    let bodyGrad = ctx.createLinearGradient(0, -h * 0.5, 0, h * 0.5);
+    bodyGrad.addColorStop(0, bodyColor); bodyGrad.addColorStop(1, bellyColor);
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w * 0.36, h * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Occhio (rivolto a sinistra, direzione di marcia)
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath(); ctx.arc(-w * 0.2, -h * 0.06, h * 0.13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#101010';
+    ctx.beginPath(); ctx.arc(-w * 0.23, -h * 0.06, h * 0.065, 0, Math.PI * 2); ctx.fill();
+
+    if (opts.teeth) {
+        ctx.fillStyle = '#fefefe';
+        ctx.fillRect(-w * 0.34, h * 0.02, w * 0.1, h * 0.12);
+    }
+    if (opts.glowDot) {
+        let lureGrad = ctx.createRadialGradient(-w * 0.42, h * 0.02, 1, -w * 0.42, h * 0.02, h * 0.5);
+        lureGrad.addColorStop(0, 'rgba(255, 200, 100, 0.9)'); lureGrad.addColorStop(1, 'rgba(255, 200, 100, 0)');
+        ctx.fillStyle = lureGrad;
+        ctx.beginPath(); ctx.arc(-w * 0.42, h * 0.02, h * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffcf6b';
+        ctx.beginPath(); ctx.arc(-w * 0.42, h * 0.02, h * 0.16, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawJellyBell(x, y, w, h, pulseTimer, tentacleSway, bellColor, glowColor) {
+    let glow = ctx.createRadialGradient(x, y, 1, x, y, w * 1.4);
+    glow.addColorStop(0, glowColor); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, w * 1.4, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = 'rgba(238, 130, 238, 0.4)'; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let t = -1; t <= 1; t++) {
+        ctx.moveTo(x + (t * 4), y + h / 2);
+        ctx.quadraticCurveTo(x + (t * 6) + tentacleSway, y + h + 6, x + (t * 3) + tentacleSway * 1.5, y + h + 15);
+    }
+    ctx.stroke();
+
+    let pulseExpansion = Math.sin(pulseTimer) * 2;
+    let bellGrad = ctx.createRadialGradient(x, y, 1, x, y, (w / 2) + pulseExpansion);
+    bellGrad.addColorStop(0, bellColor.inner); bellGrad.addColorStop(1, bellColor.outer);
+    ctx.fillStyle = bellGrad; ctx.beginPath();
+    ctx.arc(x, y, (w / 2) + pulseExpansion, Math.PI, 0, false); ctx.closePath(); ctx.fill();
+}
+
+function drawAnemoneShape(ane) {
+    const baseX = ane.x + ane.width / 2, baseY = ane.isCeiling ? ane.y : ane.y + ane.height;
+    const openColor = ane.isOpen ? '#00f5d4' : '#7b2cbf';
+    const tipColor = ane.isOpen ? '#7ffff0' : '#c084fc';
+    const dir = ane.isCeiling ? 1 : -1;
+
+    ctx.fillStyle = '#4a3a5c';
+    ctx.beginPath(); ctx.ellipse(baseX, baseY, ane.width * 0.4, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+    const frondCount = 7;
+    const spread = ane.isOpen ? 1 : 0.35;
+    const tips = [];
+
+    ctx.strokeStyle = openColor; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < frondCount; i++) {
+        const t = i / (frondCount - 1);
+        const angle = (t - 0.5) * Math.PI * 0.85 * spread;
+        const len = (ane.height * 0.85) * (ane.isOpen ? 1 : 0.55);
+        const sway = Math.sin(ane.bubbleTimer * 0.05 + i) * (ane.isOpen ? 5 : 1);
+        const tipX = baseX + Math.sin(angle) * len * 0.6 + sway;
+        const tipY = baseY + dir * len;
+        tips.push([tipX, tipY]);
+        ctx.moveTo(baseX, baseY);
+        ctx.quadraticCurveTo(baseX + Math.sin(angle) * len * 0.35, baseY + dir * len * 0.5, tipX, tipY);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = tipColor;
+    ctx.beginPath();
+    tips.forEach(([tipX, tipY]) => { ctx.moveTo(tipX + 3, tipY); ctx.arc(tipX, tipY, 3, 0, Math.PI * 2); });
+    ctx.fill();
+}
+
+function drawPufferBody(pf) {
+    const bodyColor = pf.isInflated ? '#f2b90c' : '#ca8a04';
+    let bodyGrad = ctx.createRadialGradient(pf.x - pf.currentSize * 0.3, pf.y - pf.currentSize * 0.3, 1, pf.x, pf.y, pf.currentSize);
+    bodyGrad.addColorStop(0, '#fde68a'); bodyGrad.addColorStop(1, bodyColor);
+    ctx.fillStyle = bodyGrad; ctx.beginPath(); ctx.arc(pf.x, pf.y, pf.currentSize, 0, Math.PI * 2); ctx.fill();
+
+    const spikeCount = pf.isInflated ? 10 : 0;
+    if (spikeCount > 0) {
+        ctx.strokeStyle = '#78350f'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        for (let i = 0; i < spikeCount; i++) {
+            const a = (i / spikeCount) * Math.PI * 2;
+            const r1 = pf.currentSize * 0.95, r2 = pf.currentSize * 1.3;
+            ctx.beginPath();
+            ctx.moveTo(pf.x + Math.cos(a) * r1, pf.y + Math.sin(a) * r1);
+            ctx.lineTo(pf.x + Math.cos(a) * r2, pf.y + Math.sin(a) * r2);
+            ctx.stroke();
+        }
+    }
+    ctx.fillStyle = '#101010';
+    ctx.beginPath(); ctx.arc(pf.x - pf.currentSize * 0.35, pf.y - pf.currentSize * 0.25, pf.currentSize * 0.14, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawBoat() {
+    const w = boat.width, h = boat.height;
+    const bob = Math.sin(environmentTimer * 3) * 3;
+    const cx = boat.x + w / 2, cy = boat.y + h + bob;
+    const stripeColors = { barca: '#ff6b4a', peschereccio: '#0891b2', motoscafo: '#facc15', ricerca: '#22c55e', catamarano: '#a855f7' };
+    const stripeColor = stripeColors[boat.type] || '#ff6b4a';
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(boat.direction, 1);
+
+    // Scaletta di risalita a poppa (lato da cui accede il sub)
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-w * 0.4, h * 0.18); ctx.lineTo(-w * 0.4, h * 0.95); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-w * 0.32, h * 0.18); ctx.lineTo(-w * 0.32, h * 0.95); ctx.stroke();
+    for (let r = 0; r < 3; r++) { ctx.beginPath(); ctx.moveTo(-w * 0.41, h * 0.38 + r * h * 0.2); ctx.lineTo(-w * 0.31, h * 0.38 + r * h * 0.2); ctx.stroke(); }
+
+    // Scafo
+    let hullGrad = ctx.createLinearGradient(0, -h * 0.3, 0, h * 0.25);
+    hullGrad.addColorStop(0, '#f1f5f9'); hullGrad.addColorStop(1, '#c7d2e0');
+    ctx.fillStyle = hullGrad;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.52, 0);
+    ctx.lineTo(w * 0.38, -h * 0.3);
+    ctx.lineTo(-w * 0.46, -h * 0.3);
+    ctx.lineTo(-w * 0.5, -h * 0.02);
+    ctx.lineTo(-w * 0.46, h * 0.22);
+    ctx.lineTo(w * 0.28, h * 0.22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Banda colorata di riconoscibilità (varia per tipo di imbarcazione)
+    ctx.fillStyle = stripeColor;
+    ctx.fillRect(-w * 0.46, -h * 0.08, w * 0.94, h * 0.09);
+
+    // Ponte
+    ctx.fillStyle = '#8a97a8';
+    ctx.fillRect(-w * 0.46, -h * 0.32, w * 0.86, h * 0.06);
+
+    // Cabina di comando
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-w * 0.3, -h * 0.72, w * 0.34, h * 0.42);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-w * 0.33, -h * 0.75, w * 0.4, h * 0.06);
+    ctx.fillStyle = 'rgba(150, 220, 255, 0.85)';
+    ctx.fillRect(-w * 0.24, -h * 0.6, w * 0.22, h * 0.16);
+
+    // Antenna e bandiera
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-w * 0.14, -h * 0.75); ctx.lineTo(-w * 0.14, -h * 1.15); ctx.stroke();
+    const flagWave = Math.sin(environmentTimer * 4) * 0.25;
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.14, -h * 1.15);
+    ctx.lineTo(-w * 0.14 + w * 0.16, -h * 1.1 + flagWave * h);
+    ctx.lineTo(-w * 0.14, -h * 1.02);
+    ctx.closePath(); ctx.fill();
+
+    // Attrezzatura sul ponte: cassa e bombole d'ossigeno di scorta
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(w * 0.02, -h * 0.42, w * 0.14, h * 0.14);
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(w * 0.02, -h * 0.44, w * 0.14, h * 0.03);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(w * 0.2, -h * 0.5, w * 0.07, h * 0.2);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(w * 0.2, -h * 0.52, w * 0.07, h * 0.04);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(w * 0.3, -h * 0.5, w * 0.07, h * 0.2);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(w * 0.3, -h * 0.52, w * 0.07, h * 0.04);
+
+    ctx.restore();
+}
+
+function drawPedalo() {
+    const w = boat.width, h = boat.height;
+    const bob = Math.sin(environmentTimer * 3) * 3;
+    const cx = boat.x + w / 2, cy = boat.y + h + bob;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Due galleggianti (pontoni)
+    ctx.fillStyle = '#fbbf24';
+    [-0.28, 0.28].forEach(px => {
+        ctx.beginPath();
+        ctx.ellipse(w * px, h * 0.1, w * 0.24, h * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.strokeStyle = '#b45309'; ctx.lineWidth = 1.2;
+    [-0.28, 0.28].forEach(px => {
+        ctx.beginPath(); ctx.ellipse(w * px, h * 0.1, w * 0.24, h * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+    });
+
+    // Piattaforma centrale
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(-w * 0.32, -h * 0.28, w * 0.64, h * 0.28);
+
+    // Sedile
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-w * 0.14, -h * 0.5, w * 0.28, h * 0.24);
+
+    // Pedali
+    ctx.fillStyle = '#64748b';
+    ctx.beginPath(); ctx.arc(-w * 0.06, -h * 0.02, h * 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w * 0.06, -h * 0.02, h * 0.08, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+}
+
+function lerpColor(colorA, colorB, t) {
+    if (t <= 0) return colorA;
+    if (t >= 1) return colorB;
+    const a = parseInt(colorA.slice(1), 16), b = parseInt(colorB.slice(1), 16);
+    const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+    const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+    const rr = Math.round(ar + (br - ar) * t), rg = Math.round(ag + (bg - ag) * t), rb = Math.round(ab + (bb - ab) * t);
+    return `rgb(${rr},${rg},${rb})`;
+}
+
+function drawFloraItem(weed) {
+    const swayX = Math.sin(weed.sway || 0) * 14;
+    const variant = weed.variant || 0;
+    ctx.save();
+    if (variant === 1) {
+        // Erba marina: più fili sottili
+        ctx.strokeStyle = '#2f9e6b'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        for (let b = 0; b < 3; b++) {
+            const bx = weed.x + (b * weed.width * 0.4); const sw = Math.sin((weed.sway || 0) + b) * 10;
+            ctx.beginPath(); ctx.moveTo(bx, weed.y + weed.height);
+            ctx.quadraticCurveTo(bx + sw, weed.y + weed.height * 0.4, bx + sw * 1.3, weed.y + weed.height * 0.15);
+            ctx.stroke();
+        }
+    } else if (variant === 2) {
+        // Piccolo corallo bulboso
+        ctx.fillStyle = '#e0714a';
+        ctx.beginPath(); ctx.moveTo(weed.x, weed.y + weed.height);
+        ctx.quadraticCurveTo(weed.x - 6 + swayX, weed.y + weed.height * 0.55, weed.x + swayX * 0.6, weed.y + weed.height * 0.3);
+        ctx.quadraticCurveTo(weed.x + weed.width + swayX * 0.6, weed.y + weed.height * 0.55, weed.x + weed.width, weed.y + weed.height);
+        ctx.fill();
+        ctx.fillStyle = '#f4a688';
+        ctx.beginPath(); ctx.arc(weed.x + weed.width / 2 + swayX * 0.6, weed.y + weed.height * 0.3, weed.width * 0.35, 0, Math.PI * 2); ctx.fill();
+    } else {
+        // Kelp classica
+        ctx.fillStyle = '#17492d'; ctx.beginPath(); ctx.moveTo(weed.x, weed.y + weed.height);
+        ctx.quadraticCurveTo(weed.x - 8 + swayX, weed.y + weed.height / 2, weed.x + swayX, weed.y);
+        ctx.quadraticCurveTo(weed.x + weed.width + swayX, weed.y + weed.height / 2, weed.x + weed.width, weed.y + weed.height);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawTreasureItem(tr) {
+    const w = tr.width, h = tr.height;
+    const cx = tr.x + w / 2, cy = tr.y + h / 2;
+    const bob = Math.sin(environmentTimer * 1.5 + tr.x * 0.05) * 2;
+    ctx.save();
+    ctx.translate(cx, cy + bob);
+
+    if (tr.lootType === 'oro') {
+        let glow = ctx.createRadialGradient(0, 0, 1, 0, 0, w * 1.3);
+        glow.addColorStop(0, 'rgba(255, 210, 80, 0.5)'); glow.addColorStop(1, 'rgba(255, 210, 80, 0)');
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, w * 1.3, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < 3; i++) {
+            let cGrad = ctx.createRadialGradient(-w * 0.1, -h * 0.32 + i * h * 0.2 - 2, 1, 0, -h * 0.32 + i * h * 0.2, w * 0.3);
+            cGrad.addColorStop(0, '#fff3b0'); cGrad.addColorStop(1, '#d97706');
+            ctx.fillStyle = cGrad; ctx.beginPath(); ctx.ellipse(0, -h * 0.18 + i * h * 0.22, w * 0.32, h * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1; ctx.stroke();
+        }
+    } else if (tr.lootType === 'mitico') {
+        let glow = ctx.createRadialGradient(0, 0, 1, 0, 0, w * 1.6);
+        glow.addColorStop(0, 'rgba(216, 128, 255, 0.55)'); glow.addColorStop(1, 'rgba(216, 128, 255, 0)');
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 0, w * 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.rotate(Math.sin(environmentTimer * 1.2 + tr.x * 0.05) * 0.15);
+        let gemGrad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+        gemGrad.addColorStop(0, '#f0abfc'); gemGrad.addColorStop(0.5, '#a855f7'); gemGrad.addColorStop(1, '#6b21a8');
+        ctx.fillStyle = gemGrad; ctx.beginPath();
+        ctx.moveTo(0, -h * 0.52); ctx.lineTo(w * 0.36, -h * 0.05); ctx.lineTo(w * 0.2, h * 0.5); ctx.lineTo(-w * 0.2, h * 0.5); ctx.lineTo(-w * 0.36, -h * 0.05);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(-w * 0.08, -h * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+    } else {
+        const isHeavy = tr.lootType === 'pesante';
+        const woodColor = isHeavy ? '#5b4636' : '#8a5a34';
+        const bandColor = isHeavy ? '#9aa5b1' : '#d9a441';
+        ctx.fillStyle = woodColor; ctx.fillRect(-w * 0.42, -h * 0.1, w * 0.84, h * 0.5);
+        ctx.beginPath(); ctx.moveTo(-w * 0.42, -h * 0.1); ctx.quadraticCurveTo(0, -h * 0.62, w * 0.42, -h * 0.1); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = bandColor; ctx.lineWidth = isHeavy ? 4 : 2.5;
+        ctx.beginPath(); ctx.moveTo(-w * 0.05, -h * 0.55); ctx.lineTo(-w * 0.05, h * 0.4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(w * 0.05, -h * 0.55); ctx.lineTo(w * 0.05, h * 0.4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-w * 0.42, -h * 0.1); ctx.lineTo(w * 0.42, -h * 0.1); ctx.stroke();
+        ctx.fillStyle = bandColor; ctx.fillRect(-w * 0.08, -h * 0.05, w * 0.16, h * 0.18);
+        if (isHeavy) {
+            ctx.fillStyle = '#cbd5e1';
+            [-0.32, 0.32].forEach(rx => { for (let ry = -0.02; ry < 0.35; ry += 0.16) { ctx.beginPath(); ctx.arc(w * rx, h * ry, 1.6, 0, Math.PI * 2); ctx.fill(); } });
+        }
+    }
+    ctx.restore();
+}
+
+function drawDiver() {
+    const w = diver.width, h = diver.height;
+    const cx = diver.x + w / 2, cy = diver.y + h / 2;
+    const skinCfg = WETSUIT_SKINS[gameState.currentSkin] || WETSUIT_SKINS.standard;
+    const suitColor = diver.isHeavy ? '#5a6472' : skinCfg.suitColor;
+    const suitShade = diver.isHeavy ? '#3f4750' : skinCfg.suitShade;
+    const accent = diver.isHeavy ? '#cbd5e0' : skinCfg.accent;
+    const finKick = Math.sin(diver.swimCycle);
+    const lampOn = diver.flashlightOn && diver.battery > 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(diver.facing, 1);
+    ctx.rotate(diver.tilt);
+
+    // Pinne (dietro al corpo, animate dal ciclo di nuoto)
+    ctx.fillStyle = suitShade;
+    ctx.save();
+    ctx.translate(-w * 0.36, h * 0.1);
+    ctx.rotate(finKick * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(0, -h * 0.14);
+    ctx.quadraticCurveTo(-w * 0.46, -h * 0.02 + finKick * h * 0.22, -w * 0.54, h * 0.1 + finKick * h * 0.22);
+    ctx.quadraticCurveTo(-w * 0.28, h * 0.24, 0, h * 0.14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Bombola sul dorso
+    ctx.fillStyle = '#cbd5e0';
+    ctx.fillRect(-w * 0.4, -h * 0.42, w * 0.16, h * 0.66);
+    ctx.fillStyle = '#8a97a8';
+    ctx.fillRect(-w * 0.4, -h * 0.48, w * 0.16, h * 0.1);
+
+    // Fucile subacqueo (braccio teso in avanti, con rinculo quando spara)
+    const gunKick = diver.harpoonAnimTimer > 0 ? (diver.harpoonAnimTimer / 16) * w * 0.12 : 0;
+    ctx.fillStyle = '#2b2f36';
+    ctx.fillRect(w * 0.18 - gunKick, h * 0.16, w * 0.5, h * 0.09);
+    ctx.fillStyle = diver.harpoonAnimTimer > 8 ? '#ffd166' : '#4a5568';
+    ctx.fillRect(w * 0.6 - gunKick, h * 0.13, w * 0.06, h * 0.15);
+
+    // Corpo (muta)
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.ellipse(0, h * 0.02, w * 0.42, h * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Banda colorata di riconoscibilità
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.ellipse(w * 0.02, h * 0.12, w * 0.32, h * 0.13, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Testa
+    ctx.fillStyle = suitColor;
+    ctx.beginPath();
+    ctx.arc(w * 0.32, -h * 0.04, h * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Vetro della maschera
+    ctx.fillStyle = 'rgba(150, 220, 255, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(w * 0.42, -h * 0.02, h * 0.22, h * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = suitShade;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Boccaglio/erogatore
+    ctx.fillStyle = suitShade;
+    ctx.fillRect(w * 0.28, h * 0.08, w * 0.1, h * 0.08);
+
+    // Torcia frontale sulla testa
+    ctx.fillStyle = suitShade;
+    ctx.fillRect(w * 0.24, -h * 0.4, w * 0.14, h * 0.12);
+    ctx.beginPath();
+    ctx.arc(w * 0.38, -h * 0.34, h * 0.09, 0, Math.PI * 2);
+    ctx.fillStyle = lampOn ? '#fff6cf' : '#5c6b7a';
+    ctx.fill();
+    if (lampOn) {
+        ctx.shadowColor = 'rgba(255, 240, 190, 0.9)';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
+}
+
+function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+updateUI();
+updateMenuVisualSelection();
+gameLoop();
+</script>
+</body>
+</html>

@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aura: The Ascent</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0d131a;
+            font-family: sans-serif;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            background: #141e30;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .hud-box {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #sporeCount { color: #4af6c3; }
+        
+        #baseCampMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 19, 26, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 20;
+            color: white;
+            text-align: center;
+        }
+        .hidden { display: none !important; }
+        h1 { font-size: 24px; margin-bottom: 8px; color: #4af6c3; text-transform: uppercase; letter-spacing: 2px; padding: 0 10px; }
+        p.subtitle { color: #8a9ba8; margin-bottom: 25px; font-size: 14px; padding: 0 15px; line-height: 1.4; }
+        
+        .upgrade-btn {
+            width: 100%;
+            max-width: 300px;
+            background: #1f2d3d;
+            border: 2px solid #334e68;
+            border-radius: 12px;
+            padding: 12px 15px;
+            color: white;
+            font-size: 15px;
+            margin-bottom: 12px;
+            text-align: left;
+            cursor: pointer;
+            position: relative;
+            display: block;
+        }
+        .upgrade-btn .cost { position: absolute; right: 15px; top: 12px; color: #4af6c3; font-weight: bold; }
+        .upgrade-btn .desc { font-size: 11px; color: #bcccdc; margin-top: 4px; }
+        .upgrade-btn.maxed { border-color: #4af6c3; }
+        .upgrade-btn.maxed .cost { color: #8a9ba8; }
+        
+        #startBtn {
+            margin-top: 15px;
+            width: 100%;
+            max-width: 300px;
+            background: #4af6c3;
+            color: #0d131a;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <div class="ui-layer">
+        <div class="hud-box"><span id="heightCount">0</span> / 1000m</div>
+        <div class="hud-box">Spore: <span id="sporeCount">0</span></div>
+    </div>
+
+    <div id="baseCampMenu">
+        <h1 id="menuTitle">Echoes of the Canopy</h1>
+        <p class="subtitle" id="menuSubtitle">Hub dello Scout - Gestisci l'attrezzatura</p>
+        
+        <div style="margin-bottom: 20px; font-size: 18px;">
+            Le tue Spore: <span id="menuSpore" style="color:#4af6c3; font-weight:bold;">0</span>
+        </div>
+
+        <button class="upgrade-btn" onclick="buyUpgrade('boots')">
+            <div>Stivali Ammortizzati (<span id="lvl-boots">0</span>/3)</div>
+            <div class="desc">Aumenta la potenza del salto base.</div>
+            <div class="cost" id="cost-boots">10 S.</div>
+        </button>
+
+        <button class="upgrade-btn" onclick="buyUpgrade('gloves')">
+            <div>Guanti Magnetici (<span id="lvl-gloves">0</span>/3)</div>
+            <div class="desc">Scivoli più lentamente sulle pareti.</div>
+            <div class="cost" id="cost-gloves">15 S.</div>
+        </button>
+
+        <button class="upgrade-btn" onclick="buyUpgrade('magnet')">
+            <div>Spore Magnet (<span id="lvl-magnet">0</span>/1)</div>
+            <div class="desc">Attira magneticamente le spore vicine.</div>
+            <div class="cost" id="cost-magnet">40 S.</div>
+        </button>
+
+        <button id="startBtn" onclick="startClimb()">Inizia la Scalata</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let saveState = {
+        spores: 0,
+        upgrades: { boots: 0, gloves: 0, magnet: 0 },
+        recordHeight: 0
+    };
+
+    try {
+        if(localStorage.getItem('canopy_scout_save')) {
+            saveState = JSON.parse(localStorage.getItem('canopy_scout_save'));
+        }
+    } catch(e) {}
+
+    function saveGame() {
+        try {
+            localStorage.setItem('canopy_scout_save', JSON.stringify(saveState));
+        } catch(e) {}
+    }
+
+    const VIEW_W = 480;
+    const VIEW_H = 800;
+
+    function resize() {
+        const container = document.getElementById('gameContainer');
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const PHYSICS = {
+        gravity: 0.45,
+        maxFallSpeed: 12,
+        jumpForceBase: -11.5,
+        wallSlideSpeedBase: 2.2,
+        moveSpeed: 5.8
+    };
+
+    let player = {
+        x: 240,
+        y: 650,
+        vx: 0,
+        vy: 0,
+        radius: 12,
+        isGrounded: false,
+        onWall: null,
+        chargeJump: 0,
+        isCharging: false,
+        highestY: 650,
+        scoreHeight: 0,
+        momentum: 0
+    };
+
+    let platforms = [];
+    let spores = [];
+    let particles = [];
+    let gameState = 'CAMP';
+    let cameraY = 200;
+    let lowestGeneratedY = 750;
+
+    let touchX = null;
+    let isTouching = false;
+
+    window.addEventListener('touchstart', (e) => {
+        if (gameState !== 'CLIMBING') return;
+        isTouching = true;
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        touchX = ((touch.clientX - rect.left) / canvas.width) * VIEW_W;
+        player.isCharging = true;
+    }, {passive: true});
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isTouching || gameState !== 'CLIMBING') return;
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        touchX = ((touch.clientX - rect.left) / canvas.width) * VIEW_W;
+    }, {passive: true});
+
+    window.addEventListener('touchend', (e) => {
+        if (gameState !== 'CLIMBING') return;
+        isTouching = false;
+        if (player.isCharging) triggerJump();
+        player.isCharging = false;
+        touchX = null;
+    }, {passive: true});
+
+    let keys = {};
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if(e.code === 'Space' && gameState === 'CLIMBING' && !player.isCharging) player.isCharging = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+        if(e.code === 'Space' && gameState === 'CLIMBING') {
+            triggerJump();
+            player.isCharging = false;
+        }
+    });
+
+    const UPGRADE_COSTS = {
+        boots: [10, 25, 50],
+        gloves: [15, 30, 60],
+        magnet: [40]
+    };
+
+    function updateHubUI() {
+        document.getElementById('menuSpore').innerText = saveState.spores;
+        document.getElementById('sporeCount').innerText = saveState.spores;
+        
+        ['boots', 'gloves', 'magnet'].forEach(type => {
+            const lvl = saveState.upgrades[type];
+            const maxLvl = type === 'magnet' ? 1 : 3;
+            document.getElementById(`lvl-${type}`).innerText = lvl;
+            
+            const btn = document.getElementById(`cost-${type}`).parentElement;
+            if (lvl >= maxLvl) {
+                document.getElementById(`cost-${type}`).innerText = "MAX";
+                btn.classList.add('maxed');
+            } else {
+                const cost = UPGRADE_COSTS[type][lvl];
+                document.getElementById(`cost-${type}`).innerText = `${cost} S.`;
+                btn.classList.remove('maxed');
+            }
+        });
+    }
+
+    function buyUpgrade(type) {
+        const lvl = saveState.upgrades[type];
+        const maxLvl = type === 'magnet' ? 1 : 3;
+        if (lvl >= maxLvl) return;
+        
+        const cost = UPGRADE_COSTS[type][lvl];
+        if (saveState.spores >= cost) {
+            saveState.spores -= cost;
+            saveState.upgrades[type]++;
+            saveGame();
+            updateHubUI();
+        }
+    }
+
+    function startClimb() {
+        document.getElementById('baseCampMenu').classList.add('hidden');
+        initGame();
+        gameState = 'CLIMBING';
+    }
+
+    function initGame() {
+        player.x = 240;
+        player.y = 650;
+        player.vx = 0;
+        player.vy = 0;
+        player.highestY = 650;
+        player.scoreHeight = 0;
+        player.momentum = 0;
+        cameraY = 200;
+        lowestGeneratedY = 750;
+        touchX = null;
+        isTouching = false;
+
+        platforms = [
+            { x: 40, y: 700, w: 400, h: 25, type: 'normal', broken: false }
+        ];
+
+        spores = [];
+        particles = [];
+        generateChunk(700, -1000);
+        document.getElementById('heightCount').innerText = "0";
+    }
+
+    function generateChunk(fromY, toY) {
+        let currentY = fromY - 95;
+        while (currentY > toY) {
+            let w = Math.max(70, 140 - Math.abs(currentY) * 0.002);
+            let x = 35 + Math.random() * (VIEW_W - 70 - w);
+            
+            let type = 'normal';
+            let r = Math.random();
+            if(r < 0.18 && Math.abs(currentY) > 300) type = 'slippery';
+            else if(r > 0.82 && Math.abs(currentY) > 600) type = 'crumbling';
+
+            platforms.push({ x: x, y: currentY, w: w, h: 18, type: type, broken: false });
+
+            if (Math.random() < 0.45) {
+                spores.push({
+                    x: x + w/2 + (Math.random()*20 - 10),
+                    y: currentY - 30 - Math.random()*30,
+                    radius: 7,
+                    pulse: Math.random() * 3
+                });
+            }
+            currentY -= 100 + Math.random() * 60;
+        }
+        lowestGeneratedY = toY;
+    }
+
+    function triggerJump() {
+        let extraJump = saveState.upgrades.boots * 0.9;
+        let force = PHYSICS.jumpForceBase - (player.chargeJump * 5.0) - extraJump;
+
+        if (player.isGrounded) {
+            player.vy = force;
+            player.isGrounded = false;
+            createExplosion(player.x, player.y + player.radius, '#8a9ba8', 6);
+        } else if (player.onWall) {
+            player.vy = force * 0.85;
+            player.vx = player.onWall === 'left' ? PHYSICS.moveSpeed * 1.35 : -PHYSICS.moveSpeed * 1.35;
+            player.onWall = null;
+            player.momentum = Math.min(player.momentum + 0.3, 1);
+            createExplosion(player.x, player.y, '#4af6c3', 8);
+        }
+        player.chargeJump = 0;
+    }
+
+    function update() {
+        if (gameState !== 'CLIMBING') return;
+
+        if (player.isCharging) {
+            player.chargeJump = Math.min(player.chargeJump + 0.05, 1);
+        }
+
+        if (touchX !== null) {
+            let diff = touchX - player.x;
+            if (Math.abs(diff) > 10) player.vx = Math.sign(diff) * PHYSICS.moveSpeed;
+            else player.vx = 0;
+        } else {
+            if (keys['ArrowLeft']) player.vx = -PHYSICS.moveSpeed;
+            else if (keys['ArrowRight']) player.vx = PHYSICS.moveSpeed;
+            else player.vx *= 0.75;
+        }
+
+        let activeGravity = PHYSICS.gravity;
+        let maxFall = PHYSICS.maxFallSpeed;
+
+        if (player.onWall) {
+            let gloveBonus = saveState.upgrades.gloves * 0.5;
+            let wallSlideSpeed = Math.max(0.5, PHYSICS.wallSlideSpeedBase - gloveBonus);
+            activeGravity = 0.12;
+            maxFall = wallSlideSpeed;
+            if (player.vy > maxFall) player.vy = maxFall;
+        }
+
+        player.vy += activeGravity;
+        if (player.vy > maxFall) player.vy = maxFall;
+
+        player.x += player.vx;
+        player.y += player.vy;
+        player.momentum = Math.max(0, player.momentum - 0.002);
+
+        player.onWall = null;
+        let leftWallX = 25;
+        let rightWallX = VIEW_W - 25;
+
+        if (player.x - player.radius <= leftWallX) {
+            player.x = leftWallX + player.radius;
+            if (!player.isGrounded && player.vy > 0) player.onWall = 'left';
+            player.vx = 0;
+        } else if (player.x + player.radius >= rightWallX) {
+            player.x = rightWallX - player.radius;
+            if (!player.isGrounded && player.vy > 0) player.onWall = 'right';
+            player.vx = 0;
+        }
+
+        player.isGrounded = false;
+        if (player.vy >= 0) {
+            platforms.forEach(plat => {
+                if (player.x + player.radius > plat.x && 
+                    player.x - player.radius < plat.x + plat.w &&
+                    player.y + player.radius >= plat.y && 
+                    player.y - player.radius < plat.y + plat.h) {
+                    
+                    player.y = plat.y - player.radius;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                    
+                    if(plat.type === 'slippery') player.vx += (Math.random() - 0.5) * 3;
+                    if(plat.type === 'crumbling' && !plat.broken) {
+                        plat.broken = true;
+                        setTimeout(() => { plat.y += 3000; }, 300);
+                    }
+                }
+            });
+        }
+
+        let magnetLevel = saveState.upgrades.magnet;
+        for (let i = spores.length - 1; i >= 0; i--) {
+            let spore = spores[i];
+            let dx = spore.x - player.x;
+            let dy = spore.y - player.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (magnetLevel > 0 && dist < 140) {
+                spore.x -= (dx / dist) * 5.0;
+                spore.y -= (dy / dist) * 5.0;
+            }
+
+            if (dist < player.radius + spore.radius) {
+                spores.splice(i, 1);
+                saveState.spores++;
+                createExplosion(spore.x, spore.y, '#4af6c3', 5);
+                document.getElementById('sporeCount').innerText = saveState.spores;
+            }
+        }
+
+        // Calcolo altezza basato rigorosamente sulla coordinata iniziale
+        let currentHeight = Math.floor(Math.max(0, (650 - player.y) / 10));
+        if (currentHeight > player.scoreHeight) {
+            player.scoreHeight = currentHeight;
+            document.getElementById('heightCount').innerText = player.scoreHeight;
+        }
+
+        // TELECAMERA SEGLIE IL GIOCATORE SE SALE
+        let targetCameraY = player.y - VIEW_H * 0.55;
+        if (targetCameraY < cameraY) {
+            cameraY += (targetCameraY - cameraY) * 0.1;
+        }
+
+        // 1. VERIFICA CONDIZIONE DI VITTORIA (1000 METRI)
+        if (player.scoreHeight >= 1000) {
+            gameWin();
+            return;
+        }
+
+        // 2. VERIFICA RIGIDA DI MORTE PER CADUTA
+        if (player.y > cameraY + VIEW_H + 20) {
+            gameOver();
+            return;
+        }
+        
+        if (player.y < lowestGeneratedY + 1000) {
+            generateChunk(lowestGeneratedY, lowestGeneratedY - 1500);
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx; p.y += p.vy;
+            p.alpha -= 0.02;
+            if(p.alpha <= 0) particles.splice(i, 1);
+        }
+    }
+
+    function gameOver() {
+        gameState = 'CAMP';
+        if(player.scoreHeight > saveState.recordHeight) saveState.recordHeight = player.scoreHeight;
+        saveGame();
+        
+        document.getElementById('menuTitle').innerText = "Caduto nella nebbia!";
+        document.getElementById('menuSubtitle').innerText = `Sei arrivato a ${player.scoreHeight} metri. Potenzia lo Scout e riprova la scalata!`;
+        document.getElementById('startBtn').innerText = "Riprova";
+        
+        updateHubUI();
+        document.getElementById('baseCampMenu').classList.remove('hidden');
+    }
+
+    function gameWin() {
+        gameState = 'CAMP';
+        if(player.scoreHeight > saveState.recordHeight) saveState.recordHeight = player.scoreHeight;
+        saveGame();
+        
+        document.getElementById('menuTitle').innerText = "Chioma Superata!";
+        document.getElementById('menuSubtitle').innerText = "Incredibile! Hai raggiunto la vetta dei 1000 metri e salvato lo Scout!";
+        document.getElementById('startBtn').innerText = "Gioca Ancora";
+        
+        updateHubUI();
+        document.getElementById('baseCampMenu').classList.remove('hidden');
+    }
+
+    function createExplosion(x, y, color, count) {
+        for(let i=0; i<count; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 5,
+                vy: (Math.random() - 0.5) * 5,
+                alpha: 1,
+                color: color,
+                radius: Math.random() * 3 + 1
+            });
+        }
+    }
+
+    function draw() {
+        ctx.fillStyle = '#141e30';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        let scale = canvas.width / VIEW_W;
+        ctx.scale(scale, scale);
+        ctx.translate(0, -cameraY);
+
+        // Pareti
+        ctx.fillStyle = '#1e2d3d';
+        ctx.fillRect(0, cameraY - 100, 25, VIEW_H + 200);
+        ctx.fillRect(VIEW_W - 25, cameraY - 100, 25, VIEW_H + 200);
+
+        // Piattaforme
+        platforms.forEach(plat => {
+            if(plat.type === 'normal') ctx.fillStyle = '#334e68';
+            else if(plat.type === 'slippery') ctx.fillStyle = '#4af6c3';
+            else if(plat.type === 'crumbling') ctx.fillStyle = '#da6262';
+            ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+        });
+
+        // Spore
+        spores.forEach(spore => {
+            spore.pulse += 0.05;
+            let currentRadius = spore.radius + Math.sin(spore.pulse) * 1.2;
+            ctx.fillStyle = '#4af6c3';
+            ctx.beginPath();
+            ctx.arc(spore.x, spore.y, currentRadius, 0, Math.PI*2);
+            ctx.fill();
+        });
+
+        // Particelle
+        particles.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.alpha;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Player
+        ctx.fillStyle = '#ffffff';
+        if (player.momentum > 0.2) ctx.fillStyle = '#a3fce3';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI*2);
+        ctx.fill();
+
+        if (player.isCharging) {
+            ctx.strokeStyle = '#4af6c3';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius + 5, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * player.chargeJump));
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    updateHubUI();
+    requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>

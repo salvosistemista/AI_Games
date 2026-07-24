@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Le Ore del Copista</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #2a2440; overflow: hidden;
+    font-family: 'Georgia', serif;
+    touch-action: none;
+  }
+  #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  #topBar {
+    position: fixed; top: max(10px, env(safe-area-inset-top)); left: 10px; right: 10px;
+    z-index: 5; pointer-events: none; color: #e8dcc0;
+    display: flex; justify-content: space-between; font-size: 0.78rem; flex-wrap: wrap; gap: 4px;
+  }
+  #topBar div { text-shadow: 0 0 5px rgba(0,0,0,0.6); background: rgba(20,16,30,0.35); padding: 3px 8px; border-radius: 6px; }
+
+  #toast {
+    position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,16,30,0.92); border: 1px solid #6a5a8a; color: #e8dcc0;
+    padding: 8px 18px; border-radius: 6px; font-size: 0.82rem; z-index: 8;
+    opacity: 0; transition: opacity 0.4s; pointer-events: none; text-align: center; max-width: 82vw;
+  }
+  #toast.show { opacity: 1; }
+
+  #monkRow {
+    position: fixed; bottom: max(70px, calc(env(safe-area-inset-bottom) + 62px)); left: 0; right: 0;
+    display: flex; justify-content: center; gap: 12px; z-index: 6;
+  }
+  .monkChip {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(232,220,192,0.15); border: 2px solid rgba(232,220,192,0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+  }
+  .monkChip:active { background: rgba(232,220,192,0.3); }
+
+  #bottomBar {
+    position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); left: 0; right: 0;
+    display: flex; justify-content: center; gap: 10px; z-index: 6; flex-wrap: wrap; padding: 0 10px;
+  }
+  .ctrlBtn {
+    background: rgba(232,220,192,0.12); border: 1px solid rgba(232,220,192,0.4);
+    color: #e8dcc0; border-radius: 8px; padding: 10px 16px; font-size: 0.8rem;
+  }
+  .ctrlBtn:active { background: rgba(232,220,192,0.26); }
+  .ctrlBtn.disabled { opacity: 0.35; }
+  .ctrlBtn.highlight { background: rgba(201,162,39,0.3); border-color: #c9a227; }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(20,16,30,0.95); color: #e8dcc0; text-align: center; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 { font-size: clamp(1.25rem, 5.5vw, 2rem); margin: 0 0 8px 0; letter-spacing: 1px; color: #c9a227; }
+  .overlay p { color: #b0a088; max-width: 420px; line-height: 1.55; font-size: 0.85rem; }
+  .overlay .btn {
+    margin-top: 12px; padding: 11px 26px; font-size: 0.9rem;
+    background: linear-gradient(180deg, #6a5a3a, #4a3e28);
+    border: 1px solid #c9a227; color: #f5ecd0; border-radius: 6px;
+  }
+  .btn:active { filter: brightness(0.92); }
+  .btn.secondary { background: none; border-color: #6a5a8a; color: #b0a088; }
+
+  #genreGrid, #shopGrid, #libraryList { width: 100%; max-width: 420px; margin-top: 10px; display:flex; flex-direction:column; gap:8px; }
+  .shop-row, .genre-row { display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.05); border:1px solid #4a3e58; border-radius:8px; padding:9px 13px; font-size:0.8rem; text-align:left; }
+  .shop-row .info b, .genre-row .info b { display:block; font-size:0.85rem; }
+  .shop-row .info span, .genre-row .info span { color:#a0906c; font-size:0.7rem; }
+  .shop-row button, .genre-row button { background:#6a5a3a; border:1px solid #c9a227; color:#f5ecd0; border-radius:5px; padding:6px 11px; font-size:0.76rem; }
+  .shop-row button:disabled, .genre-row button:disabled { opacity:0.4; }
+
+  #transcribeBar { width: min(80vw, 320px); height: 26px; background: rgba(0,0,0,0.4); border:1px solid #6a5a8a; border-radius:6px; position:relative; margin: 10px 0; overflow:hidden; }
+  #transcribeSweet { position:absolute; top:0; bottom:0; background: rgba(201,162,39,0.35); border-left:1px solid #c9a227; border-right:1px solid #c9a227; }
+  #transcribeMarker { position:absolute; top:-4px; width:4px; height:34px; background:#f5ecd0; box-shadow:0 0 6px #f5ecd0; }
+  #transcribeProgress { display:flex; gap:6px; margin: 8px 0; }
+  .progDot { width:12px; height:12px; border-radius:50%; background: rgba(255,255,255,0.15); border:1px solid #6a5a8a; }
+  .progDot.filled { background: #c9a227; border-color:#c9a227; }
+
+  #pigmentRow { display:flex; gap:10px; justify-content:center; margin: 12px 0; flex-wrap: wrap; }
+  .pigmentDot { width:36px; height:36px; border-radius:50%; border: 2px solid rgba(255,255,255,0.3); }
+  .pigmentDot.selected { border-color:#fff; box-shadow:0 0 8px #fff; }
+  .pigmentDot.locked { opacity: 0.25; }
+  #pageSpots { display:grid; grid-template-columns:repeat(2,60px); grid-template-rows:repeat(2,60px); gap:10px; justify-content:center; margin: 14px 0; }
+  .pageSpot { border-radius: 8px; background: rgba(255,255,255,0.08); border: 2px dashed rgba(255,255,255,0.3); }
+  .pageSpot.filled { border-style: solid; }
+
+  #bindingRow { display:flex; gap:10px; justify-content:center; margin: 12px 0; flex-wrap: wrap; }
+  .bindingOpt { padding: 10px 16px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); font-size:0.8rem; }
+  .bindingOpt.selected { border-color: #c9a227; background: rgba(201,162,39,0.15); }
+  .bindingOpt.locked { opacity: 0.3; }
+
+  .book-entry { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px 13px; text-align:left; border-left: 6px solid #999; }
+  .book-entry b { display:block; font-size:0.88rem; margin-bottom:3px; }
+  .book-entry span { font-size: 0.76rem; color: #a0906c; line-height: 1.4; }
+  .book-entry .genreTag { font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; opacity:0.7; }
+  .book-entry .qualityTag { font-size:0.68rem; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="topBar">
+  <div id="hourDisplay">🌌 Mattutino</div>
+  <div id="resourceDisplay">Pergamena: 0 · Inchiostro: 0</div>
+  <div id="oboloDisplay">Obolo: 0</div>
+</div>
+<div id="toast"></div>
+
+<div id="monkRow"></div>
+<div id="bottomBar">
+  <button class="ctrlBtn" id="mainActionBtn" onclick="mainAction()">Inizia una nuova opera</button>
+  <button class="ctrlBtn" onclick="openLibrary()">📚 Biblioteca</button>
+  <button class="ctrlBtn" onclick="openShop()">🏺 Bottega</button>
+</div>
+
+<div class="overlay" id="startScreen">
+  <h1>LE ORE DEL COPISTA</h1>
+  <p>Un'abbazia silenziosa, uno scriptorium, e il tempo scandito dalle ore canoniche. Trascrivi, illumina e rilega manoscritti insieme ai fratelli dell'ordine: nessuna fretta, nessun errore che non si possa correggere.</p>
+  <button class="btn" id="continueBtn" onclick="continueGame()" style="display:none;">TORNA ALLO SCRIPTORIUM</button>
+  <button class="btn" onclick="startNewGame()">VARCA LA SOGLIA DELL'ABBAZIA</button>
+</div>
+
+<div class="overlay hidden" id="genreScreen">
+  <h1>UNA NUOVA OPERA</h1>
+  <p>Scegli quale manoscritto lo scriptorium accoglierà.</p>
+  <div id="genreGrid"></div>
+  <button class="btn secondary" onclick="closeGenrePicker()">TORNA INDIETRO</button>
+</div>
+
+<div class="overlay hidden" id="transcribeScreen">
+  <h1>TRASCRIZIONE</h1>
+  <p>Tocca "Copia" quando il segno attraversa la zona chiara. Cinque passaggi compongono la pagina.</p>
+  <div id="transcribeProgress"></div>
+  <div id="transcribeBar"><div id="transcribeSweet"></div><div id="transcribeMarker"></div></div>
+  <button class="btn" onclick="tryTranscribe()">COPIA</button>
+</div>
+
+<div class="overlay hidden" id="illuminateScreen">
+  <h1>MINIATURA</h1>
+  <p>Scegli un pigmento e tocca uno spazio della pagina per decorarlo.</p>
+  <div id="pigmentRow"></div>
+  <div id="pageSpots"></div>
+  <button class="btn" id="finishIlluminateBtn" onclick="finishIlluminate()" disabled>COMPLETA LA MINIATURA</button>
+</div>
+
+<div class="overlay hidden" id="bindScreen">
+  <h1>RILEGATURA</h1>
+  <p>Scegli la coperta che proteggerà il manoscritto.</p>
+  <div id="bindingRow"></div>
+  <button class="btn" onclick="finishBinding()">RILEGA E COMPLETA</button>
+</div>
+
+<div class="overlay hidden" id="bookRevealScreen">
+  <h1 id="bookRevealTitle">Titolo</h1>
+  <p class="genreTag" id="bookRevealGenre"></p>
+  <p class="qualityTag" id="bookRevealQuality"></p>
+  <p id="bookRevealText"></p>
+  <p id="bookRevealReward"></p>
+  <button class="btn" onclick="closeBookReveal()">RIPONI IN BIBLIOTECA</button>
+</div>
+
+<div class="overlay hidden" id="libraryScreen">
+  <h1>LA BIBLIOTECA</h1>
+  <p id="libraryEmpty">Gli scaffali sono ancora vuoti.</p>
+  <div id="libraryList"></div>
+  <button class="btn secondary" onclick="closeLibrary()">TORNA ALLO SCRIPTORIUM</button>
+</div>
+
+<div class="overlay hidden" id="shopScreen">
+  <h1>LA BOTTEGA</h1>
+  <p id="shopOboloDisplay">Obolo: 0</p>
+  <div id="shopGrid"></div>
+  <button class="btn secondary" onclick="closeShop()">TORNA ALLO SCRIPTORIUM</button>
+</div>
+
+<div class="overlay hidden" id="monkScreen">
+  <h1 id="monkName">Fratello</h1>
+  <p id="monkRole"></p>
+  <p id="monkLine"></p>
+  <button class="btn secondary" onclick="closeMonk()">ANNUISCI IN SILENZIO</button>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var W, H, DPR;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W*DPR; canvas.height = H*DPR;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------- audio ----------
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
+    if (audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+  }
+  function tone(freq,dur,type,vol,slideTo,delay) {
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime + (delay||0);
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type||'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(slideTo,1), t0+dur);
+    gain.gain.setValueAtTime(vol!==undefined?vol:0.1, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  function sfxBell() { tone(300,0.9,'sine',0.13,150); tone(450,0.7,'sine',0.07,220,0.06); }
+  function sfxCopy() { tone(500,0.08,'sine',0.07,700); }
+  function sfxCopyGood() { tone(600,0.1,'sine',0.09,800); }
+  function sfxCopyMiss() { tone(200,0.14,'sine',0.06,150); }
+  function sfxPaint() { tone(550,0.1,'sine',0.08,750); }
+  function sfxComplete() { tone(500,0.15,'sine',0.1,700); tone(650,0.15,'sine',0.09,850,0.12); tone(800,0.2,'sine',0.08,1000,0.24); }
+  function sfxBuy() { tone(500,0.1,'sine',0.08,700); }
+  function sfxBlocked() { tone(200,0.08,'sine',0.05,150); }
+
+  // ---------- generi manoscritto ----------
+  var GENRES = {
+    salterio:   { name:'Salterio',   color:'#c9a227', pergamena:3, inchiostro:2, value:12 },
+    erbario:    { name:'Erbario',    color:'#5a8a4a', pergamena:3, inchiostro:2, value:10 },
+    bestiario:  { name:'Bestiario',  color:'#a06a3a', pergamena:3, inchiostro:2, value:14 },
+    cronaca:    { name:'Cronaca',    color:'#5a6a8a', pergamena:4, inchiostro:3, value:16 },
+    vangelario: { name:'Vangelario', color:'#8a2a4a', pergamena:6, inchiostro:5, value:24 }
+  };
+  var GENRE_KEYS = Object.keys(GENRES);
+
+  var TITLE_WORDS = {
+    salterio:   { pre:['Salterio','Antifonario','Innario','Graduale'], noun:['delle Ore Silenziose','del Coro Minore','per le Notti di Veglia','delle Sette Lodi','ritrovato in Cripta','del Fratello Ignoto'] },
+    erbario:    { pre:['Erbario','Ricettario','Trattato','Compendio'], noun:['delle Piante Amare','del Giardino Chiuso','per Febbri e Mali','delle Radici Sconosciute','di Radici e Fumi','del Chiostro Nord'] },
+    bestiario:  { pre:['Bestiario','Compendio','Trattato','Cronache'], noun:['delle Creature Minori','del Grifone Addormentato','di Bestie Mai Viste','delle Fiere Simboliche','del Drago Umile','delle Bestie di Confine'] },
+    cronaca:    { pre:['Cronaca','Annali','Memoriale','Registro'],     noun:["dell'Abbazia",'di un Anno Qualunque','delle Piogge Lunghe','dei Fratelli Passati','del Vecchio Refettorio','di Cose Dimenticate'] },
+    vangelario: { pre:['Vangelario','Evangeliario','Lezionario','Messale'], noun:['miniato in Oro','delle Quattro Voci','per le Feste Maggiori','del Coro Grande','ricoperto di Velluto','custodito in Cripta'] }
+  };
+  var BLURBS = {
+    salterio: [
+      'Le note sono state corrette più volte: qualcuno, prima di noi, cantava un po\' stonato.',
+      'Le pagine profumano ancora di cera e di fumo di candela.',
+      'Ogni salmo qui è stato copiato all\'alba, quando la mano trema meno.',
+      'Un piccolo libro, pensato per stare in una tasca e non sull\'altare.'
+    ],
+    erbario: [
+      'Descrive più rimedi di quanti l\'orto dell\'abbazia possa davvero offrire.',
+      'Alcune pagine hanno macchie sospette: forse un esperimento riuscito, forse no.',
+      'Un catalogo paziente di foglie, radici e febbri curate a modo loro.',
+      'Scritto da chi passava più tempo in giardino che in coro.'
+    ],
+    bestiario: [
+      'Le bestie qui dentro sono per metà vere e per metà inventate, e non è chiaro quale metà.',
+      'Ogni animale nasconde un insegnamento, anche quando sembra solo un disegno buffo.',
+      'Il grifone, il pellicano e una creatura che nessuno ha saputo identificare.',
+      'Copiato da un manoscritto più antico, con qualche libertà creativa in più.'
+    ],
+    cronaca: [
+      'Racconta un anno senza eventi straordinari, ed è forse per questo che vale la pena leggerlo.',
+      'Elenca raccolti, piogge e piccole liti del refettorio con la stessa cura.',
+      'Le ultime pagine sono state aggiunte da una mano diversa, più incerta.',
+      'Un registro fedele di ciò che altrove nessuno si è preso la briga di scrivere.'
+    ],
+    vangelario: [
+      'Il più prezioso della collezione: rilegato con cura, come se dovesse durare per sempre.',
+      'Ogni iniziale è decorata come se fosse l\'unica pagina del libro.',
+      'Riservato alle feste maggiori, e custodito il resto dell\'anno.',
+      'Ci sono voluti mesi di lavoro paziente, un capitolo alla volta.'
+    ]
+  };
+
+  function generateBook(genre, quality) {
+    var tw = TITLE_WORDS[genre];
+    var pre = tw.pre[Math.floor(Math.random()*tw.pre.length)];
+    var noun = tw.noun[Math.floor(Math.random()*tw.noun.length)];
+    var blurb = BLURBS[genre][Math.floor(Math.random()*BLURBS[genre].length)];
+    return { genre: genre, title: pre+' '+noun, blurb: blurb, quality: quality, harvestedAt: Date.now() };
+  }
+
+  // ---------- monaci ----------
+  var MONKS = [
+    { icon:'📜', name:'Fra Bernardo', role:'Il Trascrittore Anziano', lines:[
+      'La mano trema meno se il cuore è in pace, figliolo.',
+      'Ogni lettera copiata è una piccola preghiera che dura nel tempo.',
+      'Ho visto cinquant\'anni di inverni, e ancora imparo a tenere la penna.',
+      'Non serve fretta: la pagina aspetta quanto serve.'
+    ]},
+    { icon:'🎨', name:'Fra Anselmo', role:'Il Miniatore', lines:[
+      'Il colore giusto arriva quando smetti di cercarlo.',
+      'Anche una sola foglia d\'oro può far cantare una pagina intera.',
+      'Dipingo margini da trent\'anni, e ancora mi stupisco dell\'azzurro.',
+      'Le mie mani sanno cose che la mia mente ha dimenticato.'
+    ]},
+    { icon:'🌿', name:'Fra Ignazio', role:'L\'Erborista', lines:[
+      'L\'inchiostro migliore nasce da piante pazienti.',
+      'Il giardino insegna più della biblioteca, a chi sa ascoltare.',
+      'Ogni radice ha il suo tempo per essere raccolta, non prima.',
+      'Coltivo silenzio quanto coltivo erbe, in questo chiostro.'
+    ]},
+    { icon:'🕯️', name:'Fra Cosma', role:'Il Bibliotecario', lines:[
+      'Ogni libro che entra qui dentro trova finalmente riposo.',
+      'Conosco questi scaffali meglio del mio stesso nome.',
+      'Un manoscritto ben rilegato può sopravvivere a chi lo ha scritto.',
+      'La biblioteca non dimentica nulla, anche quando noi lo facciamo.'
+    ]}
+  ];
+
+  // ---------- ore canoniche (puramente atmosferiche) ----------
+  var HOURS = [
+    { name:'Mattutino', icon:'🌌', tint:'#1a1830' },
+    { name:'Lodi',      icon:'🌅', tint:'#3a3050' },
+    { name:'Terza',     icon:'🌤️', tint:'#5a6a8a' },
+    { name:'Sesta',     icon:'☀️', tint:'#8a7a5a' },
+    { name:'Nona',      icon:'🌇', tint:'#8a5a4a' },
+    { name:'Vespri',    icon:'🌆', tint:'#5a3a5a' },
+    { name:'Compieta',  icon:'🌙', tint:'#1a1830' }
+  ];
+  var HOUR_LENGTH = 30000;
+
+  // ---------- pigmenti e legature ----------
+  var PIGMENTS = [
+    { id:'oro',    color:'#c9a227', name:'Oro', unlockCost:0 },
+    { id:'blu',    color:'#3a5a9a', name:'Blu Oltremare', unlockCost:15 },
+    { id:'verde',  color:'#4a8a5a', name:'Verde Rame', unlockCost:20 },
+    { id:'rosso',  color:'#a03a3a', name:'Rosso Cinabro', unlockCost:25 }
+  ];
+  var BINDINGS = [
+    { id:'cuoio',   name:'Cuoio Semplice', unlockCost:0 },
+    { id:'legno',   name:'Legno Intagliato', unlockCost:20 },
+    { id:'velluto', name:'Velluto Blu', unlockCost:35 }
+  ];
+
+  // ---------- salvataggio ----------
+  var SAVE_KEY = 'oreDelCopista_save';
+  var gameStart, pergamena, inchiostro, obolo, lastPergamenaGen, lastInchiostroGen, catalog, unlockedPigments, unlockedBindings, manuscript;
+  var MAX_RESOURCE = 20;
+
+  function defaultState() {
+    gameStart = Date.now();
+    pergamena = 4; inchiostro = 3; obolo = 0;
+    lastPergamenaGen = Date.now(); lastInchiostroGen = Date.now();
+    catalog = [];
+    unlockedPigments = ['oro'];
+    unlockedBindings = ['cuoio'];
+    manuscript = null;
+  }
+  function saveGame() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        gameStart: gameStart, pergamena: pergamena, inchiostro: inchiostro, obolo: obolo,
+        lastPergamenaGen: lastPergamenaGen, lastInchiostroGen: lastInchiostroGen, catalog: catalog, unlockedPigments: unlockedPigments,
+        unlockedBindings: unlockedBindings, manuscript: manuscript
+      }));
+    } catch(e) {}
+  }
+  function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch(e) { return false; } }
+  function loadGame() {
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch(e) {}
+    if (!raw) { defaultState(); return; }
+    gameStart = raw.gameStart || Date.now();
+    pergamena = raw.pergamena||0; inchiostro = raw.inchiostro||0; obolo = raw.obolo||0;
+    lastPergamenaGen = raw.lastPergamenaGen || Date.now();
+    lastInchiostroGen = raw.lastInchiostroGen || Date.now();
+    catalog = raw.catalog || [];
+    unlockedPigments = raw.unlockedPigments || ['oro'];
+    unlockedBindings = raw.unlockedBindings || ['cuoio'];
+    manuscript = raw.manuscript || null;
+  }
+
+  function applyPassiveGeneration() {
+    var now = Date.now();
+    var pergamenaGained = Math.floor((now - lastPergamenaGen) / 40000);
+    if (pergamenaGained > 0) {
+      pergamena = Math.min(MAX_RESOURCE, pergamena + pergamenaGained);
+      lastPergamenaGen += pergamenaGained * 40000;
+    }
+    var inchiostroGained = Math.floor((now - lastInchiostroGen) / 55000);
+    if (inchiostroGained > 0) {
+      inchiostro = Math.min(MAX_RESOURCE, inchiostro + inchiostroGained);
+      lastInchiostroGen += inchiostroGained * 55000;
+    }
+  }
+
+  // ---------- stato macchina ----------
+  var state = 'title';
+  var toastTimer;
+  function showToast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  }
+
+  var currentHourIdx = -1;
+  function currentHour() {
+    var idx = Math.floor(((Date.now()-gameStart) % (HOUR_LENGTH*HOURS.length)) / HOUR_LENGTH);
+    return { idx: idx, def: HOURS[idx] };
+  }
+
+  function renderMonkRow() {
+    var row = document.getElementById('monkRow');
+    row.innerHTML = '';
+    MONKS.forEach(function(m, idx) {
+      var chip = document.createElement('div');
+      chip.className = 'monkChip';
+      chip.textContent = m.icon;
+      chip.onclick = function() { openMonk(idx); };
+      row.appendChild(chip);
+    });
+  }
+
+  function updateHUD() {
+    applyPassiveGeneration();
+    document.getElementById('resourceDisplay').textContent = 'Pergamena: ' + pergamena + ' · Inchiostro: ' + inchiostro;
+    document.getElementById('oboloDisplay').textContent = 'Obolo: ' + obolo;
+    var h = currentHour();
+    document.getElementById('hourDisplay').textContent = h.def.icon + ' ' + h.def.name;
+    if (h.idx !== currentHourIdx) {
+      if (currentHourIdx !== -1) sfxBell();
+      currentHourIdx = h.idx;
+    }
+    var btn = document.getElementById('mainActionBtn');
+    if (!manuscript) {
+      btn.textContent = 'Inizia una nuova opera';
+      btn.classList.remove('highlight');
+    } else if (manuscript.stage === 'trascrizione') {
+      btn.textContent = '✒️ Trascrivi (' + manuscript.successes + '/5)';
+      btn.classList.add('highlight');
+    } else if (manuscript.stage === 'miniatura') {
+      btn.textContent = '🎨 Illumina la pagina';
+      btn.classList.add('highlight');
+    } else if (manuscript.stage === 'rilegatura') {
+      btn.textContent = '📕 Rilega il libro';
+      btn.classList.add('highlight');
+    }
+  }
+
+  // ---------- azioni principali ----------
+  window.startNewGame = function() {
+    ensureAudio();
+    defaultState();
+    saveGame();
+    document.getElementById('startScreen').classList.add('hidden');
+    state = 'abbey';
+    renderMonkRow();
+    updateHUD();
+  };
+  window.continueGame = function() {
+    ensureAudio();
+    loadGame();
+    applyPassiveGeneration();
+    document.getElementById('startScreen').classList.add('hidden');
+    state = 'abbey';
+    renderMonkRow();
+    updateHUD();
+    saveGame();
+  };
+
+  window.mainAction = function() {
+    if (state !== 'abbey') return;
+    if (!manuscript) { openGenrePicker(); return; }
+    if (manuscript.stage === 'trascrizione') { openTranscribe(); return; }
+    if (manuscript.stage === 'miniatura') { openIlluminate(); return; }
+    if (manuscript.stage === 'rilegatura') { openBind(); return; }
+  };
+
+  // ---------- scelta genere ----------
+  window.openGenrePicker = function() {
+    var grid = document.getElementById('genreGrid');
+    grid.innerHTML = '';
+    GENRE_KEYS.forEach(function(g) {
+      var def = GENRES[g];
+      var afford = pergamena >= def.pergamena && inchiostro >= def.inchiostro;
+      var row = document.createElement('div');
+      row.className = 'genre-row';
+      row.innerHTML = '<div class="info"><b style="color:' + def.color + '">' + def.name + '</b><span>Costo: ' + def.pergamena + ' pergamena, ' + def.inchiostro + ' inchiostro</span></div>' +
+        '<button ' + (afford?'':'disabled') + ' onclick="pickGenre(\'' + g + '\')">SCEGLI</button>';
+      grid.appendChild(row);
+    });
+    document.getElementById('genreScreen').classList.remove('hidden');
+    state = 'genrePicker';
+  };
+  window.closeGenrePicker = function() {
+    document.getElementById('genreScreen').classList.add('hidden');
+    state = 'abbey';
+  };
+  window.pickGenre = function(g) {
+    var def = GENRES[g];
+    if (pergamena < def.pergamena || inchiostro < def.inchiostro) { sfxBlocked(); return; }
+    pergamena -= def.pergamena; inchiostro -= def.inchiostro;
+    manuscript = { genre: g, stage: 'trascrizione', successes: 0, pigmentsUsed: [null,null,null,null], binding: null };
+    document.getElementById('genreScreen').classList.add('hidden');
+    state = 'abbey';
+    updateHUD();
+    saveGame();
+    showToast('Un fratello porta pergamena fresca: si comincia con un ' + def.name + '.');
+  };
+
+  // ---------- trascrizione ----------
+  var transcribeStart;
+  window.openTranscribe = function() {
+    transcribeStart = performance.now();
+    renderTranscribeProgress();
+    document.getElementById('transcribeScreen').classList.remove('hidden');
+    state = 'transcribe';
+  };
+  function renderTranscribeProgress() {
+    var wrap = document.getElementById('transcribeProgress');
+    wrap.innerHTML = '';
+    for (var i=0;i<5;i++) {
+      var dot = document.createElement('div');
+      dot.className = 'progDot' + (i < manuscript.successes ? ' filled' : '');
+      wrap.appendChild(dot);
+    }
+  }
+  function updateTranscribeMarker() {
+    if (state !== 'transcribe') return;
+    var elapsed = (performance.now() - transcribeStart) % 1000;
+    var pos = (Math.sin((elapsed/1000)*Math.PI*2)+1)/2;
+    document.getElementById('transcribeMarker').style.left = (pos*100)+'%';
+  }
+  window.tryTranscribe = function() {
+    var elapsed = (performance.now() - transcribeStart) % 1000;
+    var pos = (Math.sin((elapsed/1000)*Math.PI*2)+1)/2;
+    var sweetCenter = 0.5, sweetWidth = 0.22;
+    var success = Math.abs(pos - sweetCenter) <= sweetWidth/2;
+    if (success) { manuscript.successes++; sfxCopyGood(); } else { sfxCopyMiss(); }
+    renderTranscribeProgress();
+    saveGame();
+    if (manuscript.successes >= 5) {
+      manuscript.stage = 'miniatura';
+      document.getElementById('transcribeScreen').classList.add('hidden');
+      state = 'abbey';
+      updateHUD();
+      saveGame();
+      showToast('La trascrizione è completa. La pagina attende i colori.');
+    }
+  };
+  document.getElementById('transcribeSweet').style.left = '39%';
+  document.getElementById('transcribeSweet').style.width = '22%';
+
+  // ---------- miniatura ----------
+  var selectedPigment = 'oro';
+  window.openIlluminate = function() {
+    selectedPigment = unlockedPigments[0];
+    renderPigments();
+    renderPageSpots();
+    document.getElementById('illuminateScreen').classList.remove('hidden');
+    state = 'illuminate';
+  }
+  function renderPigments() {
+    var row = document.getElementById('pigmentRow');
+    row.innerHTML = '';
+    PIGMENTS.forEach(function(p) {
+      var unlocked = unlockedPigments.indexOf(p.id) !== -1;
+      var dot = document.createElement('div');
+      dot.className = 'pigmentDot' + (p.id===selectedPigment?' selected':'') + (unlocked?'':' locked');
+      dot.style.background = p.color;
+      dot.onclick = function() {
+        if (!unlocked) { showToast('Pigmento non ancora disponibile. Visita la Bottega.'); return; }
+        selectedPigment = p.id;
+        renderPigments();
+      };
+      row.appendChild(dot);
+    });
+  }
+  function renderPageSpots() {
+    var wrap = document.getElementById('pageSpots');
+    wrap.innerHTML = '';
+    manuscript.pigmentsUsed.forEach(function(used, idx) {
+      var spot = document.createElement('div');
+      spot.className = 'pageSpot' + (used ? ' filled' : '');
+      if (used) {
+        var p = PIGMENTS.filter(function(pp){return pp.id===used;})[0];
+        spot.style.background = p.color;
+        spot.style.borderColor = p.color;
+      }
+      spot.onclick = function() {
+        manuscript.pigmentsUsed[idx] = selectedPigment;
+        sfxPaint();
+        renderPageSpots();
+        saveGame();
+        var allFilled = manuscript.pigmentsUsed.every(function(v){ return v; });
+        document.getElementById('finishIlluminateBtn').disabled = !allFilled;
+      };
+      wrap.appendChild(spot);
+    });
+    var allFilled = manuscript.pigmentsUsed.every(function(v){ return v; });
+    document.getElementById('finishIlluminateBtn').disabled = !allFilled;
+  }
+  window.finishIlluminate = function() {
+    manuscript.stage = 'rilegatura';
+    document.getElementById('illuminateScreen').classList.add('hidden');
+    state = 'abbey';
+    updateHUD();
+    saveGame();
+    showToast('La miniatura è compiuta. Resta da scegliere la coperta.');
+  };
+
+  // ---------- rilegatura ----------
+  window.openBind = function() {
+    renderBindings();
+    document.getElementById('bindScreen').classList.remove('hidden');
+    state = 'bind';
+  };
+  function renderBindings() {
+    var row = document.getElementById('bindingRow');
+    row.innerHTML = '';
+    BINDINGS.forEach(function(b) {
+      var unlocked = unlockedBindings.indexOf(b.id) !== -1;
+      var opt = document.createElement('div');
+      opt.className = 'bindingOpt' + (manuscript.binding===b.id?' selected':'') + (unlocked?'':' locked');
+      opt.textContent = b.name;
+      opt.onclick = function() {
+        if (!unlocked) { showToast('Coperta non ancora disponibile. Visita la Bottega.'); return; }
+        manuscript.binding = b.id;
+        renderBindings();
+      };
+      row.appendChild(opt);
+    });
+  }
+  window.finishBinding = function() {
+    if (!manuscript.binding) { showToast('Scegli prima una coperta.'); return; }
+    var distinctColors = {};
+    manuscript.pigmentsUsed.forEach(function(p){ if (p) distinctColors[p]=true; });
+    var colorBonus = Object.keys(distinctColors).length - 1;
+    var points = manuscript.successes + colorBonus;
+    var quality = points >= 7 ? 'Magistrale' : (points >= 4 ? 'Pregiata' : 'Comune');
+    var mult = quality === 'Magistrale' ? 2 : (quality === 'Pregiata' ? 1.5 : 1);
+    var def = GENRES[manuscript.genre];
+    var reward = Math.round(def.value * mult);
+    var book = generateBook(manuscript.genre, quality);
+    catalog.push(book);
+    obolo += reward;
+    document.getElementById('bindScreen').classList.add('hidden');
+    manuscript = null;
+    sfxComplete();
+    updateHUD();
+    saveGame();
+    showBookReveal(book, reward);
+  };
+
+  function showBookReveal(book, reward) {
+    var def = GENRES[book.genre];
+    document.getElementById('bookRevealTitle').textContent = book.title;
+    document.getElementById('bookRevealGenre').textContent = def.name;
+    document.getElementById('bookRevealGenre').style.color = def.color;
+    document.getElementById('bookRevealQuality').textContent = 'Fattura: ' + book.quality;
+    document.getElementById('bookRevealText').textContent = book.blurb;
+    document.getElementById('bookRevealReward').textContent = '✧ ' + reward + ' Obolo ricevuto per l\'opera';
+    document.getElementById('bookRevealScreen').classList.remove('hidden');
+    state = 'reveal';
+  }
+  window.closeBookReveal = function() {
+    document.getElementById('bookRevealScreen').classList.add('hidden');
+    state = 'abbey';
+  };
+
+  // ---------- biblioteca ----------
+  window.openLibrary = function() {
+    if (state !== 'abbey') return;
+    var list = document.getElementById('libraryList');
+    var empty = document.getElementById('libraryEmpty');
+    if (!catalog.length) { empty.style.display='block'; list.innerHTML=''; }
+    else {
+      empty.style.display = 'none';
+      var sorted = catalog.slice().sort(function(a,b){ return b.harvestedAt - a.harvestedAt; });
+      list.innerHTML = sorted.map(function(b) {
+        var def = GENRES[b.genre];
+        return '<div class="book-entry" style="border-left-color:' + def.color + '">' +
+          '<span class="genreTag" style="color:' + def.color + '">' + def.name + ' · <span class="qualityTag">' + b.quality + '</span></span>' +
+          '<b>' + b.title + '</b><span>' + b.blurb + '</span></div>';
+      }).join('');
+    }
+    document.getElementById('libraryScreen').classList.remove('hidden');
+    state = 'library';
+  };
+  window.closeLibrary = function() {
+    document.getElementById('libraryScreen').classList.add('hidden');
+    state = 'abbey';
+  };
+
+  // ---------- bottega ----------
+  window.openShop = function() {
+    if (state !== 'abbey') return;
+    renderShop();
+    document.getElementById('shopScreen').classList.remove('hidden');
+    state = 'shop';
+  };
+  window.closeShop = function() {
+    document.getElementById('shopScreen').classList.add('hidden');
+    state = 'abbey';
+  };
+  function renderShop() {
+    document.getElementById('shopOboloDisplay').textContent = 'Obolo: ' + obolo;
+    var grid = document.getElementById('shopGrid');
+    grid.innerHTML = '';
+    addShopRow(grid, 'Pergamena extra', 'Aggiunge subito 3 fogli', 6, function(){
+      pergamena = Math.min(MAX_RESOURCE, pergamena+3); saveGame(); updateHUD(); renderShop();
+    });
+    addShopRow(grid, 'Inchiostro extra', 'Aggiunge subito 2 boccette', 6, function(){
+      inchiostro = Math.min(MAX_RESOURCE, inchiostro+2); saveGame(); updateHUD(); renderShop();
+    });
+    PIGMENTS.forEach(function(p) {
+      if (p.unlockCost === 0) return;
+      var unlocked = unlockedPigments.indexOf(p.id) !== -1;
+      if (unlocked) return;
+      addShopRow(grid, 'Pigmento: ' + p.name, 'Sblocca questo colore per sempre', p.unlockCost, function(){
+        unlockedPigments.push(p.id); saveGame(); renderShop();
+      });
+    });
+    BINDINGS.forEach(function(b) {
+      if (b.unlockCost === 0) return;
+      var unlocked = unlockedBindings.indexOf(b.id) !== -1;
+      if (unlocked) return;
+      addShopRow(grid, 'Coperta: ' + b.name, 'Sblocca questa rilegatura per sempre', b.unlockCost, function(){
+        unlockedBindings.push(b.id); saveGame(); renderShop();
+      });
+    });
+  }
+  function addShopRow(grid, name, desc, cost, onBuy) {
+    var row = document.createElement('div');
+    row.className = 'shop-row';
+    row.innerHTML = '<div class="info"><b>' + name + '</b><span>' + desc + '</span></div><button ' + (obolo<cost?'disabled':'') + '>✧ ' + cost + '</button>';
+    row.querySelector('button').onclick = function() {
+      if (obolo >= cost) { obolo -= cost; sfxBuy(); onBuy(); }
+    };
+    grid.appendChild(row);
+  }
+
+  // ---------- monaci ----------
+  window.openMonk = function(idx) {
+    if (state !== 'abbey') return;
+    var m = MONKS[idx];
+    document.getElementById('monkName').textContent = m.name;
+    document.getElementById('monkRole').textContent = m.role;
+    document.getElementById('monkLine').textContent = m.lines[Math.floor(Math.random()*m.lines.length)];
+    document.getElementById('monkScreen').classList.remove('hidden');
+    state = 'monk';
+  };
+  window.closeMonk = function() {
+    document.getElementById('monkScreen').classList.add('hidden');
+    state = 'abbey';
+  };
+
+  // ---------- disegno ----------
+  function draw() {
+    updateTranscribeMarker();
+    var tint = (state==='title') ? HOURS[0].tint : currentHour().def.tint;
+    ctx.fillStyle = tint;
+    ctx.fillRect(0,0,W,H);
+    if (state === 'title') return;
+
+    // semplice scena: pavimento e colonne dello scriptorium
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0, H*0.7, W, H*0.3);
+    ctx.fillStyle = 'rgba(255,220,160,0.08)';
+    for (var i=0;i<5;i++) {
+      var cx = (i+0.5)*(W/5);
+      ctx.fillRect(cx-6, 0, 12, H*0.72);
+    }
+    // leggio centrale
+    ctx.fillStyle = 'rgba(90,60,30,0.5)';
+    var deskW = Math.min(220, W*0.5), deskH = 26;
+    ctx.fillRect(W/2-deskW/2, H*0.55, deskW, deskH);
+    if (manuscript) {
+      var def = GENRES[manuscript.genre];
+      ctx.fillStyle = def.color;
+      ctx.fillRect(W/2-deskW*0.28, H*0.55-16, deskW*0.56, 20);
+    }
+  }
+
+  function loop() {
+    draw();
+    if (state === 'abbey') updateHUD();
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- init ----------
+  defaultState();
+  resize();
+  if (hasSave()) document.getElementById('continueBtn').style.display = 'block';
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>

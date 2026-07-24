@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>Sorcerer's Labyrinth v4.7</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 10px;
+        }
+        
+        /* HUD */
+        #hud {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 30, 30, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 12px 18px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            border-top: 2px solid rgba(0, 188, 212, 0.4);
+            box-shadow: 0 8px 24 rgba(0, 0, 0, 0.4);
+        }
+        .hud-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .hud-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .hud-value {
+            font-weight: 700;
+            font-size: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+        #hud-level { color: #ffeb3b; text-shadow: 0 0 8px rgba(255, 235, 59, 0.3); }
+        #hud-enemies { color: #ff5252; text-shadow: 0 0 8px rgba(255, 82, 82, 0.3); }
+        .hud-actions { display: flex; gap: 5px; margin-top: 4px; }
+        .hud-btn {
+            background-color: #00bcd4;
+            color: #121212;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .hud-btn:active { background-color: #00838f; }
+        .hud-pill-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: rgba(0, 188, 212, 0.05);
+            border: 1px solid rgba(0, 188, 212, 0.1);
+        }
+        
+        .lives-wrapper { display: flex; align-items: center; gap: 6px; }
+
+        @keyframes heartBlink {
+            0%, 100% { color: #ff5252; text-shadow: 0 0 12px #ff5252; }
+            50% { color: #ffeb3b; text-shadow: 0 0 12px #ffeb3b; }
+        }
+        #hud-lives.low-health { animation: heartBlink 0.5s infinite; cursor: pointer; }
+
+        .flask-icon { position: relative; width: 16px; height: 22px; }
+        .flask-bottle {
+            position: absolute;
+            bottom: 0; left: 0; width: 16px; height: 16px;
+            border-radius: 50%; border: 1.5px solid #00bcd4;
+            background: rgba(255, 255, 255, 0.15); overflow: hidden;
+        }
+        .flask-liquid { position: absolute; bottom: 0; left: 0; width: 100%; height: 65%; background: #00bcd4; }
+        .flask-neck { position: absolute; top: 0; left: 6px; width: 4px; height: 7px; border-left: 1.5px solid #00bcd4; border-right: 1.5px solid #00bcd4; background: rgba(255, 255, 255, 0.15); }
+        .flask-cap { position: absolute; top: -2px; left: 5px; width: 6px; height: 2px; background: #8d6e63; }
+
+        @keyframes yellowFlaskBlink {
+            0%, 100% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        #special-flask { display: none; cursor: pointer; animation: yellowFlaskBlink 0.6s infinite ease-in-out; }
+        #special-flask .flask-bottle, #special-flask .flask-neck { border-color: #ffeb3b; }
+        #special-flask .flask-liquid { background: #ffeb3b; }
+
+        #canvas-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(18, 18, 18, 0.98);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease; text-align: center; padding: 20px;
+        }
+        .screen.active { opacity: 1; pointer-events: auto; }
+        
+        /* STILE PERGAMENA MEDIEVALE */
+        .parchment-screen {
+            background-color: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 20;
+        }
+        .parchment-box {
+            background-color: #f2e3c6;
+            background-image: radial-gradient(rgba(0,0,0,0.02) 20%, transparent 0), radial-gradient(rgba(0,0,0,0.02) 20%, transparent 0);
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+            border: 12px solid #6d4c41;
+            border-image: linear-gradient(to bottom right, #8d6e63, #4e342e, #8d6e63) 12;
+            padding: 25px;
+            border-radius: 4px;
+            width: 88%;
+            max-width: 380px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7), inset 0 0 40px rgba(139,69,19,0.15);
+            text-align: center;
+            color: #3e2723;
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+        .parchment-screen.active .parchment-box { transform: scale(1); }
+        
+        /* Navigazione Pagine Interna */
+        .parchment-carousel {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            min-height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .parchment-page {
+            display: none;
+            width: 100%;
+            animation: fadeIn 0.3s ease;
+        }
+        .parchment-page.active { display: block; }
+        
+        .parchment-box p {
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+            font-style: italic;
+            font-weight: 600;
+        }
+        
+        /* Frecce di navigazione per facilitare l'uso su PC e mobile */
+        .parchment-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #795548;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(139, 69, 19, 0.08);
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .parchment-arrow:hover { background: rgba(139, 69, 19, 0.18); }
+        .parchment-arrow.left { left: 5px; }
+        .parchment-arrow.right { right: 5px; }
+        .parchment-arrow.hidden { display: none; }
+
+        .parchment-dots {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+        .parchment-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(121, 85, 72, 0.3);
+            transition: background 0.2s;
+        }
+        .parchment-dot.active { background: #5d4037; }
+
+        .parchment-tap-hint {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #795548;
+            font-weight: bold;
+            margin-top: 10px !important;
+            animation: pulseHint 1.2s infinite;
+        }
+        
+        /* Pulsante di chiusura specifico per la seconda pagina o pergamena singola */
+        .parchment-btn {
+            background-color: #5d4037;
+            color: #f2e3c6;
+            border: none;
+            padding: 8px 20px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            text-transform: uppercase;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+        .parchment-btn:active { transform: scale(0.97); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulseHint { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* Bottoni e Schermate Standard */
+        .screen h1 { margin: 0 0 10px 0; font-size: 28px; letter-spacing: 1px; }
+        .screen h1.main-title { color: #00bcd4; font-size: 32px; margin-bottom: 25px; }
+        .screen h1.victory { color: #4caf50; }
+        .screen h1.gameover { color: #f44336; }
+        .screen p { color: #aaa; margin: 0 0 20px 0; font-size: 14px; line-height: 1.4; }
+        
+        .btn {
+            background-color: #4caf50; color: white; border: none; padding: 12px 35px;
+            font-size: 16px; font-weight: bold; border-radius: 25px; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s, background-color 0.2s;
+            margin: 8px 0; width: 200px;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-blue { background-color: #00bcd4; color: #121212; }
+        .btn-blue:active { background-color: #00838f; }
+        .btn-restart { background-color: #f44336; }
+        
+        #leaderboard-content { width: 100%; display: flex; justify-content: center; }
+        .leaderboard-list { width: 85%; max-width: 400px; margin: 15px 0; padding: 0; list-style: none; }
+        .leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #222; margin-bottom: 8px; border-radius: 6px; font-family: monospace; font-size: 16px; }
+        .leaderboard-item:nth-child(1) { color: #ffeb3b; border: 1px solid #ffeb3b; }
+        .name-input-container { margin: 15px 0; }
+        .name-input { background: #222; border: 2px solid #333; color: #fff; font-size: 24px; text-align: center; width: 100px; text-transform: uppercase; font-family: monospace; border-radius: 6px; padding: 5px; }
+        .name-input:focus { outline: none; border-color: #4caf50; }
+        #instructions { margin-top: 15px; font-size: 11px; color: #666; text-align: center; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="hud">
+        <div class="hud-stat">
+            <span class="hud-label">Livello</span>
+            <span id="hud-level" class="hud-value">1</span>
+        </div>
+        <div class="hud-stat">
+            <span class="hud-label">Vite</span>
+            <div class="lives-wrapper">
+                <span id="hud-lives" class="hud-value">❤️❤️❤️</span>
+                <div id="special-flask" class="flask-icon" title="Patto di Salvataggio: Ripristina TUTTE le vite spendendo 3 ampolle">
+                    <div class="flask-cap"></div>
+                    <div class="flask-neck"></div>
+                    <div class="flask-bottle"><div class="flask-liquid"></div></div>
+                </div>
+            </div>
+        </div>
+        <div class="hud-stat">
+            <span class="hud-label">Nemici</span>
+            <span id="hud-enemies" class="hud-value">0</span>
+        </div>
+        <div class="hud-stat" id="hud-mage-zone">
+            <span class="hud-label" style="min-height:13px;">&nbsp;</span>
+            <div class="hud-pill-container">
+                <div class="flask-icon">
+                    <div class="flask-cap"></div><div class="flask-neck"></div>
+                    <div class="flask-bottle"><div class="flask-liquid"></div></div>
+                </div>
+                <span id="hud-pills" class="hud-value" style="color: #00bcd4;">1</span>
+            </div>
+            <div class="hud-actions">
+                <button id="pill-btn" class="hud-btn">USA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- PERGAMENA INTRODUTTIVA (2 PAGINE CON FUNZIONE SWIPE E BOTTONI DI NAVIGAZIONE) -->
+        <div id="parchment-intro" class="screen parchment-screen">
+            <div class="parchment-box" id="parchment-intro-box">
+                <!-- Frecce Navigazione -->
+                <div class="parchment-arrow left hidden" id="intro-arrow-left">&lt;</div>
+                <div class="parchment-arrow right" id="intro-arrow-right">&gt;</div>
+                
+                <div class="parchment-carousel">
+                    <!-- Pagina 1 -->
+                    <div class="parchment-page active" id="intro-p1">
+                        <p>"Il nuovo esperimento del Mago è riuscito ma l'invidia degli altri lo ha imprigionato nei labirinti sotto il regno del Re. Aiuta il mago ad uscirne vivo".</p>
+                        <p class="parchment-tap-hint">Fai uno swipe o premi &gt; per voltare pagina</p>
+                    </div>
+                    <!-- Pagina 2 -->
+                    <div class="parchment-page" id="intro-p2">
+                        <p>"Colpisci alle spalle od esegui un agguato alle guardie irretite del Re così da recuperare la chiave e fuggire dal Labirinto. Ma stai attento se le guardie ti vengono incontro...".</p>
+                        <button class="parchment-btn" id="close-intro-btn">Inizia Gioco</button>
+                    </div>
+                </div>
+
+                <!-- Indicatori di pagina (Pallini sottostanti) -->
+                <div class="parchment-dots">
+                    <div class="parchment-dot active" id="dot-p1"></div>
+                    <div class="parchment-dot" id="dot-p2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PERGAMENA AMPOLLA (SINGOLA PAGINA) -->
+        <div id="parchment-flask" class="screen parchment-screen">
+            <div class="parchment-box">
+                <p>"Ogni ampolla serve al mago per teletrasportarsi in altro luogo oppure con tre ampolle può riguadagnare tutte le sue vite".</p>
+                <button class="parchment-btn" id="close-flask-btn">Continua</button>
+            </div>
+        </div>
+
+        <div id="start-screen" class="screen active">
+            <h1 class="main-title">SORCERER'S<br>LABYRINTH</h1>
+            <p>Muoviti di sbieco, colpisci alle spalle.</p>
+            <button id="play-btn" class="btn">Gioca</button>
+            <button id="open-leaderboard-btn" class="btn btn-blue">Classifica</button>
+        </div>
+
+        <div id="leaderboard-screen" class="screen">
+            <div id="leaderboard-content"></div>
+            <button id="back-menu-btn" class="btn">Menu Principale</button>
+        </div>
+
+        <div id="victory-screen" class="screen">
+            <h1 class="victory" id="victory-title">Livello Superato!</h1>
+            <p id="victory-desc">Il labirinto si espande e le minacce aumentano.</p>
+            <button id="next-btn" class="btn">Prossimo Livello</button>
+        </div>
+
+        <div id="gameover-screen" class="screen">
+            <h1 class="gameover">GAME OVER</h1>
+            <p>Un'altro mago perduto...</p>
+            <div class="name-input-container" id="record-input-zone">
+                <p style="color: #4caf50; font-size:12px; margin-bottom:5px;">NUOVO RECORD! Inserisci 3 lettere:</p>
+                <input type="text" id="player-tag" class="name-input" maxlength="3" value="AAA">
+            </div>
+            <button id="restart-btn" class="btn btn-restart">Salva e Riprova</button>
+        </div>
+    </div>
+
+    <<div id="instructions">
+        PC: Frecce/WASD per muoverti, BARRA SPAZIO per Teletrasporto, ESC per Menu.<br>
+        <span id="mobile-instructions" style="color:#ffeb3b;">Mobile: Swipe per scivolare, Triplo Tap per Teletrasporto. (Doppio tap qui per uscire)</span><br>
+        <span style="color:#ffeb3b;">Patto: Se hai 1 vita e almeno 3 ampolle, clicca sul cuore o premi "V" per ripristinare la salute!</span>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const startScreen = document.getElementById('start-screen');
+    const leaderboardScreen = document.getElementById('leaderboard-screen');
+    const victoryScreen = document.getElementById('victory-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const recordInputZone = document.getElementById('record-input-zone');
+    const playerTagInput = document.getElementById('player-tag');
+    const leaderboardContent = document.getElementById('leaderboard-content');
+    const victoryTitle = document.getElementById('victory-title');
+    const victoryDesc = document.getElementById('victory-desc');
+
+    // Elementi Gestione Pergamene multimediali
+    const parchmentIntro = document.getElementById('parchment-intro');
+    const parchmentIntroBox = document.getElementById('parchment-intro-box');
+    const introP1 = document.getElementById('intro-p1');
+    const introP2 = document.getElementById('intro-p2');
+    const dotP1 = document.getElementById('dot-p1');
+    const dotP2 = document.getElementById('dot-p2');
+    const introArrowLeft = document.getElementById('intro-arrow-left');
+    const introArrowRight = document.getElementById('intro-arrow-right');
+    const closeIntroBtn = document.getElementById('close-intro-btn');
+    
+    const parchmentFlask = document.getElementById('parchment-flask');
+    const closeFlaskBtn = document.getElementById('close-flask-btn');
+    
+    const playBtn = document.getElementById('play-btn');
+    const openLeaderboardBtn = document.getElementById('open-leaderboard-btn');
+    const backMenuBtn = document.getElementById('back-menu-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    
+    const hudLevel = document.getElementById('hud-level');
+    const hudLives = document.getElementById('hud-lives');
+    const specialFlask = document.getElementById('special-flask');
+    const hudEnemies = document.getElementById('hud-enemies');
+    const hudPills = document.getElementById('hud-pills');
+    const pillBtn = document.getElementById('pill-btn');
+    const hudMageZone = document.getElementById('hud-mage-zone');
+
+    const DIR_NONE = 0, DIR_UP = 1, DIR_DOWN = 2, DIR_LEFT = 3, DIR_RIGHT = 4;
+    const CELL_PATH = 0, CELL_WALL = 1;
+
+    let isGameRunning = false;
+    let isParchmentActive = false; 
+    let hasSeenFlaskParchment = false; 
+    let currentIntroPage = 1; // Pagina corrente della pergamena iniziale
+
+    let gameState = {
+        level: 1, gridSize: 11, lives: 3, pills: 1, grid: [], cellSize: 0, hasKey: false, isVictoryTriggered: false, damageFlash: 0,
+        player: { x: 1, y: 1, prevX: 1, prevY: 1, targetX: 1, targetY: 1, dir: DIR_NONE, isMoving: false, isInvulnerable: true },
+        enemies: [], jail: { x: 0, y: 0 }, key: { x: 0, y: 0 }, magicPill: null, exit: { x: 0, y: 0 },
+        enemyMoveInterval: 450, lastEnemyMoveTime: 0
+    };
+
+    function getLeaderboard() {
+        let scores = localStorage.getItem('maze_tactical_leaderboard');
+        let board = scores ? JSON.parse(scores) : [{ name: "BOT", level: 5 }, { name: "CPU", level: 3 }, { name: "NPC", level: 1 }];
+        return board.sort((a, b) => b.level - a.level);
+    }
+
+    function saveToLeaderboard(name, level) {
+        let board = getLeaderboard();
+        board.push({ name: name.toUpperCase().substring(0, 3), level: level });
+        board.sort((a, b) => b.level - a.level);
+        board = board.slice(0, 5);
+        localStorage.setItem('maze_tactical_leaderboard', JSON.stringify(board));
+    }
+
+    function drawLeaderboard() {
+        let board = getLeaderboard();
+        let html = '<ul class="leaderboard-list">';
+        board.forEach((entry, index) => { html += `<li class="leaderboard-item"><span>${index + 1}. ${entry.name}</span><span>Lvl ${entry.level}</span></li>`; });
+        html += '</ul>';
+        leaderboardContent.innerHTML = html;
+    }
+
+    function resizeCanvas() {
+        const size = Math.min(window.innerWidth, 500, window.innerHeight - 150);
+        canvas.width = size * window.devicePixelRatio;
+        canvas.height = size * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        gameState.cellSize = size / gameState.gridSize;
+        render();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function generateMaze(size) {
+        let grid = [];
+        for (let r = 0; r < size; r++) { grid[r] = []; for (let c = 0; c < size; c++) grid[r][c] = CELL_WALL; }
+        let stack = []; grid[1][1] = CELL_PATH; stack.push({ x: 1, y: 1 });
+        while (stack.length > 0) {
+            let current = stack[stack.length - 1];
+            let neighbors = [];
+            let dirs = [{ x: 0, y: -2, wallX: 0, wallY: -1 }, { x: 0, y: 2, wallX: 0, wallY: 1 }, { x: -2, y: 0, wallX: -1, wallY: 0 }, { x: 2, y: 0, wallX: 1, wallY: 0 }];
+            for (let d of dirs) {
+                let nx = current.x + d.x, ny = current.y + d.y;
+                if (nx > 0 && nx < size - 1 && ny > 0 && ny < size - 1) {
+                    if (grid[ny][nx] === CELL_WALL) neighbors.push({ next: { x: nx, y: ny }, wall: { x: current.x + d.wallX, y: current.y + d.wallY } });
+                }
+            }
+            if (neighbors.length > 0) {
+                let picked = neighbors[Math.floor(Math.random() * neighbors.length)];
+                grid[picked.wall.y][picked.wall.x] = CELL_PATH; grid[picked.next.y][picked.next.x] = CELL_PATH; stack.push(picked.next);
+            } else { stack.pop(); }
+        }
+        return grid;
+    }
+
+    function getRandomEmptyCell(grid, size, avoidPositions = []) {
+        let cells = [];
+        for (let r = 1; r < size - 1; r++) {
+            for (let c = 1; c < size - 1; c++) {
+                if (grid[r][c] === CELL_PATH) { if (!avoidPositions.some(pos => pos.x === c && pos.y === r)) cells.push({ x: c, y: r }); }
+            }
+        }
+        return cells.length === 0 ? {x: 1, y: 1} : cells[Math.floor(Math.random() * cells.length)];
+    }
+
+    function initLevel() {
+        gameState.gridSize = 11 + Math.floor((gameState.level - 1) / 3) * 2;
+        if (gameState.gridSize > 21) gameState.gridSize = 21;
+        gameState.enemyMoveInterval = Math.max(220, 450 - (gameState.level * 20));
+        gameState.isVictoryTriggered = false;
+        gameState.damageFlash = 0;
+        gameState.grid = generateMaze(gameState.gridSize);
+        gameState.player.x = 1; gameState.player.y = 1; gameState.player.prevX = 1; gameState.player.prevY = 1; gameState.player.targetX = 1; gameState.player.targetY = 1; gameState.player.dir = DIR_NONE; gameState.player.isMoving = false; gameState.player.isInvulnerable = true; 
+        gameState.exit.x = gameState.gridSize - 2; gameState.exit.y = gameState.gridSize - 2; gameState.grid[gameState.exit.y][gameState.exit.x] = CELL_PATH; 
+        gameState.hasKey = false;
+
+        let occupied = [{ x: 1, y: 1 }, { x: gameState.exit.x, y: gameState.exit.y }, { x: 1, y: 2 }, { x: 2, y: 1 }];
+        let jailCell = getRandomEmptyCell(gameState.grid, gameState.gridSize, occupied);
+        gameState.jail.x = jailCell.x; gameState.jail.y = jailCell.y; gameState.key.x = jailCell.x; gameState.key.y = jailCell.y;
+        occupied.push(jailCell);
+
+        if (Math.random() < 0.7) {
+            let pillCell = getRandomEmptyCell(gameState.grid, gameState.gridSize, occupied);
+            gameState.magicPill = { x: pillCell.x, y: pillCell.y }; occupied.push(pillCell);
+        } else { gameState.magicPill = null; }
+
+        gameState.enemies = [];
+        let numEnemies = Math.round(Math.sqrt(2 * gameState.level));
+        for (let i = 0; i < numEnemies; i++) {
+        let enemyCell = getRandomEmptyCell(gameState.grid, gameState.gridSize, occupied);
+        let dirs = [DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT];
+        let enemyHp = Math.floor(Math.random() * gameState.level) + 1;
+        gameState.enemies.push({ 
+            x: enemyCell.x, y: enemyCell.y, 
+            prevX: enemyCell.x, prevY: enemyCell.y, 
+            dir: dirs[Math.floor(Math.random() * dirs.length)], 
+            hp: enemyHp, maxHp: enemyHp, 
+            stunMoves: 0,
+            isChasing: false,  // NUOVO: Traccia se sta già inseguendo
+            alertTimer: 0      // NUOVO: Gestisce la durata dell'effetto visivo dello spavento
+        });
+        occupied.push(enemyCell);
+    }
+
+        victoryScreen.classList.remove('active');
+        gameoverScreen.classList.remove('active');
+        updateHUD();
+        resizeCanvas();
+        
+        if (gameState.level === 1) {
+            isParchmentActive = true;
+            setIntroPage(1);
+            parchmentIntro.classList.add('active');
+        } else {
+            gameState.lastEnemyMoveTime = performance.now();
+        }
+    }
+
+    function updateHUD() {
+        hudLevel.innerText = gameState.level;
+        if (gameState.lives <= 0) {
+            hudLives.innerText = "💀"; hudLives.classList.remove('low-health'); specialFlask.style.display = "none";
+        } else if (gameState.lives === 1) {
+            hudLives.innerText = "❤️"; hudLives.classList.add('low-health'); 
+            if (gameState.pills >= 3) specialFlask.style.display = "block";
+            else specialFlask.style.display = "none";
+        } else {
+            hudLives.innerText = "❤️".repeat(gameState.lives); hudLives.classList.remove('low-health'); specialFlask.style.display = "none";
+        }
+        hudEnemies.innerText = gameState.enemies.length;
+        hudPills.innerText = gameState.pills;
+    }
+
+    function triggerLifeSacrifice() {
+        if (!isGameRunning || isParchmentActive || gameState.lives !== 1 || gameState.pills < 3 || gameState.isVictoryTriggered) return;
+        gameState.pills -= 3; gameState.lives = 3; updateHUD();
+    }
+    hudLives.addEventListener('click', triggerLifeSacrifice);
+    specialFlask.addEventListener('click', triggerLifeSacrifice);
+
+    // SISTEMA LOGICA CAMBIO PAGINA PERGAMENA INTRODUTTIVA
+    function setIntroPage(pageNumber) {
+        currentIntroPage = pageNumber;
+        if (pageNumber === 1) {
+            introP1.classList.add('active'); introP2.classList.remove('active');
+            dotP1.classList.add('active'); dotP2.classList.remove('active');
+            introArrowLeft.classList.add('hidden'); introArrowRight.classList.remove('hidden');
+        } else {
+            introP1.classList.remove('active'); introP2.classList.add('active');
+            dotP1.classList.remove('active'); dotP2.classList.add('active');
+            introArrowLeft.classList.remove('hidden'); introArrowRight.classList.add('hidden');
+        }
+    }
+
+    // Navigazione frecce pergamena iniziale
+    introArrowRight.addEventListener('click', () => setIntroPage(2));
+    introArrowLeft.addEventListener('click', () => setIntroPage(1));
+
+    // Chiusura Pergamene finali
+    closeIntroBtn.addEventListener('click', function() {
+        parchmentIntro.classList.remove('active');
+        isParchmentActive = false;
+        gameState.lastEnemyMoveTime = performance.now();
+    });
+
+    closeFlaskBtn.addEventListener('click', function() {
+        parchmentFlask.classList.remove('active');
+        isParchmentActive = false;
+        gameState.lastEnemyMoveTime = performance.now();
+    });
+
+    // Rilevamento dello Swipe specifico dentro la scatola della Pergamena Iniziale
+    let parchStartX = 0, parchStartY = 0;
+    parchmentIntroBox.addEventListener('touchstart', function(e) {
+        parchStartX = e.touches[0].clientX;
+        parchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    parchmentIntroBox.addEventListener('touchend', function(e) {
+        if (!parchStartX || !parchStartY) return;
+        let diffX = e.changedTouches[0].clientX - parchStartX;
+        let diffY = e.changedTouches[0].clientY - parchStartY;
+        
+        // Verifica se il movimento è prevalentemente orizzontale e sufficientemente lungo
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+            if (diffX > 0 && currentIntroPage === 2) {
+                setIntroPage(1); // Swipe verso destra -> Pagina precedente
+            } else if (diffX < 0 && currentIntroPage === 1) {
+                setIntroPage(2); // Swipe verso sinistra -> Pagina successiva
+            }
+        }
+        parchStartX = 0; parchStartY = 0;
+    }, { passive: true });
+
+
+    function handleInput(direction) {
+        if (!isGameRunning || isParchmentActive || gameState.lives <= 0 || gameState.player.isMoving || gameState.isVictoryTriggered) return;
+        let dx = 0, dy = 0;
+        if (direction === DIR_UP) dy = -1;
+        if (direction === DIR_DOWN) dy = 1;
+        if (direction === DIR_LEFT) dx = -1;
+        if (direction === DIR_RIGHT) dx = 1;
+        if (gameState.grid[gameState.player.y + dy][gameState.player.x + dx] === CELL_WALL) return;
+        gameState.player.isInvulnerable = false; gameState.player.dir = direction; gameState.player.isMoving = true;
+        calculateSlidingTarget(dx, dy);
+    }
+
+    function calculateSlidingTarget(dx, dy) {
+        let cx = gameState.player.x, cy = gameState.player.y;
+        while (true) {
+            let nx = cx + dx, ny = cy + dy;
+            if (gameState.grid[ny][nx] === CELL_WALL) break;
+            cx = nx; cy = ny;
+            if (cx === gameState.exit.x && cy === gameState.exit.y) break;
+            if (gameState.enemies.some(e => e.x === cx && e.y === cy)) break;
+            let side = false;
+            if (dx !== 0) { if (gameState.grid[cy - 1][cx] === CELL_PATH || gameState.grid[cy + 1][cx] === CELL_PATH) side = true; }
+            else if (dy !== 0) { if (gameState.grid[cy][cx - 1] === CELL_PATH || gameState.grid[cy][cx + 1] === CELL_PATH) side = true; }
+            if (side) break;
+        }
+        gameState.player.targetX = cx; gameState.player.targetY = cy;
+    }
+
+    function useMagicPill() {
+        if (!isGameRunning || isParchmentActive || gameState.pills <= 0 || gameState.lives <= 0 || gameState.isVictoryTriggered) return;
+        let avoid = [{x: gameState.player.x, y: gameState.player.y}];
+        gameState.enemies.forEach(e => avoid.push({x: e.x, y: e.y}));
+        let safeCell = getRandomEmptyCell(gameState.grid, gameState.gridSize, avoid);
+        if (safeCell) {
+            gameState.pills--; gameState.player.isInvulnerable = false;
+            gameState.player.x = safeCell.x; gameState.player.y = safeCell.y; gameState.player.prevX = safeCell.x; gameState.player.prevY = safeCell.y; gameState.player.targetX = safeCell.x; gameState.player.targetY = safeCell.y;
+            gameState.player.isMoving = false; gameState.player.dir = DIR_NONE;
+            updateHUD(); checkCollisions();
+        }
+    }
+
+   function moveEnemies() {
+    if (gameState.isVictoryTriggered) return;
+    const p = gameState.player;
+
+    for (let enemy of gameState.enemies) {
+        if (enemy.stunMoves > 0) {
+            enemy.stunMoves--;
+            continue;
+        }
+
+        enemy.prevX = enemy.x;
+        enemy.prevY = enemy.y;
+
+        // Verifica se la guardia vede il giocatore
+        const canSee = canEnemySeePlayer(enemy);
+
+        if (canSee) {
+            // Se NON stava inseguendo, questo è il MOMENTO DELLO SPAVENTO!
+            if (!enemy.isChasing) {
+                enemy.isChasing = true;
+                enemy.alertTimer = 30; // Durata dell'effetto visivo (circa 30 frame)
+                // Cambia subito direzione verso il giocatore per "girarsi" a guardarlo
+                if (enemy.x === p.x) enemy.dir = p.y > enemy.y ? DIR_DOWN : DIR_UP;
+                else if (enemy.y === p.y) enemy.dir = p.x > enemy.x ? DIR_RIGHT : DIR_LEFT;
+                
+                continue; // SALTA IL MOVIMENTO: la guardia si blocca per lo spavento!
+            }
+
+            // Inseguimento attivo (dopo lo spavento iniziale)
+            if (enemy.x === p.x) enemy.dir = p.y > enemy.y ? DIR_DOWN : DIR_UP;
+            else if (enemy.y === p.y) enemy.dir = p.x > enemy.x ? DIR_RIGHT : DIR_LEFT;
+            
+            let dx = 0, dy = 0;
+            if (enemy.dir === DIR_UP) dy = -1;
+            if (enemy.dir === DIR_DOWN) dy = 1;
+            if (enemy.dir === DIR_LEFT) dx = -1;
+            if (enemy.dir === DIR_RIGHT) dx = 1;
+            
+            enemy.x += dx;
+            enemy.y += dy;
+            
+        } else {
+            // Se il giocatore scappa o si teletrasporta, la guardia torna calma
+            enemy.isChasing = false;
+
+            // Comportamento di pattuglia casuale originale
+            let dx = 0, dy = 0;
+            if (enemy.dir === DIR_UP) dy = -1;
+            if (enemy.dir === DIR_DOWN) dy = 1;
+            if (enemy.dir === DIR_LEFT) dx = -1;
+            if (enemy.dir === DIR_RIGHT) dx = 1;
+            
+            let nx = enemy.x + dx, ny = enemy.y + dy;
+            
+            if (gameState.grid[ny][nx] === CELL_WALL) {
+                let validDirs = [];
+                let allDirs = [{ d: DIR_UP, x: 0, y: -1 }, { d: DIR_DOWN, x: 0, y: 1 }, { d: DIR_LEFT, x: -1, y: 0 }, { d: DIR_RIGHT, x: 1, y: 0 }];
+                for (let ad of allDirs) { 
+                    if (gameState.grid[enemy.y + ad.y][enemy.x + ad.x] === CELL_PATH) validDirs.push(ad.d); 
+                }
+                if (validDirs.length > 0) enemy.dir = validDirs[Math.floor(Math.random() * validDirs.length)];
+                else enemy.dir = enemy.dir === DIR_UP ? DIR_DOWN : enemy.dir === DIR_DOWN ? DIR_UP : enemy.dir === DIR_LEFT ? DIR_RIGHT : DIR_LEFT;
+            } else { 
+                enemy.x = nx; 
+                enemy.y = ny; 
+            }
+        }
+    }
+}
+
+    function checkCollisions() {
+        if (gameState.isVictoryTriggered) return;
+        let p = gameState.player;
+        if (gameState.magicPill && p.x === gameState.magicPill.x && p.y === gameState.magicPill.y) {
+            gameState.pills++; gameState.magicPill = null; updateHUD();
+            if (!hasSeenFlaskParchment) {
+                hasSeenFlaskParchment = true; isParchmentActive = true;
+                parchmentFlask.classList.add('active');
+            }
+        }
+        if (gameState.enemies.length === 0 && !gameState.hasKey && p.x === gameState.key.x && p.y === gameState.key.y) {
+            gameState.hasKey = true; updateHUD();
+        }
+        for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+            let enemy = gameState.enemies[i];
+            let sameCell = (p.x === enemy.x && p.y === enemy.y);
+            let swappedCell = (p.x === enemy.prevX && p.y === enemy.prevY && p.prevX === enemy.x && p.prevY === enemy.y);
+            if (sameCell || swappedCell) {
+                if (enemy.stunMoves > 0) continue;
+                let backOrFlank = true;
+                if (p.dir === DIR_UP && enemy.dir === DIR_DOWN) backOrFlank = false;
+                if (p.dir === DIR_DOWN && enemy.dir === DIR_UP) backOrFlank = false;
+                if (p.dir === DIR_LEFT && enemy.dir === DIR_RIGHT) backOrFlank = false;
+                if (p.dir === DIR_RIGHT && enemy.dir === DIR_LEFT) backOrFlank = false;
+                if (p.dir === DIR_NONE) backOrFlank = false; 
+                if (backOrFlank) {
+                    enemy.hp--; p.x = enemy.x; p.y = enemy.y; p.targetX = p.x; p.targetY = p.y; p.isMoving = false; p.dir = DIR_NONE;
+                    if (enemy.hp <= 0) gameState.enemies.splice(i, 1);
+                    else enemy.stunMoves = 2;
+                } else {
+                    if (p.isInvulnerable) continue;
+                    gameState.lives--; gameState.damageFlash = 12; 
+                    p.x = 1; p.y = 1; p.prevX = 1; p.prevY = 1; p.targetX = 1; p.targetY = 1; p.isMoving = false; p.dir = DIR_NONE; p.isInvulnerable = true; 
+                    if (gameState.lives <= 0) triggerGameOver();
+                }
+                updateHUD();
+            }
+        }
+        if (gameState.hasKey && p.x === gameState.exit.x && p.y === gameState.exit.y) triggerVictory();
+    }
+
+    function triggerGameOver() {
+        let board = getLeaderboard();
+        let isRecord = board.length < 5 || gameState.level > board[board.length - 1].level;
+        if (isRecord) { recordInputZone.style.display = "block"; restartBtn.innerText = "Salva e Riprova"; }
+        else { recordInputZone.style.display = "none"; restartBtn.innerText = "Riprova"; }
+        gameoverScreen.classList.add('active'); updateHUD();
+    }
+
+    function triggerVictory() {
+        gameState.isVictoryTriggered = true; gameState.player.isMoving = false; gameState.player.dir = DIR_NONE;
+        victoryTitle.innerText = `Livello ${gameState.level} Completato!`;
+        victoryDesc.innerText = `Preparati al livello ${gameState.level + 1}.\nLa dimensione della griglia e le minacce aumentano.`;
+        victoryScreen.classList.add('active'); updateHUD();
+    }
+
+    function gameLoop(timestamp) {
+        if (isGameRunning && !isParchmentActive && gameState.lives > 0) {
+            if (gameState.player.isMoving && !gameState.isVictoryTriggered) {
+                let p = gameState.player; p.prevX = p.x; p.prevY = p.y;
+                let dx = Math.sign(p.targetX - p.x), dy = Math.sign(p.targetY - p.y);
+                if (dx !== 0 || dy !== 0) { p.x += dx; p.y += dy; checkCollisions(); }
+                else { p.isMoving = false; p.dir = DIR_NONE; }
+            } else { gameState.player.prevX = gameState.player.x; gameState.player.prevY = gameState.player.y; }
+            if (!gameState.isVictoryTriggered && timestamp - gameState.lastEnemyMoveTime >= gameState.enemyMoveInterval) {
+                moveEnemies(); checkCollisions(); gameState.lastEnemyMoveTime = timestamp;
+            }
+        }
+        render(); requestAnimationFrame(gameLoop);
+    }
+
+    function drawKey(x, y, cs, isLocked) {
+        ctx.save(); ctx.translate((x + 0.5) * cs, (y + 0.5) * cs); ctx.rotate(-Math.PI / 4);
+        ctx.strokeStyle = isLocked ? 'rgba(255, 235, 59, 0.35)' : '#ffeb3b';
+        ctx.fillStyle = isLocked ? 'rgba(255, 235, 59, 0.35)' : '#ffeb3b';
+        ctx.lineWidth = Math.max(1.5, cs * 0.06);
+        ctx.beginPath(); ctx.arc(-cs * 0.15, 0, cs * 0.12, 0, 2 * Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-cs * 0.03, 0); ctx.lineTo(cs * 0.25, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cs * 0.15, 0); ctx.lineTo(cs * 0.15, cs * 0.12); ctx.moveTo(cs * 0.22, 0); ctx.lineTo(cs * 0.22, cs * 0.12); ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawPlayer(x, y, cs) {
+        ctx.save();
+        if (gameState.player.isInvulnerable) { ctx.globalAlpha = 0.15 + 0.25 * Math.abs(Math.sin(performance.now() / 150)); }
+        const px = x * cs + cs * 0.1; const py = y * cs + cs * 0.1; const w = cs * 0.8; const h = cs * 0.8;
+        ctx.fillStyle = '#673ab7'; ctx.fillRect(px + w * 0.1, py + h * 0.4, w * 0.8, h * 0.6);
+        ctx.fillStyle = '#ffdbac'; ctx.fillRect(px + w * 0.25, py + h * 0.25, w * 0.5, h * 0.25);
+        ctx.fillStyle = '#000000'; ctx.fillRect(px + w * 0.35, py + h * 0.32, w * 0.08, h * 0.08); ctx.fillRect(px + w * 0.55, py + h * 0.32, w * 0.08, h * 0.08);
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(px + w * 0.2, py + h * 0.45); ctx.lineTo(px + w * 0.5, py + h * 0.75); ctx.lineTo(px + w * 0.8, py + h * 0.45); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffdf00'; ctx.fillRect(px + w * 0.1, py + h * 0.22, w * 0.8, h * 0.05);
+        ctx.fillStyle = '#512da8'; ctx.beginPath(); ctx.moveTo(px + w * 0.05, py + h * 0.22); ctx.lineTo(px + w * 0.5, py - h * 0.1); ctx.lineTo(px + w * 0.95, py + h * 0.22); ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+
+    function drawEnemy(enemy, cs) {
+    let ex = enemy.x * cs + cs * 0.05;
+    let ey = enemy.y * cs + cs * 0.05;
+    const w = cs * 0.9;
+    const h = cs * 0.9;
+    const isStunned = enemy.stunMoves > 0;
+
+    // NUOVO: Effetto BUMP visivo (la guardia fa un piccolo balzo verso l'alto se spaventata)
+    if (enemy.alertTimer > 0) {
+        // Crea una parabola usando il timer per far saltare lo sprite
+        let bumpOffset = Math.sin((enemy.alertTimer / 30) * Math.PI) * (cs * 0.15);
+        ey -= bumpOffset;
+        enemy.alertTimer--; // Decrementa il timer dell'animazione ad ogni render
+    }
+
+    // [Disegno corpo originale]
+    ctx.fillStyle = isStunned ? '#e0e0e0' : '#455a64'; ctx.fillRect(ex + w * 0.15, ey + h * 0.35, w * 0.7, h * 0.55);
+    ctx.fillStyle = isStunned ? '#ffffff' : '#4caf50'; ctx.fillRect(ex + w * 0.2, ey + h * 0.15, w * 0.6, h * 0.3);
+    ctx.fillStyle = isStunned ? '#9e9e9e' : '#1b5e20'; ctx.beginPath(); ctx.moveTo(ex + w * 0.15, ey + h * 0.18); ctx.lineTo(ex + w * 0.5, ey); ctx.lineTo(ex + w * 0.85, ey + h * 0.18); ctx.closePath(); ctx.fill();
+    ctx.fillRect(ex + w * 0.1, ey + h * 0.35, w * 0.1, h * 0.3); ctx.fillRect(ex + w * 0.8, ey + h * 0.35, w * 0.1, h * 0.3);
+    ctx.fillStyle = isStunned ? '#ffffff' : '#388e3c'; ctx.beginPath(); ctx.moveTo(ex + w * 0.2, ey + h * 0.2); ctx.lineTo(ex, ey + h * 0.1); ctx.lineTo(ex + w * 0.2, ey + h * 0.3); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ex + w * 0.8, ey + h * 0.2); ctx.lineTo(ex + w, ey + h * 0.1); ctx.lineTo(ex + w * 0.8, ey + h * 0.3); ctx.closePath(); ctx.fill();
+    
+    // Gestione occhi in base alla direzione
+    ctx.fillStyle = isStunned ? '#000000' : '#ff1744';
+    let ox1 = 0, ox2 = 0, oy = h * 0.22;
+    if (enemy.dir === DIR_LEFT) { ox1 = w * 0.25; ox2 = w * 0.45; } 
+    else if (enemy.dir === DIR_RIGHT) { ox1 = w * 0.45; ox2 = w * 0.65; } 
+    else if (enemy.dir === DIR_UP) { ox1 = w * 0.35; ox2 = w * 0.55; oy = h * 0.16; } 
+    else { ox1 = w * 0.35; ox2 = w * 0.55; }
+    ctx.fillRect(ex + ox1, ey + oy, w * 0.1, h * 0.1); ctx.fillRect(ex + ox2, ey + oy, w * 0.1, h * 0.1);
+    
+    // Scudo
+    ctx.fillStyle = '#37474f'; ctx.strokeStyle = '#cfd8dc'; ctx.lineWidth = Math.max(1, cs * 0.03);
+    ctx.beginPath(); ctx.moveTo(ex + w * 0.3, ey + h * 0.45); ctx.lineTo(ex + w * 0.7, ey + h * 0.45); ctx.lineTo(ex + w * 0.7, ey + h * 0.68); ctx.lineTo(ex + w * 0.5, ey + h * 0.85); ctx.lineTo(ex + w * 0.3, ey + h * 0.68); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.font = `bold ${Math.floor(cs * 0.26)}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(enemy.hp, ex + w * 0.5, ey + h * 0.6);
+
+    // NUOVO: Disegno del Punto Esclamativo di Allerta / Spavento
+    if (enemy.isChasing && enemy.alertTimer > 0) {
+        ctx.save();
+        // Posiziona il fumetto sopra l'elmo della guardia
+        const fx = ex + w * 0.5;
+        const fy = ey - (cs * 0.25);
+        
+        // Disegna un piccolo rombo/fumetto rosso di sfondo
+        ctx.fillStyle = '#ff1744';
+        ctx.beginPath();
+        ctx.moveTo(fx, fy - (cs * 0.2));
+        ctx.lineTo(fx + (cs * 0.15), fy);
+        ctx.lineTo(fx, fy + (cs * 0.15));
+        ctx.lineTo(fx - (cs * 0.15), fy);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Bordo bianco per farlo risaltare
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1, cs * 0.03);
+        ctx.stroke();
+
+        // Disegna il punto esclamativo bianco al centro
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.floor(cs * 0.3)}px 'Segoe UI', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', fx, fy - (cs * 0.02));
+        ctx.restore();
+    }
+}
+
+    function drawMedievalDoor(x, y, cs, isOpen) {
+        const ox = x * cs; const oy = y * cs;
+        ctx.save();
+        if (isOpen) {
+            ctx.fillStyle = '#ff3d00'; ctx.fillRect(ox, oy, cs, cs);
+            let gradient = ctx.createRadialGradient(ox + cs/2, oy + cs, 2, ox + cs/2, oy + cs, cs);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)'); gradient.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = gradient; ctx.fillRect(ox, oy, cs, cs);
+        } else { ctx.fillStyle = '#121212'; ctx.fillRect(ox, oy, cs, cs); }
+        const pad = cs * 0.08; const dw = cs - (pad * 2); const dh = cs - pad; const dx = ox + pad; const dy = oy + pad;
+        ctx.beginPath(); ctx.moveTo(dx, ox + cs); ctx.lineTo(dx, dy + dh * 0.4); ctx.quadraticCurveTo(dx + dw / 2, dy - (cs * 0.05), dx + dw, dy + dh * 0.4); ctx.lineTo(dx + dw, ox + cs); ctx.closePath();
+        ctx.fillStyle = '#4a2c11'; ctx.fill();
+        ctx.strokeStyle = '#2d1a0a'; ctx.lineWidth = Math.max(1, cs * 0.03);
+        let numPlanks = 4; let plankWidth = dw / numPlanks;
+        for(let i = 1; i < numPlanks; i++) { let px = dx + (i * plankWidth); ctx.beginPath(); ctx.moveTo(px, dy + (dh * 0.1)); ctx.lineTo(px, ox + cs); ctx.stroke(); }
+        ctx.strokeStyle = isOpen ? '#ff9100' : '#2b2b2b'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.stroke();
+        if (!isOpen) {
+            ctx.fillStyle = '#1f1f1f'; ctx.fillRect(dx, dy + dh * 0.3, dw * 0.25, dh * 0.06); ctx.fillRect(dx, dy + dh * 0.7, dw * 0.25, dh * 0.06); ctx.fillRect(dx + dw - (dw * 0.25), dy + dh * 0.3, dw * 0.25, dh * 0.06); ctx.fillRect(dx + dw - (dw * 0.25), dy + dh * 0.7, dw * 0.25, dh * 0.06);
+            ctx.fillStyle = '#3a3a3a';
+            let points = [{x: dx + dw*0.2, y: dy + dh*0.4}, {x: dx + dw*0.2, y: dy + dh*0.6}, {x: dx + dw*0.5, y: dy + dh*0.3}, {x: dx + dw*0.5, y: dy + dh*0.7}, {x: dx + dw*0.8, y: dy + dh*0.4}, {x: dx + dw*0.8, y: dy + dh*0.6}];
+            points.forEach(pt => { ctx.beginPath(); ctx.arc(pt.x, pt.y, Math.max(1, cs * 0.025), 0, 2 * Math.PI); ctx.fill(); });
+            ctx.strokeStyle = '#5c5c5c'; ctx.lineWidth = Math.max(1, cs * 0.03); ctx.beginPath(); ctx.arc(dx + dw * 0.4, dy + dh * 0.52, cs * 0.06, 0, 2 * Math.PI); ctx.arc(dx + dw * 0.6, dy + dh * 0.52, cs * 0.06, 0, 2 * Math.PI); ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    function drawBrickWall(c, r, cs) {
+        const ox = c * cs; const oy = r * cs;
+        ctx.fillStyle = '#424242'; ctx.fillRect(ox, oy, cs + 0.5, cs + 0.5);
+        let rows = 4; let rh = cs / rows;
+        for (let i = 0; i < rows; i++) {
+            let bry = oy + (i * rh); let isEven = (i % 2 === 0); let brickWidth = cs / 2; let startX = isEven ? ox : ox - (brickWidth / 2);
+            for (let j = 0; j < 3; j++) {
+                let brx = startX + (j * brickWidth); let x = Math.max(ox, brx); let w = Math.min(ox + cs, brx + brickWidth) - x;
+                if (w > 1) {
+                    ctx.fillStyle = ((i + j) % 3 === 0) ? '#8b2626' : '#a03030'; ctx.fillRect(x + 0.5, bry + 0.5, w - 1, rh - 1);
+                    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(x + 0.5, bry + 0.5, w - 1, Math.max(1, rh * 0.15));
+                }
+            }
+        }
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!isGameRunning) return; 
+        const cs = gameState.cellSize;
+        for (let r = 0; r < gameState.gridSize; r++) { for (let r2 = 0; r2 < gameState.gridSize; r2++) { if (gameState.grid[r2][r] === CELL_WALL) { drawBrickWall(r, r2, cs); } else { ctx.fillStyle = '#1e1e1e'; ctx.fillRect(r * cs, r2 * cs, cs, cs); } } }
+        if (gameState.magicPill) {
+            ctx.save(); ctx.translate((gameState.magicPill.x + 0.5) * cs, (gameState.magicPill.y + 0.5) * cs);
+            ctx.beginPath(); ctx.arc(0, cs * 0.1, cs * 0.22, 0, 2 * Math.PI); ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; ctx.strokeStyle = '#00bcd4'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(0, cs * 0.1, cs * 0.18, Math.PI * 0.1, Math.PI * 0.9, false); ctx.closePath(); ctx.fillStyle = '#00bcd4'; ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; ctx.fillRect(-cs * 0.06, -cs * 0.22, cs * 0.12, cs * 0.2);
+            ctx.beginPath(); ctx.moveTo(-cs * 0.06, -cs * 0.02); ctx.lineTo(-cs * 0.06, -cs * 0.22); ctx.moveTo(cs * 0.06, -cs * 0.02); ctx.lineTo(cs * 0.06, -cs * 0.22); ctx.stroke();
+            ctx.fillStyle = '#8d6e63'; ctx.fillRect(-cs * 0.07, -cs * 0.29, cs * 0.14, cs * 0.08); ctx.restore();
+        }
+        if (gameState.enemies.length > 0) {
+            drawKey(gameState.key.x, gameState.key.y, cs, true);
+            const jx = gameState.jail.x * cs; const jy = gameState.jail.y * cs;
+            ctx.fillStyle = 'rgba(156, 39, 176, 0.12)'; ctx.fillRect(jx, jy, cs, cs);
+            ctx.strokeStyle = '#9c27b0'; ctx.lineWidth = 1.5; ctx.strokeRect(jx + 1, jy + 1, cs - 2, cs - 2);
+            ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.lineCap = 'square';
+            let step = cs / 3;
+            ctx.beginPath(); ctx.moveTo(jx + step, jy + 2); ctx.lineTo(jx + step, jy + cs - 2); ctx.moveTo(jx + step * 2, jy + 2); ctx.lineTo(jx + step * 2, jy + cs - 2);
+            ctx.moveTo(jx + 2, jy + step); ctx.lineTo(jx + cs - 2, jy + step); ctx.moveTo(jx + 2, jy + step * 2); ctx.lineTo(jx + cs - 2, jy + step * 2); ctx.stroke();
+        } else if (!gameState.hasKey && !gameState.isVictoryTriggered) { drawKey(gameState.key.x, gameState.key.y, cs, false); }
+        let isDoorOpen = gameState.hasKey || gameState.isVictoryTriggered;
+        drawMedievalDoor(gameState.exit.x, gameState.exit.y, cs, isDoorOpen);
+        for (let enemy of gameState.enemies) { drawEnemy(enemy, cs); }
+        drawPlayer(gameState.player.x, gameState.player.y, cs);
+        if (gameState.damageFlash > 0) { ctx.fillStyle = `rgba(244, 67, 54, ${gameState.damageFlash / 15})`; ctx.fillRect(0, 0, canvas.width, canvas.height); gameState.damageFlash--; }
+    }
+
+	function canEnemySeePlayer(enemy) {
+		const p = gameState.player;
+		
+		// Se il giocatore è invulnerabile (es. appena rinato), la guardia non lo calcola
+		if (p.isInvulnerable) return false;
+
+		// 1. Stessa COLONNA (Movimento sull'asse Y)
+		if (enemy.x === p.x) {
+			const startY = Math.min(enemy.y, p.y);
+			const endY = Math.max(enemy.y, p.y);
+			// Controlla se ci sono muri tra la guardia e il giocatore
+			for (let y = startY + 1; y < endY; y++) {
+				if (gameState.grid[y][enemy.x] === CELL_WALL) return false;
+			}
+			return true; // Nessun muro in mezzo!
+		}
+
+		// 2. Stessa RIGA (Movimento sull'asse X)
+		if (enemy.y === p.y) {
+			const startX = Math.min(enemy.x, p.x);
+			const endX = Math.max(enemy.x, p.x);
+			// Controlla se ci sono muri
+			for (let x = startX + 1; x < endX; x++) {
+				if (gameState.grid[enemy.y][x] === CELL_WALL) return false;
+			}
+			return true; // Nessun muro in mezzo!
+		}
+
+		return false; // Non sono allineati
+	}
+
+window.addEventListener('keydown', function(e) {
+        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Escape"].includes(e.code)) e.preventDefault();
+        
+        // Se premi ESC su desktop, torna alla schermata del titolo
+        if (e.code === 'Escape' && isGameRunning) {
+            gameoverScreen.classList.remove('active');
+            victoryScreen.classList.remove('active');
+            parchmentIntro.classList.remove('active');
+            parchmentFlask.classList.remove('active');
+            
+            startScreen.classList.add('active');
+            isGameRunning = false;
+            isParchmentActive = false;
+            render();
+            return;
+        }
+
+        // NUOVO: Se premi il tasto V, attiva il Patto di Salvataggio (rigenerazione vite)
+        if (e.code === 'KeyV') {
+            triggerLifeSacrifice();
+            return;
+        }
+
+        // 1. Schermata Iniziale / Titolo attiva (Premendo Spazio avvia il gioco)
+        if (e.code === 'Space' && startScreen.classList.contains('active')) {
+            startScreen.classList.remove('active');
+            isGameRunning = true; 
+            hasSeenFlaskParchment = false;
+            gameState.level = 1; 
+            gameState.lives = 3; 
+            gameState.pills = 1;
+            initLevel();
+            return;
+        }
+
+        // 2. Schermata di Vittoria / Livello Completato
+        if (e.code === 'Space' && gameState.isVictoryTriggered) {
+            gameState.level++; 
+            initLevel();
+            return;
+        }
+
+        // 3. Pergamena Introduttiva a 2 Pagine attiva
+        if (e.code === 'Space' && isParchmentActive && parchmentIntro.classList.contains('active')) {
+            if (currentIntroPage === 1) {
+                setIntroPage(2);
+            } else {
+                parchmentIntro.classList.remove('active');
+                isParchmentActive = false;
+                gameState.lastEnemyMoveTime = performance.now();
+            }
+            return;
+        }
+
+        // 4. Pergamena dell'Ampolla attiva (Schermata singola pagina)
+        if (e.code === 'Space' && isParchmentActive && parchmentFlask.classList.contains('active')) {
+            parchmentFlask.classList.remove('active');
+            isParchmentActive = false;
+            gameState.lastEnemyMoveTime = performance.now();
+            return;
+        }
+
+        // 5. Schermata di Game Over attiva
+        if (e.code === 'Space' && gameoverScreen.classList.contains('active')) {
+            if (recordInputZone.style.display !== "none") { 
+                let tag = playerTagInput.value.trim() || "AAA"; 
+                saveToLeaderboard(tag, gameState.level); 
+            }
+            gameoverScreen.classList.remove('active'); 
+            startScreen.classList.add('active');
+            isGameRunning = false; 
+            render();
+            return;
+        }
+
+        switch(e.code) {
+            case 'ArrowUp': case 'KeyW': handleInput(DIR_UP); break;
+            case 'ArrowDown': case 'KeyS': handleInput(DIR_DOWN); break;
+            case 'ArrowLeft': case 'KeyA': handleInput(DIR_LEFT); break;
+            case 'ArrowRight': case 'KeyD': handleInput(DIR_RIGHT); break;
+            case 'Space': useMagicPill(); break;
+        }
+    });
+
+    let touchStartX = 0, touchStartY = 0;
+    let tapTimestamps = [];
+
+    function handleTripleTapCheck(e) {
+        let now = performance.now(); tapTimestamps.push(now);
+        if (tapTimestamps.length > 3) tapTimestamps.shift();
+        if (tapTimestamps.length === 3 && (tapTimestamps[2] - tapTimestamps[0] < 600)) {
+            useMagicPill(); tapTimestamps = []; e.preventDefault(); return true;
+        }
+        return false;
+    }
+
+    canvas.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; handleTripleTapCheck(e); }, { passive: false });
+    hudMageZone.addEventListener('touchstart', function(e) { handleTripleTapCheck(e); }, { passive: false });
+    canvas.addEventListener('touchmove', function(e) { if(e.cancelable) e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchend', function(e) {
+        if (!touchStartX || !touchStartY) return;
+        let diffX = e.changedTouches[0].clientX - touchStartX; let diffY = e.changedTouches[0].clientY - touchStartY;
+        if (Math.max(Math.abs(diffX), Math.abs(diffY)) > 30) {
+            if (Math.abs(diffX) > Math.abs(diffY)) handleInput(diffX > 0 ? DIR_RIGHT : DIR_LEFT);
+            else handleInput(diffY > 0 ? DIR_DOWN : DIR_UP);
+        }
+        touchStartX = 0; touchStartY = 0;
+    }, { passive: false });
+
+    pillBtn.addEventListener('click', function(e) { e.stopPropagation(); useMagicPill(); });
+
+    playBtn.addEventListener('click', function() {
+        startScreen.classList.remove('active');
+        isGameRunning = true; hasSeenFlaskParchment = false;
+        gameState.level = 1; gameState.lives = 3; gameState.pills = 1;
+        initLevel();
+    });
+
+    openLeaderboardBtn.addEventListener('click', function() { drawLeaderboard(); leaderboardScreen.classList.add('active'); });
+    backMenuBtn.addEventListener('click', function() { leaderboardScreen.classList.remove('active'); });
+    nextBtn.addEventListener('click', function() { gameState.level++; initLevel(); });
+
+    restartBtn.addEventListener('click', function() {
+        if (recordInputZone.style.display !== "none") { let tag = playerTagInput.value.trim() || "AAA"; saveToLeaderboard(tag, gameState.level); }
+        gameoverScreen.classList.remove('active'); startScreen.classList.add('active');
+        isGameRunning = false; render();
+    });
+
+    resizeCanvas(); requestAnimationFrame(gameLoop);
+</script>
+
+</body>
+</html>

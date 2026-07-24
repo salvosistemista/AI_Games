@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dungeon Tascabile V5.9 - Depth & Design Update</title>
+    <style>
+        :root {
+            --bg: #08080c;
+            --surface: #13131c;
+            --surface-2: #191924;
+            --surface-3: #20202e;
+            --border: #272738;
+            --border-soft: #1c1c28;
+            --text: #eef1f7;
+            --text-dim: #8992a8;
+            --text-faint: #565d72;
+
+            --blue: #5b8def;
+            --blue-soft: #1c2a42;
+            --purple: #a78bfa;
+            --purple-soft: #271f3d;
+            --gold: #f2c14e;
+            --gold-soft: #362c19;
+            --red: #fb5568;
+            --red-soft: #331b22;
+            --green: #4ade80;
+            --green-soft: #16281f;
+
+            --scene-bg: #101018;
+            --r-sm: 8px; --r-md: 14px; --r-lg: 20px;
+
+            /* Alias di compatibilità con le variabili V5.x, ora puntate alla nuova palette */
+            --bg-color: var(--bg);
+            --panel-bg: var(--surface);
+            --panel-border: var(--border);
+            --text-color: var(--text);
+            --text-muted: var(--text-dim);
+            --hp-color: var(--red);
+            --hp-ghost-color: #5c2c34;
+            --mp-color: var(--blue);
+            --enemy-hp: #f2934e;
+            --btn-bg: var(--surface-2);
+            --btn-active: var(--surface-3);
+        }
+
+
+        body {
+            margin: 0; padding: 0;
+            height: 100vh; height: 100dvh;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            user-select: none; -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #game-container {
+            display: flex; flex-direction: column;
+            height: 100%; width: 100%; max-width: 480px;
+            margin: 0 auto; position: relative;
+            background: var(--bg);
+            transition: transform 0.1s ease-in-out;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            20% { transform: translate(-3px, -2px) rotate(-1deg); }
+            40% { transform: translate(-1px, 2px) rotate(1deg); }
+            60% { transform: translate(3px, 1px) rotate(0deg); }
+            80% { transform: translate(-1px, -1px) rotate(-1deg); }
+            100% { transform: translate(2px, -2px) rotate(0deg); }
+        }
+        .shake { animation: shake 0.15s dashed; animation-iteration-count: 1; }
+
+        @keyframes counterPulse {
+            0%, 100% { box-shadow: inset 0 0 0px rgba(91, 141, 239, 0); }
+            50% { box-shadow: inset 0 -18px 24px -18px rgba(91, 141, 239, 0.45); }
+        }
+        #stats-panel.counter-active { animation: counterPulse 1.15s ease-in-out infinite; }
+
+        /* ---------- CHIP: badge compatto riutilizzato per stato, consumabili, contatori ---------- */
+        .chip {
+            display: none; align-items: center; gap: 4px;
+            font-size: 11px; font-weight: 700; line-height: 1;
+            padding: 5px 8px; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim);
+            white-space: nowrap;
+        }
+        .chip.show { display: inline-flex; }
+        .chip-blue { color: #bcd4ff; background: var(--blue-soft); border-color: #33517e; }
+        .chip-gold { color: #ffe6a0; background: var(--gold-soft); border-color: #6b551f; }
+        .chip-green { color: #b7f5cd; background: var(--green-soft); border-color: #2b5b3f; }
+        .chip-purple { color: #dcd0ff; background: var(--purple-soft); border-color: #4c3d78; }
+        .chip-red { color: #ffc2ca; background: var(--red-soft); border-color: #6b2e3a; }
+
+        #counter-badge { color: #bcd4ff; background: var(--blue-soft); border-color: #33517e; }
+
+        /* ---------- TOP PANEL: Statistiche ---------- */
+        #stats-panel {
+            flex: 0 0 auto; background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 14px 10px; z-index: 10;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+
+        .stat-row {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12.5px; font-weight: 700; margin-bottom: 6px;
+        }
+
+        #tier-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 800; letter-spacing: 0.3px;
+            padding: 4px 9px; border-radius: 999px;
+            background: var(--surface-3); border: 1px solid var(--border);
+        }
+        #tier-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tier-color, var(--blue)); }
+
+        #gold-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+        #ui-gold {
+            font-weight: 800; font-size: 13px; color: var(--gold);
+            background: var(--gold-soft); border: 1px solid #4a3b20;
+            padding: 4px 10px; border-radius: 999px;
+        }
+
+        .hp-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .hp-icon { font-size: 15px; line-height: 1; flex: 0 0 auto; }
+        .hp-num { font-size: 12.5px; font-weight: 700; color: var(--text-dim); flex: 0 0 auto; min-width: 62px; text-align: right; }
+
+        .bar-container {
+            background: #0a0a10; border-radius: 999px; height: 11px;
+            width: 100%; position: relative;
+            border: 1px solid var(--border-soft); overflow: hidden;
+            flex: 1 1 auto;
+        }
+        .bar-wrap { position: relative; flex: 1 1 auto; }
+
+        .bar-fill { height: 100%; position: absolute; top: 0; left: 0; border-radius: 999px; }
+        #hp-ghost { background: #5c2c34; transition: width 0.6s ease-out; z-index: 1; }
+        #hp-fill { background: linear-gradient(90deg, #ff7086, var(--red)); transition: width 0.15s ease-out; z-index: 2; }
+        #mp-fill { background: linear-gradient(90deg, #86adf7, var(--blue)); width: 100%; transition: width 0.3s ease-out; }
+        #mp-wrapper { display: none; margin-top: 6px; }
+        #mp-wrapper .hp-icon { color: var(--blue); }
+
+        .gear-row {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+        }
+        .gear-chip {
+            font-size: 10.5px; font-weight: 700; color: var(--text-dim);
+            background: var(--surface-2); border: 1px solid var(--border-soft);
+            padding: 3px 8px; border-radius: 999px;
+        }
+
+        /* ---------- CENTER PANEL: Scena ---------- */
+        #scene-panel {
+            flex: 1 1 auto; min-height: 0; padding: 16px 14px;
+            display: flex; flex-direction: column; gap: 12px;
+            overflow-y: auto;
+            background-color: var(--scene-bg);
+            transition: background-color 0.6s ease;
+        }
+
+        #room-tier-title {
+            font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 1.6px; color: var(--text-faint);
+        }
+
+        #room-desc {
+            font-size: 14.5px; line-height: 1.55; color: #d7dbe6;
+            background: var(--surface); padding: 14px; border-radius: var(--r-md);
+            border-left: 3px solid var(--tier-color, var(--blue)); min-height: 44px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+        }
+
+        #enemy-box {
+            background: linear-gradient(160deg, var(--red-soft), var(--surface) 65%);
+            border: 1px solid #4a2530;
+            border-radius: var(--r-md); padding: 12px 14px; display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+        }
+
+        .enemy-info {
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 800; font-size: 14px; margin-bottom: 8px; color: #ffd4da;
+        }
+        .enemy-status-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+        #enemy-hp-txt { font-size: 11.5px; font-weight: 700; color: var(--text-dim); }
+        #enemy-hp-fill { background: linear-gradient(90deg, #ffb35c, var(--enemy-hp)); width: 100%; transition: width 0.2s ease-out; }
+
+        /* ---------- REGISTRO AZIONI ---------- */
+        #action-feedback {
+            background: var(--surface); border: 1px solid var(--border-soft);
+            border-radius: var(--r-md); padding: 10px 12px; font-size: 13px;
+            line-height: 1.4; margin-top: auto;
+            min-height: 58px; max-height: 74px;
+            display: flex; flex-direction: column; justify-content: flex-end; gap: 3px;
+            overflow: hidden;
+        }
+        .log-line { padding-left: 8px; border-left: 2px solid currentColor; }
+
+        /* ---------- BOTTOM PANEL: Azioni ---------- */
+        #action-panel {
+            flex: 0 0 auto; background: var(--surface);
+            border-top: 1px solid var(--border); padding: 10px 12px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 9px;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 14px rgba(0,0,0,0.25);
+        }
+
+        button {
+            background: var(--surface-2); color: var(--text);
+            border: 1px solid var(--border); padding: 13px 8px; border-radius: var(--r-sm);
+            font-size: 13.5px; font-weight: 700; touch-action: manipulation;
+            cursor: pointer; transition: transform 0.08s ease, background 0.1s, opacity 0.2s;
+            min-height: 50px;
+        }
+
+        button:active { transform: scale(0.96); background: var(--surface-3); }
+        button:disabled { opacity: 0.28; pointer-events: none; transform: none; }
+        
+        .btn-full { grid-column: span 2; }
+        .btn-danger { background: var(--red-soft); border-color: #6b2e3a; color: #ffc2ca; }
+        .btn-danger:active { background: #4a2530; }
+        .btn-special { background: var(--purple-soft); border-color: #4c3d78; color: #dcd0ff; }
+        .btn-special:active { background: #362a52; }
+        .btn-success { background: var(--green-soft); border-color: #2b5b3f; color: #b7f5cd; }
+        .btn-success:active { background: #204030; }
+        .btn-potion { background: var(--surface-3); border-color: var(--border); color: var(--text); }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(6, 6, 10, 0.99); z-index: 50;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 24px; text-align: center;
+            box-sizing: border-box;
+        }
+
+        .menu-btn { width: 100%; max-width: 280px; margin-bottom: 14px; padding: 16px; font-size: 15px; border-radius: var(--r-md); }
+        .hidden { display: none !important; }
+        .class-btn { width: 100%; margin-bottom: 12px; padding: 16px; text-align: left; box-sizing: border-box; border-radius: var(--r-md); }
+        
+        .leaderboard-box { 
+            text-align: left; width: 100%; background: var(--surface); padding: 14px; border-radius: var(--r-md); 
+            margin: 16px 0; font-size: 13px; border: 1px solid var(--border); box-sizing: border-box;
+        }
+        .lb-row { display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px;}
+
+        #fx-flash {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 20; opacity: 0; transition: opacity 0.1s ease-out;
+        }
+
+        /* ---------- NUMERI FLUTTUANTI (Juice) ---------- */
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translate(-50%, 4px) scale(0.85); }
+            18% { opacity: 1; transform: translate(-50%, -4px) scale(1.05); }
+            100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+        }
+        .float-text {
+            position: absolute; left: 50%; bottom: 100%; margin-bottom: 2px;
+            transform: translate(-50%, 0);
+            font-size: 13px; font-weight: 800; white-space: nowrap;
+            pointer-events: none; z-index: 30;
+            animation: floatUp 0.85s ease-out forwards;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="fx-flash"></div>
+
+    <!-- MAIN MENU -->
+    <div id="main-menu" class="overlay">
+        <h1 style="color: #5b8def; margin-bottom: 4px; font-size: 32px; letter-spacing: -0.5px;">DUNGEON</h1>
+        <h2 style="color: #f2c14e; margin-top: 0; margin-bottom: 32px; font-size: 16px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;">Tascabile</h2>
+        
+        <button class="menu-btn btn-success hidden" id="continue-btn" onclick="resumeGame()">▶️ Continua Avventura</button>
+        <button class="menu-btn" id="new-game-btn" onclick="showScreen('class-screen')">🎮 Nuova Avventura</button>
+        <button class="menu-btn" onclick="openLeaderboardMenu()">🏆 Albo d'Oro</button>
+        <button class="menu-btn btn-danger" onclick="exitGame()">🚪 Abbandona</button>
+        
+        <p style="position: absolute; bottom: 16px; color: var(--text-muted); font-size: 11px;">Balance Pass • V6.1</p>
+    </div>
+
+    <!-- SELEZIONE CLASSE -->
+    <div id="class-screen" class="overlay hidden">
+        <h2 style="color: #5b8def; margin-bottom: 20px; font-size: 22px;">Scegli il tuo Destino</h2>
+        
+        <button class="class-btn" onclick="startGame('guerriero')">🛡️ Guerriero<br><span style="font-size:12px; font-weight:normal; color:var(--text-muted)">HP: 90 | Abilità: Colpo di Scudo (Stordisce) e Furia Sanguinaria (Danno pesante).</span></button>
+        <button class="class-btn" onclick="startGame('mago')">🔮 Mago<br><span style="font-size:12px; font-weight:normal; color:var(--text-muted)">HP: 45 | MP: 50 (rigenera esplorando) | Abilità: Palla di Fuoco (Danno Magico).</span></button>
+        <button class="class-btn" onclick="startGame('ladro')">🗡️ Ladro<br><span style="font-size:12px; font-weight:normal; color:var(--text-muted)">HP: 66 | Abilità: Veleno (Danni Costanti) e Fumo Accecante (Nemico manca il colpo). Fortuna: +15% loot raro.</span></button>
+        
+        <button class="menu-btn btn-potion" onclick="showScreen('main-menu')" style="margin-top: 10px; font-size: 13px; padding: 12px;">← Torna al Menu</button>
+    </div>
+
+    <!-- CLASSIFICA -->
+    <div id="menu-leaderboard" class="overlay hidden">
+        <h2 style="color: #ecc94b; margin-bottom: 10px; font-size: 22px;">Grandi Imprese</h2>
+        <div id="menu-lb-box" class="leaderboard-box"></div>
+        <button class="menu-btn" onclick="showScreen('main-menu')">← Torna al Menu</button>
+    </div>
+
+    <!-- USCITA NARRATIVA -->
+    <div id="exit-screen" class="overlay hidden">
+        <h2 style="color: var(--text-muted); font-style: italic; font-size: 18px; line-height: 1.6; padding: 0 20px;">
+            "Hai voltato le spalle all'oscurità del labirinto..."
+        </h2>
+        <button class="menu-btn btn-success" onclick="showScreen('main-menu')" style="margin-top: 24px;">Ripensa e Rientra 🚪</button>
+    </div>
+
+    <!-- FINALE -->
+    <div id="end-screen" class="overlay hidden">
+        <h1 id="end-title">Fine delle Cronache</h1>
+        <p id="end-desc"></p>
+        <div id="end-lb-box" class="leaderboard-box"></div>
+        <button class="btn-full" onclick="showScreen('main-menu')" style="padding: 16px; font-size:15px; background:#ecc94b; color:#000; border:none; font-weight:bold;">Torna al Menu</button>
+    </div>
+
+    <!-- INTERFACCIA HUD SUPERIORE -->
+    <div id="stats-panel" class="hidden">
+        <div class="stat-row">
+            <span style="display:flex; align-items:center; gap:6px;">
+                <span id="tier-pill"><span class="dot"></span><span id="ui-room">Piano: -</span></span>
+                <span id="counter-badge" class="chip chip-blue">⚡ CONTRATTACCO</span>
+            </span>
+            <span id="gold-wrap">
+                <span id="ui-gold">💰 0 Oro</span>
+                <span id="lucky-badge" class="chip chip-green">🍀 x0</span>
+            </span>
+        </div>
+
+        <div class="hp-row">
+            <span class="hp-icon">❤️</span>
+            <div class="bar-wrap" id="hp-bar-wrap">
+                <div class="bar-container">
+                    <div id="hp-ghost" class="bar-fill"></div>
+                    <div id="hp-fill" class="bar-fill"></div>
+                </div>
+            </div>
+            <span class="hp-num" id="ui-hp">0/0</span>
+        </div>
+
+        <div id="mp-wrapper">
+            <div class="hp-row">
+                <span class="hp-icon">🔷</span>
+                <div class="bar-wrap"><div class="bar-container"><div id="mp-fill" class="bar-fill"></div></div></div>
+                <span class="hp-num" id="ui-mp">0/0</span>
+            </div>
+        </div>
+
+        <div class="gear-row" style="margin-top: 8px;">
+            <span id="ui-gear" class="gear-chip">-</span>
+            <span id="bag-bombs" class="gear-chip">💣 x0</span>
+            <span id="bag-poisons" class="gear-chip" style="display:none;">🧪 x0</span>
+        </div>
+    </div>
+
+    <!-- CENTRO SCENA -->
+    <div id="scene-panel" class="hidden">
+        <div id="room-tier-title">-</div>
+        <div id="room-desc">-</div>
+        
+        <div id="enemy-box">
+            <div class="enemy-info">
+                <span id="enemy-name">-</span>
+                <span id="enemy-hp-txt">0/0 HP</span>
+            </div>
+            <div class="enemy-status-row" id="enemy-status-row"></div>
+            <div class="bar-wrap" id="enemy-hp-bar-wrap">
+                <div class="bar-container"><div id="enemy-hp-fill" class="bar-fill"></div></div>
+            </div>
+        </div>
+
+        <div id="action-feedback"></div>
+    </div>
+
+    <!-- BOTTONI BASSI -->
+    <div id="action-panel" class="hidden"></div>
+</div>
+
+<script>
+const MAX_ROOMS = 35;
+
+let player = {
+    charClass: '', maxHp: 0, hp: 0, maxMp: 0, mp: 0,
+    gold: 0, room: 0, potions: 1, bombs: 0, poisons: 0, amulets: 0, luckyTurns: 0,
+    weaponBonus: 0, weaponName: "", armorBonus: 0, armorName: "", weaponTier: 0, armorTier: 0,
+    isDefending: false,
+    shieldBashCooldown: 0,
+    furyCooldown: 0,      // Guerriero: Furia Sanguinaria
+    smokeCooldown: 0,     // Ladro: Fumo Accecante
+    luck: 0,              // Fortuna passiva: influenza le probabilità di Loot Raro/Epico
+    pendingCounter: false // Debito di Stabilità: true nel turno subito dopo una Difesa
+};
+
+let enemy = null;
+let currentPhase = 'explore'; 
+let combatLog = [];
+let currentRoomDescHTML = ''; // V6.0 - Serve per ripristinare la scena esatta al Resume
+
+// V5.9 - Progressione equipaggiamento: ogni acquisto sale di livello e mostra il nome reale del prossimo pezzo
+// V6.1 - Ribilanciamento: prezzi delle tier 2/3 ridotti, l'economia non teneva il passo
+const weaponTiers = [
+    { name: "Lama Forgiata", bonus: 3, price: 50 },
+    { name: "Lama Runica", bonus: 4, price: 75 },
+    { name: "Lama Ancestrale", bonus: 6, price: 115 }
+];
+const armorTiers = [
+    { name: "Maglia Anelli", bonus: 2, price: 45 },
+    { name: "Corazza Rinforzata", bonus: 3, price: 65 },
+    { name: "Piastre Ancestrali", bonus: 4, price: 100 }
+];
+
+// POOL ATTIVI PER PREVENIRE RIPETIZIONI (No-Repeat Engine)
+let activeTextPools = { t1: [], t2: [], t3: [] };
+
+const dungeonGironi = {
+    t1: {
+        name: "I° Girone: Le Cripte Dimenticate (Stanze 1-12)", border: "#4a5568", sceneBg: "#131317",
+        texts: [
+            "Le pareti di pietra grigia qui sono ricoperte da rampicanti secchi. Al centro della stanza, una vecchia tomba scoperchiata mostra solo polvere.",
+            "L'aria odora di terra bagnata. Il soffitto è basso, costringendoti a procedere curvo mentre le gocce d'acqua cadono ritmicamente.",
+            "Un silenzio spettrale avvolge questa cella. Nicchie scavate nei muri ospitavano un tempo antiche urne cinerarie ridotte in frantumi.",
+            "Ti trovi in un corridoio stretto. Sulle pareti noti rozzi graffiti che raffigurano scudi spezzati, simboli di una guarnigione caduta.",
+            "Radici nodose hanno spaccato il pavimento di lastre funerarie. Un odore dolciastro di muffa impregna ogni angolo della cripta.",
+            "Torce spente pendono storte dai sostegni arrugginiti. In un angolo, un mucchio di ossa ingiallite giace ancora composto in fila.",
+            "Il corridoio si allarga in una cappella crollata. Frammenti di vetrate colorate scricchiolano sotto i tuoi passi ad ogni movimento.",
+            "Una scala consumata scende verso il buio più fitto. L'eco dei tuoi passi ti restituisce un suono stranamente moltiplicato."
+        ],
+        monsters: [
+            { name: "Goblin Razziatore 🎭", hp: 15, atk: 5 },
+            { name: "Pipistrello Gigante 🦇", hp: 11, atk: 4 },
+            { name: "Goblin Sciacallo 🐺", hp: 13, atk: 3, rare: true, special: 'thief' }
+        ]
+    },
+    t2: {
+        name: "II° Girone: I Laboratori Arcani (Stanze 13-24)", border: "#805ad5", sceneBg: "#160f1f",
+        texts: [
+            "Entri nel sanctum di un antico mago. Scaffali di quercia marcia sorreggono centinaia di tomi cristallizzati dal tempo.",
+            "Questa stanza circolare ospita un enorme specchio incrinato. Guardando dentro vedi la tua ombra muoversi con un bizzarro ritardo.",
+            "Il pavimento è solcato da canali geometrici. Residui di polvere fluorescente viola emanano ancora un debole bagliore magico.",
+            "Tavoli da lavoro coperti di ampolle vitree dominano lo spazio. Un calderone di bronzo giace ribaltato sul fianco.",
+            "Simboli arcani incisi nel marmo pulsano debolmente al tuo passaggio, come se percepissero la tua presenza tra le mura.",
+            "Una biblioteca verticale si perde nel buio sopra di te. Scale a chiocciola di ferro battuto collegano ripiani carichi di grimori.",
+            "L'aria crepita di elettricità statica residua. Frammenti di cristallo fluttuano immobili a mezz'aria, sospesi da un incantesimo dimenticato.",
+            "Un cerchio d'evocazione carbonizzato segna il centro della stanza. Le ceneri sparse suggeriscono un rituale finito male."
+        ],
+        monsters: [
+            { name: "Scheletro Corazzato 💀", hp: 24, atk: 8 },
+            { name: "Apparizione Instabile 🔮", hp: 19, atk: 10 },
+            { name: "Spettro Divorante 👻", hp: 20, atk: 7, rare: true, special: 'vampire' }
+        ]
+    },
+    t3: {
+        name: "III° Girone: Il Nucleo Abissale (Stanze 25-34)", border: "#e53e3e", sceneBg: "#1c1210",
+        texts: [
+            "L'aria diventa rovente e satura di vapori sulfurei. Cammini su una grata sospesa sopra un fiume sotterraneo di magma.",
+            "Le pareti di roccia vulcanica mostrano ingranaggi neri bloccati. Il terreno trema leggermente a intervalli regolari.",
+            "Ti trovi sul ciglio di un baratro insondabile. Catene colossali penzolano dal soffitto scomparendo nel vuoto sottostante.",
+            "Una cappella sconsacrata scavata nella roccia lavica. Un altare di pietra nera è graffiato profondamente da artigli mastodontici.",
+            "Colonne di basalto nero sorreggono un soffitto invisibile nel buio. Rivoli di lava incandescente scorrono lenti tra le fessure.",
+            "Il calore qui è quasi insopportabile. Statue fuse a metà da un'antica eruzione osservano il tuo passaggio con volti deformati.",
+            "Un ponte di ossidiana attraversa un lago di fuoco ribollente. Il bagliore rosso illumina simboli infernali incisi nella roccia.",
+            "Gabbie di ferro contorto pendono dal soffitto, vuote da tempo immemore. Il fumo denso rende l'aria pesante da respirare."
+        ],
+        monsters: [
+            { name: "Orco di Caverna 👹", hp: 40, atk: 12 },
+            { name: "Guardiano di Fuoco 🔥", hp: 35, atk: 14 },
+            { name: "Elementale Instabile 💥", hp: 28, atk: 10, rare: true, special: 'volatile' }
+        ]
+    }
+};
+
+// ESTRATTORE DI TESTO UNICO SENZA REINSERIMENTO
+function getUniqueDescription(gironeKey) {
+    let pool = activeTextPools[gironeKey];
+    let source = dungeonGironi[gironeKey].texts;
+    
+    if (!pool || pool.length === 0) {
+        activeTextPools[gironeKey] = [...source];
+        pool = activeTextPools[gironeKey];
+    }
+    
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    const chosenText = pool[randomIndex];
+    pool.splice(randomIndex, 1); // Rimuove l'elemento per evitare doppioni consecutivi
+    
+    return chosenText;
+}
+
+function showScreen(screenId) {
+    const screens = ['main-menu', 'class-screen', 'menu-leaderboard', 'exit-screen', 'end-screen', 'stats-panel', 'scene-panel', 'action-panel'];
+    screens.forEach(id => { document.getElementById(id)?.classList.add('hidden'); });
+    document.getElementById(screenId).classList.remove('hidden');
+}
+
+function openLeaderboardMenu() { showScreen('menu-leaderboard'); renderLeaderboard('menu-lb-box'); }
+function exitGame() { showScreen('exit-screen'); try { window.close(); } catch(e) {} }
+
+function addLogEntry(text, colorClass) {
+    let hexColor = 'var(--text-muted)';
+    if (colorClass === 'damage') hexColor = 'var(--hp-color)';
+    if (colorClass === 'heal') hexColor = '#9ae6b4';
+    if (colorClass === 'gold') hexColor = 'var(--gold)';
+    if (colorClass === 'system') hexColor = '#cbd5e1';
+
+    combatLog.push({ text: text, color: hexColor });
+    if (combatLog.length > 3) combatLog.shift();
+    renderLogBox();
+}
+
+// V6.0 - Estratta da addLogEntry per poter ridisegnare il registro anche al Resume, senza duplicare voci
+function renderLogBox() {
+    const box = document.getElementById('action-feedback');
+    box.innerHTML = '';
+    combatLog.forEach((log, index) => {
+        let opacity = index === combatLog.length - 1 ? 1.0 : (index === combatLog.length - 2 ? 0.55 : 0.25);
+        box.innerHTML += `<div class="log-line" style="opacity: ${opacity}; color: ${log.color}; font-weight: ${index === combatLog.length - 1 ? '700' : '500'}">${log.text}</div>`;
+    });
+}
+
+// V6.0 - Numeri fluttuanti (Juice): mostra un +/- numero animato sopra la barra indicata
+function spawnFloatText(containerId, text, color) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = 'float-text';
+    el.style.color = color;
+    el.textContent = text;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 850);
+}
+
+// V5.8 - Debito di Stabilità: mostra/nasconde il pulsare blu della fase Contrattacco
+function updateCounterVisual(active) {
+    document.getElementById('stats-panel').classList.toggle('counter-active', active);
+    document.getElementById('counter-badge').classList.toggle('show', active);
+}
+
+// V5.8 - Loot di Raro Grado: la fortuna del giocatore (player.luck) alza le probabilità
+// di trovare bottino Raro o Epico. Il Ladro parte con +15% di fortuna passiva.
+function rollLootRarity() {
+    const luck = player.luck || 0;
+    const epicChance = 0.06 + luck;
+    const rareChance = 0.22 + (luck * 0.5);
+    const roll = Math.random();
+
+    if (roll < epicChance) {
+        return { tier: 'EPICO', mult: 3.0, color: '#ecc94b', tag: '✨ LOOT EPICO' };
+    } else if (roll < epicChance + rareChance) {
+        return { tier: 'RARO', mult: 1.8, color: '#4299e1', tag: '🔷 Loot Raro' };
+    }
+    return { tier: 'COMUNE', mult: 1.0, color: null, tag: '' };
+}
+
+function triggerImpact(flashColor, activeShake = false) {
+    const f = document.getElementById('fx-flash');
+    f.style.backgroundColor = flashColor; f.style.opacity = '0.25';
+    setTimeout(() => f.style.opacity = '0', 120);
+
+    if (activeShake) {
+        const container = document.getElementById('game-container');
+        container.classList.add('shake');
+        setTimeout(() => container.classList.remove('shake'), 150);
+    }
+}
+
+// V6.0 - Salvataggio automatico: la partita si salva ad ogni aggiornamento di stato,
+// così puoi mettere via il telefono e riprendere esattamente da dove avevi lasciato.
+const SAVE_KEY = 'dungeon_v6_save';
+
+function saveGameState() {
+    if (!player.charClass) return; // nessuna partita attiva da salvare
+    try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+            player, enemy, currentPhase, combatLog, activeTextPools, currentRoomDescHTML
+        }));
+    } catch (e) { /* storage non disponibile: si prosegue senza salvataggio */ }
+}
+
+function loadGameState() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+function clearGameState() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+}
+
+function resumeGame() {
+    const state = loadGameState();
+    if (!state || !state.player || !state.player.charClass) return;
+
+    player = state.player;
+    enemy = state.enemy;
+    currentPhase = state.currentPhase;
+    combatLog = state.combatLog || [];
+    activeTextPools = state.activeTextPools || { t1: [], t2: [], t3: [] };
+    currentRoomDescHTML = state.currentRoomDescHTML || '';
+
+    document.getElementById('bag-poisons').style.display = (player.charClass === 'ladro') ? 'inline' : 'none';
+    document.getElementById('mp-wrapper').style.display = (player.charClass === 'mago') ? 'block' : 'none';
+
+    showScreen('stats-panel');
+    document.getElementById('scene-panel').classList.remove('hidden');
+    document.getElementById('action-panel').classList.remove('hidden');
+
+    const gironeKey = getKeyByRoom();
+    const girone = dungeonGironi[gironeKey];
+    document.getElementById('room-desc').style.borderColor = girone.border;
+    document.getElementById('room-tier-title').innerText = girone.name;
+    document.getElementById('room-desc').innerHTML = currentRoomDescHTML;
+    document.documentElement.style.setProperty('--scene-bg', girone.sceneBg);
+    document.documentElement.style.setProperty('--tier-color', girone.border);
+
+    updateCounterVisual(player.pendingCounter);
+    renderLogBox();
+    updateUI();
+    drawButtons();
+}
+
+function startGame(chosenClass) {
+    const existing = loadGameState();
+    if (existing && existing.player && existing.player.charClass) {
+        const ok = confirm("Hai una partita in corso. Iniziarne una nuova cancellerà quei progressi. Vuoi continuare?");
+        if (!ok) return;
+    }
+    clearGameState();
+
+    player.charClass = chosenClass; player.room = 1; player.gold = 0; player.potions = 1; player.bombs = 0; player.poisons = 0; player.amulets = 0; player.luckyTurns = 0;
+    player.shieldBashCooldown = 0; player.furyCooldown = 0; player.smokeCooldown = 0; player.pendingCounter = false; combatLog = [];
+    player.luck = (chosenClass === 'ladro') ? 0.15 : 0;
+    player.weaponTier = 0; player.armorTier = 0;
+    
+    // Reset preventivo dei pool descrittivi ad ogni run
+    activeTextPools = { t1: [], t2: [], t3: [] };
+
+    document.getElementById('bag-poisons').style.display = (chosenClass === 'ladro') ? 'inline' : 'none';
+
+    if (chosenClass === 'guerriero') {
+        player.maxHp = 90; player.weaponBonus = 5; player.weaponName = "Spada Corta"; player.armorBonus = 3; player.armorName = "Maglia Cuoio";
+        document.getElementById('mp-wrapper').style.display = 'none';
+    } else if (chosenClass === 'mago') {
+        player.maxHp = 45; player.maxMp = 50; player.mp = 50; player.weaponBonus = 0; player.weaponName = "Bastone Antico"; player.armorBonus = 0; player.armorName = "Toga Vana";
+        document.getElementById('mp-wrapper').style.display = 'block';
+    } else if (chosenClass === 'ladro') {
+        player.maxHp = 66; player.poisons = 1; player.weaponBonus = 1; player.weaponName = "Daga Logora"; player.armorBonus = 1; player.armorName = "Mantello Scuro";
+        document.getElementById('mp-wrapper').style.display = 'none';
+    }
+    
+    player.hp = player.maxHp;
+    showScreen('stats-panel');
+    document.getElementById('scene-panel').classList.remove('hidden');
+    document.getElementById('action-panel').classList.remove('hidden');
+    addLogEntry("L'oscurità si flette attorno ai tuoi passi.", 'system');
+    buildRoom();
+}
+
+function getKeyByRoom() {
+    if (player.room <= 12) return 't1';
+    if (player.room <= 24) return 't2';
+    return 't3';
+}
+
+function updateUI() {
+    const gironeKey = getKeyByRoom();
+    const girone = dungeonGironi[gironeKey];
+    
+    document.getElementById('ui-room').innerText = `${player.room}/${MAX_ROOMS} - ${girone.name.split(':')[0]}`;
+    document.getElementById('ui-gold').innerText = `💰 ${player.gold} Oro`;
+    document.getElementById('ui-hp').innerText = `${player.hp}/${player.maxHp} HP`;
+    document.getElementById('ui-gear').innerText = `${player.weaponName} (+${player.weaponBonus}) | ${player.armorName} (-${player.armorBonus})`;
+    
+    document.getElementById('bag-bombs').innerText = `💣 x${player.bombs}`;
+    if(player.charClass === 'ladro') document.getElementById('bag-poisons').innerText = `🧪 x${player.poisons}`;
+
+    const luckyBadge = document.getElementById('lucky-badge');
+    if (player.luckyTurns > 0) {
+        luckyBadge.classList.add('show');
+        luckyBadge.innerText = `🍀 x${player.luckyTurns}`;
+    } else {
+        luckyBadge.classList.remove('show');
+    }
+
+    const hpPercent = `${(player.hp / player.maxHp) * 100}%`;
+    document.getElementById('hp-fill').style.width = hpPercent;
+    document.getElementById('hp-ghost').style.width = hpPercent;
+
+    if (player.charClass === 'mago') {
+        document.getElementById('ui-mp').innerText = `${player.mp}/${player.maxMp} MP`;
+        document.getElementById('mp-fill').style.width = `${(player.mp / player.maxMp) * 100}%`;
+    }
+
+    const enemyBox = document.getElementById('enemy-box');
+    if (enemy) {
+        enemyBox.style.display = 'block';
+        document.getElementById('enemy-name').innerText = enemy.name;
+        document.getElementById('enemy-hp-txt').innerText = `${enemy.hp}/${enemy.maxHp} HP`;
+        document.getElementById('enemy-hp-fill').style.width = `${Math.max(0, (enemy.hp / enemy.maxHp) * 100)}%`;
+
+        let chips = '';
+        if (enemy.poisoned) chips += '<span class="chip show chip-green">☠️ Avvelenato</span>';
+        if (enemy.stunned) chips += '<span class="chip show chip-purple">💫 Stordito</span>';
+        if (enemy.blinded) chips += '<span class="chip show chip-blue">🌫️ Accecato</span>';
+        document.getElementById('enemy-status-row').innerHTML = chips;
+    } else {
+        enemyBox.style.display = 'none';
+    }
+
+    saveGameState();
+}
+
+function buildRoom() {
+    player.isDefending = false;
+    player.pendingCounter = false;
+    updateCounterVisual(false);
+
+    // V6.1 - Ribilanciamento: crescita permanente degli HP massimi ad ogni cambio di girone,
+    // per tenere il passo con la scala offensiva dei nemici (che prima cresceva senza contropartita)
+    if (player.room === 13 || player.room === 25) {
+        const bonus = player.room === 13 ? 18 : 25;
+        player.maxHp += bonus;
+        player.hp += bonus;
+        spawnFloatText('hp-bar-wrap', `+${bonus} MAX`, 'var(--gold)');
+        addLogEntry(`🌟 Il tuo corpo si rafforza nell'oscurità: HP massimi +${bonus}!`, 'gold');
+    }
+
+    updateUI();
+    const gironeKey = getKeyByRoom();
+    const girone = dungeonGironi[gironeKey];
+    const descBox = document.getElementById('room-desc');
+    
+    descBox.style.borderColor = girone.border;
+    document.getElementById('room-tier-title').innerText = girone.name;
+    document.documentElement.style.setProperty('--scene-bg', girone.sceneBg);
+    document.documentElement.style.setProperty('--tier-color', girone.border);
+    
+    if (player.room === MAX_ROOMS) {
+        currentPhase = 'combat';
+        enemy = { name: "DRAGO DEL DESTINO 🐉", hp: 170, maxHp: 170, atk: 42, poisoned: false, stunned: false };
+        descBox.innerHTML = currentRoomDescHTML = "L'immensa parete vulcanica cede il passo ad un anfiteatro monumentale.";
+        addLogEntry("Il Drago ruggisce sprigionando fiamme sulfuree!", 'damage');
+        updateUI(); drawButtons(); return;
+    }
+
+    if (player.room > 1 && player.room % 7 === 0) {
+        currentPhase = 'merchant'; enemy = null;
+        descBox.innerHTML = currentRoomDescHTML = "Un vecchio mercante gobbo e bendato ti accoglie con un cenno.";
+        addLogEntry("'Ho nuova mercanzia per chi sopravvive...'", 'system');
+        updateUI(); drawButtons(); return;
+    }
+
+    // Pesca della descrizione garantita unica
+    descBox.innerHTML = currentRoomDescHTML = getUniqueDescription(gironeKey);
+
+    let rng = Math.random();
+    if (rng < 0.40) { 
+        currentPhase = 'combat';
+        const commonMonsters = girone.monsters.filter(m => !m.rare);
+        const rareMonster = girone.monsters.find(m => m.rare);
+        let base = (rareMonster && Math.random() < 0.15) ? rareMonster : commonMonsters[Math.floor(Math.random() * commonMonsters.length)];
+        let scale = 1 + (player.room * 0.075);
+        enemy = { name: base.name, hp: Math.floor(base.hp * scale), maxHp: Math.floor(base.hp * scale), atk: Math.floor(base.atk * scale), poisoned: false, stunned: false, special: base.special || null };
+        addLogEntry(base.rare ? `Un raro ${enemy.name} emerge dalle ombre! Sembra... diverso.` : `Un ${enemy.name} emerge dalle ombre!`, 'system');
+    } 
+    else if (rng < 0.70) { 
+        currentPhase = 'explore'; enemy = null;
+        let chestRoll = Math.random();
+        if (chestRoll < 0.22 && player.bombs < 2) {
+            player.bombs++;
+            addLogEntry("Trovi una cassa intatta: hai recuperato una 💣 Bomba Alchemica!", 'heal');
+        } else if (chestRoll < 0.34 && player.amulets < 2) {
+            player.amulets++;
+            addLogEntry("Trovi una cassa intatta: recuperi un 🍀 Amuleto della Fortuna!", 'heal');
+        } else {
+            let baseGain = Math.floor(Math.random() * 12) + 10 + Math.floor(player.room * 0.8);
+            let loot = rollLootRarity();
+            let gain = Math.floor(baseGain * loot.mult);
+            player.gold += gain;
+            spawnFloatText('gold-wrap', `+${gain}`, 'var(--gold)');
+            if (loot.tier === 'COMUNE') {
+                addLogEntry(`Trovata borsa militare: +${gain} monete d'oro.`, 'gold');
+            } else {
+                triggerImpact(loot.color, false);
+                addLogEntry(`${loot.tag}! La cassa cela un tesoro straordinario: +${gain} monete d'oro!`, 'gold');
+            }
+        }
+    } 
+    else if (rng < 0.85) { 
+        currentPhase = 'explore'; enemy = null;
+        let healAmount = Math.floor(player.maxHp * 0.35);
+        player.hp = Math.min(player.maxHp, player.hp + healAmount);
+        spawnFloatText('hp-bar-wrap', `+${healAmount}`, '#9ae6b4');
+        triggerImpact('#10b981', false);
+        addLogEntry(`Sgorga una vena d'acqua: rigeneri ${healAmount} HP.`, 'heal');
+    } 
+    else {
+        currentPhase = 'explore'; enemy = null;
+        addLogEntry("Nessun pericolo apparente in questa stanza.", 'default');
+    }
+
+    updateUI();
+    drawButtons();
+}
+
+function drawButtons() {
+    const panel = document.getElementById('action-panel');
+    panel.innerHTML = '';
+
+    if (currentPhase === 'explore') {
+        panel.innerHTML = `
+            <button class="btn-full btn-success" onclick="nextRoom()">Scendi più in profondità 🚪</button>
+            <button class="btn-full btn-potion" onclick="drinkPotion()" ${player.potions <= 0 ? 'disabled' : ''}>🧪 Cura (${player.potions})</button>
+        `;
+    } 
+    else if (currentPhase === 'combat') {
+        panel.innerHTML = `
+            <button class="btn-success" onclick="handlePlayerAction('safe')">⚔️ Attacco Sicuro</button>
+            <button class="btn-danger" onclick="handlePlayerAction('risky')">🎲 Attacco Azzardato</button>
+            <button class="btn-full" onclick="handlePlayerAction('defend')">🛡️ Difesa</button>
+            <button class="btn-full btn-potion" onclick="drinkPotion()" ${player.potions <= 0 ? 'disabled' : ''}>🧪 Cura (${player.potions})</button>
+        `;
+
+        if (player.charClass === 'mago') {
+            let b = document.createElement('button'); b.innerHTML = "🔮 Palla di Fuoco (15 MP)"; b.className = "btn-special btn-full";
+            b.disabled = player.mp < 15; b.onclick = () => handlePlayerAction('magic'); panel.appendChild(b);
+        }
+        if (player.charClass === 'guerriero') {
+            let b = document.createElement('button'); 
+            b.innerHTML = player.shieldBashCooldown > 0 ? `🧱 Scudo in ricarica (${player.shieldBashCooldown})` : "🧱 Colpo di Scudo";
+            b.className = "btn-special btn-full"; b.disabled = player.shieldBashCooldown > 0;
+            b.onclick = () => handlePlayerAction('bash'); panel.appendChild(b);
+
+            let f = document.createElement('button');
+            f.innerHTML = player.furyCooldown > 0 ? `🩸 Furia in ricarica (${player.furyCooldown})` : "🩸 Furia Sanguinaria";
+            f.className = "btn-danger btn-full"; f.disabled = player.furyCooldown > 0;
+            f.onclick = () => handlePlayerAction('fury'); panel.appendChild(f);
+        }
+        if (player.charClass === 'ladro') {
+            let b = document.createElement('button'); b.innerHTML = `🧪 Applica Veleno (${player.poisons})`;
+            b.className = "btn-special btn-full"; b.disabled = player.poisons <= 0 || (enemy && enemy.poisoned);
+            b.onclick = () => handlePlayerAction('poison_throw'); panel.appendChild(b);
+
+            let s = document.createElement('button');
+            s.innerHTML = player.smokeCooldown > 0 ? `🌫️ Fumo in ricarica (${player.smokeCooldown})` : "🌫️ Fumo Accecante";
+            s.className = "btn-special btn-full"; s.disabled = player.smokeCooldown > 0 || (enemy && enemy.blinded);
+            s.onclick = () => handlePlayerAction('smoke'); panel.appendChild(s);
+        }
+        if (player.bombs > 0) {
+            let b = document.createElement('button'); b.innerHTML = `💣 Lancia Bomba (${player.bombs})`;
+            b.className = "btn-potion btn-full"; b.onclick = () => handlePlayerAction('use_bomb'); panel.appendChild(b);
+        }
+        if (player.amulets > 0) {
+            let a = document.createElement('button');
+            a.innerHTML = player.luckyTurns > 0 ? `🍀 Fortuna Attiva (${player.luckyTurns})` : `🍀 Usa Amuleto (${player.amulets})`;
+            a.className = "btn-potion btn-full"; a.disabled = player.luckyTurns > 0;
+            a.onclick = () => handlePlayerAction('use_amulet'); panel.appendChild(a);
+        }
+    } 
+    else if (currentPhase === 'merchant') {
+        panel.innerHTML = `<button onclick="buy('potion', 20)" ${player.gold < 20 ? 'disabled' : ''}>🧪 Pozione (20 Oro)</button>`;
+
+        if (player.weaponTier < weaponTiers.length) {
+            const w = weaponTiers[player.weaponTier];
+            panel.innerHTML += `<button onclick="buy('weapon')" ${player.gold < w.price ? 'disabled' : ''}>🗡️ ${w.name} (+${w.bonus}) — ${w.price} Oro</button>`;
+        } else {
+            panel.innerHTML += `<button disabled>🗡️ Arma al Massimo Livello</button>`;
+        }
+
+        if (player.armorTier < armorTiers.length) {
+            const a = armorTiers[player.armorTier];
+            panel.innerHTML += `<button onclick="buy('armor')" ${player.gold < a.price ? 'disabled' : ''}>🛡️ ${a.name} (-${a.bonus}) — ${a.price} Oro</button>`;
+        } else {
+            panel.innerHTML += `<button disabled>🛡️ Corazza al Massimo Livello</button>`;
+        }
+
+        panel.innerHTML += `<button onclick="buy('amulet', 35)" ${player.gold < 35 || player.amulets >= 2 ? 'disabled' : ''}>🍀 Amuleto Fortuna (35 Oro)</button>`;
+
+        if (player.charClass === 'ladro') {
+            panel.innerHTML += `<button onclick="buy('poison', 15)" ${player.gold < 15 ? 'disabled' : ''}>🧪 Fiala Veleno (15 Oro)</button>`;
+        }
+        panel.innerHTML += `<button class="btn-success btn-full" onclick="nextRoom()">Saluta e Prosegui 🚪</button>`;
+    }
+}
+
+function nextRoom() { 
+    player.room++; 
+    if (player.shieldBashCooldown > 0) player.shieldBashCooldown--; 
+    if (player.furyCooldown > 0) player.furyCooldown--;
+    if (player.smokeCooldown > 0) player.smokeCooldown--;
+    // V6.1 - Ribilanciamento: il Mago rigenera Mana avanzando, altrimenti esaurisce la Palla di Fuoco dopo 3 lanci in tutta la run
+    if (player.charClass === 'mago') player.mp = Math.min(player.maxMp, player.mp + 5);
+    buildRoom(); 
+}
+
+function handlePlayerAction(type) {
+    player.isDefending = false;
+
+    // V5.8 - Debito di Stabilità: consuma il bonus di Contrattacco (valido un solo turno)
+    const counterWasReady = player.pendingCounter;
+    player.pendingCounter = false;
+    updateCounterVisual(false);
+
+    let dmgToEnemy = 0;
+    let baseDmg = player.weaponBonus + Math.floor(Math.random() * 4) + 6;
+
+    if (type === 'safe') {
+        if (counterWasReady) {
+            dmgToEnemy = Math.floor(baseDmg * 1.5);
+            triggerImpact('#4299e1', true);
+            addLogEntry(`CONTRATTACCO! Sfrutti l'apertura del nemico: infliggi ${dmgToEnemy} danni (+50%).`, 'gold');
+        } else {
+            dmgToEnemy = baseDmg;
+            addLogEntry(`Sferri un affondo sicuro: infliggi ${dmgToEnemy} danni.`, 'system');
+        }
+    } 
+    else if (type === 'risky') {
+        let chance = player.charClass === 'ladro' ? 0.70 : 0.55;
+        if (player.luckyTurns > 0) chance += 0.20;
+        if (Math.random() <= chance) {
+            dmgToEnemy = Math.floor(baseDmg * 2.5);
+            triggerImpact('#ecc94b', true);
+            addLogEntry(`COLPO CRITICO! ${dmgToEnemy} danni!`, 'gold');
+        } else {
+            addLogEntry("Il mostro schiva il tuo fendente. Mancato!", 'default');
+        }
+    } 
+    else if (type === 'magic') {
+        player.mp -= 15; dmgToEnemy = 26 + (player.room * 2);
+        addLogEntry(`Scateni una fiammata magica: ${dmgToEnemy} danni arcani.`, 'system');
+    } 
+    else if (type === 'bash') {
+        player.shieldBashCooldown = 2; 
+        dmgToEnemy = Math.floor(baseDmg * 0.8);
+        enemy.stunned = true;
+        triggerImpact('#4299e1', true);
+        addLogEntry(`Impatto violento! Infliggi ${dmgToEnemy} danni e STORDISCI il nemico!`, 'system');
+    }
+    else if (type === 'poison_throw') {
+        player.poisons--;
+        enemy.poisoned = true;
+        addLogEntry(`Spargi tossine sulle lame! Il nemico è gravemente avvelenato.`, 'heal');
+        updateUI(); drawButtons(); return; 
+    }
+    else if (type === 'fury') {
+        player.furyCooldown = 4;
+        dmgToEnemy = Math.floor(baseDmg * 1.8);
+        let selfDmg = 2;
+        player.hp = Math.max(1, player.hp - selfDmg);
+        triggerImpact('#e53e3e', true);
+        addLogEntry(`FURIA SANGUINARIA! Infliggi ${dmgToEnemy} danni, ma la rabbia ti costa ${selfDmg} HP.`, 'damage');
+    }
+    else if (type === 'smoke') {
+        player.smokeCooldown = 4;
+        enemy.blinded = true;
+        addLogEntry("Lanci una boccetta di fumo accecante: il nemico non riesce più a vederti!", 'default');
+        updateUI(); drawButtons(); return;
+    }
+    else if (type === 'use_bomb') {
+        player.bombs--;
+        dmgToEnemy = 25;
+        triggerImpact('#f97316', true);
+        addLogEntry(`La bomba esplode fragorosamente! ${dmgToEnemy} danni fissi.`, 'gold');
+    }
+    else if (type === 'defend') {
+        player.isDefending = true;
+        player.pendingCounter = true;
+        updateCounterVisual(true);
+        addLogEntry("Ti copri dietro lo scudo, pronto a contrattaccare (+50% al prossimo Attacco Sicuro).", 'default');
+    }
+    else if (type === 'use_amulet') {
+        player.amulets--;
+        player.luckyTurns = 3;
+        addLogEntry("Indossi l'Amuleto della Fortuna: la tua mira sarà implacabile per i prossimi 3 turni!", 'heal');
+        updateUI(); drawButtons(); return;
+    }
+
+    // V5.9 - L'effetto dell'Amuleto si consuma solo sulle azioni di combattimento reali
+    if (player.luckyTurns > 0) player.luckyTurns--;
+
+    if (dmgToEnemy > 0) { enemy.hp -= dmgToEnemy; spawnFloatText('enemy-hp-bar-wrap', `-${dmgToEnemy}`, 'var(--hp-color)'); }
+
+    if (enemy && enemy.hp > 0 && enemy.poisoned) {
+        let poisonDmg = 7 + Math.floor(player.room * 0.3);
+        enemy.hp -= poisonDmg;
+        spawnFloatText('enemy-hp-bar-wrap', `-${poisonDmg}`, '#9ae6b4');
+        addLogEntry(`Il veleno corrode i tessuti del mostro: -${poisonDmg} HP.`, 'heal');
+    }
+
+    updateUI();
+
+    if (enemy && enemy.hp <= 0) {
+        // V5.9 - Elementale Instabile: esplode alla morte infliggendo danno da contraccolpo
+        if (enemy.special === 'volatile') {
+            let blastDmg = Math.max(4, Math.floor(enemy.maxHp * 0.18));
+            player.hp = Math.max(1, player.hp - blastDmg);
+            spawnFloatText('hp-bar-wrap', `-${blastDmg}`, 'var(--enemy-hp)');
+            triggerImpact('#f97316', true);
+            addLogEntry(`Il ${enemy.name} esplode in una vampata infernale! Subisci ${blastDmg} danni da contraccolpo.`, 'damage');
+        }
+
+        let baseLoot = Math.floor(Math.random() * 10) + 6 + Math.floor(player.room * 0.8);
+        let rarity = rollLootRarity();
+        let loot = Math.floor(baseLoot * rarity.mult);
+        player.gold += loot;
+        spawnFloatText('gold-wrap', `+${loot}`, 'var(--gold)');
+        if (rarity.tier === 'COMUNE') {
+            addLogEntry(`Abbattuto! Recuperi +${loot} monete.`, 'heal');
+        } else {
+            triggerImpact(rarity.color, false);
+            addLogEntry(`${rarity.tag}! Il nemico sconfitto cela un bottino incredibile: +${loot} monete!`, 'gold');
+        }
+        player.pendingCounter = false; updateCounterVisual(false);
+        enemy = null; currentPhase = 'explore';
+        if (player.room === MAX_ROOMS) { endGame(true); } else { updateUI(); drawButtons(); }
+    } else {
+        document.getElementById('action-panel').innerHTML = '';
+        if (enemy && enemy.stunned) {
+            enemy.stunned = false;
+            addLogEntry("Il nemico sussulta stordito, impossibilitato a colpire!", 'system');
+            setTimeout(drawButtons, 800);
+        } else {
+            setTimeout(enemyTurn, 600);
+        }
+    }
+}
+
+function enemyTurn() {
+    if (!enemy) return;
+
+    if (enemy.blinded) {
+        enemy.blinded = false;
+        addLogEntry(`Il ${enemy.name} brancola confuso nel fumo e manca completamente il colpo!`, 'system');
+        updateUI();
+        drawButtons();
+        return;
+    }
+
+    let rawAtk = enemy.atk + Math.floor(Math.random() * 3) - 1;
+    let finalDmg = rawAtk - player.armorBonus;
+    
+    if (player.isDefending) finalDmg = Math.floor(finalDmg / 2);
+    finalDmg = Math.max(1, finalDmg);
+    player.hp -= finalDmg;
+    spawnFloatText('hp-bar-wrap', `-${finalDmg}`, 'var(--hp-color)');
+    
+    triggerImpact('#f43f5e', true);
+    addLogEntry(`Il ${enemy.name} colpisce: -${finalDmg} HP.`, 'damage');
+
+    // V5.9 - Mostri rari: comportamenti speciali
+    if (enemy.special === 'thief' && player.gold > 0) {
+        let stolen = Math.min(player.gold, Math.floor(player.gold * 0.15) + 3);
+        player.gold -= stolen;
+        spawnFloatText('gold-wrap', `-${stolen}`, 'var(--hp-color)');
+        addLogEntry(`Il ${enemy.name} ti sfila ${stolen} monete dalla tasca e scompare tra le ombre!`, 'gold');
+    } else if (enemy.special === 'vampire') {
+        let leeched = Math.floor(finalDmg * 0.5);
+        enemy.hp = Math.min(enemy.maxHp, enemy.hp + leeched);
+        spawnFloatText('enemy-hp-bar-wrap', `+${leeched}`, '#9ae6b4');
+        addLogEntry(`Il ${enemy.name} assorbe la tua energia vitale: +${leeched} HP per lui.`, 'default');
+    }
+
+    updateUI();
+
+    if (player.hp <= 0) { endGame(false); } else { drawButtons(); }
+}
+
+function drinkPotion() {
+    if (player.potions > 0 && currentPhase !== 'merchant') {
+        player.potions--; let heal = 50;
+        player.hp = Math.min(player.maxHp, player.hp + heal);
+        spawnFloatText('hp-bar-wrap', `+${heal}`, '#9ae6b4');
+        triggerImpact('#10b981', false);
+        addLogEntry(`Bevi la pozione: recuperi ${heal} HP.`, 'heal');
+        updateUI(); drawButtons();
+    }
+}
+
+function buy(itemType, price) {
+    if (itemType === 'weapon') {
+        const w = weaponTiers[player.weaponTier];
+        if (!w || player.gold < w.price) return;
+        player.gold -= w.price;
+        player.weaponBonus += w.bonus; player.weaponName = w.name; player.weaponTier++;
+        addLogEntry(`Arma potenziata: impugni ora ${w.name}!`, 'system');
+        updateUI(); drawButtons(); return;
+    }
+    if (itemType === 'armor') {
+        const a = armorTiers[player.armorTier];
+        if (!a || player.gold < a.price) return;
+        player.gold -= a.price;
+        player.armorBonus += a.bonus; player.armorName = a.name; player.armorTier++;
+        addLogEntry(`Armatura rinforzata: indossi ora ${a.name}!`, 'system');
+        updateUI(); drawButtons(); return;
+    }
+    if (player.gold >= price) {
+        player.gold -= price;
+        if (itemType === 'potion') { player.potions++; addLogEntry("Acquistata pozione di cura.", 'system'); }
+        else if (itemType === 'poison') { player.poisons++; addLogEntry("Acquistata dose di veleno.", 'system'); }
+        else if (itemType === 'amulet') { player.amulets++; addLogEntry("Acquistato un Amuleto della Fortuna.", 'system'); }
+        updateUI(); drawButtons();
+    }
+}
+
+function endGame(victory) {
+    clearGameState();
+    showScreen('end-screen');
+    const finalScore = (player.room * 100) + player.gold;
+    if (victory) {
+        document.getElementById('end-title').innerHTML = "<span style='color:#ecc94b'>👑 LEGGENDA</span>";
+        document.getElementById('end-desc').innerHTML = `Il Drago è caduto! Vittoria totale.<br>Punteggio: <b>${finalScore}</b>`;
+    } else {
+        document.getElementById('end-title').innerHTML = "<span style='color:var(--hp-color)'>☠️ SCONFITTA</span>";
+        document.getElementById('end-desc').innerHTML = `Sei caduto alla Stanza ${player.room}.<br>Punteggio: <b>${finalScore}</b>`;
+    }
+    saveRecord(finalScore); renderLeaderboard('end-lb-box');
+}
+
+function saveRecord(score) {
+    let list = JSON.parse(localStorage.getItem('dungeon_v5_scores')) || [];
+    const d = new Date();
+    const formattedDate = `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const icon = player.charClass === 'guerriero' ? '🛡️' : (player.charClass === 'mago' ? '🔮' : '🗡️');
+    list.push({ score: score, hero: icon, roomReached: player.room, time: formattedDate });
+    list.sort((a, b) => b.score - a.score).splice(5);
+    localStorage.setItem('dungeon_v5_scores', JSON.stringify(list));
+}
+
+function renderLeaderboard(boxId) {
+    let list = JSON.parse(localStorage.getItem('dungeon_v5_scores')) || [];
+    const container = document.getElementById(boxId);
+    let html = "<h4 style='margin:0 0 10px 0; color:#4299e1; font-size:14px;'>🏆 Top 5 Record:</h4>";
+    if (list.length === 0) { html += "<p style='color:var(--text-muted); margin:0; font-style:italic;'>Nessun record.</p>"; } 
+    else {
+        list.forEach((row, i) => {
+            html += `<div class="lb-row"><span><b>#${i+1}</b> ${row.hero} Stanza ${row.roomReached}</span><span><b>${row.score} pt</b></span></div>`;
+        });
+    }
+    container.innerHTML = html;
+}
+
+// V6.0 - Al caricamento della pagina: se esiste una partita salvata, mostra "Continua Avventura" come azione primaria
+(function initMenu() {
+    const saved = loadGameState();
+    const continueBtn = document.getElementById('continue-btn');
+    const newGameBtn = document.getElementById('new-game-btn');
+    if (saved && saved.player && saved.player.charClass) {
+        continueBtn.classList.remove('hidden');
+        newGameBtn.classList.remove('btn-success');
+    } else {
+        newGameBtn.classList.add('btn-success');
+    }
+})();
+</script>
+</body>
+</html>

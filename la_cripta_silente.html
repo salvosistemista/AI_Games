@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>La Cripta Silente</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #0a0908; overflow: hidden;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    touch-action: none;
+  }
+  #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  #hud {
+    position: fixed; top: max(10px, env(safe-area-inset-top)); left: 10px; right: 10px;
+    z-index: 5; pointer-events: none; color: #cbd5c0;
+  }
+  .bar-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .bar-label { font-size: 0.7rem; width: 16px; text-align: center; opacity: 0.8; }
+  .bar-bg { width: 160px; height: 12px; background: rgba(0,0,0,0.5); border: 1px solid #444; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; transition: width 0.15s ease; }
+  #hpFill { background: linear-gradient(90deg, #7a0d0d, #d1495b); }
+  #stamFill { background: linear-gradient(90deg, #2a5c2a, #6fbf6f); }
+  #topRight {
+    position: fixed; top: max(10px, env(safe-area-inset-top)); right: 12px; z-index: 5;
+    text-align: right; color: #cbd5c0; font-size: 0.85rem; pointer-events: none;
+  }
+  #topRight div { margin-bottom: 2px; text-shadow: 0 0 4px #000; }
+  #potionCounter { color: #a0d8b0; }
+  #soulsCounter { color: #d9c46a; }
+  #depthCounter { color: #cbd5c0; opacity: 0.85; }
+
+  #bossBarWrap {
+    position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    width: min(70vw, 420px); z-index: 6; display: none;
+  }
+  #bossBarWrap.active { display: block; }
+  #bossName { text-align: center; color: #e2b8b8; font-size: 0.8rem; margin-bottom: 3px; text-shadow: 0 0 6px #000; letter-spacing: 1px; }
+  #bossBarBg { height: 10px; background: rgba(0,0,0,0.6); border: 1px solid #663333; border-radius: 3px; overflow: hidden; }
+  #bossBarFill { height: 100%; background: linear-gradient(90deg, #5c0d0d, #b03030); width: 100%; transition: width 0.2s; }
+
+  #toast {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(15,12,10,0.9); border: 1px solid #7a6a4a; color: #e8dcc0;
+    padding: 8px 18px; border-radius: 6px; font-size: 0.85rem; z-index: 8;
+    opacity: 0; transition: opacity 0.4s; pointer-events: none; text-align: center; max-width: 80vw;
+  }
+  #toast.show { opacity: 1; }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(6,5,4,0.94); color: #cbd5c0; text-align: center; padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 {
+    font-size: clamp(1.5rem, 6vw, 2.4rem); margin: 0 0 8px 0;
+    color: #b8a888; letter-spacing: 3px; text-shadow: 0 0 16px #00000099;
+  }
+  .overlay p { color: #8f9a86; max-width: 440px; line-height: 1.5; font-size: 0.85rem; }
+  .overlay .btn {
+    margin-top: 14px; padding: 11px 30px; font-size: 0.95rem;
+    background: linear-gradient(180deg, #2a2420, #17130f);
+    border: 1px solid #7a6a4a; color: #d8c8a0; border-radius: 6px;
+    cursor: pointer; letter-spacing: 1px;
+  }
+  .btn:active { background: #221d18; }
+  .btn:disabled { opacity: 0.4; }
+  .overlay .btn.secondary { border-color: #555; color: #999; }
+
+  #shopGrid { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 380px; margin-top: 14px; }
+  .shop-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.03); border: 1px solid #443c30; border-radius: 8px;
+    padding: 10px 14px; font-size: 0.82rem;
+  }
+  .shop-item .info { text-align: left; }
+  .shop-item .info b { color: #d8c8a0; display: block; font-size: 0.88rem; }
+  .shop-item .info span { color: #7f8a78; font-size: 0.72rem; }
+  .shop-item button {
+    background: #2a2420; border: 1px solid #7a6a4a; color: #d8c8a0;
+    border-radius: 5px; padding: 6px 12px; font-size: 0.78rem; cursor: pointer; white-space: nowrap;
+  }
+  .shop-item button:disabled { opacity: 0.35; }
+  .fragments-display { color: #d9c46a; font-size: 1.1rem; margin: 10px 0; }
+
+  #deathStats { margin: 14px 0; color: #b8b0a0; font-size: 0.9rem; line-height: 1.7; }
+  #deathStats b { color: #d8c8a0; }
+
+  #pauseBtn {
+    position: fixed; top: max(10px, env(safe-area-inset-top)); right: 12px;
+    z-index: 6; background: rgba(0,0,0,0.3); border: 1px solid #665c48;
+    color: #cbd5c0; border-radius: 6px; padding: 5px 11px; font-size: 0.85rem;
+    display: none;
+  }
+  #pauseBtn.visible { display: block; }
+
+  /* touch controls */
+  #joystickZone {
+    position: fixed; left: 0; bottom: 0; width: 45vw; height: 45vh; z-index: 6;
+  }
+  #joystickBase {
+    position: absolute; width: 96px; height: 96px; border-radius: 50%;
+    background: rgba(203,213,192,0.08); border: 1px solid rgba(203,213,192,0.25);
+    display: none;
+  }
+  #joystickStick {
+    position: absolute; width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(203,213,192,0.35); border: 1px solid rgba(203,213,192,0.5);
+    display: none;
+  }
+  #actionButtons {
+    position: fixed; right: 14px; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 6;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  }
+  #actionButtons.hidden { display: none; }
+  .abtn {
+    width: 62px; height: 62px; border-radius: 50%;
+    background: rgba(203,213,192,0.1); border: 1px solid rgba(203,213,192,0.35);
+    color: #cbd5c0; font-size: 1.3rem; display: flex; align-items: center; justify-content: center;
+  }
+  .abtn:active { background: rgba(203,213,192,0.25); }
+  #attackBtn { width: 74px; height: 74px; font-size: 1.5rem; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud">
+  <div class="bar-row"><span class="bar-label">♥</span><div class="bar-bg"><div class="bar-fill" id="hpFill" style="width:100%"></div></div></div>
+  <div class="bar-row"><span class="bar-label">◆</span><div class="bar-bg"><div class="bar-fill" id="stamFill" style="width:100%"></div></div></div>
+</div>
+<div id="topRight">
+  <div id="depthCounter">Livello 1</div>
+  <div id="soulsCounter">Anime: 0</div>
+  <div id="potionCounter">Fiaschette: 2</div>
+</div>
+<div id="bossBarWrap">
+  <div id="bossName">Il Guardiano di Cenere</div>
+  <div id="bossBarBg"><div id="bossBarFill"></div></div>
+</div>
+<div id="toast"></div>
+<button id="pauseBtn" onclick="togglePause()">⏸</button>
+
+<div id="joystickZone"></div>
+<div id="joystickBase"></div>
+<div id="joystickStick"></div>
+<div id="actionButtons" class="hidden">
+  <div class="abtn" id="potionBtn">🧪</div>
+  <div class="abtn" id="dodgeBtn">⟲</div>
+  <div class="abtn" id="attackBtn">⚔</div>
+</div>
+
+<div class="overlay" id="startScreen">
+  <h1>LA CRIPTA SILENTE</h1>
+  <p>Scendi nelle profondità di una cripta dimenticata. Ogni caduta è definitiva, ma le anime raccolte non vanno mai del tutto perdute. Muoviti con WASD o frecce, attacca con J o click, schiva con K o Shift, bevi una fiaschetta con E.</p>
+  <div class="fragments-display" id="fragmentsDisplay">✧ 0 Frammenti d'Anima</div>
+  <button class="btn" id="continueBtn" onclick="continueRun()" style="display:none;">RIPRENDI LA DISCESA</button>
+  <button class="btn" onclick="openShop()">SANTUARIO (potenziamenti)</button>
+  <button class="btn" onclick="startNewRun()">INIZIA UNA NUOVA DISCESA</button>
+</div>
+
+<div class="overlay hidden" id="shopScreen">
+  <h1>SANTUARIO</h1>
+  <p>Spendi i Frammenti d'Anima raccolti nelle vite precedenti per rafforzare il tuo prossimo tentativo.</p>
+  <div class="fragments-display" id="shopFragmentsDisplay">✧ 0</div>
+  <div id="shopGrid"></div>
+  <button class="btn secondary" onclick="closeShop()">TORNA INDIETRO</button>
+</div>
+
+<div class="overlay hidden" id="gameOverScreen">
+  <h1>LA CENERE TI RECLAMA</h1>
+  <div id="deathStats"></div>
+  <button class="btn" onclick="backToMenuFromDeath()">TORNA AL SANTUARIO</button>
+</div>
+
+<div class="overlay hidden" id="pauseScreen">
+  <h1>IN PAUSA</h1>
+  <button class="btn" onclick="togglePause()">RIPRENDI</button>
+  <button class="btn secondary" onclick="quitToMenu()">ABBANDONA (salva progressi)</button>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ============================================================
+  //  SETUP CANVAS
+  // ============================================================
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var W, H, DPR;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  var TILE = 32;
+
+  // ============================================================
+  //  AUDIO
+  // ============================================================
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function tone(freq, dur, type, vol, slideTo, delay) {
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime + (delay||0);
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(slideTo,1), t0+dur);
+    gain.gain.setValueAtTime(vol!==undefined?vol:0.15, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  function noiseBurst(dur, vol) {
+    if (!audioCtx) return;
+    var bufferSize = audioCtx.sampleRate * dur;
+    var buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+    var src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    var gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(vol!==undefined?vol:0.15, audioCtx.currentTime);
+    src.connect(gain); gain.connect(audioCtx.destination);
+    src.start();
+  }
+  function sfxSwing() { noiseBurst(0.12, 0.1); tone(300,0.1,'square',0.05,180); }
+  function sfxHit() { tone(120,0.15,'sawtooth',0.15,50); noiseBurst(0.08,0.12); }
+  function sfxEnemyDeath() { tone(200,0.3,'sawtooth',0.14,40); }
+  function sfxPlayerHurt() { tone(100,0.35,'sawtooth',0.18,35); }
+  function sfxDodge() { tone(500,0.15,'sine',0.08,900); }
+  function sfxPotion() { tone(600,0.1,'sine',0.1,900,0); tone(800,0.12,'sine',0.08,1100,0.08); }
+  function sfxSoul() { tone(700,0.08,'sine',0.06,1000); }
+  function sfxStairs() { tone(140,0.6,'sine',0.12,60); }
+  function sfxTelegraph() { tone(900,0.06,'square',0.05,900); }
+  function sfxBossRoar() { tone(70,0.9,'sawtooth',0.2,30); }
+  function sfxDeath() { tone(220,1.2,'sine',0.15,40); }
+
+  // ============================================================
+  //  META PROGRESSION (persistente)
+  // ============================================================
+  var META_KEY = 'criptaSilente_meta';
+  var SAVE_KEY = 'criptaSilente_save';
+
+  function loadMeta() {
+    try {
+      var raw = localStorage.getItem(META_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return { fragments: 0, vigore: 0, fiato: 0, borsa: 0 };
+  }
+  function saveMeta() { localStorage.setItem(META_KEY, JSON.stringify(meta)); }
+  var meta = loadMeta();
+
+  var UPGRADES = {
+    vigore: { name: 'Vigore', desc: '+15 Salute massima', max: 6, baseCost: 5, step: 4 },
+    fiato:  { name: 'Fiato',  desc: '+10 Energia massima', max: 5, baseCost: 5, step: 4 },
+    borsa:  { name: 'Bisaccia', desc: '+1 fiaschetta iniziale', max: 3, baseCost: 8, step: 6 }
+  };
+  function upgradeCost(key) {
+    var lvl = meta[key] || 0;
+    var u = UPGRADES[key];
+    return u.baseCost + lvl * u.step;
+  }
+
+  function renderShop() {
+    document.getElementById('shopFragmentsDisplay').textContent = '✧ ' + meta.fragments + ' Frammenti d\'Anima';
+    var grid = document.getElementById('shopGrid');
+    grid.innerHTML = '';
+    Object.keys(UPGRADES).forEach(function(key) {
+      var u = UPGRADES[key];
+      var lvl = meta[key] || 0;
+      var maxed = lvl >= u.max;
+      var cost = upgradeCost(key);
+      var row = document.createElement('div');
+      row.className = 'shop-item';
+      row.innerHTML = '<div class="info"><b>' + u.name + ' (Lv.' + lvl + '/' + u.max + ')</b><span>' + u.desc + '</span></div>' +
+        '<button ' + ((maxed || meta.fragments < cost) ? 'disabled' : '') + ' onclick="buyUpgrade(\'' + key + '\')">' +
+        (maxed ? 'MASSIMO' : ('✧ ' + cost)) + '</button>';
+      grid.appendChild(row);
+    });
+  }
+  window.buyUpgrade = function(key) {
+    var cost = upgradeCost(key);
+    if (meta.fragments >= cost && (meta[key]||0) < UPGRADES[key].max) {
+      meta.fragments -= cost;
+      meta[key] = (meta[key]||0) + 1;
+      saveMeta();
+      renderShop();
+      document.getElementById('fragmentsDisplay').textContent = '✧ ' + meta.fragments + ' Frammenti d\'Anima';
+    }
+  };
+  window.openShop = function() {
+    renderShop();
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('shopScreen').classList.remove('hidden');
+  };
+  window.closeShop = function() {
+    document.getElementById('shopScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+  };
+
+  // ============================================================
+  //  ARMI
+  // ============================================================
+  var WEAPONS = {
+    spada:   { name: 'Spada Logora',    range: 50, arc: 1.4, dmg: 14, stamina: 15, cooldown: 380, color: '#c9c9c9' },
+    ascia:   { name: 'Ascia Pesante',   range: 52, arc: 1.9, dmg: 22, stamina: 22, cooldown: 600, color: '#c98a4a' },
+    pugnale: { name: 'Pugnale Ombra',   range: 36, arc: 1.0, dmg: 9,  stamina: 10, cooldown: 220, color: '#8a4ac9' },
+    lancia:  { name: 'Lancia Spezzata', range: 70, arc: 0.6, dmg: 16, stamina: 18, cooldown: 460, color: '#4ac9a0' }
+  };
+
+  // ============================================================
+  //  STATO DI GIOCO
+  // ============================================================
+  var STATE = { MENU: 0, PLAYING: 1, PAUSED: 2, DEAD: 3 };
+  var state = STATE.MENU;
+
+  var player, dungeon, enemies, projectiles, pickups, particles, chests, camera, toastTimer;
+  var runSouls = 0, depth = 1, isBossFloor = false, bossDefeated = false, currentBoss = null;
+
+  function makePlayer() {
+    var maxHp = 80 + meta.vigore * 15;
+    var maxStam = 60 + meta.fiato * 10;
+    return {
+      x: 0, y: 0, r: 11,
+      hp: maxHp, maxHp: maxHp,
+      stamina: maxStam, maxStamina: maxStam,
+      speed: 2.6,
+      facing: Math.PI/2,
+      weapon: 'spada',
+      potions: 2 + meta.borsa,
+      isRolling: false, rollTimer: 0, rollDx: 0, rollDy: 0,
+      isAttacking: false, attackTimer: 0,
+      invincibleUntil: 0,
+      lastActionTime: 0,
+      lastAttackTime: -9999,
+      lastPotionTime: -9999
+    };
+  }
+
+  // ============================================================
+  //  GENERAZIONE DUNGEON
+  // ============================================================
+  function inBounds(gx, gy, gw, gh) { return gx>=0 && gy>=0 && gx<gw && gy<gh; }
+
+  function generateDungeon(depthNum, bossFloor) {
+    var gw = 46, gh = 46;
+    var grid = [];
+    for (var y=0;y<gh;y++) { grid.push(new Array(gw).fill(0)); }
+    var rooms = [];
+
+    function carveRoom(rx, ry, rw, rh) {
+      for (var y=ry;y<ry+rh;y++) for (var x=rx;x<rx+rw;x++) if (inBounds(x,y,gw,gh)) grid[y][x] = 1;
+    }
+    function roomsOverlap(a, b, pad) {
+      return a.x-pad < b.x+b.w && a.x+a.w+pad > b.x && a.y-pad < b.y+b.h && a.y+a.h+pad > b.y;
+    }
+    function carveCorridor(x1,y1,x2,y2) {
+      var horizFirst = Math.random() < 0.5;
+      var cx = x1, cy = y1;
+      if (horizFirst) {
+        for (var x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) { if (inBounds(x,y1,gw,gh)) grid[y1][x]=1; if (inBounds(x,y1+1,gw,gh)) grid[y1+1][x]=1; }
+        for (var y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) { if (inBounds(x2,y,gw,gh)) grid[y][x2]=1; if (inBounds(x2+1,y,gw,gh)) grid[y][x2+1]=1; }
+      } else {
+        for (var y2b=Math.min(y1,y2); y2b<=Math.max(y1,y2); y2b++) { if (inBounds(x1,y2b,gw,gh)) grid[y2b][x1]=1; if (inBounds(x1+1,y2b,gw,gh)) grid[y2b][x1+1]=1; }
+        for (var x2b=Math.min(x1,x2); x2b<=Math.max(x1,x2); x2b++) { if (inBounds(x2b,y2,gw,gh)) grid[y2][x2b]=1; if (inBounds(x2b,y2+1,gw,gh)) grid[y2][x2b+1]=1; }
+      }
+    }
+
+    if (bossFloor) {
+      var arenaW = 16, arenaH = 14;
+      var ax = Math.floor((gw-arenaW)/2), ay = Math.floor((gh-arenaH)/2);
+      carveRoom(ax, ay, arenaW, arenaH);
+      rooms.push({ x:ax, y:ay, w:arenaW, h:arenaH, cx: ax+Math.floor(arenaW/2), cy: ay+arenaH-2 });
+      rooms.push({ x:ax, y:ay, w:arenaW, h:arenaH, cx: ax+Math.floor(arenaW/2), cy: ay+2 });
+    } else {
+      var numRooms = 8 + Math.min(6, Math.floor(depthNum/2));
+      var attempts = 0;
+      while (rooms.length < numRooms && attempts < 300) {
+        attempts++;
+        var rw = 4 + Math.floor(Math.random()*5);
+        var rh = 4 + Math.floor(Math.random()*5);
+        var rx = 1 + Math.floor(Math.random()*(gw-rw-2));
+        var ry = 1 + Math.floor(Math.random()*(gh-rh-2));
+        var cand = { x:rx, y:ry, w:rw, h:rh };
+        var overlaps = false;
+        for (var i=0;i<rooms.length;i++) { if (roomsOverlap(cand, rooms[i], 2)) { overlaps = true; break; } }
+        if (!overlaps) {
+          carveRoom(rx, ry, rw, rh);
+          cand.cx = rx + Math.floor(rw/2); cand.cy = ry + Math.floor(rh/2);
+          rooms.push(cand);
+        }
+      }
+      for (i=1;i<rooms.length;i++) {
+        carveCorridor(rooms[i-1].cx, rooms[i-1].cy, rooms[i].cx, rooms[i].cy);
+      }
+    }
+
+    return { grid: grid, gw: gw, gh: gh, rooms: rooms };
+  }
+
+  function tileAt(gx, gy) {
+    if (!inBounds(gx, gy, dungeon.gw, dungeon.gh)) return 0;
+    return dungeon.grid[gy][gx];
+  }
+  function isWallAtPixel(px, py) {
+    var gx = Math.floor(px / TILE), gy = Math.floor(py / TILE);
+    return tileAt(gx, gy) === 0;
+  }
+  function circleCollides(px, py, r) {
+    var pts = [[px-r,py],[px+r,py],[px,py-r],[px,py+r]];
+    for (var i=0;i<pts.length;i++) if (isWallAtPixel(pts[i][0], pts[i][1])) return true;
+    return false;
+  }
+
+  // ============================================================
+  //  TIPI NEMICI
+  // ============================================================
+  var ENEMY_BASE = {
+    sciacallo:  { hp:18, dmg:8,  speed:2.6, detect:230, range:34,  telegraph:280, atkDur:150, recover:400, color:'#a04030', size:12, ranged:false },
+    arciere:    { hp:14, dmg:10, speed:1.5, detect:280, range:230, telegraph:520, atkDur:120, recover:750, color:'#7a4aa0', size:11, ranged:true, keepDistance:120 },
+    cavaliere:  { hp:42, dmg:17, speed:1.3, detect:210, range:42,  telegraph:650, atkDur:220, recover:650, color:'#4a5a7a', size:16, ranged:false },
+    sciame:     { hp:6,  dmg:4,  speed:3.3, detect:300, range:26,  telegraph:150, atkDur:100, recover:250, color:'#c98a30', size:7,  ranged:false }
+  };
+
+  function depthMult(d) { return { hp: 1 + d*0.13, dmg: 1 + d*0.09, speed: Math.min(1.3, 1 + d*0.02) }; }
+
+  function makeEnemy(type, x, y, d) {
+    var base = ENEMY_BASE[type];
+    var m = depthMult(d);
+    return {
+      type: type, x: x, y: y,
+      hp: Math.round(base.hp * m.hp), maxHp: Math.round(base.hp * m.hp),
+      dmg: Math.round(base.dmg * m.dmg), speed: base.speed * m.speed,
+      detect: base.detect, range: base.range, telegraphTime: base.telegraph,
+      atkDur: base.atkDur, recoverTime: base.recover, color: base.color, size: base.size,
+      ranged: !!base.ranged, keepDistance: base.keepDistance || 0,
+      state: 'idle', stateTimer: 0, facing: 0, hitFlash: 0
+    };
+  }
+
+  function makeBoss(x, y, tier) {
+    return {
+      type: 'boss', x: x, y: y,
+      hp: 200 + tier*70, maxHp: 200 + tier*70,
+      dmg: 20 + tier*4, speed: 1.6,
+      detect: 600, range: 60, telegraphTime: 750, atkDur: 320, recoverTime: 900,
+      color: '#7a1f1f', size: 30,
+      ranged: false, state: 'idle', stateTimer: 0, facing: 0, hitFlash: 0,
+      attackPattern: 'slam', chargeDx:0, chargeDy:0
+    };
+  }
+
+  function spawnEnemiesForFloor() {
+    enemies = [];
+    currentBoss = null;
+    bossDefeated = false;
+    if (isBossFloor) {
+      var tier = Math.floor(depth/5);
+      var bossRoom = dungeon.rooms[1];
+      var boss = makeBoss(bossRoom.cx*TILE+TILE/2, bossRoom.cy*TILE+TILE/2, tier);
+      enemies.push(boss);
+      currentBoss = boss;
+      return;
+    }
+    var types = ['sciacallo','arciere','cavaliere','sciame'];
+    for (var i=1;i<dungeon.rooms.length;i++) {
+      var room = dungeon.rooms[i];
+      var count = 1 + Math.floor(Math.random()*2) + (depth>4?Math.floor(Math.random()*2):0);
+      for (var c=0;c<count;c++) {
+        var type = types[Math.floor(Math.random()*types.length)];
+        if (depth < 2 && type === 'cavaliere') type = 'sciacallo';
+        var ex = (room.x + 1 + Math.random()*(room.w-2)) * TILE;
+        var ey = (room.y + 1 + Math.random()*(room.h-2)) * TILE;
+        enemies.push(makeEnemy(type, ex, ey, depth));
+        if (type === 'sciame') {
+          for (var s=0;s<2;s++) {
+            enemies.push(makeEnemy('sciame', ex + (Math.random()*20-10), ey + (Math.random()*20-10), depth));
+          }
+        }
+      }
+    }
+  }
+
+  function spawnPickupsForFloor() {
+    pickups = [];
+    chests = [];
+    for (var i=1;i<dungeon.rooms.length;i++) {
+      var room = dungeon.rooms[i];
+      if (Math.random() < 0.35) {
+        pickups.push({ type:'potion', x:(room.x+1+Math.random()*(room.w-2))*TILE, y:(room.y+1+Math.random()*(room.h-2))*TILE });
+      }
+      if (Math.random() < 0.5) {
+        pickups.push({ type:'soul', x:(room.x+1+Math.random()*(room.w-2))*TILE, y:(room.y+1+Math.random()*(room.h-2))*TILE, value: 3+Math.floor(Math.random()*4) });
+      }
+    }
+    if (!isBossFloor && depth % 3 === 0 && dungeon.rooms.length > 2) {
+      var chestRoom = dungeon.rooms[dungeon.rooms.length-2];
+      var keys = Object.keys(WEAPONS);
+      var wKey = keys[Math.floor(Math.random()*keys.length)];
+      chests.push({ x: chestRoom.cx*TILE+TILE/2, y: chestRoom.cy*TILE+TILE/2, weapon: wKey, opened:false });
+    }
+  }
+
+  function startFloor() {
+    isBossFloor = (depth % 5 === 0);
+    dungeon = generateDungeon(depth, isBossFloor);
+    var startRoom = dungeon.rooms[0];
+    player.x = startRoom.cx*TILE + TILE/2;
+    player.y = startRoom.cy*TILE + TILE/2;
+    projectiles = [];
+    particles = [];
+    spawnEnemiesForFloor();
+    spawnPickupsForFloor();
+    document.getElementById('depthCounter').textContent = 'Livello ' + depth + (isBossFloor ? ' — Sacrario' : '');
+    document.getElementById('bossBarWrap').classList.toggle('active', isBossFloor);
+    updateHUD();
+    if (isBossFloor) { sfxBossRoar(); showToast('Il Guardiano di Cenere veglia in questo luogo...'); }
+    autosave();
+  }
+
+  // ============================================================
+  //  SALVATAGGIO RUN
+  // ============================================================
+  function autosave() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        depth: depth, hp: player.hp, maxHp: player.maxHp,
+        stamina: player.stamina, maxStamina: player.maxStamina,
+        weapon: player.weapon, potions: player.potions, runSouls: runSouls
+      }));
+    } catch(e) {}
+  }
+  function hasSave() {
+    try { return !!localStorage.getItem(SAVE_KEY); } catch(e) { return false; }
+  }
+  function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch(e) {} }
+
+  // ============================================================
+  //  HUD / TOAST
+  // ============================================================
+  function updateHUD() {
+    document.getElementById('hpFill').style.width = Math.max(0,(player.hp/player.maxHp*100)) + '%';
+    document.getElementById('stamFill').style.width = Math.max(0,(player.stamina/player.maxStamina*100)) + '%';
+    document.getElementById('soulsCounter').textContent = 'Anime: ' + runSouls;
+    document.getElementById('potionCounter').textContent = 'Fiaschette: ' + player.potions;
+    if (currentBoss) {
+      document.getElementById('bossBarFill').style.width = Math.max(0,(currentBoss.hp/currentBoss.maxHp*100)) + '%';
+    }
+  }
+  function showToast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  }
+
+  // ============================================================
+  //  INPUT
+  // ============================================================
+  var keys = {};
+  window.addEventListener('keydown', function(e) {
+    keys[e.key.toLowerCase()] = true;
+    if (state !== STATE.PLAYING) { if ((e.key==='p'||e.key==='Escape') && state===STATE.PAUSED) togglePause(); return; }
+    if (e.key.toLowerCase()==='j') doAttack();
+    if (e.key.toLowerCase()==='k' || e.key==='Shift') doDodge();
+    if (e.key.toLowerCase()==='e') doPotion();
+    if (e.key==='p' || e.key==='Escape') togglePause();
+  });
+  window.addEventListener('keyup', function(e) { keys[e.key.toLowerCase()] = false; });
+  window.addEventListener('mousedown', function(e) { ensureAudio(); if (state===STATE.PLAYING && e.button===0) doAttack(); });
+  document.addEventListener('click', function(){ ensureAudio(); });
+
+  // joystick touch
+  var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  var joyActive = false, joyDx = 0, joyDy = 0, joyStartX=0, joyStartY=0;
+  var joyZone = document.getElementById('joystickZone');
+  var joyBase = document.getElementById('joystickBase');
+  var joyStick = document.getElementById('joystickStick');
+  if (isTouch) document.getElementById('actionButtons').classList.remove('hidden');
+
+  joyZone.addEventListener('touchstart', function(e) {
+    ensureAudio();
+    e.preventDefault();
+    var t = e.touches[0];
+    joyActive = true;
+    joyStartX = t.clientX; joyStartY = t.clientY;
+    joyBase.style.left = (joyStartX-48)+'px'; joyBase.style.top = (joyStartY-48)+'px';
+    joyBase.style.display = 'block';
+    joyStick.style.left = (joyStartX-22)+'px'; joyStick.style.top = (joyStartY-22)+'px';
+    joyStick.style.display = 'block';
+  }, {passive:false});
+  joyZone.addEventListener('touchmove', function(e) {
+    if (!joyActive) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    var dx = t.clientX - joyStartX, dy = t.clientY - joyStartY;
+    var dist = Math.min(40, Math.hypot(dx,dy));
+    var ang = Math.atan2(dy,dx);
+    joyDx = Math.cos(ang) * (dist/40);
+    joyDy = Math.sin(ang) * (dist/40);
+    joyStick.style.left = (joyStartX + Math.cos(ang)*dist - 22)+'px';
+    joyStick.style.top = (joyStartY + Math.sin(ang)*dist - 22)+'px';
+  }, {passive:false});
+  joyZone.addEventListener('touchend', function(e) {
+    joyActive = false; joyDx=0; joyDy=0;
+    joyBase.style.display = 'none'; joyStick.style.display = 'none';
+  });
+
+  function bindTap(id, fn) {
+    var el = document.getElementById(id);
+    el.addEventListener('touchstart', function(e){ e.preventDefault(); ensureAudio(); if (state===STATE.PLAYING) fn(); }, {passive:false});
+  }
+  bindTap('attackBtn', doAttack);
+  bindTap('dodgeBtn', doDodge);
+  bindTap('potionBtn', doPotion);
+
+  // ============================================================
+  //  AZIONI GIOCATORE
+  // ============================================================
+  function doAttack() {
+    var now = performance.now();
+    var w = WEAPONS[player.weapon];
+    if (player.isRolling || player.isAttacking) return;
+    if (now - player.lastAttackTime < w.cooldown) return;
+    if (player.stamina < w.stamina) return;
+    player.isAttacking = true;
+    player.attackTimer = 160;
+    player.lastAttackTime = now;
+    player.stamina -= w.stamina;
+    player.lastActionTime = now;
+    sfxSwing();
+    for (var i=0;i<enemies.length;i++) {
+      var en = enemies[i];
+      var ddx = en.x - player.x, ddy = en.y - player.y;
+      var dist = Math.hypot(ddx, ddy);
+      if (dist > w.range + en.size) continue;
+      var ang = Math.atan2(ddy, ddx);
+      var diff = Math.atan2(Math.sin(ang - player.facing), Math.cos(ang - player.facing));
+      if (Math.abs(diff) <= w.arc/2) {
+        damageEnemy(en, w.dmg, ddx/dist, ddy/dist);
+      }
+    }
+    updateHUD();
+  }
+
+  function damageEnemy(en, dmg, kx, ky) {
+    en.hp -= dmg;
+    en.hitFlash = 150;
+    en.x += (kx||0) * 6; en.y += (ky||0) * 6;
+    spawnHitParticles(en.x, en.y, '#e8c874');
+    sfxHit();
+    if (en.hp <= 0 && en.alive !== false) {
+      en.alive = false;
+      sfxEnemyDeath();
+      var soulVal = en.type==='boss' ? (40+Math.floor(Math.random()*20)) :
+                    en.type==='cavaliere' ? (8+Math.floor(Math.random()*6)) :
+                    en.type==='arciere' ? (4+Math.floor(Math.random()*3)) :
+                    en.type==='sciame' ? (1+Math.floor(Math.random()*2)) : (3+Math.floor(Math.random()*3));
+      pickups.push({ type:'soul', x: en.x, y: en.y, value: soulVal });
+      if (en.type === 'boss') {
+        currentBoss = null;
+        bossDefeated = true;
+        document.getElementById('bossBarWrap').classList.remove('active');
+        showToast('Il Guardiano è caduto. Le scale sono libere.');
+      }
+    }
+  }
+
+  function doDodge() {
+    var now = performance.now();
+    if (player.isRolling) return;
+    if (player.stamina < 25) return;
+    var dx = 0, dy = 0;
+    if (keys['w']||keys['arrowup']) dy -= 1;
+    if (keys['s']||keys['arrowdown']) dy += 1;
+    if (keys['a']||keys['arrowleft']) dx -= 1;
+    if (keys['d']||keys['arrowright']) dx += 1;
+    if (joyActive) { dx = joyDx; dy = joyDy; }
+    if (dx===0 && dy===0) { dx = Math.cos(player.facing); dy = Math.sin(player.facing); }
+    var len = Math.hypot(dx,dy) || 1;
+    player.rollDx = dx/len; player.rollDy = dy/len;
+    player.isRolling = true;
+    player.rollTimer = 220;
+    player.stamina -= 25;
+    player.invincibleUntil = now + 260;
+    player.lastActionTime = now;
+    sfxDodge();
+  }
+
+  function doPotion() {
+    var now = performance.now();
+    if (player.potions <= 0) { showToast('Non hai più fiaschette.'); return; }
+    if (now - player.lastPotionTime < 700) return;
+    if (player.hp >= player.maxHp) return;
+    player.potions--;
+    player.hp = Math.min(player.maxHp, player.hp + 35);
+    player.lastPotionTime = now;
+    sfxPotion();
+    updateHUD();
+  }
+
+  // ============================================================
+  //  PARTICELLE
+  // ============================================================
+  function spawnHitParticles(x,y,color) {
+    for (var i=0;i<6;i++) {
+      var ang = Math.random()*Math.PI*2, spd = Math.random()*2+0.5;
+      particles.push({ x:x, y:y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, life:300+Math.random()*150, color:color });
+    }
+  }
+
+  // ============================================================
+  //  AGGIORNAMENTO
+  // ============================================================
+  var lastTime = performance.now();
+
+  function updatePlayer(dt) {
+    var now = performance.now();
+    if (player.isRolling) {
+      player.rollTimer -= dt;
+      var rspeed = player.speed * 3.1;
+      var nx = player.x + player.rollDx*rspeed*(dt/16.6);
+      var ny = player.y + player.rollDy*rspeed*(dt/16.6);
+      if (!circleCollides(nx, player.y, player.r)) player.x = nx;
+      if (!circleCollides(player.x, ny, player.r)) player.y = ny;
+      if (player.rollTimer <= 0) player.isRolling = false;
+    } else {
+      var dx=0, dy=0;
+      if (keys['w']||keys['arrowup']) dy -= 1;
+      if (keys['s']||keys['arrowdown']) dy += 1;
+      if (keys['a']||keys['arrowleft']) dx -= 1;
+      if (keys['d']||keys['arrowright']) dx += 1;
+      if (joyActive) { dx = joyDx; dy = joyDy; }
+      var len = Math.hypot(dx,dy);
+      if (len > 0.05) {
+        dx/=len; dy/=len;
+        player.facing = Math.atan2(dy,dx);
+        var sp = player.speed * (dt/16.6);
+        var nx = player.x + dx*sp, ny = player.y + dy*sp;
+        if (!circleCollides(nx, player.y, player.r)) player.x = nx;
+        if (!circleCollides(player.x, ny, player.r)) player.y = ny;
+      }
+    }
+    if (player.isAttacking) {
+      player.attackTimer -= dt;
+      if (player.attackTimer <= 0) player.isAttacking = false;
+    }
+    // rigenerazione energia (con ritardo dopo un'azione)
+    if (now - player.lastActionTime > 500 && player.stamina < player.maxStamina) {
+      player.stamina = Math.min(player.maxStamina, player.stamina + 22*(dt/1000));
+    }
+  }
+
+  function updateEnemyAI(en, dt) {
+    if (en.alive === false) return;
+    var now = performance.now();
+    var dx = player.x - en.x, dy = player.y - en.y;
+    var dist = Math.hypot(dx,dy);
+    if (en.hitFlash > 0) en.hitFlash -= dt;
+
+    if (en.type === 'boss') { updateBossAI(en, dt, dx, dy, dist); return; }
+
+    switch (en.state) {
+      case 'idle':
+        if (dist < en.detect) en.state = 'chase';
+        break;
+      case 'chase': {
+        var moveDist = dist;
+        var desiredDist = en.ranged ? en.keepDistance : 0;
+        if (moveDist > en.range * 0.8 || (en.ranged && moveDist < desiredDist*0.7)) {
+          var dir = (en.ranged && moveDist < desiredDist*0.7) ? -1 : 1;
+          var nx = en.x + (dx/dist)*en.speed*dir*(dt/16.6);
+          var ny = en.y + (dy/dist)*en.speed*dir*(dt/16.6);
+          if (!circleCollides(nx, en.y, en.size*0.6)) en.x = nx;
+          if (!circleCollides(en.x, ny, en.size*0.6)) en.y = ny;
+        }
+        en.facing = Math.atan2(dy,dx);
+        if (dist <= en.range && (!en.ranged || dist <= en.range)) {
+          en.state = 'telegraph'; en.stateTimer = en.telegraphTime; sfxTelegraph();
+        }
+        if (dist > en.detect*1.4) en.state = 'idle';
+        break;
+      }
+      case 'telegraph':
+        en.stateTimer -= dt;
+        en.facing = Math.atan2(dy,dx);
+        if (en.stateTimer <= 0) {
+          en.state = 'attack'; en.stateTimer = en.atkDur;
+          if (en.ranged) {
+            projectiles.push({ x:en.x, y:en.y, vx:Math.cos(en.facing)*4.5, vy:Math.sin(en.facing)*4.5, dmg: en.dmg, life: 3000, fromEnemy:true });
+          } else {
+            if (dist <= en.range + 14 && now > player.invincibleUntil) {
+              player.hp -= en.dmg;
+              player.invincibleUntil = now + 500;
+              spawnHitParticles(player.x, player.y, '#d1495b');
+              sfxPlayerHurt();
+              updateHUD();
+              checkPlayerDeath();
+            }
+          }
+        }
+        break;
+      case 'attack':
+        en.stateTimer -= dt;
+        if (en.stateTimer <= 0) { en.state = 'recover'; en.stateTimer = en.recoverTime; }
+        break;
+      case 'recover':
+        en.stateTimer -= dt;
+        if (en.stateTimer <= 0) en.state = 'chase';
+        break;
+    }
+  }
+
+  function updateBossAI(en, dt, dx, dy, dist) {
+    var now = performance.now();
+    switch (en.state) {
+      case 'idle':
+        if (dist < en.detect) en.state = 'chase';
+        break;
+      case 'chase':
+        en.facing = Math.atan2(dy,dx);
+        if (dist > en.range) {
+          var nx = en.x + (dx/dist)*en.speed*(dt/16.6);
+          var ny = en.y + (dy/dist)*en.speed*(dt/16.6);
+          if (!circleCollides(nx, en.y, en.size*0.6)) en.x = nx;
+          if (!circleCollides(en.x, ny, en.size*0.6)) en.y = ny;
+        } else {
+          en.state = 'telegraph'; en.stateTimer = en.telegraphTime;
+          en.attackPattern = Math.random() < 0.5 ? 'slam' : 'charge';
+          en.chargeDx = dx/dist; en.chargeDy = dy/dist;
+          sfxTelegraph();
+        }
+        break;
+      case 'telegraph':
+        en.stateTimer -= dt;
+        en.facing = Math.atan2(dy,dx);
+        if (en.stateTimer <= 0) {
+          en.state = 'attack'; en.stateTimer = en.atkDur;
+          if (en.attackPattern === 'slam') {
+            if (dist <= 95 && now > player.invincibleUntil) {
+              player.hp -= en.dmg;
+              player.invincibleUntil = now + 500;
+              spawnHitParticles(player.x, player.y, '#d1495b');
+              sfxPlayerHurt(); updateHUD(); checkPlayerDeath();
+            }
+          }
+        }
+        break;
+      case 'attack':
+        en.stateTimer -= dt;
+        if (en.attackPattern === 'charge') {
+          var nx2 = en.x + en.chargeDx*7*(dt/16.6);
+          var ny2 = en.y + en.chargeDy*7*(dt/16.6);
+          if (!circleCollides(nx2, en.y, en.size*0.6)) en.x = nx2;
+          if (!circleCollides(en.x, ny2, en.size*0.6)) en.y = ny2;
+          var pdist = Math.hypot(player.x-en.x, player.y-en.y);
+          if (pdist < en.size+player.r && now > player.invincibleUntil) {
+            player.hp -= en.dmg;
+            player.invincibleUntil = now + 500;
+            spawnHitParticles(player.x, player.y, '#d1495b');
+            sfxPlayerHurt(); updateHUD(); checkPlayerDeath();
+          }
+        }
+        if (en.stateTimer <= 0) { en.state = 'recover'; en.stateTimer = en.recoverTime; }
+        break;
+      case 'recover':
+        en.stateTimer -= dt;
+        if (en.stateTimer <= 0) en.state = 'chase';
+        break;
+    }
+  }
+
+  function checkPlayerDeath() {
+    if (player.hp <= 0 && state === STATE.PLAYING) {
+      state = STATE.DEAD;
+      sfxDeath();
+      var fragGained = Math.max(runSouls>0?1:0, Math.floor(runSouls * 0.12));
+      meta.fragments += fragGained;
+      saveMeta();
+      clearSave();
+      document.getElementById('deathStats').innerHTML =
+        'Sei giunto al <b>Livello ' + depth + '</b><br>' +
+        'Anime raccolte in questa discesa: <b>' + runSouls + '</b><br>' +
+        'Frammenti d\'Anima ottenuti: <b>✧ ' + fragGained + '</b>';
+      document.getElementById('gameOverScreen').classList.remove('hidden');
+      document.getElementById('pauseBtn').classList.remove('visible');
+    }
+  }
+
+  function updateProjectiles(dt) {
+    for (var i=projectiles.length-1;i>=0;i--) {
+      var p = projectiles[i];
+      p.x += p.vx*(dt/16.6); p.y += p.vy*(dt/16.6);
+      p.life -= dt;
+      if (isWallAtPixel(p.x,p.y) || p.life <= 0) { projectiles.splice(i,1); continue; }
+      if (p.fromEnemy) {
+        var now = performance.now();
+        var pd = Math.hypot(p.x-player.x, p.y-player.y);
+        if (pd < player.r+5 && now > player.invincibleUntil) {
+          player.hp -= p.dmg;
+          player.invincibleUntil = now + 500;
+          spawnHitParticles(player.x, player.y, '#d1495b');
+          sfxPlayerHurt(); updateHUD();
+          projectiles.splice(i,1);
+          checkPlayerDeath();
+        }
+      }
+    }
+  }
+
+  function updatePickups() {
+    for (var i=pickups.length-1;i>=0;i--) {
+      var pk = pickups[i];
+      var d = Math.hypot(pk.x-player.x, pk.y-player.y);
+      if (d < player.r + 12) {
+        if (pk.type === 'potion') { player.potions = Math.min(6, player.potions+1); sfxPotion(); showToast('Fiaschetta raccolta.'); }
+        else if (pk.type === 'soul') { runSouls += pk.value; sfxSoul(); }
+        pickups.splice(i,1);
+        updateHUD();
+      }
+    }
+    for (i=chests.length-1;i>=0;i--) {
+      var ch = chests[i];
+      if (ch.opened) continue;
+      var d2 = Math.hypot(ch.x-player.x, ch.y-player.y);
+      if (d2 < player.r + 16) {
+        ch.opened = true;
+        player.weapon = ch.weapon;
+        showToast('Hai impugnato: ' + WEAPONS[ch.weapon].name);
+        sfxSoul();
+      }
+    }
+  }
+
+  function checkStairs() {
+    var stairsRoom = dungeon.rooms[dungeon.rooms.length-1];
+    var sx = stairsRoom.cx*TILE+TILE/2, sy = stairsRoom.cy*TILE+TILE/2;
+    var d = Math.hypot(sx-player.x, sy-player.y);
+    if (d < TILE) {
+      if (isBossFloor && !bossDefeated) {
+        return;
+      }
+      depth++;
+      sfxStairs();
+      startFloor();
+    }
+  }
+
+  function update(dt) {
+    if (state !== STATE.PLAYING) return;
+    updatePlayer(dt);
+    for (var i=0;i<enemies.length;i++) updateEnemyAI(enemies[i], dt);
+    enemies = enemies.filter(function(e){ return e.alive !== false; });
+    updateProjectiles(dt);
+    updatePickups();
+    checkStairs();
+    for (i=particles.length-1;i>=0;i--) {
+      var p = particles[i];
+      p.x += p.vx*(dt/16.6); p.y += p.vy*(dt/16.6);
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i,1);
+    }
+    updateHUD();
+  }
+
+  // ============================================================
+  //  DISEGNO
+  // ============================================================
+  function worldToScreen(x,y) { return [x - camera.x + W/2, y - camera.y + H/2]; }
+
+  function draw() {
+    ctx.fillStyle = '#0a0908';
+    ctx.fillRect(0,0,W,H);
+    if (state === STATE.MENU) return;
+
+    camera = { x: player.x, y: player.y };
+
+    var gx0 = Math.max(0, Math.floor((camera.x - W/2)/TILE) - 1);
+    var gx1 = Math.min(dungeon.gw, Math.ceil((camera.x + W/2)/TILE) + 1);
+    var gy0 = Math.max(0, Math.floor((camera.y - H/2)/TILE) - 1);
+    var gy1 = Math.min(dungeon.gh, Math.ceil((camera.y + H/2)/TILE) + 1);
+
+    for (var gy=gy0; gy<gy1; gy++) {
+      for (var gx=gx0; gx<gx1; gx++) {
+        var t = dungeon.grid[gy][gx];
+        var sp = worldToScreen(gx*TILE, gy*TILE);
+        if (t === 1) {
+          ctx.fillStyle = ((gx+gy)%2===0) ? '#1c1712' : '#191510';
+          ctx.fillRect(sp[0], sp[1], TILE, TILE);
+        } else {
+          ctx.fillStyle = '#040302';
+          ctx.fillRect(sp[0], sp[1], TILE, TILE);
+        }
+      }
+    }
+
+    // scale
+    var stairsRoom = dungeon.rooms[dungeon.rooms.length-1];
+    var stp = worldToScreen(stairsRoom.cx*TILE+TILE/2, stairsRoom.cy*TILE+TILE/2);
+    var stairsLocked = isBossFloor && !bossDefeated;
+    ctx.beginPath();
+    ctx.arc(stp[0], stp[1], 16, 0, Math.PI*2);
+    ctx.fillStyle = stairsLocked ? 'rgba(120,40,40,0.5)' : 'rgba(216,200,160,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = stairsLocked ? '#7a2a2a' : '#d8c8a0';
+    ctx.lineWidth = 2; ctx.stroke();
+
+    // chests
+    for (var ci=0; ci<chests.length; ci++) {
+      var ch = chests[ci];
+      if (ch.opened) continue;
+      var cp = worldToScreen(ch.x, ch.y);
+      ctx.fillStyle = '#8a6a3a';
+      ctx.fillRect(cp[0]-10, cp[1]-8, 20, 16);
+      ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(cp[0]-10, cp[1]-8, 20, 16);
+    }
+
+    // pickups
+    for (var pi=0; pi<pickups.length; pi++) {
+      var pk = pickups[pi];
+      var pp = worldToScreen(pk.x, pk.y);
+      ctx.beginPath();
+      if (pk.type === 'potion') {
+        ctx.fillStyle = '#5fb87a';
+        ctx.arc(pp[0], pp[1], 6, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle = '#d9c46a';
+        ctx.shadowColor = '#d9c46a'; ctx.shadowBlur = 6;
+        ctx.arc(pp[0], pp[1], 4, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // nemici
+    for (var ei=0; ei<enemies.length; ei++) {
+      var en = enemies[ei];
+      var ep = worldToScreen(en.x, en.y);
+      ctx.save();
+      ctx.translate(ep[0], ep[1]);
+      ctx.rotate(en.facing);
+      var flashColor = en.hitFlash > 0 ? '#ffffff' : en.color;
+      ctx.fillStyle = flashColor;
+      if (en.state === 'telegraph') {
+        ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 14;
+      }
+      if (en.type === 'boss') {
+        ctx.beginPath();
+        for (var k=0;k<6;k++) {
+          var a = k*Math.PI/3;
+          var rr = en.size;
+          if (k===0) ctx.moveTo(Math.cos(a)*rr, Math.sin(a)*rr);
+          else ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
+        }
+        ctx.closePath(); ctx.fill();
+      } else if (en.type === 'cavaliere') {
+        ctx.fillRect(-en.size/2,-en.size/2,en.size,en.size);
+      } else if (en.type === 'arciere') {
+        ctx.beginPath();
+        ctx.moveTo(en.size,0); ctx.lineTo(0,en.size); ctx.lineTo(-en.size,0); ctx.lineTo(0,-en.size);
+        ctx.closePath(); ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(en.size,0); ctx.lineTo(-en.size*0.7,en.size*0.6); ctx.lineTo(-en.size*0.7,-en.size*0.6);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+      // barra hp piccola
+      if (en.hp < en.maxHp && en.type !== 'boss') {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(ep[0]-14, ep[1]-en.size-10, 28, 4);
+        ctx.fillStyle = '#c94a4a';
+        ctx.fillRect(ep[0]-14, ep[1]-en.size-10, 28*Math.max(0,en.hp/en.maxHp), 4);
+      }
+    }
+
+    // proiettili
+    for (var qi=0;qi<projectiles.length;qi++) {
+      var pr = projectiles[qi];
+      var prp = worldToScreen(pr.x, pr.y);
+      ctx.fillStyle = '#c090e0';
+      ctx.shadowColor = '#c090e0'; ctx.shadowBlur = 6;
+      ctx.beginPath(); ctx.arc(prp[0], prp[1], 4, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // giocatore
+    var now = performance.now();
+    var pp2 = worldToScreen(player.x, player.y);
+    var flashing = now < player.invincibleUntil && Math.floor(now/80)%2===0;
+    ctx.save();
+    ctx.translate(pp2[0], pp2[1]);
+    ctx.rotate(player.facing);
+    ctx.globalAlpha = flashing ? 0.4 : 1;
+    ctx.fillStyle = '#cbd5c0';
+    ctx.beginPath();
+    ctx.arc(0,0,player.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#0a0908';
+    ctx.beginPath(); ctx.arc(player.r*0.55,0,2.5,0,Math.PI*2); ctx.fill();
+    if (player.isAttacking) {
+      var w = WEAPONS[player.weapon];
+      ctx.strokeStyle = w.color; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0,0,w.range*0.7, -w.arc/2, w.arc/2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    // particelle
+    for (var parti=0; parti<particles.length; parti++) {
+      var part = particles[parti];
+      var pap = worldToScreen(part.x, part.y);
+      ctx.globalAlpha = Math.max(0, part.life/450);
+      ctx.fillStyle = part.color;
+      ctx.fillRect(pap[0]-2, pap[1]-2, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+
+    // vignetta
+    var grad = ctx.createRadialGradient(W/2,H/2, Math.min(W,H)*0.25, W/2,H/2, Math.max(W,H)*0.65);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function loop(now) {
+    var dt = Math.min(50, now - lastTime);
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ============================================================
+  //  CONTROLLO SCHERMATE
+  // ============================================================
+  function refreshMenuScreen() {
+    document.getElementById('fragmentsDisplay').textContent = '✧ ' + meta.fragments + ' Frammenti d\'Anima';
+    document.getElementById('continueBtn').style.display = hasSave() ? 'block' : 'none';
+  }
+  refreshMenuScreen();
+
+  window.startNewRun = function() {
+    ensureAudio();
+    clearSave();
+    player = makePlayer();
+    runSouls = 0; depth = 1;
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('pauseScreen').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.add('visible');
+    state = STATE.PLAYING;
+    startFloor();
+  };
+
+  window.continueRun = function() {
+    ensureAudio();
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch(e) {}
+    player = makePlayer();
+    if (raw) {
+      player.hp = raw.hp; player.maxHp = raw.maxHp;
+      player.stamina = raw.stamina; player.maxStamina = raw.maxStamina;
+      player.weapon = raw.weapon || 'spada';
+      player.potions = raw.potions;
+      runSouls = raw.runSouls || 0;
+      depth = raw.depth || 1;
+    } else { depth = 1; runSouls = 0; }
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.add('visible');
+    state = STATE.PLAYING;
+    startFloor();
+  };
+
+  window.backToMenuFromDeath = function() {
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+    document.getElementById('fragmentsDisplay').textContent = '✧ ' + meta.fragments + ' Frammenti d\'Anima';
+    refreshMenuScreen();
+    state = STATE.MENU;
+  };
+
+  window.togglePause = function() {
+    if (state === STATE.PLAYING) {
+      state = STATE.PAUSED;
+      document.getElementById('pauseScreen').classList.remove('hidden');
+    } else if (state === STATE.PAUSED) {
+      state = STATE.PLAYING;
+      document.getElementById('pauseScreen').classList.add('hidden');
+    }
+  };
+
+  window.quitToMenu = function() {
+    autosave();
+    document.getElementById('pauseScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+    document.getElementById('pauseBtn').classList.remove('visible');
+    refreshMenuScreen();
+    state = STATE.MENU;
+  };
+
+})();
+</script>
+</body>
+</html>
