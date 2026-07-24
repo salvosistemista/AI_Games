@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Vegetable Merge Puzzle Game</title>
+    <!-- Matter.js Physics Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1e29;
+            --card-bg: #252b3b;
+            --accent-color: #4CAF50;
+            --danger-color: #ff4757;
+            --text-color: #ffffff;
+            --subtext-color: #a0aec0;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            max-width: 440px;
+            height: 100vh;
+            max-height: 880px;
+            background: #151821;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        /* Top Header UI */
+        .header {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+            z-index: 10;
+        }
+
+        .score-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .score-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--subtext-color);
+        }
+
+        .score-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ffca28;
+        }
+
+        .next-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .next-preview {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            background: #2a3142;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        /* Canvas Area */
+        #canvas-holder {
+            position: relative;
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Start Screen Overlay (To trigger Fullscreen API) */
+        #start-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(21, 24, 33, 0.96);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            cursor: pointer;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 20px;
+            font-weight: 800;
+            border-radius: 30px;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+            margin-top: 20px;
+        }
+
+        /* Danger Warning Overlay */
+        #danger-timer {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 71, 87, 0.9);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+            animation: pulse 0.5s infinite alternate;
+            z-index: 20;
+        }
+
+        @keyframes pulse {
+            from { transform: translateX(-50%) scale(1); }
+            to { transform: translateX(-50%) scale(1.08); }
+        }
+
+        /* Modal Overlay */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 18, 25, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--danger-color);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .modal-score {
+            font-size: 18px;
+            color: var(--subtext-color);
+            margin-bottom: 24px;
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            border: none;
+            padding: 14px 36px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .btn-restart:active {
+            transform: scale(0.95);
+        }
+
+        /* Tier Chain Footer Guide */
+        .tier-guide {
+            width: 100%;
+            padding: 8px;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 14px;
+        }
+
+        .tier-item {
+            opacity: 0.6;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .tier-item.active {
+            opacity: 1;
+            transform: scale(1.25);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Start Screen (Mandatory for Fullscreen Request) -->
+        <div id="start-overlay">
+            <h1 style="font-size: 28px; margin-bottom: 10px;">Vegetable Merge 🫛🎃</h1>
+            <p style="color: var(--subtext-color); font-size: 14px;">Tocca per giocare a schermo intero</p>
+            <button class="start-btn">GIOCA 🚀</button>
+        </div>
+
+        <!-- Top Navigation Bar -->
+        <div class="header">
+            <div class="score-box">
+                <span class="score-label">Punti</span>
+                <span id="score" class="score-value">0</span>
+            </div>
+            <div class="score-box" style="align-items: flex-end;">
+                <span class="score-label">Record</span>
+                <span id="high-score" class="score-value" style="color: #64b5f6;">0</span>
+            </div>
+            <div class="next-box">
+                <span class="score-label">Prossimo</span>
+                <div id="next-preview" class="next-preview">🌱</div>
+            </div>
+        </div>
+
+        <!-- Canvas Holder for Matter.js -->
+        <div id="canvas-holder">
+            <div id="danger-timer">⚠️ PERICOLO: <span id="timer-val">2.0</span>s</div>
+        </div>
+
+        <!-- Tier Guide Footer -->
+        <div class="tier-guide" id="tier-guide"></div>
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="modal">
+            <div class="modal-title">Game Over!</div>
+            <div class="modal-score">Punteggio Finale: <span id="final-score" style="color: #ffca28; font-weight: bold;">0</span></div>
+            <button class="btn-restart" id="btn-restart">Rigioca 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Configuration & Tiers Data ---
+        const VEGETABLES = [
+            { tier: 1, name: "Pisello", radius: 15, score: 10, color: "#8BC34A", emoji: "🫛", spawnable: true },
+            { tier: 2, name: "Pomodorino", radius: 22, score: 20, color: "#FF5252", emoji: "🍅", spawnable: true },
+            { tier: 3, name: "Ravanello", radius: 30, score: 40, color: "#E91E63", emoji: "🧅", spawnable: true },
+            { tier: 4, name: "Patata", radius: 40, score: 80, color: "#D7CCC8", emoji: "🥔", spawnable: true },
+            { tier: 5, name: "Cipolla", radius: 52, score: 160, color: "#AB47BC", emoji: "🧅", spawnable: false },
+            { tier: 6, name: "Peperone", radius: 66, score: 320, color: "#FF9800", emoji: "🫑", spawnable: false },
+            { tier: 7, name: "Melanzana", radius: 82, score: 640, color: "#5E35B1", emoji: "🍆", spawnable: false },
+            { tier: 8, name: "Broccolo", radius: 100, score: 1280, color: "#43A047", emoji: "🥦", spawnable: false },
+            { tier: 9, name: "Cavolo", radius: 120, score: 2560, color: "#009688", emoji: "🥬", spawnable: false },
+            { tier: 10, name: "Zucca", radius: 145, score: 5120, color: "#FF5722", emoji: "🎃", spawnable: false }
+        ];
+
+        // --- Module Aliases ---
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body, Vector } = Matter;
+
+        // --- DOM Elements ---
+        const container = document.getElementById('canvas-holder');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('high-score');
+        const nextPreviewEl = document.getElementById('next-preview');
+        const dangerTimerEl = document.getElementById('danger-timer');
+        const timerValEl = document.getElementById('timer-val');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+        const btnRestart = document.getElementById('btn-restart');
+        const tierGuide = document.getElementById('tier-guide');
+        const startOverlay = document.getElementById('start-overlay');
+
+        // --- Game Variables ---
+        let engine, render, runner;
+        let gameWidth = 400;
+        let gameHeight = 600;
+        let dangerLineY = 100;
+        let currentScore = 0;
+        let highScore = localStorage.getItem('veg_high_score') || 0;
+        
+        let currentVegIndex = 0;
+        let nextVegIndex = getRandomSpawnableIndex();
+        let dropperX = gameWidth / 2;
+        let isCanDrop = true;
+        let dropCooldownTimer = null;
+
+        let dangerTimer = 0; // Milliseconds
+        let isGameOver = false;
+
+        // --- Fullscreen Trigger Helper ---
+        function requestFullScreen() {
+            const docEl = document.documentElement;
+            const req = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+            if (req) {
+                req.call(docEl).catch(() => {});
+            }
+        }
+
+        // --- Initialize Tier Guide UI ---
+        function initTierGuide() {
+            tierGuide.innerHTML = VEGETABLES.map(v => 
+                `<span class="tier-item" id="tier-icon-${v.tier}" title="${v.name}">${v.emoji}</span>`
+            ).join('');
+        }
+
+        function getRandomSpawnableIndex() {
+            return Math.floor(Math.random() * 4);
+        }
+
+        // --- Setup Matter.js Engine & Canvas ---
+        function initGame() {
+            highScoreEl.textContent = highScore;
+            initTierGuide();
+
+            const rect = container.getBoundingClientRect();
+            gameWidth = rect.width;
+            gameHeight = rect.height;
+            dangerLineY = 110;
+
+            engine = Engine.create({
+                gravity: { x: 0, y: 1.2 }
+            });
+
+            render = Render.create({
+                element: container,
+                engine: engine,
+                options: {
+                    width: gameWidth,
+                    height: gameHeight,
+                    wireframes: false,
+                    background: '#151821'
+                }
+            });
+
+            Render.run(render);
+            runner = Runner.create();
+            Runner.run(runner, engine);
+
+            const wallThickness = 60;
+            const wallOptions = { isStatic: true, friction: 0.1, restitution: 0.2, render: { fillStyle: '#252b3b' } };
+
+            const leftWall = Bodies.rectangle(-wallThickness/2, gameHeight/2, wallThickness, gameHeight * 2, wallOptions);
+            const rightWall = Bodies.rectangle(gameWidth + wallThickness/2, gameHeight/2, wallThickness, gameHeight * 2, wallOptions);
+            const bottomWall = Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth * 2, wallThickness, wallOptions);
+
+            Composite.add(engine.world, [leftWall, rightWall, bottomWall]);
+
+            currentVegIndex = getRandomSpawnableIndex();
+            nextVegIndex = getRandomSpawnableIndex();
+            updateNextPreview();
+
+            setupInputListeners();
+            Events.on(engine, 'collisionStart', handleCollisions);
+            Events.on(render, 'afterRender', customRender);
+            Events.on(engine, 'afterUpdate', checkDangerLine);
+
+            btnRestart.addEventListener('click', restartGame);
+        }
+
+        // --- Input Handling ---
+        function setupInputListeners() {
+            const canvas = render.canvas;
+
+            function handleMove(e) {
+                if (isGameOver) return;
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                dropperX = clientX - rect.left;
+
+                const radius = VEGETABLES[currentVegIndex].radius;
+                dropperX = Math.max(radius + 10, Math.min(gameWidth - radius - 10, dropperX));
+            }
+
+            function handleDrop() {
+                if (isGameOver || !isCanDrop) return;
+                dropVegetable();
+            }
+
+            canvas.addEventListener('mousemove', handleMove);
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+
+            canvas.addEventListener('mouseup', handleDrop);
+            canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleDrop(); }, { passive: false });
+        }
+
+        function dropVegetable() {
+            isCanDrop = false;
+            const vegData = VEGETABLES[currentVegIndex];
+
+            const body = Bodies.circle(dropperX, 55, vegData.radius, {
+                restitution: 0.25,
+                friction: 0.08,
+                density: 0.001 * vegData.tier,
+                render: { fillStyle: vegData.color }
+            });
+
+            body.vegetableTier = vegData.tier;
+            body.isVegetable = true;
+
+            Composite.add(engine.world, body);
+
+            currentVegIndex = nextVegIndex;
+            nextVegIndex = getRandomSpawnableIndex();
+            updateNextPreview();
+
+            dropCooldownTimer = setTimeout(() => {
+                isCanDrop = true;
+            }, 500);
+        }
+
+        function updateNextPreview() {
+            const nextVeg = VEGETABLES[nextVegIndex];
+            nextPreviewEl.textContent = nextVeg.emoji;
+            nextPreviewEl.style.borderColor = nextVeg.color;
+        }
+
+        function handleCollisions(event) {
+            const pairs = event.pairs;
+
+            for (let i = 0; i < pairs.length; i++) {
+                const { bodyA, bodyB } = pairs[i];
+
+                if (bodyA.isVegetable && bodyB.isVegetable) {
+                    if (bodyA.vegetableTier === bodyB.vegetableTier && !bodyA.isMerging && !bodyB.isMerging) {
+                        const tier = bodyA.vegetableTier;
+
+                        if (tier < VEGETABLES.length) {
+                            bodyA.isMerging = true;
+                            bodyB.isMerging = true;
+
+                            const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                            const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                            Composite.remove(engine.world, bodyA);
+                            Composite.remove(engine.world, bodyB);
+
+                            const nextTier = tier + 1;
+                            const nextVeg = VEGETABLES[nextTier - 1];
+
+                            const newBody = Bodies.circle(midX, midY, nextVeg.radius, {
+                                restitution: 0.25,
+                                friction: 0.08,
+                                density: 0.001 * nextTier,
+                                render: { fillStyle: nextVeg.color }
+                            });
+
+                            newBody.vegetableTier = nextTier;
+                            newBody.isVegetable = true;
+
+                            Composite.add(engine.world, newBody);
+                            addScore(nextVeg.score);
+                            highlightTierGuide(nextTier);
+                        }
+                    }
+                }
+            }
+        }
+
+        function addScore(points) {
+            currentScore += points;
+            scoreEl.textContent = currentScore;
+
+            if (currentScore > highScore) {
+                highScore = currentScore;
+                highScoreEl.textContent = highScore;
+                localStorage.setItem('veg_high_score', highScore);
+            }
+        }
+
+        function highlightTierGuide(tier) {
+            const item = document.getElementById(`tier-icon-${tier}`);
+            if (item) {
+                item.classList.add('active');
+                setTimeout(() => item.classList.remove('active'), 800);
+            }
+        }
+
+        function customRender() {
+            const ctx = render.context;
+
+            // Danger Line
+            ctx.save();
+            ctx.setLineDash([8, 6]);
+            ctx.strokeStyle = dangerTimer > 0 ? '#ff4757' : 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, dangerLineY);
+            ctx.lineTo(gameWidth, dangerLineY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Active Dropper
+            if (isCanDrop && !isGameOver) {
+                const vegData = VEGETABLES[currentVegIndex];
+
+                ctx.save();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(dropperX, 55);
+                ctx.lineTo(dropperX, gameHeight);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(dropperX, 55, vegData.radius, 0, 2 * Math.PI);
+                ctx.fillStyle = vegData.color;
+                ctx.globalAlpha = 0.85;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = `${vegData.radius * 1.1}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(vegData.emoji, dropperX, 57);
+                ctx.restore();
+            }
+
+            // Bodies Emojis
+            const bodies = Composite.allBodies(engine.world);
+
+            for (let body of bodies) {
+                if (body.isVegetable) {
+                    const veg = VEGETABLES[body.vegetableTier - 1];
+
+                    ctx.save();
+                    ctx.translate(body.position.x, body.position.y);
+                    ctx.rotate(body.angle);
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, veg.radius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.font = `${veg.radius * 1.15}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(veg.emoji, 0, 2);
+
+                    ctx.restore();
+                }
+            }
+        }
+
+        function checkDangerLine() {
+            if (isGameOver) return;
+
+            const bodies = Composite.allBodies(engine.world);
+            let overflow = false;
+
+            for (let body of bodies) {
+                if (body.isVegetable) {
+                    const topEdge = body.position.y - body.circleRadius;
+                    if (topEdge < dangerLineY && body.position.y > 70) {
+                        overflow = true;
+                        break;
+                    }
+                }
+            }
+
+            if (overflow) {
+                dangerTimer += 1000 / 60;
+                dangerTimerEl.style.display = 'block';
+                timerValEl.textContent = Math.max(0, (2.0 - dangerTimer / 1000)).toFixed(1);
+
+                if (dangerTimer >= 2000) {
+                    triggerGameOver();
+                }
+            } else {
+                dangerTimer = 0;
+                dangerTimerEl.style.display = 'none';
+            }
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            Runner.stop(runner);
+            finalScoreEl.textContent = currentScore;
+            gameOverModal.classList.add('active');
+        }
+
+        function restartGame() {
+            const bodies = Composite.allBodies(engine.world);
+            for (let body of bodies) {
+                if (body.isVegetable) {
+                    Composite.remove(engine.world, body);
+                }
+            }
+
+            currentScore = 0;
+            scoreEl.textContent = '0';
+            dangerTimer = 0;
+            isGameOver = false;
+            isCanDrop = true;
+            dangerTimerEl.style.display = 'none';
+            gameOverModal.classList.remove('active');
+
+            currentVegIndex = getRandomSpawnableIndex();
+            nextVegIndex = getRandomSpawnableIndex();
+            updateNextPreview();
+
+            Runner.run(runner, engine);
+        }
+
+        // --- Start Game & Fullscreen Trigger ---
+        startOverlay.addEventListener('click', () => {
+            requestFullScreen();
+            startOverlay.style.display = 'none';
+            initGame();
+        });
+
+        // Try automatic fullscreen immediately if allowed by browser policy
+        window.addEventListener('load', () => {
+            requestFullScreen();
+        });
+    </script>
+</body>
+</html>
