@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SUB-ACQUA v.1.0 - Procedural Edition</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: none;
+      user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #050b14;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* --- LAYOUT HUD --- */
+    .hud-card {
+      background: rgba(10, 25, 47, 0.9);
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+      width: fit-content;
+    }
+
+    #hud-top-left {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #hud-top-right {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    #hud-bottom-left {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      z-index: 10;
+    }
+
+    #hud-bottom-right {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      z-index: 10;
+    }
+
+    .bar-container {
+      width: 70px;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    #health-bar {
+      width: 100%;
+      height: 100%;
+      background: #22c55e;
+      transition: width 0.1s linear, background-color 0.3s;
+    }
+
+    #compass-arrow {
+      display: inline-block;
+      font-size: 13px;
+      transition: transform 0.1s ease-out;
+    }
+
+    #pause-btn {
+      background: rgba(10, 25, 47, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: white;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #pause-btn:active {
+      background: rgba(56, 189, 248, 0.3);
+      transform: scale(0.96);
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 11, 20, 0.95);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      padding: 20px;
+    }
+
+    .ui-box {
+      background: #0f172a;
+      border: 2px solid #38bdf8;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.3);
+      text-align: center;
+    }
+
+    .shop-title {
+      font-size: 24px;
+      color: #38bdf8;
+      margin-bottom: 5px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .version-tag {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 15px;
+      font-weight: normal;
+    }
+
+    .menu-btn {
+      width: 100%;
+      margin: 8px 0;
+      background: #38bdf8;
+      color: #0f172a;
+      font-size: 16px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .menu-btn:hover { background: #7dd3fc; }
+    .menu-btn:disabled {
+      background: #475569;
+      color: #94a3b8;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .shop-item, .option-item {
+      background: #1e293b;
+      margin: 10px 0;
+      padding: 12px 16px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: left;
+    }
+
+    .shop-btn {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .shop-btn:disabled {
+      background: #64748b;
+      opacity: 0.5;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #475569;
+      transition: .3s;
+      border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #38bdf8;
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    #game-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: #ef4444;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 20px 30px;
+      border-radius: 15px;
+      border: 2px solid #ef4444;
+      text-align: center;
+      display: none;
+      z-index: 90;
+    }
+
+    #save-toast {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(34, 197, 94, 0.9);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      display: none;
+      z-index: 80;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    #joystick-base {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+      z-index: 20;
+    }
+    #joystick-stick {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- MENU PRINCIPALE INIZIALE -->
+  <div id="main-menu" class="modal-overlay">
+    <div class="ui-box">
+      <div class="shop-title">⚓ SUB-ACQUA</div>
+      <div class="version-tag">v.1.0</div>
+      <p style="margin-bottom: 20px; font-size: 14px; opacity: 0.8;">Esplora gli abissi, naviga il pericolo e raccogli tutti i tesori!</p>
+      
+      <button id="resume-btn" class="menu-btn" onclick="resumeGame()">▶️ RIPRENDI PARTITA</button>
+      <button class="menu-btn" style="background: #e2e8f0;" onclick="startNewGame()">🔄 NUOVA PARTITA</button>
+      <button class="menu-btn" style="background: #64748b; color: white;" onclick="openOptionsMenu()">⚙️ OPZIONI</button>
+    </div>
+  </div>
+
+  <!-- MODALE OPZIONI -->
+  <div id="options-modal" class="modal-overlay" style="display: none;">
+    <div class="ui-box">
+      <div class="shop-title">⚙️ OPZIONI</div>
+      <div class="version-tag">Impostazioni di gioco</div>
+
+      <div class="option-item">
+        <span id="audio-label">🔊 Audio di Gioco</span>
+        <label class="switch">
+          <input type="checkbox" id="audio-toggle" checked onchange="toggleAudio(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="option-item">
+        <span>🖥️ Schermo Intero (Fullscreen)</span>
+        <label class="switch">
+          <input type="checkbox" id="fullscreen-toggle" onchange="toggleFullscreen(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="menu-btn" style="margin-top: 15px;" onclick="closeOptionsMenu()">🛈 CHIUDI</button>
+    </div>
+  </div>
+
+  <!-- --- HUD --- -->
+  <div id="hud-top-left">
+    <div class="hud-card">
+      <span style="font-size: 11px; opacity: 0.9;">VITA</span>
+      <div class="bar-container"><div id="health-bar"></div></div>
+    </div>
+    <div class="hud-card">
+      <span>💰 SACCO:</span>
+      <span style="color: #ffd700;"><span id="carried-coins">0</span>/<span id="max-bag-ui">100</span></span>
+    </div>
+  </div>
+
+  <div id="hud-top-right">
+    <div class="hud-card">
+      <span>🎯 <span id="total-coins">0</span>/<span id="target-coins">1000</span></span>
+      <span style="opacity: 0.4;">|</span>
+      <span>📍 <span id="depth-count">0</span>m</span>
+    </div>
+    <div class="hud-card">
+      <span>⚓ BARCA <span id="compass-arrow">↗️</span></span>
+      <span style="color: #38bdf8;"><span id="boat-dist">0</span>m</span>
+    </div>
+  </div>
+
+  <div id="hud-bottom-left">
+    <button id="pause-btn" onclick="openMainMenu()">⚙️ MENU</button>
+  </div>
+
+  <div id="hud-bottom-right">
+    <div class="hud-card" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4);">
+      <span style="color: #38bdf8;">🎯 LIV <span id="level-num">1</span></span>
+    </div>
+  </div>
+
+  <!-- UI NEGOZIO INTERLIVELLO -->
+  <div id="shop-modal" class="modal-overlay" style="display: none;">
+    <div class="ui-box">
+      <div class="shop-title">🛒 NEGOZIO SUB (LIV. <span id="shop-lvl">1</span>)</div>
+      <div style="text-align: center; margin-bottom: 15px; font-size: 16px;">
+        Cassa: 💰 <span id="shop-bank">0</span>
+      </div>
+
+      <div class="shop-item">
+        <div>
+          <div>🎒 Sacco Monete (Lvl <span id="bag-lvl">0</span>/5)</div>
+          <small style="opacity:0.7">Capienza: <span id="bag-next">120</span> monete</small>
+        </div>
+        <button id="buy-bag-btn" class="shop-btn" onclick="buyUpgrade('bag')"></button>
+      </div>
+
+      <div class="shop-item">
+        <div>
+          <div>🛡️ Tuta da Sub (Lvl <span id="suit-lvl">0</span>/5)</div>
+          <small style="opacity:0.7">Protezione: +<span id="suit-next">10</span>%</small>
+        </div>
+        <button id="buy-suit-btn" class="shop-btn" onclick="buyUpgrade('suit')"></button>
+      </div>
+
+      <div class="shop-item">
+        <div>
+          <div>📡 Radar Tesori (Lvl <span id="radar-lvl">0</span>/5)</div>
+          <small style="opacity:0.7">Raggio: <span id="radar-next">15</span>m</small>
+        </div>
+        <button id="buy-radar-btn" class="shop-btn" onclick="buyUpgrade('radar')"></button>
+      </div>
+
+      <button class="menu-btn" style="margin-top: 15px;" onclick="startNextLevel()">INIZIA PROSSIMO LIVELLO ➔</button>
+    </div>
+  </div>
+
+  <div id="game-message">SEI MORTO!<br><span style="font-size: 14px; color: #fff;">Livello riavviato...</span></div>
+  <div id="save-toast">💾 Gioco Salvato!</div>
+  <div id="joystick-base"><div id="joystick-stick"></div></div>
+  <div id="game-container"></div>
+
+  <script>
+    // --- MOTORE AUDIO NATIVO (WEB AUDIO API) ---
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        
+        this.noiseNode = null;
+        this.oceanFilter = null;
+        this.oceanGain = null;
+        this.lfoNode = null;
+        this.lfoGain = null;
+        
+        this.lastFishSoundTime = 0;
+      }
+
+      init() {
+        if (this.ctx) {
+          if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+          return;
+        }
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+        this.setupOceanAmbient();
+      }
+
+      setupOceanAmbient() {
+        if (!this.ctx) return;
+
+        const bufferSize = 2 * this.ctx.sampleRate;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+          output[i] *= 0.11;
+          b6 = white * 0.115926;
+        }
+
+        this.noiseNode = this.ctx.createBufferSource();
+        this.noiseNode.buffer = noiseBuffer;
+        this.noiseNode.loop = true;
+
+        this.oceanFilter = this.ctx.createBiquadFilter();
+        this.oceanFilter.type = 'lowpass';
+        this.oceanFilter.frequency.value = 400;
+
+        this.lfoNode = this.ctx.createOscillator();
+        this.lfoNode.frequency.value = 0.2;
+        this.lfoGain = this.ctx.createGain();
+        this.lfoGain.gain.value = 150; 
+
+        this.lfoNode.connect(this.lfoGain);
+        this.lfoGain.connect(this.oceanFilter.frequency);
+
+        this.oceanGain = this.ctx.createGain();
+        this.oceanGain.gain.value = this.isMuted ? 0 : 0.15;
+
+        this.noiseNode.connect(this.oceanFilter);
+        this.oceanFilter.connect(this.oceanGain);
+        this.oceanGain.connect(this.ctx.destination);
+
+        this.noiseNode.start();
+        this.lfoNode.start();
+      }
+
+      updateAmbient(depth) {
+        if (!this.ctx || this.isMuted) return;
+
+        if (depth <= 5) {
+          const targetFreq = 350 + (5 - depth) * 50;
+          this.oceanFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.2);
+          this.oceanFilter.Q.setTargetAtTime(1.0, this.ctx.currentTime, 0.2);
+          this.lfoGain.gain.setTargetAtTime(180, this.ctx.currentTime, 0.2);
+        } else {
+          const depthFactor = Math.min(1, (depth - 5) / 100);
+          const targetFreq = 180 - (depthFactor * 100);
+          this.oceanFilter.frequency.setTargetAtTime(Math.max(60, targetFreq), this.ctx.currentTime, 0.5);
+          this.oceanFilter.Q.setTargetAtTime(3.0, this.ctx.currentTime, 0.5);
+          this.lfoGain.gain.setTargetAtTime(20, this.ctx.currentTime, 0.5);
+        }
+      }
+
+      playFishProximity(distance) {
+        if (!this.ctx || this.isMuted) return;
+
+        const now = this.ctx.currentTime;
+        const interval = 0.15 + (distance / 6.0) * 0.4;
+
+        if (now - this.lastFishSoundTime >= interval) {
+          this.lastFishSoundTime = now;
+
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          const freq = 600 + Math.random() * 200;
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+
+          const vol = Math.max(0.01, (1.0 - (distance / 6.0)) * 0.08);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.09);
+        }
+      }
+
+      playGoldCollect() {
+        if (!this.ctx || this.isMuted) return;
+        this.init();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.06);
+        osc.frequency.setValueAtTime(1758.48, now + 0.12);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      playHurt() {
+        if (!this.ctx || this.isMuted) return;
+        this.init();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.25);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+
+      playDeposit() {
+        if (!this.ctx || this.isMuted) return;
+        this.init();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(783.99, now + 0.16);
+
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playDeath() {
+        if (!this.ctx || this.isMuted) return;
+        this.init();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.8);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.8);
+      }
+
+      playShopOpen() {
+        if (!this.ctx || this.isMuted) return;
+        this.init();
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(554.37, now + 0.1);
+        osc.frequency.setValueAtTime(659.25, now + 0.2);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+
+      setMute(mute) {
+        this.isMuted = mute;
+        if (this.oceanGain && this.ctx) {
+          this.oceanGain.gain.setValueAtTime(mute ? 0 : 0.15, this.ctx.currentTime);
+        }
+      }
+    }
+
+    const audioEngine = new SoundEngine();
+
+    function toggleAudio(enable) {
+      audioEngine.init();
+      audioEngine.setMute(!enable);
+      document.getElementById('audio-label').innerText = enable ? "🔊 Audio di Gioco" : "🔇 Audio Disattivato";
+    }
+
+    // --- LOGICA DI GIOCO ED EVENTI ---
+    const SAVE_KEY = 'SubAcqua_v1_SaveData';
+
+    let currentLevel = 1;
+    let bankCoins = 0;
+    let gameStarted = false;
+    
+    let upgrades = { bag: 0, suit: 0, radar: 0 };
+
+    const prices = {
+      bag: [300, 500, 800, 1200, 1800],
+      suit: [250, 450, 750, 1100, 1600],
+      radar: [200, 350, 550, 800, 1200]
+    };
+
+    function saveGameToStorage(showToast = false) {
+      const saveData = {
+        currentLevel: currentLevel,
+        bankCoins: bankCoins,
+        upgrades: upgrades,
+        playerState: {
+          health: player.health,
+          carriedCoins: player.carriedCoins,
+          levelCollectedCoins: player.levelCollectedCoins,
+          posX: diverGroup ? diverGroup.position.x : 0,
+          posY: diverGroup ? diverGroup.position.y : 0
+        }
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+
+      if (showToast) {
+        const toast = document.getElementById('save-toast');
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 1500);
+      }
+    }
+
+    function loadGameFromStorage() {
+      const data = localStorage.getItem(SAVE_KEY);
+      if (!data) return false;
+      try {
+        const parsed = JSON.parse(data);
+        currentLevel = parsed.currentLevel || 1;
+        bankCoins = parsed.bankCoins || 0;
+        upgrades = parsed.upgrades || { bag: 0, suit: 0, radar: 0 };
+        
+        if (parsed.playerState) {
+          player.health = parsed.playerState.health ?? 100;
+          player.carriedCoins = parsed.playerState.carriedCoins ?? 0;
+          player.levelCollectedCoins = parsed.playerState.levelCollectedCoins ?? 0;
+          diverGroup.position.x = parsed.playerState.posX ?? 0;
+          diverGroup.position.y = parsed.playerState.posY ?? 0;
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function checkSaveState() {
+      const hasSave = localStorage.getItem(SAVE_KEY) !== null;
+      document.getElementById('resume-btn').disabled = !hasSave;
+    }
+
+    function openMainMenu() {
+      if (gameStarted) saveGameToStorage(true);
+      gameStarted = false;
+      checkSaveState();
+      document.getElementById('main-menu').style.display = 'flex';
+    }
+
+    function openOptionsMenu() {
+      document.getElementById('fullscreen-toggle').checked = !!document.fullscreenElement;
+      document.getElementById('audio-toggle').checked = !audioEngine.isMuted;
+      document.getElementById('options-modal').style.display = 'flex';
+    }
+
+    function closeOptionsMenu() {
+      document.getElementById('options-modal').style.display = 'none';
+    }
+
+    function toggleFullscreen(enable) {
+      if (enable) {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.log("Impossibile attivare Fullscreen:", err);
+          });
+        }
+      } else {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    function startNewGame() {
+      audioEngine.init();
+      localStorage.removeItem(SAVE_KEY);
+      currentLevel = 1;
+      bankCoins = 0;
+      upgrades = { bag: 0, suit: 0, radar: 0 };
+      
+      player.health = player.maxHealth;
+      player.carriedCoins = 0;
+      player.levelCollectedCoins = 0;
+      diverGroup.position.set(0, 0, 0);
+
+      initGameSession();
+      saveGameToStorage();
+    }
+
+    function resumeGame() {
+      audioEngine.init();
+      if (loadGameFromStorage()) {
+        initGameSession(true);
+      }
+    }
+
+    function initGameSession(isResume = false) {
+      document.getElementById('main-menu').style.display = 'none';
+      gameStarted = true;
+
+      document.getElementById('carried-coins').innerText = player.carriedCoins;
+      document.getElementById('total-coins').innerText = player.levelCollectedCoins;
+      
+      const healthBar = document.getElementById('health-bar');
+      healthBar.style.width = `${player.health}%`;
+      healthBar.style.backgroundColor = player.health < 40 ? '#ef4444' : '#22c55e';
+
+      setupLevelData();
+    }
+
+    // --- THREE.JS SCENA & ILLUMINAZIONE AVANZATA ---
+    const container = document.getElementById('game-container');
+    const scene = new THREE.Scene();
+
+    const surfaceColor = new THREE.Color(0x00d2d3);
+    const deepColor = new THREE.Color(0x050515);
+    scene.background = surfaceColor.clone();
+
+    scene.fog = new THREE.FogExp2(0x051525, 0.015);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    const viewSize = 27;
+    camera = new THREE.OrthographicCamera(
+      -viewSize * aspect / 2, viewSize * aspect / 2,
+      viewSize / 2, -viewSize / 2,
+      0.1, 1000
+    );
+    camera.position.z = 10;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xdff9fb, 0.8);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    sunLight.position.set(10, 20, 15);
+    scene.add(sunLight);
+
+    const subLight = new THREE.PointLight(0x38bdf8, 1.5, 12);
+    scene.add(subLight);
+
+    let mapLimitX = 75;
+    let maxDepthY = -150;
+    let targetCoins = 1000;
+
+    const player = {
+      health: 100,
+      maxHealth: 100,
+      invulnerableTimer: 0,
+      carriedCoins: 0,
+      maxCarriedCoins: 100,
+      levelCollectedCoins: 0,
+      isDead: false
+    };
+
+    // --- DELIMITAZIONE CIELO E SUPERFICIE MARE ---
+    const skyGeo = new THREE.PlaneGeometry(500, 100);
+    const skyMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb });
+    const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    skyMesh.position.set(0, 52.2, -2);
+    scene.add(skyMesh);
+
+    const seaSurfaceGeo = new THREE.PlaneGeometry(500, 0.4);
+    const seaSurfaceMat = new THREE.MeshStandardMaterial({ 
+      color: 0x7dd3fc, 
+      transparent: true, 
+      opacity: 0.8,
+      roughness: 0.1,
+      metalness: 0.1
+    });
+    const seaSurfaceMesh = new THREE.Mesh(seaSurfaceGeo, seaSurfaceMat);
+    seaSurfaceMesh.position.set(0, 2.2, -0.1);
+    scene.add(seaSurfaceMesh);
+
+    // Radar Line
+    const radarMaterial = new THREE.LineBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.8 });
+    const radarGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const radarLine = new THREE.Line(radarGeometry, radarMaterial);
+    radarLine.frustumCulled = false;
+    scene.add(radarLine);
+    radarLine.visible = false;
+
+    // Bolle d'aria
+    const bubbles = [];
+    const bubbleGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const bubbleMat = new THREE.MeshPhysicalMaterial({ 
+      color: 0xffffff, 
+      transparent: true, 
+      opacity: 0.6,
+      roughness: 0,
+      transmission: 0.9,
+      ior: 1.1
+    });
+    for (let i = 0; i < 50; i++) {
+      const b = new THREE.Mesh(bubbleGeo, bubbleMat);
+      b.position.set((Math.random() - 0.5) * 160, -Math.random() * 200, (Math.random() - 0.5) * 4);
+      scene.add(b);
+      bubbles.push({
+        mesh: b,
+        speed: 0.03 + Math.random() * 0.04,
+        wobble: Math.random() * Math.PI * 2
+      });
+    }
+
+    // --- SFONDO E PARETI LATERALI ---
+    const backgroundGroup = new THREE.Group();
+    backgroundGroup.position.z = -5;
+    scene.add(backgroundGroup);
+
+    function createStylizedBackground() {
+      while(backgroundGroup.children.length > 0) { 
+        backgroundGroup.remove(backgroundGroup.children[0]); 
+      }
+
+      const seaweedMat = new THREE.MeshStandardMaterial({ color: 0x0f5132, roughness: 0.4, side: THREE.DoubleSide });
+      const rockMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+
+      for (let y = 0; y > -200; y -= 12) {
+        for (let x = -100; x <= 100; x += 15) {
+          if (Math.random() > 0.4) {
+            const shape = new THREE.Shape();
+            shape.moveTo(0, 0);
+            shape.quadraticCurveTo(0.3, 2, -0.2, 4);
+            shape.quadraticCurveTo(0.4, 6, 0, 8);
+            shape.lineTo(-0.3, 8);
+            shape.quadraticCurveTo(0.1, 6, -0.5, 4);
+            shape.quadraticCurveTo(0, 2, -0.3, 0);
+
+            const seaweedGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+            const seaweed = new THREE.Mesh(seaweedGeo, seaweedMat);
+            seaweed.position.set(x + (Math.random() * 6 - 3), y + (Math.random() * 4 - 2), 0);
+            backgroundGroup.add(seaweed);
+          }
+          if (Math.random() > 0.6) {
+            const size = 1.5 + Math.random() * 3;
+            const rockGeo = new THREE.DodecahedronGeometry(size, 1);
+            const pos = rockGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              pos.setXYZ(i, 
+                pos.getX(i) + (Math.random() - 0.5) * 0.3,
+                pos.getY(i) + (Math.random() - 0.5) * 0.3,
+                pos.getZ(i) + (Math.random() - 0.5) * 0.3
+              );
+            }
+            rockGeo.computeVertexNormals();
+
+            const rock = new THREE.Mesh(rockGeo, rockMat);
+            rock.position.set(x + (Math.random() * 6 - 3), y + (Math.random() * 4 - 2), -1);
+            backgroundGroup.add(rock);
+          }
+        }
+      }
+    }
+    createStylizedBackground();
+
+    // --- FONDALE MARINO ---
+    const seabedGroup = new THREE.Group();
+    scene.add(seabedGroup);
+    const animatedSeawheeds = [];
+
+    function generateSeabed() {
+      while(seabedGroup.children.length > 0) {
+        seabedGroup.remove(seabedGroup.children[0]);
+      }
+      animatedSeawheeds.length = 0;
+
+      const width = mapLimitX * 2 + 60;
+      const startX = -mapLimitX - 30;
+      const segments = 120;
+      const stepX = width / segments;
+
+      const sandShape = new THREE.Shape();
+      sandShape.moveTo(startX, maxDepthY - 20);
+
+      const heightProfile = [];
+      for (let i = 0; i <= segments; i++) {
+        const x = startX + i * stepX;
+        const h = Math.sin(i * 0.15) * 1.5 + Math.cos(i * 0.08) * 2.2 + (Math.random() * 0.4);
+        const y = maxDepthY + h;
+        heightProfile.push({ x, y });
+        sandShape.lineTo(x, y);
+      }
+
+      sandShape.lineTo(startX + width, maxDepthY - 20);
+      sandShape.closePath();
+
+      const sandGeo = new THREE.ExtrudeGeometry(sandShape, {
+        depth: 6,
+        bevelEnabled: true,
+        bevelThickness: 0.5,
+        bevelSize: 0.5,
+        bevelSegments: 2
+      });
+
+      const sandMat = new THREE.MeshStandardMaterial({
+        color: 0x2c261e,
+        roughness: 0.95,
+        metalness: 0.05
+      });
+
+      const seabedMesh = new THREE.Mesh(sandGeo, sandMat);
+      seabedMesh.position.z = -3;
+      seabedMesh.renderOrder = 0;
+      seabedGroup.add(seabedMesh);
+
+      const coralColors = [0xe74c3c, 0x9b59b6, 0xe67e22, 0x1abc9c, 0x2ecc71];
+      for (let i = 2; i < heightProfile.length - 2; i += 3) {
+        if (Math.random() > 0.3) {
+          const pt = heightProfile[i];
+          const coralMat = new THREE.MeshStandardMaterial({
+            color: coralColors[Math.floor(Math.random() * coralColors.length)],
+            roughness: 0.7
+          });
+
+          const coralType = Math.random();
+          if (coralType < 0.5) {
+            const coralGeo = new THREE.IcosahedronGeometry(0.8 + Math.random() * 0.8, 1);
+            const mesh = new THREE.Mesh(coralGeo, coralMat);
+            mesh.position.set(pt.x, pt.y + 0.4, -0.5 + (Math.random() - 0.5) * 2);
+            mesh.scale.set(0.8 + Math.random() * 0.5, 1.2 + Math.random() * 0.8, 0.8);
+            mesh.renderOrder = 1;
+            seabedGroup.add(mesh);
+          } else {
+            const cluster = new THREE.Group();
+            const numTubes = 3 + Math.floor(Math.random() * 4);
+            for (let t = 0; t < numTubes; t++) {
+              const tubeGeo = new THREE.CylinderGeometry(0.1, 0.2, 1 + Math.random() * 1.2, 8);
+              const tube = new THREE.Mesh(tubeGeo, coralMat);
+              tube.position.set((Math.random() - 0.5) * 0.6, 0.5, (Math.random() - 0.5) * 0.6);
+              tube.rotation.z = (Math.random() - 0.5) * 0.4;
+              tube.rotation.x = (Math.random() - 0.5) * 0.4;
+              cluster.add(tube);
+            }
+            cluster.position.set(pt.x, pt.y, -0.5 + (Math.random() - 0.5) * 2);
+            cluster.traverse(c => { if(c.isMesh) c.renderOrder = 1; });
+            seabedGroup.add(cluster);
+          }
+        }
+      }
+
+      const seaweedGreenMat = new THREE.MeshStandardMaterial({
+        color: 0x10b981,
+        roughness: 0.3,
+        side: THREE.DoubleSide
+      });
+
+      for (let i = 1; i < heightProfile.length - 1; i++) {
+        const pt = heightProfile[i];
+        const density = Math.floor(Math.random() * 3) + 1;
+
+        for (let d = 0; d < density; d++) {
+          const height = 3 + Math.random() * 4.5;
+          const shape = new THREE.Shape();
+          shape.moveTo(0, 0);
+          shape.quadraticCurveTo(0.4, height * 0.3, -0.2, height * 0.6);
+          shape.quadraticCurveTo(0.3, height * 0.8, 0, height);
+          shape.lineTo(-0.25, height);
+          shape.quadraticCurveTo(0.05, height * 0.8, -0.45, height * 0.6);
+          shape.quadraticCurveTo(0.1, height * 0.3, -0.25, 0);
+          shape.closePath();
+
+          const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: false });
+          const weed = new THREE.Mesh(geo, seaweedGreenMat);
+
+          const offsetX = (Math.random() - 0.5) * 1.5;
+          const offsetZ = (Math.random() - 0.5) * 3;
+          weed.position.set(pt.x + offsetX, pt.y, offsetZ);
+
+          weed.renderOrder = 2;
+          seabedGroup.add(weed);
+
+          animatedSeawheeds.push({
+            mesh: weed,
+            baseRotation: (Math.random() - 0.5) * 0.2,
+            speed: 0.002 + Math.random() * 0.002,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+    }
+
+    // --- BARCA ---
+    function createProceduralBoat() {
+      const boat = new THREE.Group();
+
+      const hullShape = new THREE.Shape();
+      hullShape.moveTo(-3, 0.8);
+      hullShape.lineTo(-2.5, -0.6);
+      hullShape.quadraticCurveTo(0, -1.0, 2.5, -0.6);
+      hullShape.lineTo(3.2, 0.8);
+      hullShape.closePath();
+
+      const hullGeo = new THREE.ExtrudeGeometry(hullShape, {
+        depth: 1.2,
+        bevelEnabled: true,
+        bevelThickness: 0.1,
+        bevelSize: 0.1,
+        bevelSegments: 3
+      });
+      hullGeo.center();
+
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7, metalness: 0.1 });
+      const hullMesh = new THREE.Mesh(hullGeo, woodMat);
+
+      const cabinGeo = new THREE.BoxGeometry(2, 1.4, 1.1);
+      const cabinMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.3 });
+      const cabinMesh = new THREE.Mesh(cabinGeo, cabinMat);
+      cabinMesh.position.set(-0.8, 1.1, 0);
+
+      const roofGeo = new THREE.BoxGeometry(2.3, 0.2, 1.3);
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 });
+      const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+      roofMesh.position.set(-0.8, 1.85, 0);
+
+      boat.add(hullMesh, cabinMesh, roofMesh);
+      return boat;
+    }
+
+    const boatGroup = createProceduralBoat();
+    boatGroup.position.set(0, 2.95, 0);
+    scene.add(boatGroup);
+
+    // --- SUB ---
+    function createProceduralDiver() {
+      const diver = new THREE.Group();
+
+      const bodyGeo = new THREE.CylinderGeometry(0.4, 0.35, 1.2, 16);
+      const suitMat = new THREE.MeshStandardMaterial({ color: 0xff7f50, roughness: 0.3, metalness: 0.1 });
+      const bodyMesh = new THREE.Mesh(bodyGeo, suitMat);
+
+      const helmetGeo = new THREE.SphereGeometry(0.38, 16, 16);
+      const helmetMesh = new THREE.Mesh(helmetGeo, suitMat);
+      helmetMesh.position.set(0, 0.7, 0);
+
+      const visorGeo = new THREE.SphereGeometry(0.22, 16, 16);
+      const visorMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x00ffff, 
+        roughness: 0.1, 
+        metalness: 0.9, 
+        clearcoat: 1.0, 
+        clearcoatRoughness: 0.1 
+      });
+      const visorMesh = new THREE.Mesh(visorGeo, visorMat);
+      visorMesh.position.set(0, 0.72, 0.22);
+
+      const points = [];
+      for (let i = 0; i <= 10; i++) {
+        points.push(new THREE.Vector2(Math.sin(i * 0.3) * 0.18 + 0.02, (i - 5) * 0.12));
+      }
+      const tankGeo = new THREE.LatheGeometry(points, 12);
+      const tankMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.2, metalness: 0.8 });
+      const tankMesh = new THREE.Mesh(tankGeo, tankMat);
+      tankMesh.position.set(0, 0.2, -0.35);
+
+      const finShape = new THREE.Shape();
+      finShape.moveTo(0, 0);
+      finShape.lineTo(0.2, -0.7);
+      finShape.lineTo(-0.2, -0.7);
+      finShape.closePath();
+
+      const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.05, bevelEnabled: true, bevelSize: 0.02 });
+      const finMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.5 });
+
+      const finLeft = new THREE.Mesh(finGeo, finMat);
+      finLeft.position.set(-0.25, -0.6, 0);
+      const finRight = new THREE.Mesh(finGeo, finMat);
+      finRight.position.set(0.25, -0.6, 0);
+
+      diver.add(bodyMesh, helmetMesh, visorMesh, tankMesh, finLeft, finRight);
+      
+      diver.traverse(child => {
+        if (child.isMesh) {
+          child.renderOrder = 3;
+        }
+      });
+
+      return diver;
+    }
+
+    const diverGroup = createProceduralDiver();
+    diverGroup.position.z = 0;
+    scene.add(diverGroup);
+
+    // --- GENERATORE DI PESCI CON COLORI E FORME DIVERSIFICATE ---
+    function createFishByType(type, scale) {
+      const fishGroup = new THREE.Group();
+      fishGroup.userData = { type: type, scale: scale }; // Salviamo il tipo per i calcoli di collisione
+      const shape = new THREE.Shape();
+      let colorHex = 0x38bdf8;
+
+      if (type === 'small') {
+        colorHex = 0x38bdf8;
+        shape.moveTo(0.8, 0);
+        shape.lineTo(-0.4, 0.2);
+        shape.lineTo(-0.7, 0.4);
+        shape.lineTo(-0.5, 0);
+        shape.lineTo(-0.7, -0.4);
+        shape.lineTo(-0.4, -0.2);
+        shape.closePath();
+
+      } else if (type === 'medium') {
+        colorHex = 0xffd700;
+        shape.absarc(0, 0, 0.6, 0, Math.PI * 2, false);
+        const tailShape = new THREE.Path();
+        shape.moveTo(-0.5, 0.1);
+        shape.lineTo(-1.0, 0.4);
+        shape.lineTo(-0.8, 0);
+        shape.lineTo(-1.0, -0.4);
+        shape.lineTo(-0.5, -0.1);
+
+      } else {
+        colorHex = 0xef4444;
+        shape.moveTo(1.4, 0);
+        shape.quadraticCurveTo(0.4, 0.9, -0.8, 0.3);
+        shape.lineTo(-1.3, 0.8);
+        shape.lineTo(-1.0, 0);
+        shape.lineTo(-1.3, -0.8);
+        shape.lineTo(-0.8, -0.3);
+        shape.quadraticCurveTo(0.4, -0.9, 1.4, 0);
+      }
+
+      const extrudeSettings = {
+        depth: (type === 'large' ? 0.4 : 0.15) * scale,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: 0.05 * scale,
+        bevelThickness: 0.05 * scale
+      };
+
+      const bodyGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      bodyGeo.center();
+
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: colorHex,
+        roughness: 0.2,
+        metalness: 0.1,
+        wireframe: false
+      });
+
+      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      fishGroup.add(bodyMesh);
+
+      const eyeRadius = (type === 'large' ? 0.18 : 0.09) * scale;
+      const eyeGeo = new THREE.SphereGeometry(eyeRadius, 8, 8);
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+      const eyeRight = new THREE.Mesh(eyeGeo, eyeMat);
+      const eyeOffset = type === 'large' ? 0.6 : 0.3;
+      eyeRight.position.set(eyeOffset * scale, 0.1 * scale, 0.12 * scale);
+
+      const pupilRight = new THREE.Mesh(new THREE.SphereGeometry(eyeRadius * 0.5, 8, 8), pupilMat);
+      pupilRight.position.set((eyeOffset + 0.03) * scale, 0.1 * scale, 0.15 * scale);
+
+      const eyeLeft = eyeRight.clone();
+      eyeLeft.position.z = -0.12 * scale;
+      const pupilLeft = pupilRight.clone();
+      pupilLeft.position.z = -0.15 * scale;
+
+      fishGroup.add(eyeRight, pupilRight, eyeLeft, pupilLeft);
+
+      const mult = type === 'large' ? 1.8 : (type === 'medium' ? 1.3 : 0.8);
+      fishGroup.scale.set(scale * mult, scale * mult, scale * mult);
+
+      fishGroup.traverse(child => {
+        if (child.isMesh) child.renderOrder = 2;
+      });
+
+      return fishGroup;
+    }
+
+    // --- RELITTI E SACCHI TESORO ---
+    function createProceduralShipwreck() {
+      const wreck = new THREE.Group();
+      
+      const hullShape = new THREE.Shape();
+      hullShape.moveTo(-3, 1);
+      hullShape.lineTo(-2.2, -1);
+      hullShape.lineTo(2.2, -1);
+      hullShape.lineTo(3, 0.5);
+      hullShape.closePath();
+
+      const hullGeo = new THREE.ExtrudeGeometry(hullShape, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.05 });
+      hullGeo.center();
+
+      const wreckMat = new THREE.MeshStandardMaterial({ 
+        color: 0x3d2314, 
+        roughness: 0.9, 
+        metalness: 0.2 
+      });
+      const hullMesh = new THREE.Mesh(hullGeo, wreckMat);
+
+      const mastGeo = new THREE.CylinderGeometry(0.15, 0.2, 4, 8);
+      const mastMesh = new THREE.Mesh(mastGeo, wreckMat);
+      mastMesh.rotation.z = Math.PI / 3;
+      mastMesh.position.set(0, 1, 0);
+
+      wreck.add(hullMesh, mastMesh);
+
+      wreck.traverse(child => {
+        if (child.isMesh) {
+          child.renderOrder = 1;
+        }
+      });
+
+      return wreck;
+    }
+
+    function createProceduralSack() {
+      const points = [];
+      points.push(new THREE.Vector2(0, -0.6));
+      points.push(new THREE.Vector2(0.5, -0.4));
+      points.push(new THREE.Vector2(0.6, 0.1));
+      points.push(new THREE.Vector2(0.2, 0.4));
+      points.push(new THREE.Vector2(0.3, 0.6));
+      points.push(new THREE.Vector2(0, 0.65));
+
+      const sackGeo = new THREE.LatheGeometry(points, 16);
+      const sackMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.7 });
+      const sackMesh = new THREE.Mesh(sackGeo, sackMat);
+      
+      sackMesh.renderOrder = 2;
+      return sackMesh;
+    }
+
+    // GENERAZIONE MONDO
+    const enemies = [];
+    const treasureSacks = [];
+    const shipwreckObjects = [];
+
+    function setupLevelData() {
+      const seaWidth = 140 + (currentLevel * 10);
+      const seaDepth = 140 + (currentLevel * 10);
+
+      mapLimitX = seaWidth / 2;
+      maxDepthY = -seaDepth;
+      targetCoins = 900 + (currentLevel * 100);
+
+      player.maxCarriedCoins = Math.floor(100 * (1 + (upgrades.bag * 0.20)));
+
+      document.getElementById('level-num').innerText = currentLevel;
+      document.getElementById('target-coins').innerText = targetCoins;
+      document.getElementById('max-bag-ui').innerText = player.maxCarriedCoins;
+
+      generateSeabed();
+      generateEnemies();
+      generateShipwrecks();
+    }
+
+    function generateEnemies() {
+      enemies.forEach(e => scene.remove(e.mesh));
+      enemies.length = 0;
+
+      const spawnMinX = -(mapLimitX - 10);
+      const spawnMaxX = (mapLimitX - 10);
+      const spawnStartDepth = 10;
+      const spawnEndDepth = Math.abs(maxDepthY) - 15;
+      const damageMultiplier = 1 + ((currentLevel - 1) * 0.10);
+
+      for (let depth = spawnStartDepth; depth <= spawnEndDepth; depth += 6) {
+        const y = -depth;
+        const count = Math.floor(Math.random() * 2) + 2;
+
+        for (let i = 0; i < count; i++) {
+          let fishType = 'small';
+          let baseScale = 0.85;
+          let baseSpeed = 0.08;
+          let baseDamage = 15;
+
+          if (depth < 60) {
+            if (Math.random() > 0.75) {
+              fishType = 'medium'; baseScale = 1.2; baseSpeed = 0.05; baseDamage = 25;
+            }
+          } else if (depth >= 60 && depth < 110) {
+            if (Math.random() > 0.3) {
+              fishType = 'medium'; baseScale = 1.3; baseSpeed = 0.06; baseDamage = 25;
+            } else {
+              fishType = 'small'; baseScale = 0.85; baseSpeed = 0.09; baseDamage = 15;
+            }
+          } else {
+            fishType = 'large'; baseScale = 2.0; baseSpeed = 0.04; baseDamage = 40;
+          }
+
+          const finalScale = baseScale * (0.9 + Math.random() * 0.2);
+          const fish = createFishByType(fishType, finalScale);
+
+          const dir = Math.random() > 0.5 ? 1 : -1;
+          const x = spawnMinX + Math.random() * (spawnMaxX - spawnMinX);
+
+          fish.position.set(x, y + (Math.random() * 2 - 1), 0);
+          if (dir < 0) fish.rotation.y = Math.PI;
+
+          enemies.push({
+            mesh: fish,
+            type: fishType,
+            speed: (baseSpeed + Math.random() * 0.02) * dir,
+            radius: 0.5 * finalScale,
+            damage: Math.round(baseDamage * damageMultiplier)
+          });
+          scene.add(fish);
+        }
+      }
+    }
+
+    function generateShipwrecks() {
+      shipwreckObjects.forEach(obj => scene.remove(obj));
+      treasureSacks.forEach(sack => scene.remove(sack.mesh));
+      shipwreckObjects.length = 0;
+      treasureSacks.length = 0;
+
+      const numShipwrecks = 10;
+      const coinsPerSack = Math.floor(targetCoins / numShipwrecks);
+      let remainingCoins = targetCoins;
+
+      const spawnMinX = -(mapLimitX - 10);
+      const spawnMaxX = (mapLimitX - 10);
+      const startY = -15;
+      const stepY = (Math.abs(maxDepthY) - 25) / numShipwrecks;
+
+      for (let i = 0; i < numShipwrecks; i++) {
+        const y = startY - (i * stepY);
+        const x = spawnMinX + Math.random() * (spawnMaxX - spawnMinX);
+
+        const shipwreckGroup = createProceduralShipwreck();
+        shipwreckGroup.rotation.z = (Math.random() - 0.5) * 0.4;
+        shipwreckGroup.position.set(x, y, -2.5);
+        scene.add(shipwreckGroup);
+        shipwreckObjects.push(shipwreckGroup);
+
+        const amount = (i === numShipwrecks - 1) ? remainingCoins : coinsPerSack;
+        remainingCoins -= amount;
+
+        const sackMesh = createProceduralSack();
+        sackMesh.position.set(x + 2, y - 0.5, 0.0);
+        scene.add(sackMesh);
+
+        treasureSacks.push({
+          mesh: sackMesh,
+          amount: amount,
+          radius: 1.5
+        });
+      }
+    }
+
+    // SHOP
+    function openShop() {
+      bankCoins += player.levelCollectedCoins;
+      saveGameToStorage(true);
+      audioEngine.playShopOpen();
+      document.getElementById('shop-modal').style.display = 'flex';
+      updateShopUI();
+    }
+
+    function updateShopUI() {
+      document.getElementById('shop-lvl').innerText = currentLevel;
+      document.getElementById('shop-bank').innerText = bankCoins;
+
+      document.getElementById('bag-lvl').innerText = upgrades.bag;
+      if (upgrades.bag < 5) {
+        document.getElementById('bag-next').innerText = Math.floor(100 * (1 + ((upgrades.bag + 1) * 0.20)));
+        setupBtn('buy-bag-btn', prices.bag[upgrades.bag]);
+      } else {
+        document.getElementById('buy-bag-btn').innerText = 'MAX';
+        document.getElementById('buy-bag-btn').disabled = true;
+      }
+
+      document.getElementById('suit-lvl').innerText = upgrades.suit;
+      if (upgrades.suit < 5) {
+        document.getElementById('suit-next').innerText = (upgrades.suit + 1) * 10;
+        setupBtn('buy-suit-btn', prices.suit[upgrades.suit]);
+      } else {
+        document.getElementById('buy-suit-btn').innerText = 'MAX';
+        document.getElementById('buy-suit-btn').disabled = true;
+      }
+
+      document.getElementById('radar-lvl').innerText = upgrades.radar;
+      if (upgrades.radar < 5) {
+        document.getElementById('radar-next').innerText = 15 + (upgrades.radar * 10);
+        setupBtn('buy-radar-btn', prices.radar[upgrades.radar]);
+      } else {
+        document.getElementById('buy-radar-btn').innerText = 'MAX';
+        document.getElementById('buy-radar-btn').disabled = true;
+      }
+    }
+
+    function setupBtn(id, price) {
+      const btn = document.getElementById(id);
+      btn.innerText = `Acquista (${price}💰)`;
+      btn.disabled = bankCoins < price;
+    }
+
+    function buyUpgrade(type) {
+      const price = prices[type][upgrades[type]];
+      if (bankCoins >= price && upgrades[type] < 5) {
+        bankCoins -= price;
+        upgrades[type]++;
+        audioEngine.playGoldCollect();
+        saveGameToStorage(true);
+        updateShopUI();
+      }
+    }
+
+    function startNextLevel() {
+      currentLevel++;
+      document.getElementById('shop-modal').style.display = 'none';
+
+      player.health = player.maxHealth;
+      player.carriedCoins = 0;
+      player.levelCollectedCoins = 0;
+      diverGroup.position.set(0, 0, 0);
+
+      document.getElementById('carried-coins').innerText = 0;
+      document.getElementById('total-coins').innerText = 0;
+
+      saveGameToStorage(true);
+      setupLevelData();
+    }
+
+    // MORTE
+    function handlePlayerDeath() {
+      if (player.isDead) return;
+      player.isDead = true;
+
+      audioEngine.playDeath();
+      const msgEl = document.getElementById('game-message');
+      msgEl.style.display = 'block';
+
+      setTimeout(() => {
+        player.health = player.maxHealth;
+        player.carriedCoins = 0;
+        player.levelCollectedCoins = 0;
+        player.invulnerableTimer = 60;
+        player.isDead = false;
+
+        diverGroup.position.set(0, 0, 0);
+
+        document.getElementById('carried-coins').innerText = 0;
+        document.getElementById('total-coins').innerText = 0;
+        const healthBar = document.getElementById('health-bar');
+        healthBar.style.width = '100%';
+        healthBar.style.backgroundColor = '#22c55e';
+
+        generateShipwrecks();
+        msgEl.style.display = 'none';
+        saveGameToStorage();
+      }, 2000);
+    }
+
+    // CONTROLLI
+    let joystickActive = false;
+    let touchStart = { x: 0, y: 0 };
+    let moveVector = { x: 0, y: 0 };
+
+    const baseEl = document.getElementById('joystick-base');
+    const stickEl = document.getElementById('joystick-stick');
+    const compassEl = document.getElementById('compass-arrow');
+
+    window.addEventListener('pointerdown', (e) => {
+      audioEngine.init();
+      if (!gameStarted || player.isDead || document.getElementById('shop-modal').style.display === 'flex' || document.getElementById('options-modal').style.display === 'flex') return;
+      if (e.target.closest('#pause-btn')) return;
+
+      joystickActive = true;
+      touchStart = { x: e.clientX, y: e.clientY };
+      baseEl.style.left = `${e.clientX}px`;
+      baseEl.style.top = `${e.clientY}px`;
+      baseEl.style.display = 'block';
+      stickEl.style.transform = `translate(-50%, -50%)`;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!joystickActive || player.isDead) return;
+      const deltaX = e.clientX - touchStart.x;
+      const deltaY = e.clientY - touchStart.y;
+      const dist = Math.hypot(deltaX, deltaY);
+      const maxRadius = 40;
+      const angle = Math.atan2(deltaY, deltaX);
+      const intensity = Math.min(dist, maxRadius) / maxRadius;
+
+      moveVector.x = Math.cos(angle) * intensity;
+      moveVector.y = -Math.sin(angle) * intensity;
+
+      const clampDist = Math.min(dist, maxRadius);
+      const stickX = Math.cos(angle) * clampDist;
+      const stickY = Math.sin(angle) * clampDist;
+      stickEl.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+    });
+
+    window.addEventListener('pointerup', () => {
+      joystickActive = false;
+      moveVector = { x: 0, y: 0 };
+      baseEl.style.display = 'none';
+    });
+
+    // LOOP DI GIOCO
+    const speed = 0.15;
+    checkSaveState();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = Date.now();
+      const timeSec = now * 0.001;
+
+      bubbles.forEach(b => {
+        b.mesh.position.y += b.speed;
+        b.wobble += 0.05;
+        b.mesh.position.x += Math.sin(b.wobble) * 0.02;
+
+        if (b.mesh.position.y > 2) {
+          b.mesh.position.y = maxDepthY - Math.random() * 10;
+          b.mesh.position.x = (Math.random() - 0.5) * (mapLimitX * 2);
+        }
+      });
+
+      animatedSeawheeds.forEach(w => {
+        w.mesh.rotation.z = w.baseRotation + Math.sin(now * w.speed + w.phase) * 0.15;
+      });
+
+      seaSurfaceMat.opacity = 0.6 + Math.sin(now * 0.003) * 0.2;
+
+      const currentDepth = Math.max(0, Math.floor(-diverGroup.position.y));
+      audioEngine.updateAmbient(currentDepth);
+
+      if (gameStarted && !player.isDead && document.getElementById('shop-modal').style.display !== 'flex' && document.getElementById('options-modal').style.display !== 'flex') {
+        
+        if (moveVector.x !== 0 || moveVector.y !== 0) {
+          diverGroup.position.x += moveVector.x * speed;
+          diverGroup.position.y += moveVector.y * speed;
+          
+          const targetAngle = Math.atan2(moveVector.y, moveVector.x) - Math.PI / 2;
+          diverGroup.rotation.z = targetAngle;
+        } else {
+          const waveOffsetY = Math.sin(timeSec * 1.8) * 0.008;
+          const waveOffsetX = Math.cos(timeSec * 1.2) * 0.004;
+          const waveTilt = Math.sin(timeSec * 1.5) * 0.04;
+
+          diverGroup.position.y += waveOffsetY;
+          diverGroup.position.x += waveOffsetX;
+          diverGroup.rotation.z += (waveTilt - diverGroup.rotation.z) * 0.05;
+        }
+
+        if (diverGroup.position.x < -mapLimitX) diverGroup.position.x = -mapLimitX;
+        if (diverGroup.position.x > mapLimitX) diverGroup.position.x = mapLimitX;
+        if (diverGroup.position.y > 1.0) diverGroup.position.y = 1.0;
+        if (diverGroup.position.y < maxDepthY + 1.2) diverGroup.position.y = maxDepthY + 1.2;
+
+        camera.position.x += (diverGroup.position.x - camera.position.x) * 0.1;
+        camera.position.y += (diverGroup.position.y - camera.position.y) * 0.1;
+
+        subLight.position.set(diverGroup.position.x, diverGroup.position.y, 2);
+
+        backgroundGroup.position.x = diverGroup.position.x * 0.3;
+        backgroundGroup.position.y = diverGroup.position.y * 0.3;
+
+        const dx = boatGroup.position.x - diverGroup.position.x;
+        const dy = boatGroup.position.y - diverGroup.position.y;
+        const distToBoat = Math.floor(Math.hypot(dx, dy));
+        
+        const angleToBoat = Math.atan2(dx, dy) * (180 / Math.PI);
+        compassEl.style.transform = `rotate(${angleToBoat}deg)`;
+        document.getElementById('boat-dist').innerText = distToBoat;
+
+        if (upgrades.radar > 0) {
+          const radarRange = 15 + ((upgrades.radar - 1) * 10);
+          let closestSack = null;
+          let minDist = Infinity;
+
+          treasureSacks.forEach(sack => {
+            if (sack.amount > 0) {
+              const d = diverGroup.position.distanceTo(sack.mesh.position);
+              if (d < minDist) {
+                minDist = d;
+                closestSack = sack;
+              }
+            }
+          });
+
+          if (closestSack && minDist <= radarRange) {
+            radarLine.visible = true;
+            const positions = radarLine.geometry.attributes.position.array;
+            
+            positions[0] = diverGroup.position.x;
+            positions[1] = diverGroup.position.y;
+            positions[2] = 0;
+            
+            positions[3] = closestSack.mesh.position.x;
+            positions[4] = closestSack.mesh.position.y;
+            positions[5] = 0;
+
+            radarLine.geometry.attributes.position.needsUpdate = true;
+            radarLine.geometry.computeBoundingSphere();
+          } else {
+            radarLine.visible = false;
+          }
+        } else {
+          radarLine.visible = false;
+        }
+
+        if (player.invulnerableTimer > 0) {
+          player.invulnerableTimer--;
+          diverGroup.visible = Math.floor(player.invulnerableTimer / 5) % 2 === 0;
+        } else {
+          diverGroup.visible = true;
+        }
+
+        let closestFishDist = Infinity;
+
+        enemies.forEach(enemy => {
+          enemy.mesh.position.x += enemy.speed;
+          enemy.mesh.rotation.z = Math.sin(now * 0.01) * 0.1;
+
+          if (enemy.speed > 0 && enemy.mesh.position.x > mapLimitX) enemy.mesh.position.x = -mapLimitX;
+          else if (enemy.speed < 0 && enemy.mesh.position.x < -mapLimitX) enemy.mesh.position.x = mapLimitX;
+
+          // 1. Distanza dal centro geometrico del pesce
+          const distToCenter = diverGroup.position.distanceTo(enemy.mesh.position);
+          
+          // 2. Calcolo punto della testa nello spazio di gioco (Opzione A)
+          const isLarge = enemy.type === 'large';
+          const headOffset = isLarge ? 2.2 * enemy.mesh.scale.x : 0.8 * enemy.mesh.scale.x;
+          
+          // Orientamento e direzione della testa in base all'angolo di nuoto
+          const fishForward = new THREE.Vector3(1, 0, 0).applyQuaternion(enemy.mesh.quaternion);
+          const headPos = enemy.mesh.position.clone().add(fishForward.multiplyScalar(headOffset));
+          const distToHead = diverGroup.position.distanceTo(headPos);
+
+          const minCurrentDist = Math.min(distToCenter, distToHead);
+          if (minCurrentDist < closestFishDist) {
+            closestFishDist = minCurrentDist;
+          }
+
+          if (player.invulnerableTimer === 0) {
+            // Raggio di collisione esteso per la testa e il corpo
+            const hitRadius = isLarge ? (enemy.radius * 1.2) : enemy.radius;
+            
+            if (distToCenter < hitRadius + 0.4 || distToHead < hitRadius + 0.4) {
+              const suitProtection = 1 - (upgrades.suit * 0.10);
+              const finalDamage = Math.max(1, Math.round(enemy.damage * suitProtection));
+
+              player.health = Math.max(0, player.health - finalDamage);
+              player.invulnerableTimer = 60;
+              
+              audioEngine.playHurt();
+
+              const healthBar = document.getElementById('health-bar');
+              healthBar.style.width = `${player.health}%`;
+              if (player.health < 40) healthBar.style.backgroundColor = '#ef4444';
+
+              if (player.health <= 0) handlePlayerDeath();
+            }
+          }
+        });
+
+        if (closestFishDist <= 6.0 && !player.isDead) {
+          audioEngine.playFishProximity(closestFishDist);
+        }
+
+        treasureSacks.forEach((sack) => {
+          if (sack.amount > 0) {
+            sack.mesh.rotation.y += 0.02;
+
+            if (player.carriedCoins < player.maxCarriedCoins) {
+              const dist = diverGroup.position.distanceTo(sack.mesh.position);
+              if (dist < sack.radius) {
+                const spaceAvailable = player.maxCarriedCoins - player.carriedCoins;
+                const takeAmount = Math.min(spaceAvailable, sack.amount);
+
+                player.carriedCoins += takeAmount;
+                sack.amount -= takeAmount;
+
+                audioEngine.playGoldCollect();
+
+                document.getElementById('carried-coins').innerText = player.carriedCoins;
+                if (sack.amount <= 0) sack.mesh.visible = false;
+              }
+            }
+          }
+        });
+
+        if (distToBoat < 3.5) {
+          if (player.carriedCoins > 0) {
+            player.levelCollectedCoins += player.carriedCoins;
+            player.carriedCoins = 0;
+            
+            audioEngine.playDeposit();
+
+            document.getElementById('carried-coins').innerText = player.carriedCoins;
+            document.getElementById('total-coins').innerText = player.levelCollectedCoins;
+
+            saveGameToStorage(true);
+
+            if (player.levelCollectedCoins >= targetCoins) {
+              openShop();
+            }
+          }
+
+          if (player.health < player.maxHealth) {
+            player.health = Math.min(player.maxHealth, player.health + 0.5);
+            const healthBar = document.getElementById('health-bar');
+            healthBar.style.width = `${player.health}%`;
+            if (player.health >= 40) healthBar.style.backgroundColor = '#22c55e';
+          }
+        }
+      }
+
+      document.getElementById('depth-count').innerText = currentDepth;
+
+      const depthRatio = Math.min(1, currentDepth / Math.abs(maxDepthY));
+      scene.background.lerpColors(surfaceColor, deepColor, depthRatio);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('beforeunload', () => {
+      if (gameStarted) saveGameToStorage();
+    });
+
+    window.addEventListener('resize', () => {
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = -viewSize * aspect / 2;
+      camera.right = viewSize * aspect / 2;
+      camera.top = viewSize / 2;
+      camera.bottom = -viewSize / 2;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
