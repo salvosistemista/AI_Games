@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Games with Claude</title>
+    <style>
+        :root {
+            --bg-color: #f4ebd9;
+            --text-color: #2c3e2e;
+            --card-bg: rgba(255, 255, 255, 0.5);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --description-color: #4a5d4c;
+            --btn-bg: #8a6240;
+            --btn-hover: #724f32;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 750px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            color: #1e3322;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            color: var(--description-color);
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+        }
+
+        .games-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            backdrop-filter: blur(4px);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .game-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .game-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            padding-right: 1rem;
+        }
+
+        .game-name {
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #1e3322;
+        }
+
+        .game-description {
+            font-size: 0.95rem;
+            color: var(--description-color);
+            line-height: 1.4;
+        }
+
+        .btn-play {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--btn-bg);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 3px 10px rgba(138, 98, 64, 0.2);
+            transition: background 0.2s, transform 0.1s;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-play:hover {
+            background-color: var(--btn-hover);
+        }
+
+        .btn-play:active {
+            transform: scale(0.98);
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .game-card {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1.2rem;
+                padding: 1.2rem;
+            }
+            .game-info {
+                padding-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>AI Games with Claude</h1>
+        <div class="subtitle">La tua biblioteca personale di giochi ed esperienze interattive.</div>
+        
+        <div class="games-grid" id="gamesGrid">
+            <!-- I giochi verranno inseriti qui dal ciclo JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Configurazione statica dei tuoi giochi
+        const games = [
+            { name: "LdQ Piccola Libreria v.6.07", file: "LdQ Piccola Libreria v.6.07.html", desc: "qui descrizione" },
+            { name: "La Marea Nera", file: "la_marea_nera.html", desc: "qui descrizione" },
+            { name: "Work in Space", file: "Work in Space.html", desc: "qui descrizione" },
+            { name: "Orbit and Echoes v1", file: "Orbit_and_Echoes_v1.html", desc: "qui descrizione" },
+            { name: "Orbit and Echoes v2", file: "Orbit_and_Echoes_v2.html", desc: "qui descrizione" },
+            { name: "Deep Space", file: "Deep_Space.html", desc: "qui descrizione" },
+            { name: "Retro Highway Racer 2D", file: "Retro Highway Racer 2D.html", desc: "qui descrizione" },
+            { name: "Monsters & Labyrinths", file: "Monsters_n_Labyriths_standalone.html", desc: "qui descrizione" },
+            { name: "My Dungeon", file: "MyDungeon.html", desc: "qui descrizione" },
+            { name: "Sorcerer's Labyrinth", file: "Sorcerer's Labyrinth.html", desc: "qui descrizione" },
+            { name: "Frogger", file: "frogger.html", desc: "qui descrizione" },
+            { name: "La Cripta Silente", file: "la_cripta_silente.html", desc: "qui descrizione" },
+            { name: "Le Ore del Copista", file: "le_ore_del_copista.html", desc: "qui descrizione" },
+            { name: "Treasures of the Ocean", file: "treasures_of_the_ocean_for_desktop.html", desc: "qui descrizione" },
+            { name: "Aura The Ascent", file: "Aura The Ascent.html", desc: "qui descrizione" },
+            { name: "Stealth Escape", file: "stealth_escape.html", desc: "qui descrizione" }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridContainer = document.getElementById('gamesGrid');
+
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.innerHTML = `
+                    <div class="game-info">
+                        <span class="game-name">${game.name}</span>
+                        <span class="game-description">${game.desc}</span>
+                    </div>
+                    <a href="${encodeURIComponent(game.file)}" class="btn-play">Esegui</a>
+                `;
+                gridContainer.appendChild(card);
+            });
+        });
+    </script>
+</body>
+</html>
