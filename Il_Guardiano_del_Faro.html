@@ -1425,6 +1425,7 @@
           <button id="letter-attach-btn" class="modal-close-btn" type="button">📎 Allega Polaroid</button>
           <button id="letter-gift-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#8C5E3C,#6B4529);">🍪 Invia un regalo</button>
           <button id="letter-conchiglie-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#4A7A8C,#345A68);">🦪 Consegna conchiglie</button>
+          <button id="letter-archive-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#C1666B,#9E4D52);">📜 Ho preso nota</button>
         </div>
         <div class="letter-actions centrato">
           <button id="letter-postpone-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#8C5E3C,#6B4529);">📥 Metti da parte per dopo</button>
@@ -1839,6 +1840,65 @@
             una nuova partita senza mai vedere il menu iniziale.
             attivaSchermoIntero() fa da toggle con fallback ai prefissi
             webkit/moz/ms per compatibilità multi-browser.
+   FIX BARNABY POMERIGGIO — la posizione "scogliera" era troppo vicina
+            al punto pesca (canna/secchiello), risultando coperto o
+            confuso con quell'hotspot. Spostato a distanza di sicurezza.
+   FIX NOTIFICA POSTA — se lo stesso mattino arrivavano anche un dono
+            di Barnaby o l'avviso di stufa spenta, il loro messaggio
+            sovrascriveva quello della posta (ultimo showMessage vince).
+            attivaProssimaLetteraSeDisponibile() ora viene chiamata per
+            ultima nel blocco del nuovo giorno, così la notifica della
+            posta resta sempre quella visibile quando serve un'azione.
+   BLOCCO FASE SENZA POSTA LETTA — se al Mattino c'è posta non ancora
+            aperta (nuovaLetteraNonLetta), avanzare fase è bloccato con
+            un messaggio dedicato, finché non si apre almeno una volta
+            la cassetta. Verificato end-to-end.
+   🌊 MAREA E ISOLOTTO — alta marea al Mattino e al Tramonto, bassa al
+            Pomeriggio e di Notte (calcolaMarea()). Con la bassa marea
+            si scopre un sentiero (sentieroMareaHotspot, invisibile e
+            non toccabile con l'alta marea) verso un piccolo isolotto
+            secondario con un relitto misterioso, pronto per future
+            storie. Toccando il sentiero si viaggia avanti e indietro;
+            mentre si è sull'isolotto, avanzare fase è bloccato — va
+            prima ripercorso il sentiero. Stato incluso nel salvataggio
+            (posizione camera ricostruita al ricaricamento). Verificato
+            l'intero ciclo: blocco con alta marea, viaggio, blocco fase
+            sull'isolotto, ritorno, persistenza dopo reload.
+   FIX LAYOUT CASA — il tavolo/dispensa era troppo vicino al mobiletto
+            del Sacco dei Ritrovamenti (distanza ~0.4, praticamente
+            sovrapposti): spostato più vicino alla parete sinistra. La
+            posizione notturna di Barnaby era quasi sovrapposta alla
+            stufa stessa (distanza ~0.4, restava coperto dalla sua
+            geometria): allontanato mantenendo il senso di "vicino al
+            fuoco" senza più nasconderlo.
+   🏝️ PUNTI D'INTERESSE DEL SECONDO ISOLOTTO — l'isolotto raggiungibile
+            con la bassa marea è ora ~50% più grande dell'isola
+            principale (sentiero allungato, nebbia scenica estesa) e
+            ospita tre punti d'interesse narrativi, pensati per
+            raccontare senza testo: 1) Il Vecchio Molo Inutilizzato
+            (impalcato di legno rovinato con assi/pali mancanti/rotti):
+            al Tramonto regala un momento di pesca rilassante
+            (+Serenità), nelle altre fasi un controllo settimanale
+            (50%) può restituire una targa di ottone con il nome di
+            una nave leggendaria (NOMI_NAVI_LEGGENDARIE); 2)
+            L'Incisione sulla Roccia (data e iniziale scolpite su un
+            masso), rilevata come nuovo soggetto INCISIONE in
+            classificaFoto(): fotografarla sblocca, una tantum, la
+            lettera dello Storico della Terraferma — puramente
+            narrativa, richiede il nuovo bottone generico "📜 Ho preso
+            nota" (mostrato quando una lettera non ha nessuna
+            richiesta di foto/regalo/conchiglie); 3) La Piccola Serra
+            Abbandonata, a 3 stadi visivi (polverosa → in lavorazione →
+            restaurata con vetri puliti e pianta rara), che consuma
+            Legni di Relitto dal Sacco dei Ritrovamenti (20 per
+            iniziare, poi 10 per ognuna delle 20 riparazioni). Le
+            Targhe di Navi trovate si vedono ora anche nella vetrina
+            del Sacco dei Ritrovamenti. Tutto lo stato (controllo
+            molo, targhe trovate, lettera storico, progresso serra)
+            incluso nel salvataggio e resettato in una nuova partita.
+            NOTA: la serra restaurata non influenza ancora davvero la
+            crescita dell'orto in inverno/tempesta — l'integrazione
+            con l'orto resta il prossimo passo naturale.
    ================================================================ */
 
 // ---------------------------------------------------------------
@@ -1864,7 +1924,7 @@ const PALETTE = {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PALETTE.skyFog);
 // Fog leggera per dare profondità e atmosfera "cozy" senza hard-edge
-scene.fog = new THREE.Fog(PALETTE.skyFog, 18, 40);
+scene.fog = new THREE.Fog(PALETTE.skyFog, 18, 55);
 
 // ---------------------------------------------------------------
 // CAMERA — PerspectiveCamera, vista panoramica/isometrica inclinata
@@ -3233,7 +3293,7 @@ interiorGroup.add(kettleHotspot);
 interactableGroups.push(kettleHotspot);
 
 const pantryHotspot = createPantryHotspot();
-pantryHotspot.position.set(-0.35, 0, 0.6);
+pantryHotspot.position.set(-0.7, 0, 0.6); // avvicinato alla parete sinistra: prima si accavallava col mobiletto
 pantryHotspot.rotation.y = 2.6;
 interiorGroup.add(pantryHotspot);
 interactableGroups.push(pantryHotspot);
@@ -3806,6 +3866,393 @@ function aggiornaSchiuma() {
   // Leggero scintillio: l'opacità media oscilla dolcemente nel tempo,
   // più marcato con il mare mosso della tempesta
   foamMateriale.opacity = opacitaBase + Math.sin(elapsedTime * 0.8) * 0.1;
+}
+
+// ================================================================
+// 🌊 MAREA — alta al Mattino e al Tramonto, bassa al Pomeriggio e di
+// Notte. Con la bassa marea si scopre un sentiero verso un piccolo
+// isolotto, altrimenti sommerso e impraticabile.
+// ================================================================
+let mareaAlta = true;
+let sulSecondoIsolotto = false;
+let cameraStatoPrimaSentiero = null;
+
+// --- Stato dei tre punti d'interesse del secondo isolotto ---
+// Vecchio Molo: controllo settimanale (50% di trovare una targa nave)
+let prossimoControlloMoloGiorno = null;
+let targheNaviTrovate = [];
+// Incisione sulla Roccia: sblocca una volta sola la lettera dello storico
+let incisioneLetteraSbloccata = false;
+// Piccola Serra Abbandonata: 20 Legni di Relitto per iniziare i lavori,
+// poi 10 Legni di Relitto per ognuna delle 20 riparazioni successive
+const LEGNI_INIZIO_SERRA = 20;
+const LEGNI_PER_RIPARAZIONE_SERRA = 10;
+const RIPARAZIONI_TOTALI_SERRA = 20;
+let serraLavoriIniziati = false;
+let serraRiparazioniFatte = 0;
+
+const NOMI_NAVI_LEGGENDARIE = [
+  'La Sirena d\'Argento', 'Il Vento del Nord', 'La Stella di Ponente',
+  'Il Corvo Bianco', 'La Promessa del Mare', 'L\'Ultimo Faro',
+  'La Fortuna di Levante', 'Il Sogno dell\'Atlantico'
+];
+
+// Piccolo isolotto secondario, raggiungibile solo con la bassa marea.
+// Dimensionato ~50% più grande dell'isola principale (roccia 7.2-8.2 →
+// 10.8-12.3) per ospitare i tre punti d'interesse narrativi.
+function creaSecondoIsolotto() {
+  const group = new THREE.Group();
+
+  const rocciaMat = new THREE.MeshStandardMaterial({ color: PALETTE.warmRock, roughness: 0.95, flatShading: true });
+  const roccia = new THREE.Mesh(new THREE.CylinderGeometry(10.8, 12.3, 1.4, 9, 1), rocciaMat);
+  roccia.position.y = 0.2;
+  roccia.castShadow = true;
+  roccia.receiveShadow = true;
+  group.add(roccia);
+
+  const erbaMat = new THREE.MeshStandardMaterial({ color: PALETTE.mossGreen, roughness: 0.9, flatShading: true });
+  const erba = new THREE.Mesh(new THREE.CylinderGeometry(9.75, 10.8, 0.5, 9, 1), erbaMat);
+  erba.position.y = 0.2 + 0.7 + 0.25;
+  erba.castShadow = true;
+  erba.receiveShadow = true;
+  group.add(erba);
+
+  // Un piccolo dettaglio misterioso: un relitto scuro semi-sepolto
+  const relittoMat = new THREE.MeshStandardMaterial({ color: 0x3A332C, roughness: 0.85, flatShading: true });
+  const relitto = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.22), relittoMat);
+  relitto.rotation.y = 0.4;
+  relitto.rotation.z = 0.15;
+  relitto.position.set(2.4, 0.2 + 0.7 + 0.5 + 0.08, -1.6);
+  relitto.castShadow = true;
+  group.add(relitto);
+
+  return group;
+}
+
+const SECONDO_ISOLOTTO_POSIZIONE = new THREE.Vector3(24.5, 0, 0);
+const ISOLOTTO_SURFACE_Y = 0.2 + 0.7 + 0.5 + 0.25; // altezza calpestabile approssimativa
+
+const secondoIsolottoGroup = creaSecondoIsolotto();
+secondoIsolottoGroup.position.copy(SECONDO_ISOLOTTO_POSIZIONE);
+scene.add(secondoIsolottoGroup);
+
+// Il sentiero: una striscia di sabbia/roccia bagnata, visibile e
+// percorribile solo con la bassa marea (Pomeriggio e Notte). Allungato
+// per coprire la distanza maggiore verso il nuovo isolotto più grande.
+function creaSentieroMarea() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8C8264, roughness: 0.95, flatShading: true });
+  const sentiero = new THREE.Mesh(new THREE.BoxGeometry(14.6, 0.12, 1.5), mat);
+  sentiero.position.y = 0.06;
+  sentiero.receiveShadow = true;
+  group.add(sentiero);
+
+  addInvisibleTapArea(group, new THREE.Vector3(14.6, 0.7, 1.5));
+
+  group.userData.interactable = true;
+  group.userData.id = 'sentieroMarea';
+  group.userData.onActivate = function () {
+    toccaSentieroMarea();
+  };
+
+  return group;
+}
+
+const sentieroMareaHotspot = creaSentieroMarea();
+sentieroMareaHotspot.position.set(15.6, 0, 0);
+scene.add(sentieroMareaHotspot);
+interactableGroups.push(sentieroMareaHotspot);
+
+// --- IL VECCHIO MOLO INUTILIZZATO — struttura di legno rovinata dal
+// sale, un tempo attracco dei piroscafi. Al Tramonto: pesca rilassante
+// e serena. Nelle altre fasi: controllo settimanale (50%) per una
+// vecchia targa di nave scomparsa. ---
+function creaVecchioMolo() {
+  const group = new THREE.Group();
+  const legnoVecchioMat = new THREE.MeshStandardMaterial({ color: 0x5C4A38, roughness: 0.95, flatShading: true });
+  const legnoRottoMat = new THREE.MeshStandardMaterial({ color: 0x453728, roughness: 0.95, flatShading: true });
+
+  // Assi dell'impalcato, alcune volutamente mancanti/storte per dare
+  // l'idea di abbandono
+  const assiConfig = [
+    { x: 0, z: 0.5, rot: 0.03 }, { x: -0.55, z: 0.5, rot: -0.02 },
+    { x: -1.1, z: 0.48, rot: 0.05 }, { x: -1.7, z: 0.52, rot: -0.06 },
+    { x: -2.35, z: 0.46, rot: 0.14 }, // asse più storta, verso la fine
+    { x: 0, z: -0.5, rot: -0.02 }, { x: -0.55, z: -0.5, rot: 0.03 },
+    { x: -1.1, z: -0.48, rot: -0.04 }, { x: -2.35, z: -0.5, rot: 0.09 }
+    // nota: manca volutamente l'asse a x=-1.7,z=-0.48: una falla nell'impalcato
+  ];
+  assiConfig.forEach((cfg) => {
+    const asse = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.06, 0.42), legnoVecchioMat);
+    asse.position.set(cfg.x, 0.55, cfg.z);
+    asse.rotation.z = cfg.rot;
+    asse.castShadow = true;
+    asse.receiveShadow = true;
+    group.add(asse);
+  });
+
+  // Pali di sostegno, alcuni spezzati a metà altezza
+  const paliPos = [
+    { x: 0.25, z: 0.65, h: 0.7 }, { x: 0.25, z: -0.65, h: 0.7 },
+    { x: -1.0, z: 0.65, h: 0.7 }, { x: -1.0, z: -0.65, h: 0.42 }, // spezzato
+    { x: -2.55, z: 0.65, h: 0.7 }, { x: -2.55, z: -0.65, h: 0.7 }
+  ];
+  paliPos.forEach((p) => {
+    const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.07, p.h, 6), legnoRottoMat);
+    palo.position.set(p.x, p.h / 2, p.z);
+    palo.castShadow = true;
+    group.add(palo);
+  });
+
+  addInvisibleTapArea(group, new THREE.Vector3(3.6, 1.3, 1.5));
+
+  group.userData.interactable = true;
+  group.userData.id = 'vecchioMolo';
+  group.userData.onActivate = function () {
+    if (DAY_PHASES[currentPhaseIndex].name === 'Tramonto') {
+      serenita = clampStat(serenita + 10);
+      updateStatsUI();
+      showMessage('Ti siedi sul bordo del vecchio molo, la lenza in acqua, a guardare il sole calare dietro l\'orizzonte.');
+      return;
+    }
+    if (prossimoControlloMoloGiorno === null || currentDay >= prossimoControlloMoloGiorno) {
+      prossimoControlloMoloGiorno = currentDay + 7;
+      if (Math.random() < 0.5) {
+        const nome = NOMI_NAVI_LEGGENDARIE[Math.floor(Math.random() * NOMI_NAVI_LEGGENDARIE.length)];
+        targheNaviTrovate.push(nome);
+        showMessage(`Tra le assi marce del vecchio molo trovi una vecchia targa di ottone annerita: si legge ancora il nome "${nome}".`);
+      } else {
+        showMessage('Il vecchio molo scricchiola sotto i tuoi passi: oggi non trovi nulla, solo salsedine e legno marcio.');
+      }
+    } else {
+      showMessage('Il legno consumato dal sale racconta di un tempo in cui qui attraccavano i piroscafi.');
+    }
+  };
+
+  return group;
+}
+
+const vecchioMoloHotspot = creaVecchioMolo();
+vecchioMoloHotspot.position.set(SECONDO_ISOLOTTO_POSIZIONE.x - 6.5, ISOLOTTO_SURFACE_Y - 0.15, SECONDO_ISOLOTTO_POSIZIONE.z + 4.5);
+vecchioMoloHotspot.rotation.y = 0.3;
+scene.add(vecchioMoloHotspot);
+interactableGroups.push(vecchioMoloHotspot);
+
+// --- L'INCISIONE SULLA ROCCIA — data e iniziale incise da un guardiano
+// di un secolo fa. Nessuna azione al tap: si scopre fotografandola
+// (vedi classificaFoto/scattaFoto), un dettaglio da notare esplorando. ---
+function creaIncisioneRoccia() {
+  const group = new THREE.Group();
+  const rocciaMat = new THREE.MeshStandardMaterial({ color: PALETTE.warmRock, roughness: 0.9, flatShading: true });
+  const roccione = new THREE.Mesh(new THREE.DodecahedronGeometry(0.85, 0), rocciaMat);
+  roccione.scale.set(1, 0.8, 0.9);
+  roccione.position.y = 0.55;
+  roccione.castShadow = true;
+  roccione.receiveShadow = true;
+  group.add(roccione);
+
+  // Piccola superficie levigata dove è incisa la data/iniziale
+  const targaMat = new THREE.MeshStandardMaterial({ color: 0x8A7355, roughness: 0.75, flatShading: true });
+  const targa = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.32, 0.03), targaMat);
+  targa.position.set(0.35, 0.65, 0.55);
+  targa.rotation.y = -0.35;
+  group.add(targa);
+
+  // Solchi incisi (righe scure sottili): una data e un'iniziale stilizzate
+  const incisioneMat = new THREE.MeshStandardMaterial({ color: 0x3A3128, roughness: 0.6 });
+  const righeIncisione = [
+    { w: 0.3, y: 0.72, }, { w: 0.22, y: 0.65 }, { w: 0.12, y: 0.58 }
+  ];
+  righeIncisione.forEach((r) => {
+    const riga = new THREE.Mesh(new THREE.BoxGeometry(r.w, 0.02, 0.008), incisioneMat);
+    riga.position.set(0.35, r.y, 0.575);
+    riga.rotation.y = -0.35;
+    group.add(riga);
+  });
+
+  addInvisibleTapArea(group, new THREE.Vector3(1.4, 1.3, 1.4));
+
+  group.userData.interactable = true;
+  group.userData.id = 'incisioneRoccia';
+  group.userData.onActivate = function () {
+    showMessage('Ti chini a guardare da vicino: una data e un\'iniziale, incise nella pietra da mani lontane nel tempo. Varrebbe la pena fotografarle.');
+  };
+
+  return group;
+}
+
+const incisioneRocciaHotspot = creaIncisioneRoccia();
+incisioneRocciaHotspot.position.set(SECONDO_ISOLOTTO_POSIZIONE.x + 5.5, ISOLOTTO_SURFACE_Y, SECONDO_ISOLOTTO_POSIZIONE.z + 5.0);
+incisioneRocciaHotspot.rotation.y = -0.6;
+scene.add(incisioneRocciaHotspot);
+interactableGroups.push(incisioneRocciaHotspot);
+
+// --- LA PICCOLA SERRA ABBANDONATA — edificio in vetro e legno da
+// restaurare: 20 Legni di Relitto per iniziare i lavori, poi 10 per
+// ognuna delle 20 riparazioni successive. Una volta completata,
+// permetterà di coltivare piante rare anche in inverno o con tempesta
+// (integrazione con l'orto prevista in un prossimo step). ---
+function creaSerraAbbandonata() {
+  const group = new THREE.Group();
+
+  // Struttura in legno, sempre visibile
+  const telaioMat = new THREE.MeshStandardMaterial({ color: PALETTE.fenceWood, roughness: 0.85, flatShading: true });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 0.9), telaioMat);
+  base.position.y = 0.03;
+  base.receiveShadow = true;
+  group.add(base);
+  [[-0.62, -0.42], [0.62, -0.42], [-0.62, 0.42], [0.62, 0.42]].forEach(([x, z]) => {
+    const montante = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.95, 0.06), telaioMat);
+    montante.position.set(x, 0.5, z);
+    montante.castShadow = true;
+    group.add(montante);
+  });
+  const trave = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 0.9), telaioMat);
+  trave.position.y = 0.97;
+  group.add(trave);
+
+  // --- Stadio 0: polvere, assi rotte, vetri infranti (non ancora iniziata) ---
+  const stadio0Group = new THREE.Group();
+  const polvereMat = new THREE.MeshStandardMaterial({ color: 0xA79A82, roughness: 1.0, flatShading: true });
+  const polvere = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.03, 8), polvereMat);
+  polvere.position.y = 0.07;
+  stadio0Group.add(polvere);
+  const asseRottaMat = new THREE.MeshStandardMaterial({ color: 0x453728, roughness: 0.95, flatShading: true });
+  const asseRotta1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.12), asseRottaMat);
+  asseRotta1.position.set(-0.15, 0.35, 0.44);
+  asseRotta1.rotation.z = 0.5;
+  stadio0Group.add(asseRotta1);
+  const asseRotta2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.1), asseRottaMat);
+  asseRotta2.position.set(0.3, 0.55, -0.44);
+  asseRotta2.rotation.z = -0.35;
+  stadio0Group.add(asseRotta2);
+  group.add(stadio0Group);
+
+  // --- Stadio 1: lavori in corso, telaio sgombro ma vetri ancora assenti ---
+  const stadio1Group = new THREE.Group();
+  const teloMat = new THREE.MeshStandardMaterial({ color: 0xD9CFC0, roughness: 0.9, transparent: true, opacity: 0.55, flatShading: true, side: THREE.DoubleSide });
+  const telo = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.85), teloMat);
+  telo.position.set(0, 0.5, 0.42);
+  stadio1Group.add(telo);
+  stadio1Group.visible = false;
+  group.add(stadio1Group);
+
+  // --- Stadio 2: completamente restaurata, vetri puliti + pianta rara ---
+  const stadio2Group = new THREE.Group();
+  const vetroMat = new THREE.MeshStandardMaterial({ color: 0xBEE3EE, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.45, flatShading: true, side: THREE.DoubleSide });
+  [0.42, -0.42].forEach((z) => {
+    const pannello = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.85), vetroMat);
+    pannello.position.set(0, 0.5, z);
+    if (z < 0) pannello.rotation.y = Math.PI;
+    stadio2Group.add(pannello);
+  });
+  const vasoMat = new THREE.MeshStandardMaterial({ color: 0xB5732E, roughness: 0.8, flatShading: true });
+  const vaso = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.14, 8), vasoMat);
+  vaso.position.set(0, 0.13, 0);
+  stadio2Group.add(vaso);
+  const piantaRaraMat = new THREE.MeshStandardMaterial({ color: 0x8B5FBF, roughness: 0.7, flatShading: true });
+  const piantaRara = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), piantaRaraMat);
+  piantaRara.position.set(0, 0.13 + 0.16, 0);
+  stadio2Group.add(piantaRara);
+  stadio2Group.visible = false;
+  group.add(stadio2Group);
+
+  addInvisibleTapArea(group, new THREE.Vector3(1.5, 1.2, 1.1));
+
+  // Applica visivamente lo stadio corrente (0 = da iniziare, 1 = in
+  // lavorazione, 2 = restaurata) — usata sia dal tap che dal caricamento
+  group.userData.applicaStadioSerra = function (stadio) {
+    stadio0Group.visible = (stadio === 0);
+    stadio1Group.visible = (stadio === 1);
+    stadio2Group.visible = (stadio === 2);
+  };
+
+  group.userData.interactable = true;
+  group.userData.id = 'serraAbbandonata';
+  group.userData.onActivate = function () {
+    if (serraRiparazioniFatte >= RIPARAZIONI_TOTALI_SERRA) {
+      showMessage('La serra restaurata scintilla di vetro pulito: ora potrai coltivare piante rare anche in inverno o durante la tempesta.');
+      return;
+    }
+    if (!serraLavoriIniziati) {
+      const disponibile = saccoRitrovamenti.driftwood || 0;
+      if (disponibile < LEGNI_INIZIO_SERRA) {
+        showMessage(`La piccola serra è piena di polvere e assi rotte. Per iniziare i lavori servono almeno ${LEGNI_INIZIO_SERRA} Legni di Relitto (ne hai ${disponibile}).`);
+        return;
+      }
+      saccoRitrovamenti.driftwood -= LEGNI_INIZIO_SERRA;
+      serraLavoriIniziati = true;
+      group.userData.applicaStadioSerra(1);
+      showMessage('Rimuovi le assi rotte e spazzi via la polvere: i lavori di restauro della serra sono finalmente iniziati.');
+      return;
+    }
+    const disponibile = saccoRitrovamenti.driftwood || 0;
+    if (disponibile < LEGNI_PER_RIPARAZIONE_SERRA) {
+      showMessage(`Servono almeno ${LEGNI_PER_RIPARAZIONE_SERRA} Legni di Relitto per continuare la riparazione (ne hai ${disponibile}). Riparazioni completate: ${serraRiparazioniFatte}/${RIPARAZIONI_TOTALI_SERRA}.`);
+      return;
+    }
+    saccoRitrovamenti.driftwood -= LEGNI_PER_RIPARAZIONE_SERRA;
+    serraRiparazioniFatte += 1;
+    if (serraRiparazioniFatte >= RIPARAZIONI_TOTALI_SERRA) {
+      group.userData.applicaStadioSerra(2);
+      showMessage('Con l\'ultima asse sistemata, la piccola serra torna a splendere: è completamente restaurata!');
+    } else {
+      showMessage(`Un altro passo avanti nel restauro della serra (${serraRiparazioniFatte}/${RIPARAZIONI_TOTALI_SERRA}).`);
+    }
+  };
+
+  return group;
+}
+
+const serraAbbandonataHotspot = creaSerraAbbandonata();
+serraAbbandonataHotspot.position.set(SECONDO_ISOLOTTO_POSIZIONE.x - 2.5, ISOLOTTO_SURFACE_Y, SECONDO_ISOLOTTO_POSIZIONE.z - 6.0);
+serraAbbandonataHotspot.rotation.y = 0.4;
+scene.add(serraAbbandonataHotspot);
+interactableGroups.push(serraAbbandonataHotspot);
+
+// Ricalcola lo stato della marea in base alla fase corrente, e mostra
+// (o nasconde) il sentiero di conseguenza
+function calcolaMarea() {
+  mareaAlta = (currentPhaseIndex === 0 || currentPhaseIndex === 2); // Mattino/Tramonto = alta, Pomeriggio/Notte = bassa
+  sentieroMareaHotspot.visible = !mareaAlta;
+}
+
+// Posiziona la camera per ammirare il piccolo isolotto (ora più grande:
+// arretrata e alzata per inquadrare i tre punti d'interesse)
+function posizionaCameraSuIsolotto() {
+  camera.position.set(SECONDO_ISOLOTTO_POSIZIONE.x + 6.5, ISOLOTTO_SURFACE_Y + 5.2, SECONDO_ISOLOTTO_POSIZIONE.z + 7.2);
+  controls.target.set(SECONDO_ISOLOTTO_POSIZIONE.x, ISOLOTTO_SURFACE_Y, SECONDO_ISOLOTTO_POSIZIONE.z);
+  controls.update();
+}
+
+// Attraversa il sentiero: verso l'isolotto se sei sull'isola
+// principale, di ritorno se sei già sull'isolotto. Con l'alta marea
+// il sentiero è sommerso e invisibile: il tocco non ha alcun effetto.
+function toccaSentieroMarea() {
+  if (mareaAlta) return;
+
+  if (!sulSecondoIsolotto) {
+    eseguiTransizioneScena(() => {
+      cameraStatoPrimaSentiero = { position: camera.position.clone(), target: controls.target.clone() };
+      posizionaCameraSuIsolotto();
+      sulSecondoIsolotto = true;
+      showMessage('Approfitti della bassa marea per raggiungere il piccolo isolotto.');
+    });
+  } else {
+    eseguiTransizioneScena(() => {
+      if (cameraStatoPrimaSentiero) {
+        camera.position.copy(cameraStatoPrimaSentiero.position);
+        controls.target.copy(cameraStatoPrimaSentiero.target);
+      } else {
+        // Fallback di sicurezza (es. dopo un caricamento): torna alla vista panoramica standard
+        camera.position.set(11, 10, 13);
+        controls.target.set(0, 1.5, 0);
+      }
+      controls.update();
+      sulSecondoIsolotto = false;
+      showMessage('Torni sull\'isola principale, ripercorrendo il sentiero scoperto dalla marea.');
+    });
+  }
 }
 
 // --- 🍂 FOGLIE NEL VENTO — piccoli punti che derivano lentamente
@@ -4402,7 +4849,8 @@ const INFO_VOCI_MOBILETTO = {
   targaOttone: { icona: '⚓', nome: 'Targa in Ottone' },
   rullino: { icona: '🎞️', nome: 'Rullino Vintage' },
   doniBarnaby: { icona: '🐾', nome: 'Doni di Barnaby' },
-  oggettiRari: { icona: '✨', nome: 'Oggetti Rari (mareggiate/mappe)' }
+  oggettiRari: { icona: '✨', nome: 'Oggetti Rari (mareggiate/mappe)' },
+  targheNavi: { icona: '🚢', nome: 'Targhe di Navi Leggendarie' }
 };
 
 function apriMobilettoRitrovamenti() {
@@ -4412,7 +4860,8 @@ function apriMobilettoRitrovamenti() {
 
   const conteggi = Object.assign({}, saccoRitrovamenti, {
     doniBarnaby: collezionabili.doniBarnaby || 0,
-    oggettiRari: collezionabili.oggettiRari || 0
+    oggettiRari: collezionabili.oggettiRari || 0,
+    targheNavi: targheNaviTrovate.length
   });
 
   const voci = Object.keys(INFO_VOCI_MOBILETTO).filter((id) => (conteggi[id] || 0) > 0);
@@ -4584,9 +5033,9 @@ function aggiornaLivelloBarnaby() {
 // 4 fasi; con pioggia o tempesta resta sempre dentro, vicino alla stufa
 const BARNABY_POSIZIONI = {
   muretto: new THREE.Vector3(2.05, 0, -0.05), // accanto al muretto dell'orto (non dentro!), al mattino
-  scogliera: new THREE.Vector3(-3.5, 0, -0.8), // scogliera, al pomeriggio (coordinate mondo)
+  scogliera: new THREE.Vector3(-3.2, 0, -2.2), // scogliera, al pomeriggio (spostato: prima era troppo vicino al punto pesca e restava coperto)
   faro: new THREE.Vector3(-1.2, 0, -0.9), // base del faro, al tramonto (coordinate mondo)
-  stufa: new THREE.Vector3(0.5, 0, 0.75) // dentro casa, vicino alla stufa (coordinate LOCALI a interiorGroup)
+  stufa: new THREE.Vector3(0.3, 0, 0.0) // dentro casa, vicino (ma non troppo) alla stufa — prima era quasi sovrapposto e restava coperto (coordinate LOCALI a interiorGroup)
 };
 
 // Determina dove dovrebbe trovarsi Barnaby ora, e lo sposta lì
@@ -5250,7 +5699,8 @@ const SUBJECT_LABELS = {
   ORTO: '🌱 Orto',
   MARE: '🌊 Mare',
   GATTO: '🐱 Barnaby',
-  ISOLA: '🏝️ Isola'
+  ISOLA: '🏝️ Isola',
+  INCISIONE: '🪨 Incisione'
 };
 
 // Ogni lettera: id, mittente, testo, richiestaFoto (tipo atteso o
@@ -5302,6 +5752,18 @@ const lettereDatabase = [
     ricompensa: { messaggio: 'Sono buonissimi! Ti mando un disegno del faro visto da qui: sembra ancora più bello nei tuoi racconti.', tipo: 'informazione' }
   }
 ];
+// Lettera speciale, non in coda: arriva una tantum quando si fotografa
+// l'incisione sulla roccia del secondo isolotto (vedi scattaFoto())
+const letteraStoricoIncisione = {
+  id: 'storico-incisione',
+  mittente: 'Uno Storico della Terraferma',
+  testo: 'Caro guardiano,\nmi hanno inoltrato una tua fotografia: un\'incisione nella roccia, una data e un\'iniziale. Studio da anni la storia dei fari di queste coste, e non conoscevo questo dettaglio. Chissà quale guardiano l\'ha lasciata, e cosa lo spinse a farlo. Grazie per avermela mostrata: la conserverò nei miei archivi.',
+  richiestaFoto: null,
+  richiestaRegalo: null,
+  completata: false,
+  ricompensa: { messaggio: 'Il tuo racconto per lettera arriva a chi, lontano, si prende cura della memoria di questo posto.', tipo: 'informazione' }
+};
+
 let indiceProssimaLettera = 0;
 // Lettere ricevute e non ancora completate: possono accumularsi, così
 // il giocatore può "metterne da parte" una senza bloccare la posta
@@ -5452,6 +5914,18 @@ function updatePhaseHUD() {
 // AVANZAMENTO FASE — chiamato dal bottone "Avanza Fase ➔"
 // ---------------------------------------------------------------
 function advancePhase() {
+  // Non si può far scorrere il tempo mentre si è sul secondo isolotto:
+  // bisogna prima tornare sull'isola principale attraversando il sentiero
+  if (sulSecondoIsolotto) {
+    showMessage('Non puoi far passare il tempo mentre sei sull\'isolotto: torna sull\'isola principale attraversando il sentiero scoperto dalla marea.');
+    return;
+  }
+  // Se c'è posta non ancora aperta, va controllata prima di uscire per il pomeriggio
+  if (currentPhaseIndex === 0 && nuovaLetteraNonLetta) {
+    showMessage('C\'è una lettera nella cassetta della posta: aprila prima di andare avanti con la giornata.');
+    return;
+  }
+
   currentPhaseIndex++;
   let nuovoGiorno = false;
   if (currentPhaseIndex >= DAY_PHASES.length) {
@@ -5461,6 +5935,7 @@ function advancePhase() {
   }
   startTransitionTo(currentPhaseIndex);
   updatePhaseHUD();
+  calcolaMarea();
 
   // STEP 7: piccola pulsazione CSS sul pannello fase, per un feedback
   // visivo morbido oltre alla dissolvenza di luci/colori già in corso
@@ -5475,7 +5950,6 @@ function advancePhase() {
   showMessage(DAY_PHASES[currentPhaseIndex].enterMessage);
 
   aggiornaVisibilitaDiario();
-  if (currentPhaseIndex === 0) attivaProssimaLetteraSeDisponibile(); // nuovo Mattino: possibile nuova posta
   if (nuovoGiorno) generaOggettiSpiaggia(); // usa il meteo della notte appena trascorsa
   if (nuovoGiorno) calcolaMeteoDelGiorno();
   if (nuovoGiorno) {
@@ -5493,6 +5967,11 @@ function advancePhase() {
 
     controllaSpegnimentoStufa();
   }
+  // La notifica della posta va per ultima: se lo stesso mattino si sono
+  // già mostrati altri messaggi (dono di Barnaby, stufa spenta...), è
+  // quella che deve restare visibile, perché richiede un'azione
+  if (currentPhaseIndex === 0) attivaProssimaLetteraSeDisponibile();
+
   aggiornaPosizioneBarnaby();
   aggiornaTestoBottoneFase();
 
@@ -5535,6 +6014,7 @@ function applicaFaseIstantanea(phaseIndex) {
   barnabyLocazioneAttuale = null; // forza il ricalcolo della posizione
   aggiornaPosizioneBarnaby();
   aggiornaTestoBottoneFase();
+  calcolaMarea();
 }
 
 // ---------------------------------------------------------------
@@ -5624,7 +6104,8 @@ function classificaFoto() {
     { tipo: 'FARO', posizione: lighthouse.position },
     { tipo: 'ORTO', posizione: gardenHotspot.position },
     { tipo: 'MARE', posizione: fishingSpotHotspot.position },
-    { tipo: 'GATTO', posizione: barnabyGroup.getWorldPosition(new THREE.Vector3()) }
+    { tipo: 'GATTO', posizione: barnabyGroup.getWorldPosition(new THREE.Vector3()) },
+    { tipo: 'INCISIONE', posizione: incisioneRocciaHotspot.position }
   ];
 
   let migliorTipo = 'ISOLA';
@@ -5738,6 +6219,17 @@ function scattaFoto() {
     updateStatsUI();
     setTimeout(() => {
       showMessage('La foto rivela un dettaglio che non avevi mai notato: la mappa del tesoro aveva ragione!');
+    }, 2600);
+  }
+
+  // Fotografare l'incisione sulla roccia del secondo isolotto sblocca,
+  // una tantum, la lettera dello storico della terraferma
+  if (entry.subjectType === 'INCISIONE' && !incisioneLetteraSbloccata) {
+    incisioneLetteraSbloccata = true;
+    setTimeout(() => {
+      letterePendenti.push(Object.assign({}, letteraStoricoIncisione));
+      nuovaLetteraNonLetta = true;
+      showMessage('Quella fotografia sembra aver attirato l\'attenzione di qualcuno, lontano sulla terraferma...');
     }, 2600);
   }
 }
@@ -5945,6 +6437,7 @@ function apriDettaglioLettera(lettera) {
   letterAttachBtnEl.style.display = lettera.richiestaFoto ? 'inline-block' : 'none';
   letterGiftBtnEl.style.display = lettera.richiestaRegalo ? 'inline-block' : 'none';
   letterConchiglieBtnEl.style.display = lettera.richiestaConchiglie ? 'inline-block' : 'none';
+  letterArchiveBtnEl.style.display = (!lettera.richiestaFoto && !lettera.richiestaRegalo && !lettera.richiestaConchiglie) ? 'inline-block' : 'none';
   letterListStateEl.style.display = 'none';
   letterDetailStateEl.style.display = 'block';
 }
@@ -6042,12 +6535,23 @@ function gestisciConchigliePerLettera() {
 }
 
 const letterConchiglieBtnEl = document.getElementById('letter-conchiglie-btn');
+const letterArchiveBtnEl = document.getElementById('letter-archive-btn');
 
 letterAttachBtnEl.addEventListener('click', () => {
   apriSelettoreFoto('Scegli la Polaroid da allegare alla lettera', gestisciFotoPerLettera);
 });
 letterGiftBtnEl.addEventListener('click', gestisciRegaloPerLettera);
 letterConchiglieBtnEl.addEventListener('click', gestisciConchigliePerLettera);
+// Lettere puramente narrative (nessuna foto/regalo/conchiglie richiesti):
+// si archiviano con un solo tap, applicando comunque la ricompensa testuale
+letterArchiveBtnEl.addEventListener('click', () => {
+  const lettera = letteraInVisualizzazione;
+  if (!lettera) return;
+  lettera.completata = true;
+  applicaRicompensa(lettera.ricompensa);
+  showMessage(lettera.ricompensa.messaggio);
+  completaEChiudiLettera(lettera);
+});
 letterPostponeBtnEl.addEventListener('click', mettiDaParteLettera);
 document.getElementById('letter-list-close-btn').addEventListener('click', chiudiLettere);
 letterBackdropEl.addEventListener('click', (event) => {
@@ -6616,6 +7120,16 @@ function ottieniStatoGioco() {
     stufa: {
       accesa: stufaAccesa,
       prossimoSpegnimentoGiorno: prossimoSpegnimentoStufaGiorno
+    },
+    marea: {
+      sulSecondoIsolotto: sulSecondoIsolotto
+    },
+    isolotto: {
+      prossimoControlloMoloGiorno: prossimoControlloMoloGiorno,
+      targheNaviTrovate: targheNaviTrovate,
+      incisioneLetteraSbloccata: incisioneLetteraSbloccata,
+      serraLavoriIniziati: serraLavoriIniziati,
+      serraRiparazioniFatte: serraRiparazioniFatte
     }
   };
 }
@@ -6778,6 +7292,26 @@ function caricaPartita() {
     aggiornaAspettoStufa();
   }
 
+  if (stato.isolotto) {
+    prossimoControlloMoloGiorno = stato.isolotto.prossimoControlloMoloGiorno !== undefined ? stato.isolotto.prossimoControlloMoloGiorno : null;
+    targheNaviTrovate = Array.isArray(stato.isolotto.targheNaviTrovate) ? stato.isolotto.targheNaviTrovate : [];
+    incisioneLetteraSbloccata = !!stato.isolotto.incisioneLetteraSbloccata;
+    serraLavoriIniziati = !!stato.isolotto.serraLavoriIniziati;
+    serraRiparazioniFatte = stato.isolotto.serraRiparazioniFatte || 0;
+    let stadioSerra = 0;
+    if (serraRiparazioniFatte >= RIPARAZIONI_TOTALI_SERRA) stadioSerra = 2;
+    else if (serraLavoriIniziati) stadioSerra = 1;
+    serraAbbandonataHotspot.userData.applicaStadioSerra(stadioSerra);
+  }
+
+  if (stato.marea) {
+    sulSecondoIsolotto = !!stato.marea.sulSecondoIsolotto;
+    cameraStatoPrimaSentiero = null; // non ha senso conservarlo tra una sessione e l'altra
+    if (sulSecondoIsolotto) {
+      posizionaCameraSuIsolotto();
+    }
+  }
+
   return true;
 }
 
@@ -6839,6 +7373,16 @@ function iniziaNuovaPartita() {
   stufaAccesa = true;
   prossimoSpegnimentoStufaGiorno = currentDay + 7; // il primo spegnimento avviene sempre dopo almeno 7 giorni dall'inizio partita
   aggiornaAspettoStufa();
+
+  sulSecondoIsolotto = false;
+  cameraStatoPrimaSentiero = null;
+
+  prossimoControlloMoloGiorno = null;
+  targheNaviTrovate = [];
+  incisioneLetteraSbloccata = false;
+  serraLavoriIniziati = false;
+  serraRiparazioniFatte = 0;
+  serraAbbandonataHotspot.userData.applicaStadioSerra(0);
 
   faroAccesoStanotte = false;
   puliziaLente = 0;
