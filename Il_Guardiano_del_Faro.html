@@ -1583,6 +1583,9 @@
         <button id="start-continue-btn" class="modal-close-btn" type="button">⏯️ Continua Partita</button>
         <button id="start-newgame-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#C1666B,#9E4D52);">🔄 Nuova Partita</button>
       </div>
+      <div class="letter-actions centrato" style="margin-top:8px;">
+        <button id="start-fullscreen-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#4A7A8C,#345A68);">⛶ Schermo Intero</button>
+      </div>
     </div>
   </div>
 
@@ -1592,6 +1595,7 @@
       <div class="letter-sender">⚙️ Impostazioni</div>
       <div class="letter-actions centrato" style="flex-direction:column;">
         <button id="settings-save-btn" class="modal-close-btn" type="button">💾 Salva ora</button>
+        <button id="settings-fullscreen-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#4A7A8C,#345A68);">⛶ Schermo Intero</button>
         <button id="settings-newgame-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#C1666B,#9E4D52);">🔄 Nuova Partita</button>
         <button id="settings-close-btn" class="modal-close-btn" type="button">Chiudi</button>
       </div>
@@ -1829,6 +1833,12 @@
             un intervallo casuale di 3, 4 o 5 giorni (mai più fisso a
             7). Verificato statisticamente su 200 riaccensioni: solo
             intervalli 3/4/5 osservati.
+   SCHERMO INTERO — bottone "⛶ Schermo Intero" nel menu iniziale (utile
+            soprattutto su browser mobile Android, nasconde la barra
+            indirizzi) e replicato nelle Impostazioni per chi inizia
+            una nuova partita senza mai vedere il menu iniziale.
+            attivaSchermoIntero() fa da toggle con fallback ai prefissi
+            webkit/moz/ms per compatibilità multi-browser.
    ================================================================ */
 
 // ---------------------------------------------------------------
@@ -6859,6 +6869,33 @@ function continuaPartita() {
   aggiornaVisibilitaDiario();
   showMessage('Bentornato, guardiano. L\'isola ti aspettava.');
 }
+
+// --- Schermo Intero — utile soprattutto sui browser mobile Android,
+// dove nasconde la barra degli indirizzi durante il gioco ---
+function attivaSchermoIntero() {
+  const elemento = document.documentElement;
+  const inSchermoIntero = document.fullscreenElement || document.webkitFullscreenElement
+    || document.mozFullScreenElement || document.msFullscreenElement;
+
+  if (!inSchermoIntero) {
+    const richiedi = elemento.requestFullscreen || elemento.webkitRequestFullscreen
+      || elemento.mozRequestFullScreen || elemento.msRequestFullscreen;
+    if (richiedi) {
+      richiedi.call(elemento).catch(() => {
+        showMessage('Il browser non permette lo schermo intero in questo momento.');
+      });
+    } else {
+      showMessage('Il tuo browser non supporta lo schermo intero.');
+    }
+  } else {
+    const esci = document.exitFullscreen || document.webkitExitFullscreen
+      || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (esci) esci.call(document);
+  }
+}
+
+document.getElementById('start-fullscreen-btn').addEventListener('click', attivaSchermoIntero);
+document.getElementById('settings-fullscreen-btn').addEventListener('click', attivaSchermoIntero);
 
 // --- Menu iniziale (mostrato solo se esiste già un salvataggio) ---
 const startMenuBackdropEl = document.getElementById('start-menu-backdrop');
