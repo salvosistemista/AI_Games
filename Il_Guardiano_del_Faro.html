@@ -1424,6 +1424,7 @@
         <div class="letter-actions">
           <button id="letter-attach-btn" class="modal-close-btn" type="button">📎 Allega Polaroid</button>
           <button id="letter-gift-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#8C5E3C,#6B4529);">🍪 Invia un regalo</button>
+          <button id="letter-conchiglie-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#4A7A8C,#345A68);">🦪 Consegna conchiglie</button>
         </div>
         <div class="letter-actions centrato">
           <button id="letter-postpone-btn" class="modal-close-btn" type="button" style="background:linear-gradient(160deg,#8C5E3C,#6B4529);">📥 Metti da parte per dopo</button>
@@ -1781,11 +1782,13 @@
             di attraversarla in linea retta. La posizione mattutina di
             Barnaby è stata spostata fuori dal perimetro del letto
             dell'orto (era troppo vicina al centro).
-   FOTO INVIATE — le Polaroid usate per rispondere a una lettera non
-            venivano mai rimosse da inventarioFoto (nessun codice le
-            cancellava), ma ora portano un badge "✓ Inviata a..." in
-            Album e selettore, per rendere visibile che restano sempre
-            disponibili.
+   FOTO INVIATE (CORREZIONE) — avevo frainteso la richiesta iniziale:
+            la Polaroid è un oggetto fisico, non digitale. Una volta
+            spedita per rispondere a una lettera viene ora rimossa per
+            davvero da inventarioFoto (splice in gestisciFotoPerLettera),
+            non resta più nell'Album. Rimosso anche il badge "✓ Inviata"
+            introdotto per errore nel giro precedente. Verificato con un
+            test end-to-end: scatto reale → invio → sparizione confermata.
    🗄️ SACCO DEI RITROVAMENTI — nuovo mobiletto 3D in casa (vetrina)
             che mostra i conteggi di tutti i collezionabili di
             spiaggia: Legni di Relitto, Conchiglie Rare, Targhe in
@@ -1798,6 +1801,34 @@
             prove), sempre ritentabile. Sportello del fuoco e luce
             calda si spengono/riaccendono visivamente di conseguenza.
             Tutto lo stato incluso nel salvataggio.
+   LETTERE CONCHIGLIE — dal Giorno 7 in poi, Il Biologo Marino e La
+            Bambina della Terraferma possono chiedere (in aggiunta,
+            non al posto, delle altre lettere) 1-3 Conchiglie Rare per
+            la loro collezione, ricompensando con 2-4 unità casuali di
+            caffè/limone/olio/spezie/farina. Bottone dedicato "🦪
+            Consegna conchiglie". Verificato: generazione al Giorno 7,
+            consegna che consuma le conchiglie e completa la lettera.
+   TESTO BOTTONE FASE — "Avanza Fase ➔" solo il Giorno 1, poi si
+            accorcia in "Fase ➔" dal Giorno 2 in poi (aggiornato ad
+            ogni avanzamento e dopo caricamento/nuova partita).
+   COSTANZA DI BARNABY (v2, meno severa) — la finestra è stata ridotta
+            da 30 a 20 giorni (FINESTRA_COSTANZA_BARNABY): i livelli 2-4
+            richiedono, oltre alla soglia di affetto, almeno 20 giorni
+            di partita trascorsi con il 90% di interazioni quotidiane
+            negli ultimi 20 giorni (barnabyGiorniInterazione, potato a
+            25 giorni). Verificato: 0 livelli sbloccati nei primi 20
+            giorni anche con affetto già al massimo; sblocco corretto
+            esattamente al Giorno 20 (nota: essendo il livello una
+            funzione pura di affetto+costanza, se l'affetto era già
+            alto può saltare direttamente a un livello superiore al 2,
+            invece di passare per ciascuno in sequenza — voluto).
+   STUFA — PERIODICITÀ VARIABILE — il primo spegnimento resta fissato
+            ad almeno 7 giorni dall'inizio partita (prossimoSpegnimento
+            StufaGiorno = currentDay + 7 in iniziaNuovaPartita), ma i
+            cicli successivi dopo ogni riaccensione riuscita usano ora
+            un intervallo casuale di 3, 4 o 5 giorni (mai più fisso a
+            7). Verificato statisticamente su 200 riaccensioni: solo
+            intervalli 3/4/5 osservati.
    ================================================================ */
 
 // ---------------------------------------------------------------
@@ -4498,13 +4529,34 @@ let barnabyAffetto = 0; // 0-100
 let barnabyNutritoOggi = false; // per offrire il pesce al massimo una volta al giorno
 let barnabyLivelloPrecedente = 1;
 let barnabyLocazioneAttuale = null;
+// Giorni (numeri) in cui c'è stata almeno un'interazione con Barnaby,
+// usati per calcolare la costanza delle attenzioni quotidiane
+let barnabyGiorniInterazione = [];
 
-// Il livello si deriva dall'affetto accumulato, non da un conteggio
-// rigido di giorni: cresce naturalmente con le interazioni quotidiane
+// Percentuale di giorni, negli ultimi 20 (o meno, se la partita è più
+// giovane), in cui hai interagito con Barnaby almeno una volta
+const FINESTRA_COSTANZA_BARNABY = 20;
+
+function calcolaCostanzaBarnaby() {
+  const finestraGiorni = Math.min(FINESTRA_COSTANZA_BARNABY, currentDay);
+  if (finestraGiorni <= 0) return 0;
+  let giorniConInterazione = 0;
+  for (let g = currentDay - finestraGiorni + 1; g <= currentDay; g++) {
+    if (barnabyGiorniInterazione.indexOf(g) !== -1) giorniConInterazione++;
+  }
+  return giorniConInterazione / finestraGiorni;
+}
+
+// Il livello dipende sia dall'affetto accumulato sia dalla costanza:
+// per superare il Livello 1 servono almeno 20 giorni di gioco E il 90%
+// di interazioni quotidiane negli ultimi 20 giorni (basta una al
+// giorno). Senza questa costanza, Barnaby resta un gatto randagio
+// anche con affetto molto alto.
 function livelloBarnaby() {
-  if (barnabyAffetto >= 75) return 4; // Compagno di Vita
-  if (barnabyAffetto >= 50) return 3; // Amico Fedele
-  if (barnabyAffetto >= 25) return 2; // Curioso
+  const costanzaSoddisfatta = currentDay >= FINESTRA_COSTANZA_BARNABY && calcolaCostanzaBarnaby() >= 0.9;
+  if (barnabyAffetto >= 75 && costanzaSoddisfatta) return 4; // Compagno di Vita
+  if (barnabyAffetto >= 50 && costanzaSoddisfatta) return 3; // Amico Fedele
+  if (barnabyAffetto >= 25 && costanzaSoddisfatta) return 2; // Curioso
   return 1; // Gatto Randagio
 }
 
@@ -4584,6 +4636,13 @@ function possibileDonoBarnaby() {
 // Accarezzare Barnaby (o, se hai del pesce ed è la prima volta oggi,
 // offrirglielo automaticamente: l'affetto cresce più in fretta)
 function interagisciConBarnaby() {
+  // Registra il giorno di oggi tra quelli con almeno un'interazione,
+  // per il calcolo della costanza dei livelli (vedi calcolaCostanzaBarnaby)
+  if (barnabyGiorniInterazione.indexOf(currentDay) === -1) {
+    barnabyGiorniInterazione.push(currentDay);
+    barnabyGiorniInterazione = barnabyGiorniInterazione.filter((g) => g >= currentDay - (FINESTRA_COSTANZA_BARNABY + 5));
+  }
+
   const pesciDisponibili = ['merluzzo', 'sgombro'].filter((id) => (inventarioIngredienti[id] || 0) > 0);
 
   if (pesciDisponibili.length > 0 && !barnabyNutritoOggi) {
@@ -5249,6 +5308,8 @@ const ricetteSbloccate = [];
 // arriva una richiesta di foto, ricompensata con 1-5 ingredienti a caso
 let prossimaLetteraRicorrenteGiorno = null;
 let contatoreLettereRicorrentiCompletate = 0;
+// Lettere di richiesta conchiglie: disponibili solo dal Giorno 7 in poi
+let prossimaLetteraConchiglieGiorno = 7;
 
 const MITTENTI_RICORRENTI = ['Il Biologo Marino', 'La Bambina della Terraferma', 'Un Vecchio Amico Pescatore', 'Il Capitano di Passaggio'];
 const TESTI_LETTERA_RICORRENTE = {
@@ -5423,6 +5484,7 @@ function advancePhase() {
     controllaSpegnimentoStufa();
   }
   aggiornaPosizioneBarnaby();
+  aggiornaTestoBottoneFase();
 
   // STEP 6: quando si va a dormire alla fine della Notte e inizia un
   // nuovo Mattino, i progressi vengono salvati automaticamente
@@ -5431,7 +5493,15 @@ function advancePhase() {
   }
 }
 
-document.getElementById('advance-phase-btn').addEventListener('click', advancePhase);
+const advancePhaseBtnEl = document.getElementById('advance-phase-btn');
+advancePhaseBtnEl.addEventListener('click', advancePhase);
+
+// Dal secondo giorno in poi il testo si accorcia in "Fase ➔", per
+// lasciare più spazio alle informazioni a schermo una volta che il
+// significato del bottone è ormai chiaro
+function aggiornaTestoBottoneFase() {
+  advancePhaseBtnEl.textContent = currentDay > 1 ? 'Fase ➔' : 'Avanza Fase ➔';
+}
 
 // Applica all'istante (senza transizione morbida) tutti i valori
 // visivi di una fase: usata sia per l'avvio di una Nuova Partita sia
@@ -5454,6 +5524,7 @@ function applicaFaseIstantanea(phaseIndex) {
   updateStatsUI();
   barnabyLocazioneAttuale = null; // forza il ricalcolo della posizione
   aggiornaPosizioneBarnaby();
+  aggiornaTestoBottoneFase();
 }
 
 // ---------------------------------------------------------------
@@ -5685,14 +5756,6 @@ function renderAlbum() {
     caption.textContent = `${SUBJECT_LABELS[entry.subjectType]}`;
     thumb.appendChild(caption);
 
-    if (entry.inviataA) {
-      const badge = document.createElement('span');
-      badge.textContent = `✓ Inviata a ${entry.inviataA}`;
-      badge.style.color = '#6E8B5A';
-      badge.style.fontStyle = 'italic';
-      thumb.appendChild(badge);
-    }
-
     thumb.addEventListener('click', () => apriPolaroid(entry));
     albumGridEl.appendChild(thumb);
   });
@@ -5761,12 +5824,9 @@ function attivaProssimaLetteraSeDisponibile(mostraNotifica) {
     if (mostraNotifica) {
       showMessage('È arrivata una lettera dalla terraferma: la cassetta della posta ha una sorpresa per te.');
     }
-    return;
-  }
-
-  // Lettere fisse esaurite: controlla se è arrivato il giorno di una
-  // nuova lettera ricorrente da uno dei nostri amici (almeno 1 a settimana)
-  if (prossimaLetteraRicorrenteGiorno !== null && currentDay >= prossimaLetteraRicorrenteGiorno) {
+  } else if (prossimaLetteraRicorrenteGiorno !== null && currentDay >= prossimaLetteraRicorrenteGiorno) {
+    // Lettere fisse esaurite: controlla se è arrivato il giorno di una
+    // nuova lettera ricorrente da uno dei nostri amici (almeno 1 a settimana)
     letterePendenti.push(generaLetteraRicorrente());
     nuovaLetteraNonLetta = true;
     prossimaLetteraRicorrenteGiorno = currentDay + 7;
@@ -5774,6 +5834,53 @@ function attivaProssimaLetteraSeDisponibile(mostraNotifica) {
       showMessage('È arrivata una lettera dalla terraferma: la cassetta della posta ha una sorpresa per te.');
     }
   }
+
+  // Lettere di richiesta conchiglie: indipendenti dal resto della posta,
+  // disponibili dal Giorno 7 in poi, da parte di Biologo Marino e Bambina
+  // della Terraferma — "oltre alle solite lettere", quindi possono
+  // arrivare lo stesso mattino di un'altra lettera qualsiasi
+  if (currentDay >= 7 && prossimaLetteraConchiglieGiorno !== null && currentDay >= prossimaLetteraConchiglieGiorno) {
+    letterePendenti.push(generaLetteraConchiglie());
+    nuovaLetteraNonLetta = true;
+    prossimaLetteraConchiglieGiorno = currentDay + 7;
+    if (mostraNotifica) {
+      showMessage('È arrivata una lettera dalla terraferma: la cassetta della posta ha una sorpresa per te.');
+    }
+  }
+}
+
+// --- Lettere di richiesta conchiglie: Biologo Marino / Bambina della
+// Terraferma chiedono 1-3 Conchiglie Rare, in cambio di 2-4 unità di
+// un ingrediente di dispensa a caso ---
+const MITTENTI_RICHIESTA_CONCHIGLIE = ['Il Biologo Marino', 'La Bambina della Terraferma'];
+const TESTI_RICHIESTA_CONCHIGLIE = {
+  'Il Biologo Marino': (n) => `Sto catalogando le conchiglie della tua zona per uno studio marino: potresti inviarmi ${n} conchiglie rare della tua isola?`,
+  'La Bambina della Terraferma': (n) => `Sto facendo una collezione di conchiglie bellissime! Me ne mandi ${n} tra quelle che trovi sulla spiaggia?`
+};
+const INGREDIENTI_RICOMPENSA_CONCHIGLIE = ['caffe', 'limone', 'olio', 'spezie', 'farina'];
+
+function generaLetteraConchiglie() {
+  const mittente = MITTENTI_RICHIESTA_CONCHIGLIE[Math.floor(Math.random() * MITTENTI_RICHIESTA_CONCHIGLIE.length)];
+  const numeroRichiesto = 1 + Math.floor(Math.random() * 3); // 1-3
+  const idIngredienteRicompensa = INGREDIENTI_RICOMPENSA_CONCHIGLIE[Math.floor(Math.random() * INGREDIENTI_RICOMPENSA_CONCHIGLIE.length)];
+  const quantitaRicompensa = 2 + Math.floor(Math.random() * 3); // 2-4
+
+  return {
+    id: `conchiglie-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    ricorrente: true,
+    mittente: mittente,
+    testo: TESTI_RICHIESTA_CONCHIGLIE[mittente](numeroRichiesto),
+    richiestaFoto: null,
+    richiestaRegalo: null,
+    richiestaConchiglie: numeroRichiesto,
+    completata: false,
+    ricompensa: {
+      messaggio: `Grazie mille per le conchiglie! Come ringraziamento, ti mando ${quantitaRicompensa} ${INGREDIENTI_DB[idIngredienteRicompensa].nome}.`,
+      tipo: 'ingrediente',
+      idIngrediente: idIngredienteRicompensa,
+      quantita: quantitaRicompensa
+    }
+  };
 }
 
 function applicaRicompensa(ricompensa) {
@@ -5811,7 +5918,7 @@ function renderListaLettere() {
 
     const tipo = document.createElement('span');
     tipo.className = 'letter-list-item-tipo';
-    tipo.textContent = lettera.richiestaRegalo ? '🍪' : '📷';
+    tipo.textContent = lettera.richiestaRegalo ? '🍪' : (lettera.richiestaConchiglie ? '🦪' : '📷');
 
     riga.appendChild(mittente);
     riga.appendChild(tipo);
@@ -5827,6 +5934,7 @@ function apriDettaglioLettera(lettera) {
   letterBodyEl.textContent = lettera.testo;
   letterAttachBtnEl.style.display = lettera.richiestaFoto ? 'inline-block' : 'none';
   letterGiftBtnEl.style.display = lettera.richiestaRegalo ? 'inline-block' : 'none';
+  letterConchiglieBtnEl.style.display = lettera.richiestaConchiglie ? 'inline-block' : 'none';
   letterListStateEl.style.display = 'none';
   letterDetailStateEl.style.display = 'block';
 }
@@ -5874,9 +5982,10 @@ function gestisciFotoPerLettera(entry) {
     lettera.completata = true;
     applicaRicompensa(lettera.ricompensa);
     showMessage(lettera.ricompensa.messaggio);
-    // La Polaroid resta nell'album: si segna solo come "già inviata",
-    // così puoi sempre ritrovarla e sapere a chi l'hai mandata
-    entry.inviataA = lettera.mittente;
+    // La Polaroid è un oggetto fisico: una volta spedita per posta non
+    // hai più una copia, quindi esce definitivamente dall'album
+    const indiceFoto = inventarioFoto.indexOf(entry);
+    if (indiceFoto !== -1) inventarioFoto.splice(indiceFoto, 1);
     chiudiSelettoreFoto();
     completaEChiudiLettera(lettera);
   } else {
@@ -5903,10 +6012,32 @@ function gestisciRegaloPerLettera() {
   completaEChiudiLettera(lettera);
 }
 
+// Consegna il numero di Conchiglie Rare richiesto dalla lettera
+function gestisciConchigliePerLettera() {
+  const lettera = letteraInVisualizzazione;
+  if (!lettera || !lettera.richiestaConchiglie) return;
+  const richieste = lettera.richiestaConchiglie;
+  const disponibili = saccoRitrovamenti.conchigliaRara || 0;
+
+  if (disponibili < richieste) {
+    showMessage(`Ti servono ${richieste} conchiglie rare per questa richiesta (ne hai ${disponibili}). Cercale sulla battigia al mattino!`);
+    return;
+  }
+
+  saccoRitrovamenti.conchigliaRara -= richieste;
+  lettera.completata = true;
+  applicaRicompensa(lettera.ricompensa);
+  showMessage(lettera.ricompensa.messaggio);
+  completaEChiudiLettera(lettera);
+}
+
+const letterConchiglieBtnEl = document.getElementById('letter-conchiglie-btn');
+
 letterAttachBtnEl.addEventListener('click', () => {
   apriSelettoreFoto('Scegli la Polaroid da allegare alla lettera', gestisciFotoPerLettera);
 });
 letterGiftBtnEl.addEventListener('click', gestisciRegaloPerLettera);
+letterConchiglieBtnEl.addEventListener('click', gestisciConchigliePerLettera);
 letterPostponeBtnEl.addEventListener('click', mettiDaParteLettera);
 document.getElementById('letter-list-close-btn').addEventListener('click', chiudiLettere);
 letterBackdropEl.addEventListener('click', (event) => {
@@ -5941,14 +6072,6 @@ function renderPhotoPickerGrid() {
     const caption = document.createElement('span');
     caption.textContent = SUBJECT_LABELS[entry.subjectType];
     thumb.appendChild(caption);
-
-    if (entry.inviataA) {
-      const badge = document.createElement('span');
-      badge.textContent = `✓ già inviata a ${entry.inviataA}`;
-      badge.style.color = '#6E8B5A';
-      badge.style.fontStyle = 'italic';
-      thumb.appendChild(badge);
-    }
 
     thumb.addEventListener('click', () => {
       if (photoPickerCallback) photoPickerCallback(entry);
@@ -6054,7 +6177,9 @@ function tentaAccensioneStufa() {
 
   if (successo) {
     stufaAccesa = true;
-    prossimoSpegnimentoStufaGiorno = currentDay + 7;
+    // Dopo la prima volta (che richiede sempre almeno 7 giorni dall'inizio
+    // partita), i cicli successivi sono più imprevedibili: 3, 4 o 5 giorni
+    prossimoSpegnimentoStufaGiorno = currentDay + (3 + Math.floor(Math.random() * 3));
     aggiornaAspettoStufa();
     suonaAccensioneFiamma();
     showMessage(`La stufa torna a scoppiettare: ${LEGNI_PER_ACCENSIONE} legni di relitto sono bastati.`);
@@ -6444,7 +6569,8 @@ function ottieniStatoGioco() {
       nuovaLetteraNonLetta: nuovaLetteraNonLetta,
       completate: lettereDatabase.map((l) => l.completata),
       prossimaLetteraRicorrenteGiorno: prossimaLetteraRicorrenteGiorno,
-      contatoreLettereRicorrentiCompletate: contatoreLettereRicorrentiCompletate
+      contatoreLettereRicorrentiCompletate: contatoreLettereRicorrentiCompletate,
+      prossimaLetteraConchiglieGiorno: prossimaLetteraConchiglieGiorno
     },
     casa: {
       angoloPolverosoPulito: dustyCornerHotspot.userData.cleaned
@@ -6474,7 +6600,8 @@ function ottieniStatoGioco() {
     barnaby: {
       affetto: barnabyAffetto,
       nutritoOggi: barnabyNutritoOggi,
-      livelloPrecedente: barnabyLivelloPrecedente
+      livelloPrecedente: barnabyLivelloPrecedente,
+      giorniInterazione: barnabyGiorniInterazione
     },
     stufa: {
       accesa: stufaAccesa,
@@ -6572,6 +6699,9 @@ function caricaPartita() {
       ? stato.lettere.prossimaLetteraRicorrenteGiorno
       : null;
     contatoreLettereRicorrentiCompletate = stato.lettere.contatoreLettereRicorrentiCompletate || 0;
+    prossimaLetteraConchiglieGiorno = stato.lettere.prossimaLetteraConchiglieGiorno !== undefined
+      ? stato.lettere.prossimaLetteraConchiglieGiorno
+      : 7;
   }
 
   if (stato.casa) {
@@ -6629,6 +6759,7 @@ function caricaPartita() {
     barnabyAffetto = stato.barnaby.affetto !== undefined ? stato.barnaby.affetto : 0;
     barnabyNutritoOggi = !!stato.barnaby.nutritoOggi;
     barnabyLivelloPrecedente = stato.barnaby.livelloPrecedente || 1;
+    barnabyGiorniInterazione = Array.isArray(stato.barnaby.giorniInterazione) ? stato.barnaby.giorniInterazione : [];
   }
 
   if (stato.stufa) {
@@ -6668,6 +6799,7 @@ function iniziaNuovaPartita() {
   lettereDatabase.forEach((lettera) => { lettera.completata = false; });
   prossimaLetteraRicorrenteGiorno = null;
   contatoreLettereRicorrentiCompletate = 0;
+  prossimaLetteraConchiglieGiorno = 7;
   nuovaLetteraNonLetta = false;
   gardenHotspot.userData.applicaStadio(0);
   gardenHotspot.userData.giornoMaturazione = null;
@@ -6692,9 +6824,10 @@ function iniziaNuovaPartita() {
   barnabyNutritoOggi = false;
   barnabyLivelloPrecedente = 1;
   barnabyLocazioneAttuale = null;
+  barnabyGiorniInterazione = [];
 
   stufaAccesa = true;
-  prossimoSpegnimentoStufaGiorno = currentDay + 7;
+  prossimoSpegnimentoStufaGiorno = currentDay + 7; // il primo spegnimento avviene sempre dopo almeno 7 giorni dall'inizio partita
   aggiornaAspettoStufa();
 
   faroAccesoStanotte = false;
