@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Pixel Golf 3D - Con Level Editor e Fullscreen</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { background: #111; font-family: monospace; overflow: hidden; color: #fff; touch-action: none; }
+        
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        canvas { image-rendering: pixelated; width: 100% !important; height: 100% !important; }
+
+        .hud {
+            position: absolute; top: 15px; left: 15px;
+            background: rgba(0, 0, 0, 0.85); border: 2px solid #55ff55;
+            padding: 12px 18px; border-radius: 6px; font-size: 14px; line-height: 1.5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5;
+        }
+
+        .controls-hint {
+            position: absolute; bottom: 15px; left: 15px;
+            background: rgba(0,0,0,0.85); padding: 10px 14px; border-radius: 6px; font-size: 12px;
+            border: 1px solid #444; line-height: 1.4; z-index: 5;
+        }
+
+        .cam-controls {
+            position: absolute; top: 15px; right: 15px;
+            display: flex; gap: 10px; z-index: 10;
+        }
+        .cam-btn {
+            width: 44px; height: 44px; background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(85, 255, 85, 0.7); color: #55ff55;
+            font-size: 20px; font-weight: bold; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; backdrop-filter: blur(4px); transition: all 0.1s ease;
+        }
+        .cam-btn:active { background: rgba(85, 255, 85, 0.4); color: #fff; transform: scale(0.95); }
+
+        .power-bar-container {
+            position: absolute; bottom: 25px; right: 25px;
+            width: 26px; height: 160px; background: #222; border: 2px solid #fff; display: none;
+            border-radius: 4px; overflow: hidden; z-index: 5;
+        }
+        .power-bar { width: 100%; height: 0%; background: linear-gradient(to top, #55ff55, #ffff55, #ff3333); position: absolute; bottom: 0; }
+
+        .modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #181818; border: 3px solid #55ff55; padding: 20px; text-align: center;
+            width: 380px; max-width: 95vw; display: none; box-shadow: 0 0 25px rgba(0,0,0,0.9); border-radius: 8px;
+            z-index: 20; max-height: 90vh; overflow-y: auto;
+        }
+        .modal h2 { color: #55ff55; margin-bottom: 10px; font-size: 20px; }
+        
+        .btn {
+            background: #2a2a2a; color: #fff; border: 2px solid #55ff55; padding: 8px 12px;
+            margin: 3px; cursor: pointer; font-family: monospace; font-size: 11px; font-weight: bold;
+            transition: all 0.1s ease; border-radius: 4px; display: inline-block;
+        }
+        .btn:hover { background: #55ff55; color: #000; }
+        .btn-active { background: #55ff55 !important; color: #000 !important; }
+        .btn-danger { border-color: #ff5555; }
+        .btn-danger:hover { background: #ff5555; color: #fff; }
+
+        .leaderboard-list { text-align: left; margin: 10px 0; font-size: 12px; max-height: 100px; overflow-y: auto; background: #111; padding: 8px; border: 1px solid #333; }
+        .lb-entry { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #333; }
+
+        .import-area {
+            width: 100%; height: 100px; background: #111; color: #55ff55; border: 1px solid #444;
+            font-family: monospace; font-size: 11px; padding: 6px; resize: none; margin: 8px 0; user-select: text;
+        }
+        .feedback-msg { font-size: 11px; margin-top: 6px; color: #ffff55; }
+
+        /* EDITOR UI */
+        .editor-modal { width: 500px; max-width: 95vw; }
+        .editor-toolbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-bottom: 10px; }
+        .editor-grid-container {
+            display: flex; justify-content: center; align-items: center;
+            margin: 10px 0; overflow: auto; max-height: 40vh; background: #0a0a0a; padding: 10px; border: 1px solid #333;
+        }
+        .editor-grid { display: grid; gap: 2px; }
+        .editor-cell {
+            width: 32px; height: 32px; background: #222; border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; cursor: pointer; transition: background 0.1s;
+        }
+        .editor-cell.tile { background: #2e6f38; }
+        .editor-cell:hover { border-color: #ffff55; }
+        .editor-select { background: #222; color: #55ff55; border: 1px solid #55ff55; padding: 4px; font-family: monospace; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="hud">
+        <div style="color:#55ff55; font-weight:bold; margin-bottom:4px;" id="hole-name">Livello 1</div>
+        <div>BUCA: <span id="hole-num">1</span>/50</div>
+        <div>COLPI BUCA: <span id="current-strokes" style="color:#ffff55;">0</span></div>
+        <div>TOTALE COLPI: <span id="total-strokes" style="color:#55ff55;">0</span></div>
+    </div>
+
+    <div class="cam-controls">
+        <div class="cam-btn" id="btn-cam-ccw" title="Ruota Antiorario">↺</div>
+        <div class="cam-btn" id="btn-cam-cw" title="Ruota Orario">↻</div>
+    </div>
+
+    <div class="controls-hint">
+        <b>[Trascina]</b> Mira e Forza<br>
+        <b>[Doppio Click/Tap Palla]</b> Centra Cam<br>
+        <b>[R]</b> Riavvia Buca | <b>[ESC]</b> Pausa
+    </div>
+
+    <div class="power-bar-container" id="power-container">
+        <div class="power-bar" id="power-bar"></div>
+    </div>
+
+    <!-- Modal Pausa Principale -->
+    <div class="modal" id="game-modal">
+        <h2 id="modal-title">PAUSA</h2>
+        <div id="modal-content" style="margin-bottom:10px; font-size: 12px;"></div>
+        
+        <div id="leaderboard-sec" style="display:none;">
+            <h3 style="font-size:12px; color:#aaa; margin-top:6px;">TOP 5 CLASSIFICA</h3>
+            <div class="leaderboard-list" id="lb-list"></div>
+        </div>
+
+        <div style="margin-top:10px; border-top: 1px solid #333; padding-top: 10px;">
+            <button class="btn" id="btn-resume">RIPRENDI</button>
+            <button class="btn" id="btn-restart">NUOVA PARTITA</button>
+            <button class="btn" id="btn-fullscreen" style="border-color:#55ffff; color:#55ffff;">SCHERMO INTERO ⛶</button>
+            <button class="btn" id="btn-open-editor" style="border-color:#ffff55; color:#ffff55;">EDITOR LIVELLI ✏️</button>
+        </div>
+
+        <div style="margin-top:8px; border-top: 1px solid #333; padding-top: 10px;">
+            <div style="font-size:11px; color:#888; margin-bottom:4px;">GESTIONE CAMPI</div>
+            <button class="btn" id="btn-export-json">ESPORTA CAMPI (JSON)</button>
+            <button class="btn" id="btn-open-import">IMPORTA CAMPI</button>
+            <button class="btn btn-danger" id="btn-reset-levels" style="display:none;">RESET DEFAULT</button>
+        </div>
+    </div>
+
+    <!-- Modal Importazione -->
+    <div class="modal" id="import-modal">
+        <h2>IMPORTA CAMPI</h2>
+        <p style="font-size:11px; color:#ccc;">Incolla il codice JSON dei campi oppure carica un file salvato:</p>
+        <textarea class="import-area" id="import-json-text" placeholder="Incolla qui il JSON dei 50 livelli..."></textarea>
+        
+        <div style="margin: 6px 0;">
+            <input type="file" id="file-input" accept=".json" style="display:none;">
+            <button class="btn" id="btn-trigger-file">CARICA FILE .JSON</button>
+        </div>
+
+        <div id="import-feedback" class="feedback-msg"></div>
+
+        <div style="margin-top:12px;">
+            <button class="btn" id="btn-confirm-import">CONFERMA IMPORT</button>
+            <button class="btn btn-danger" id="btn-cancel-import">ANNULLA</button>
+        </div>
+    </div>
+
+    <!-- Modal Level Editor -->
+    <div class="modal editor-modal" id="editor-modal">
+        <h2>EDITOR LIVELLI</h2>
+        
+        <div style="margin-bottom: 8px;">
+            <label style="font-size: 11px;">Seleziona Livello: </label>
+            <select id="editor-level-select" class="editor-select"></select>
+        </div>
+
+        <div class="editor-toolbar">
+            <button class="btn btn-active" data-tool="tile">🟩 Pista</button>
+            <button class="btn" data-tool="start">⚪ Palla</button>
+            <button class="btn" data-tool="end">🕳️ Buca</button>
+            <button class="btn" data-tool="block">🟧 Blocco</button>
+            <button class="btn" data-tool="wallH">▬ Muro Orizz.</button>
+            <button class="btn" data-tool="wallV">❚ Muro Vert.</button>
+            <button class="btn btn-danger" data-tool="clearObs">❌ Canc. Ostacolo</button>
+        </div>
+
+        <div class="editor-grid-container">
+            <div id="editor-grid" class="editor-grid"></div>
+        </div>
+
+        <div style="margin: 6px 0;">
+            <span style="font-size: 11px;">Dimensioni Griglia:</span>
+            <button class="btn" id="btn-add-row">+Riga</button>
+            <button class="btn" id="btn-rem-row">-Riga</button>
+            <button class="btn" id="btn-add-col">+Colonna</button>
+            <button class="btn" id="btn-rem-col">-Colonna</button>
+        </div>
+
+        <div id="editor-feedback" class="feedback-msg"></div>
+
+        <div style="margin-top:12px; border-top: 1px solid #333; padding-top: 10px;">
+            <button class="btn" id="btn-save-level" style="border-color:#55ff55;">SALVA MODIFICHE</button>
+            <button class="btn" id="btn-test-level" style="border-color:#ffff55; color:#ffff55;">TESTA LIVELLO</button>
+            <button class="btn btn-danger" id="btn-close-editor">CHIUDI</button>
+        </div>
+    </div>
+
+    <script>
+        const RENDER_WIDTH = 400;
+        const RENDER_HEIGHT = 300;
+        const FRICTION = 0.984;
+        const BOUNCINESS = 0.75;
+        const BALL_RADIUS = 0.2;
+        const HOLE_RADIUS = 0.35;
+        const TILE_SIZE = 2.0;
+        const T = 0.3; 
+        const H = 0.5; 
+
+        let scene, camera, renderer, renderTarget, raycaster, mouseVec;
+        let ball, aimingArrow;
+        let isAiming = false, dragStartPos = { x: 0, y: 0 }, currentPower = 0;
+        
+        let cameraAngle = 0; 
+        const CAMERA_DISTANCE = 14;
+        const CAMERA_HEIGHT = 11;
+
+        let gameState = {
+            currentHole: 1,
+            strokesCurrentHole: 0,
+            totalStrokes: 0,
+            ballVelocity: new THREE.Vector3(0, 0, 0),
+            isBallMoving: false
+        };
+
+        let currentHoleObstacles = [];
+        let holePosition = new THREE.Vector3();
+
+        const DEFAULT_LEVEL_DEFINITIONS = [
+            { name: "1. Il Primo Passo", grid: [[1],[1],[1],[1]], start: {r:3,c:0}, end: {r:0,c:0} },
+            { name: "2. Angolo Destro", grid: [[0,1],[1,1]], start: {r:1,c:0}, end: {r:0,c:1} },
+            { name: "3. La Svolta Sinistra", grid: [[1,0],[1,1]], start: {r:1,c:1}, end: {r:0,c:0} },
+            { name: "4. Il Corridoio Lungo", grid: [[1],[1],[1],[1],[1],[1]], start: {r:5,c:0}, end: {r:0,c:0} },
+            { name: "5. Ostacolo Centrale", grid: [[1],[1],[1],[1]], start: {r:3,c:0}, end: {r:0,c:0}, obstacles: [{r:1,c:0,w:0.8,d:0.8}] },
+            { name: "6. L Estesa", grid: [[0,0,1],[0,0,1],[1,1,1]], start: {r:2,c:0}, end: {r:0,c:2} },
+            { name: "7. Doppio Blocco", grid: [[1,1],[1,1],[1,1]], start: {r:2,c:0}, end: {r:0,c:1}, obstacles: [{r:1,c:0,w:0.6,d:0.6}] },
+            { name: "8. Strettoia Iniziale", grid: [[1],[1],[1],[1],[1]], start: {r:4,c:0}, end: {r:0,c:0}, obstacles: [{r:2,c:0,offsetX:-0.4,w:1.2,d:0.4}] },
+            { name: "9. La T rovesciata", grid: [[1,1,1],[0,1,0],[0,1,0]], start: {r:2,c:1}, end: {r:0,c:0} },
+            { name: "10. La Chicane Singola", grid: [[0,1],[1,1],[1,0]], start: {r:2,c:0}, end: {r:0,c:1} },
+            { name: "11. Il Sarto", grid: [[1,1,1],[1,0,0],[1,1,1]], start: {r:0,c:2}, end: {r:2,c:2} },
+            { name: "12. Serpentina a Z", grid: [[1,1,0],[0,1,0],[0,1,1]], start: {r:0,c:0}, end: {r:2,c:2} },
+            { name: "13. Piazza Centrale", grid: [[1,1,1],[1,1,1],[1,1,1]], start: {r:2,c:0}, end: {r:0,c:2}, obstacles: [{r:1,c:1,w:1.2,d:1.2}] },
+            { name: "14. Strettoia a Gomito", grid: [[0,1,1],[0,1,0],[1,1,0]], start: {r:2,c:0}, end: {r:0,c:2}, obstacles: [{r:0,c:1,w:0.6,d:0.6}] },
+            { name: "15. La Forchetta", grid: [[1,0,1],[1,1,1],[0,1,0]], start: {r:2,c:1}, end: {r:0,c:0} },
+            { name: "16. Sponda Obbligata", grid: [[1,0],[1,1],[0,1]], start: {r:0,c:0}, end: {r:2,c:1}, obstacles: [{r:1,c:1,offsetX:0.2,w:0.6,d:0.6}] },
+            { name: "17. Il Canale Offset", grid: [[1,1],[0,1],[0,1],[1,1]], start: {r:0,c:0}, end: {r:3,c:0} },
+            { name: "18. Triplo Pilastro", grid: [[1,1],[1,1],[1,1],[1,1]], start: {r:3,c:0}, end: {r:0,c:1}, obstacles: [{r:1,c:0,w:0.5,d:0.5},{r:2,c:1,w:0.5,d:0.5}] },
+            { name: "19. Il Quadrante Cavato", grid: [[1,1,1],[1,0,1],[1,1,1]], start: {r:2,c:0}, end: {r:0,c:2} },
+            { name: "20. Imbuto Stretto", grid: [[1,1,1],[0,1,0],[0,1,0],[0,1,0]], start: {r:0,c:0}, end: {r:3,c:1} },
+            { name: "21. Il Muro Divisorio", grid: [[1,1],[1,1],[1,1],[1,1],[1,1]], start: {r:4,c:0}, end: {r:0,c:1}, obstacles: [{r:2,c:0,w:1.8,d:0.4}] },
+            { name: "22. La Grande Effe", grid: [[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,1,1]], start: {r:4,c:1}, end: {r:0,c:2} },
+            { name: "23. Slalom a Tre", grid: [[1,1],[1,1],[1,1],[1,1],[1,1]], start: {r:4,c:0}, end: {r:0,c:1}, obstacles: [{r:1,c:0,offsetX:-0.3,w:1.2,d:0.4},{r:2,c:1,offsetX:0.3,w:1.2,d:0.4},{r:3,c:0,offsetX:-0.3,w:1.2,d:0.4}] },
+            { name: "24. Il Quadrato Sfalsato", grid: [[1,1,0],[1,1,1],[0,1,1]], start: {r:0,c:0}, end: {r:2,c:2}, obstacles: [{r:1,c:1,w:0.8,d:0.8}] },
+            { name: "25. La Clessidra", grid: [[1,1,1],[0,1,0],[1,1,1]], start: {r:2,c:0}, end: {r:0,c:2} },
+            { name: "26. Zig Zag Stretto", grid: [[1,0,0],[1,1,0],[0,1,1],[0,0,1]], start: {r:0,c:0}, end: {r:3,c:2} },
+            { name: "27. Ostacolo Diagnonale", grid: [[1,1,1],[1,1,1],[1,1,1]], start: {r:2,c:0}, end: {r:0,c:2}, obstacles: [{r:1,c:0,w:0.6,d:0.6},{r:1,c:1,w:0.6,d:0.6},{r:1,c:2,w:0.6,d:0.6}] },
+            { name: "28. Anello Incompleto", grid: [[1,1,1,1],[1,0,0,1],[1,1,0,1]], start: {r:2,c:0}, end: {r:0,c:3} },
+            { name: "29. Corridoio Cieco", grid: [[1,1,1],[1,0,1],[1,0,1],[1,1,1]], start: {r:2,c:0}, end: {r:2,c:2} },
+            { name: "30. Il Pettine", grid: [[1,1,1,1],[1,0,1,0],[1,1,1,1]], start: {r:2,c:0}, end: {r:0,c:3} },
+            { name: "31. Spirale Quadrata", grid: [[1,1,1,1],[0,0,0,1],[1,1,0,1],[1,1,1,1]], start: {r:3,c:0}, end: {r:2,c:0} },
+            { name: "32. Campo Minato", grid: [[1,1,1],[1,1,1],[1,1,1],[1,1,1]], start: {r:3,c:1}, end: {r:0,c:1}, obstacles: [{r:1,c:0,w:0.7,d:0.7},{r:1,c:2,w:0.7,d:0.7},{r:2,c:1,w:0.7,d:0.7}] },
+            { name: "33. La Strettoia Doppia", grid: [[1,1],[1,1],[1,1],[1,1],[1,1]], start: {r:4,c:0}, end: {r:0,c:0}, obstacles: [{r:1,c:0,offsetX:0.5,w:1.0,d:0.4},{r:3,c:1,offsetX:-0.5,w:1.0,d:0.4}] },
+            { name: "34. Crossroad", grid: [[0,1,0],[1,1,1],[0,1,0]], start: {r:2,c:1}, end: {r:0,c:1}, obstacles: [{r:1,c:1,w:0.9,d:0.9}] },
+            { name: "35. Il Muro a V", grid: [[1,1,1],[1,1,1],[1,1,1]], start: {r:2,c:1}, end: {r:0,c:1}, obstacles: [{r:1,c:0,offsetX:0.3,w:0.8,d:0.4},{r:1,c:2,offsetX:-0.3,w:0.8,d:0.4}] },
+            { name: "36. Serpente Lungo", grid: [[1,1,0,0],[0,1,1,0],[0,0,1,1],[0,0,0,1]], start: {r:0,c:0}, end: {r:3,c:3} },
+            { name: "37. Castello di Carte", grid: [[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]], start: {r:3,c:0}, end: {r:0,c:3}, obstacles: [{r:1,c:1,w:0.8,d:0.8},{r:2,c:2,w:0.8,d:0.8}] },
+            { name: "38. Incrocio ad X", grid: [[1,1,1],[1,1,1],[1,1,1]], start: {r:2,c:0}, end: {r:0,c:2}, obstacles: [{r:0,c:1,w:0.8,d:0.8},{r:1,c:0,w:0.8,d:0.8},{r:1,c:2,w:0.8,d:0.8},{r:2,c:1,w:0.8,d:0.8}] },
+            { name: "39. Il Corridoio Sghembo", grid: [[1,1,0],[0,1,1],[1,1,0]], start: {r:2,c:0}, end: {r:0,c:1}, obstacles: [{r:1,c:1,w:0.6,d:0.6}] },
+            { name: "40. Doppio Anello", grid: [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]], start: {r:4,c:0}, end: {r:0,c:2} },
+            { name: "41. La Griglia Densa", grid: [[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]], start: {r:3,c:0}, end: {r:0,c:3}, obstacles: [{r:1,c:1,w:1.0,d:1.0},{r:1,c:2,w:1.0,d:1.0},{r:2,c:1,w:1.0,d:1.0},{r:2,c:2,w:1.0,d:1.0}] },
+            { name: "42. La Chiocciola", grid: [[1,1,1,1,1],[1,0,0,0,1],[1,0,1,0,1],[1,0,1,1,1]], start: {r:3,c:0}, end: {r:2,c:2} },
+            { name: "43. Triplett di Ostacoli", grid: [[1,1,1],[1,1,1],[1,1,1],[1,1,1],[1,1,1]], start: {r:4,c:1}, end: {r:0,c:1}, obstacles: [{r:1,c:1,w:1.4,d:0.4},{r:2,c:0,w:0.8,d:0.8},{r:2,c:2,w:0.8,d:0.8},{r:3,c:1,w:1.4,d:0.4}] },
+            { name: "44. Il Labirinto a T", grid: [[1,1,1,1,1],[0,0,1,0,0],[0,1,1,1,0],[0,1,0,1,0]], start: {r:3,c:1}, end: {r:0,c:4} },
+            { name: "45. Il Perimetro Stretto", grid: [[1,1,1,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]], start: {r:3,c:0}, end: {r:3,c:3}, obstacles: [{r:0,c:1,w:0.8,d:0.8},{r:0,c:2,w:0.8,d:0.8}] },
+            { name: "46. Lo Slalom Obliquo", grid: [[1,1,0,0],[1,1,1,0],[0,1,1,1],[0,0,1,1]], start: {r:3,c:3}, end: {r:0,c:0}, obstacles: [{r:1,c:1,w:0.7,d:0.7},{r:2,c:2,w:0.7,d:0.7}] },
+            { name: "47. Corridoi Sfalsati", grid: [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]], start: {r:4,c:0}, end: {r:0,c:0} },
+            { name: "48. La Fortezza Interna", grid: [[1,1,1,1,1],[1,0,0,0,1],[1,0,1,0,1],[1,1,1,1,1]], start: {r:3,c:0}, end: {r:2,c:2}, obstacles: [{r:0,c:2,w:0.8,d:0.8}] },
+            { name: "49. Gimcana del Maestro", grid: [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]], start: {r:4,c:0}, end: {r:0,c:2}, obstacles: [{r:0,c:1,w:0.6,d:0.6},{r:2,c:1,w:0.6,d:0.6},{r:4,c:1,w:0.6,d:0.6}] },
+            { name: "50. Il Circuito Supremo", grid: [[1,1,1,1,1],[1,0,1,0,1],[1,1,1,1,1],[1,0,1,0,1],[1,1,1,1,1]], start: {r:4,c:0}, end: {r:0,c:4}, obstacles: [{r:2,c:2,w:1.2,d:1.2},{r:1,c:2,w:0.5,d:0.5},{r:3,c:2,w:0.5,d:0.5}] }
+        ];
+
+        let LEVEL_DEFINITIONS = [];
+
+        function loadLevelDefinitions() {
+            const saved = localStorage.getItem('minigolf_custom_levels');
+            if (saved) {
+                try {
+                    LEVEL_DEFINITIONS = JSON.parse(saved);
+                    document.getElementById('btn-reset-levels').style.display = 'inline-block';
+                } catch(e) {
+                    LEVEL_DEFINITIONS = [...DEFAULT_LEVEL_DEFINITIONS];
+                }
+            } else {
+                LEVEL_DEFINITIONS = [...DEFAULT_LEVEL_DEFINITIONS];
+                document.getElementById('btn-reset-levels').style.display = 'none';
+            }
+        }
+
+        function init() {
+            loadLevelDefinitions();
+
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x12131c);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            raycaster = new THREE.Raycaster();
+            mouseVec = new THREE.Vector2();
+
+            renderer = new THREE.WebGLRenderer({ antialias: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            renderTarget = new THREE.WebGLRenderTarget(RENDER_WIDTH, RENDER_HEIGHT, {
+                minFilter: THREE.NearestFilter,
+                magFilter: THREE.NearestFilter,
+                format: THREE.RGBAFormat
+            });
+
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+            dirLight.position.set(12, 24, 12);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            scene.add(dirLight);
+
+            const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 12, 12);
+            const ballMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            ball = new THREE.Mesh(ballGeo, ballMat);
+            ball.castShadow = true;
+            scene.add(ball);
+
+            const arrowGeo = new THREE.ConeGeometry(0.12, 0.6, 4);
+            arrowGeo.rotateX(Math.PI / 2);
+            const arrowMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+            aimingArrow = new THREE.Mesh(arrowGeo, arrowMat);
+            aimingArrow.visible = false;
+            scene.add(aimingArrow);
+
+            loadGameProgress();
+            buildHole(gameState.currentHole - 1);
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('fullscreenchange', updateFullscreenButtonText);
+            setupInputEvents();
+            setupEditorEvents();
+
+            animate();
+        }
+
+        function centerCameraOnBall() {
+            camera.position.x = ball.position.x + Math.sin(cameraAngle) * CAMERA_DISTANCE;
+            camera.position.z = ball.position.z + Math.cos(cameraAngle) * CAMERA_DISTANCE;
+            camera.position.y = ball.position.y + CAMERA_HEIGHT;
+            camera.lookAt(ball.position);
+        }
+
+        function clearCurrentHole() {
+            currentHoleObstacles.forEach(obj => scene.remove(obj));
+            currentHoleObstacles = [];
+        }
+
+        function createWallMesh(x, z, w, d, color = 0x8b5a2b) {
+            const geo = new THREE.BoxGeometry(w, H, d);
+            const mat = new THREE.MeshLambertMaterial({ color: color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, H / 2, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            mesh.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(mesh);
+
+            mesh.userData = { isWall: true, box: box };
+            scene.add(mesh);
+            currentHoleObstacles.push(mesh);
+            return mesh;
+        }
+
+        function createHoleTrigger(x, z) {
+            const geo = new THREE.CylinderGeometry(HOLE_RADIUS, HOLE_RADIUS, 0.02, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, 0.01, z);
+            scene.add(mesh);
+            currentHoleObstacles.push(mesh);
+            holePosition.set(x, 0, z);
+        }
+
+        function buildGridCourse(grid, ballGridPos, holeGridPos, extraObstacles = []) {
+            const rows = grid.length;
+            const cols = grid[0].length;
+            const halfW = (cols * TILE_SIZE) / 2;
+            const halfH = (rows * TILE_SIZE) / 2;
+
+            const hasTile = (r, c) => r >= 0 && r < rows && c >= 0 && c < cols && grid[r][c] === 1;
+
+            const getX = (c) => (c * TILE_SIZE + TILE_SIZE / 2) - halfW;
+            const getZ = (r) => (r * TILE_SIZE + TILE_SIZE / 2) - halfH;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (grid[r][c] === 1) {
+                        const geo = new THREE.BoxGeometry(TILE_SIZE, 0.2, TILE_SIZE);
+                        const mat = new THREE.MeshLambertMaterial({ color: 0x48b05b });
+                        const mesh = new THREE.Mesh(geo, mat);
+                        mesh.position.set(getX(c), -0.1, getZ(r));
+                        mesh.receiveShadow = true;
+                        scene.add(mesh);
+                        currentHoleObstacles.push(mesh);
+                    }
+                }
+            }
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (!grid[r][c]) continue;
+
+                    const cx = getX(c);
+                    const cz = getZ(r);
+
+                    if (!hasTile(r - 1, c)) createWallMesh(cx, cz - TILE_SIZE / 2 - T / 2, TILE_SIZE, T);
+                    if (!hasTile(r + 1, c)) createWallMesh(cx, cz + TILE_SIZE / 2 + T / 2, TILE_SIZE, T);
+                    if (!hasTile(r, c - 1)) createWallMesh(cx - TILE_SIZE / 2 - T / 2, cz, T, TILE_SIZE);
+                    if (!hasTile(r, c + 1)) createWallMesh(cx + TILE_SIZE / 2 + T / 2, cz, T, TILE_SIZE);
+
+                    const corners = [
+                        { r1: r - 1, c1: c, r2: r, c2: c - 1, x: cx - TILE_SIZE / 2 - T / 2, z: cz - TILE_SIZE / 2 - T / 2 },
+                        { r1: r - 1, c1: c, r2: r, c2: c + 1, x: cx + TILE_SIZE / 2 + T / 2, z: cz - TILE_SIZE / 2 - T / 2 },
+                        { r1: r + 1, c1: c, r2: r, c2: c - 1, x: cx - TILE_SIZE / 2 - T / 2, z: cz + TILE_SIZE / 2 + T / 2 },
+                        { r1: r + 1, c1: c, r2: r, c2: c + 1, x: cx + TILE_SIZE / 2 + T / 2, z: cz + TILE_SIZE / 2 + T / 2 }
+                    ];
+
+                    corners.forEach(cn => {
+                        if (!hasTile(cn.r1, cn.c1) && !hasTile(cn.r2, cn.c2)) {
+                            createWallMesh(cn.x, cn.z, T, T);
+                        }
+                    });
+                }
+            }
+
+            extraObstacles.forEach(obs => {
+                const ox = getX(obs.c) + (obs.offsetX || 0);
+                const oz = getZ(obs.r) + (obs.offsetZ || 0);
+                createWallMesh(ox, oz, obs.w, obs.d, 0xd97724);
+            });
+
+            ball.position.set(getX(ballGridPos.c), BALL_RADIUS, getZ(ballGridPos.r));
+            createHoleTrigger(getX(holeGridPos.c), getZ(holeGridPos.r));
+        }
+
+        function buildHole(index) {
+            if (index >= LEVEL_DEFINITIONS.length) index = 0;
+            clearCurrentHole();
+            const def = LEVEL_DEFINITIONS[index];
+            buildGridCourse(def.grid, def.start, def.end, def.obstacles || []);
+            gameState.strokesCurrentHole = 0;
+            gameState.ballVelocity.set(0, 0, 0);
+            gameState.isBallMoving = false;
+            centerCameraOnBall();
+            updateUI();
+        }
+
+        function updatePhysics() {
+            if (!gameState.isBallMoving) return;
+
+            const SUB_STEPS = 5;
+            const subVel = gameState.ballVelocity.clone().divideScalar(SUB_STEPS);
+
+            for (let s = 0; s < SUB_STEPS; s++) {
+                ball.position.add(subVel);
+
+                for (let i = 0; i < currentHoleObstacles.length; i++) {
+                    const obj = currentHoleObstacles[i];
+                    if (obj.userData && obj.userData.isWall) {
+                        const box = obj.userData.box;
+
+                        const closestPoint = new THREE.Vector3(
+                            Math.max(box.min.x, Math.min(ball.position.x, box.max.x)),
+                            ball.position.y,
+                            Math.max(box.min.z, Math.min(ball.position.z, box.max.z))
+                        );
+
+                        const diff = new THREE.Vector3().subVectors(ball.position, closestPoint);
+                        diff.y = 0;
+                        const dist = diff.length();
+
+                        if (dist < BALL_RADIUS) {
+                            const normal = dist === 0 ? new THREE.Vector3(0, 0, 1) : diff.normalize();
+                            const overlap = BALL_RADIUS - dist;
+                            ball.position.add(normal.clone().multiplyScalar(overlap));
+
+                            const dot = gameState.ballVelocity.dot(normal);
+                            if (dot < 0) {
+                                const reflection = normal.clone().multiplyScalar(2 * dot);
+                                gameState.ballVelocity.sub(reflection).multiplyScalar(BOUNCINESS);
+                            }
+                        }
+                    }
+                }
+            }
+
+            gameState.ballVelocity.multiplyScalar(FRICTION);
+
+            if (gameState.ballVelocity.length() < 0.003) {
+                gameState.ballVelocity.set(0, 0, 0);
+                gameState.isBallMoving = false;
+            }
+
+            const distToHole = new THREE.Vector2(ball.position.x, ball.position.z)
+                .distanceTo(new THREE.Vector2(holePosition.x, holePosition.z));
+
+            if (distToHole < HOLE_RADIUS) {
+                gameState.isBallMoving = false;
+                gameState.ballVelocity.set(0, 0, 0);
+                setTimeout(nextHole, 350);
+            }
+        }
+
+        function nextHole() {
+            if (gameState.currentHole < LEVEL_DEFINITIONS.length) {
+                gameState.currentHole++;
+                buildHole(gameState.currentHole - 1);
+                saveGameProgress();
+            } else {
+                saveToLeaderboard(gameState.totalStrokes);
+                showEndGameModal();
+            }
+        }
+
+        function isClickOnBall(clientX, clientY) {
+            mouseVec.x = (clientX / window.innerWidth) * 2 - 1;
+            mouseVec.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouseVec, camera);
+            const intersects = raycaster.intersectObject(ball);
+            return intersects.length > 0;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {});
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(err => {});
+                }
+            }
+        }
+
+        function updateFullscreenButtonText() {
+            const btn = document.getElementById('btn-fullscreen');
+            if (document.fullscreenElement) {
+                btn.innerText = "RIAPRI IN FINESTRA 🗗";
+            } else {
+                btn.innerText = "SCHERMO INTERO ⛶";
+            }
+        }
+
+        function setupInputEvents() {
+            let lastTapTime = 0;
+
+            const rotateSpeed = 0.12;
+            document.getElementById('btn-cam-ccw').addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                cameraAngle -= rotateSpeed;
+                centerCameraOnBall();
+            });
+            document.getElementById('btn-cam-cw').addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                cameraAngle += rotateSpeed;
+                centerCameraOnBall();
+            });
+
+            window.addEventListener('pointerdown', (e) => {
+                if (gameState.isBallMoving) return;
+                if (document.getElementById('game-modal').style.display === 'block' || 
+                    document.getElementById('import-modal').style.display === 'block' ||
+                    document.getElementById('editor-modal').style.display === 'block') return;
+                if (e.target.closest('.cam-controls') || e.target.closest('.modal')) return;
+
+                const now = Date.now();
+                if (now - lastTapTime < 300) {
+                    if (isClickOnBall(e.clientX, e.clientY)) {
+                        centerCameraOnBall();
+                        isAiming = false;
+                        aimingArrow.visible = false;
+                        document.getElementById('power-container').style.display = 'none';
+                        lastTapTime = 0;
+                        return;
+                    }
+                }
+                lastTapTime = now;
+
+                isAiming = true;
+                dragStartPos = { x: e.clientX, y: e.clientY };
+                document.getElementById('power-container').style.display = 'block';
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isAiming) return;
+                const dx = e.clientX - dragStartPos.x;
+                const dy = e.clientY - dragStartPos.y;
+                const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 160);
+                currentPower = dist / 160;
+
+                document.getElementById('power-bar').style.height = `${currentPower * 100}%`;
+
+                const dragAngle = Math.atan2(dx, dy);
+                const finalAngle = dragAngle + cameraAngle;
+
+                aimingArrow.visible = true;
+                aimingArrow.position.copy(ball.position);
+                aimingArrow.rotation.y = finalAngle + Math.PI;
+            });
+
+            window.addEventListener('pointerup', () => {
+                if (!isAiming) return;
+                isAiming = false;
+                aimingArrow.visible = false;
+                document.getElementById('power-container').style.display = 'none';
+
+                if (currentPower > 0.04) {
+                    const force = currentPower * 0.38;
+                    const angle = aimingArrow.rotation.y - Math.PI;
+                    
+                    gameState.ballVelocity.set(
+                        Math.sin(angle) * force,
+                        0,
+                        Math.cos(angle) * force
+                    );
+                    gameState.isBallMoving = true;
+                    gameState.strokesCurrentHole++;
+                    gameState.totalStrokes++;
+                    updateUI();
+                    saveGameProgress();
+                }
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') buildHole(gameState.currentHole - 1);
+                if (e.key === 'Escape') togglePauseModal();
+            });
+
+            document.getElementById('btn-resume').onclick = () => togglePauseModal(false);
+            document.getElementById('btn-restart').onclick = resetGame;
+            document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
+
+            document.getElementById('btn-export-json').onclick = exportLevelsJSON;
+            document.getElementById('btn-open-import').onclick = openImportModal;
+            document.getElementById('btn-cancel-import').onclick = closeImportModal;
+            document.getElementById('btn-confirm-import').onclick = confirmImportJSON;
+            document.getElementById('btn-trigger-file').onclick = () => document.getElementById('file-input').click();
+            document.getElementById('file-input').onchange = handleFileUpload;
+            document.getElementById('btn-reset-levels').onclick = resetToDefaultLevels;
+        }
+
+        // --- LEVEL EDITOR SYSTEM ---
+        let editorState = {
+            levelIndex: 0,
+            activeTool: 'tile',
+            tempDef: null
+        };
+
+        function setupEditorEvents() {
+            document.getElementById('btn-open-editor').onclick = openEditorModal;
+            document.getElementById('btn-close-editor').onclick = closeEditorModal;
+            
+            const toolBtns = document.querySelectorAll('.editor-toolbar .btn');
+            toolBtns.forEach(btn => {
+                btn.onclick = () => {
+                    toolBtns.forEach(b => b.classList.remove('btn-active'));
+                    btn.classList.add('btn-active');
+                    editorState.activeTool = btn.dataset.tool;
+                };
+            });
+
+            document.getElementById('editor-level-select').onchange = (e) => {
+                editorState.levelIndex = parseInt(e.target.value, 10);
+                loadLevelIntoEditor();
+            };
+
+            document.getElementById('btn-add-row').onclick = () => resizeEditorGrid(1, 0);
+            document.getElementById('btn-rem-row').onclick = () => resizeEditorGrid(-1, 0);
+            document.getElementById('btn-add-col').onclick = () => resizeEditorGrid(0, 1);
+            document.getElementById('btn-rem-col').onclick = () => resizeEditorGrid(0, -1);
+
+            document.getElementById('btn-save-level').onclick = saveEditorLevel;
+            document.getElementById('btn-test-level').onclick = () => {
+                saveEditorLevel();
+                gameState.currentHole = editorState.levelIndex + 1;
+                closeEditorModal();
+                togglePauseModal(false);
+                buildHole(editorState.levelIndex);
+            };
+        }
+
+        function openEditorModal() {
+            document.getElementById('game-modal').style.display = 'none';
+            document.getElementById('editor-modal').style.display = 'block';
+
+            const select = document.getElementById('editor-level-select');
+            select.innerHTML = '';
+            LEVEL_DEFINITIONS.forEach((def, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = `${idx + 1}. ${def.name}`;
+                if (idx === gameState.currentHole - 1) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            editorState.levelIndex = select.selectedIndex >= 0 ? select.selectedIndex : 0;
+            loadLevelIntoEditor();
+        }
+
+        function closeEditorModal() {
+            document.getElementById('editor-modal').style.display = 'none';
+            document.getElementById('game-modal').style.display = 'block';
+        }
+
+        function loadLevelIntoEditor() {
+            const original = LEVEL_DEFINITIONS[editorState.levelIndex];
+            editorState.tempDef = JSON.parse(JSON.stringify(original));
+            if (!editorState.tempDef.obstacles) editorState.tempDef.obstacles = [];
+            renderEditorGrid();
+            document.getElementById('editor-feedback').innerText = '';
+        }
+
+        function renderEditorGrid() {
+            const gridContainer = document.getElementById('editor-grid');
+            const grid = editorState.tempDef.grid;
+            const rows = grid.length;
+            const cols = grid[0].length;
+
+            gridContainer.style.gridTemplateColumns = `repeat(${cols}, 32px)`;
+            gridContainer.innerHTML = '';
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = `editor-cell ${grid[r][c] === 1 ? 'tile' : ''}`;
+                    
+                    let content = '';
+                    if (editorState.tempDef.start.r === r && editorState.tempDef.start.c === c) content = '⚪';
+                    else if (editorState.tempDef.end.r === r && editorState.tempDef.end.c === c) content = '🕳️';
+                    else {
+                        const obs = editorState.tempDef.obstacles.find(o => o.r === r && o.c === c);
+                        if (obs) {
+                            if (obs.w > obs.d) content = '▬';
+                            else if (obs.d > obs.w) content = '❚';
+                            else content = '🟧';
+                        }
+                    }
+                    cell.innerText = content;
+
+                    cell.onclick = () => handleCellClick(r, c);
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+
+        function handleCellClick(r, c) {
+            const def = editorState.tempDef;
+            const tool = editorState.activeTool;
+
+            if (tool === 'tile') {
+                def.grid[r][c] = def.grid[r][c] === 1 ? 0 : 1;
+            } else if (tool === 'start') {
+                def.start = { r, c };
+                def.grid[r][c] = 1;
+            } else if (tool === 'end') {
+                def.end = { r, c };
+                def.grid[r][c] = 1;
+            } else if (tool === 'block') {
+                def.grid[r][c] = 1;
+                def.obstacles = def.obstacles.filter(o => !(o.r === r && o.c === c));
+                def.obstacles.push({ r, c, w: 0.8, d: 0.8 });
+            } else if (tool === 'wallH') {
+                def.grid[r][c] = 1;
+                def.obstacles = def.obstacles.filter(o => !(o.r === r && o.c === c));
+                def.obstacles.push({ r, c, w: 1.4, d: 0.4 });
+            } else if (tool === 'wallV') {
+                def.grid[r][c] = 1;
+                def.obstacles = def.obstacles.filter(o => !(o.r === r && o.c === c));
+                def.obstacles.push({ r, c, w: 0.4, d: 1.4 });
+            } else if (tool === 'clearObs') {
+                def.obstacles = def.obstacles.filter(o => !(o.r === r && o.c === c));
+            }
+
+            renderEditorGrid();
+        }
+
+        function resizeEditorGrid(deltaRows, deltaCols) {
+            const grid = editorState.tempDef.grid;
+            let rows = grid.length;
+            let cols = grid[0].length;
+
+            if (deltaRows === 1) {
+                grid.push(new Array(cols).fill(0));
+            } else if (deltaRows === -1 && rows > 1) {
+                grid.pop();
+            }
+
+            if (deltaCols === 1) {
+                grid.forEach(r => r.push(0));
+            } else if (deltaCols === -1 && cols > 1) {
+                grid.forEach(r => r.pop());
+            }
+
+            rows = grid.length;
+            cols = grid[0].length;
+
+            editorState.tempDef.start.r = Math.min(editorState.tempDef.start.r, rows - 1);
+            editorState.tempDef.start.c = Math.min(editorState.tempDef.start.c, cols - 1);
+            editorState.tempDef.end.r = Math.min(editorState.tempDef.end.r, rows - 1);
+            editorState.tempDef.end.c = Math.min(editorState.tempDef.end.c, cols - 1);
+            editorState.tempDef.obstacles = editorState.tempDef.obstacles.filter(o => o.r < rows && o.c < cols);
+
+            renderEditorGrid();
+        }
+
+        function saveEditorLevel() {
+            LEVEL_DEFINITIONS[editorState.levelIndex] = JSON.parse(JSON.stringify(editorState.tempDef));
+            localStorage.setItem('minigolf_custom_levels', JSON.stringify(LEVEL_DEFINITIONS));
+            document.getElementById('btn-reset-levels').style.display = 'inline-block';
+            document.getElementById('editor-feedback').innerText = "Livello salvato con successo!";
+        }
+
+        // --- IMPORT / EXPORT FUNCS ---
+        function exportLevelsJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(LEVEL_DEFINITIONS, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "minigolf_campi.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function openImportModal() {
+            document.getElementById('game-modal').style.display = 'none';
+            document.getElementById('import-modal').style.display = 'block';
+            document.getElementById('import-json-text').value = '';
+            document.getElementById('import-feedback').innerText = '';
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').style.display = 'none';
+            document.getElementById('game-modal').style.display = 'block';
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('import-json-text').value = evt.target.result;
+                document.getElementById('import-feedback').innerText = "File caricato! Clicca 'CONFERMA IMPORT' per applicare.";
+            };
+            reader.readAsText(file);
+        }
+
+        function confirmImportJSON() {
+            const rawText = document.getElementById('import-json-text').value.trim();
+            const feedbackEl = document.getElementById('import-feedback');
+
+            if (!rawText) {
+                feedbackEl.innerText = "Inserisci o carica un JSON valido!";
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(rawText);
+                if (!Array.isArray(parsed) || parsed.length === 0) {
+                    feedbackEl.innerText = "Formato non valido: deve essere una lista di livelli.";
+                    return;
+                }
+
+                if (!parsed[0].grid || !parsed[0].start || !parsed[0].end) {
+                    feedbackEl.innerText = "Campi mancanti nel JSON (grid, start o end).";
+                    return;
+                }
+
+                LEVEL_DEFINITIONS = parsed;
+                localStorage.setItem('minigolf_custom_levels', JSON.stringify(LEVEL_DEFINITIONS));
+                
+                feedbackEl.innerText = "Campi importati con successo!";
+                setTimeout(() => {
+                    closeImportModal();
+                    resetGame();
+                }, 800);
+
+            } catch (err) {
+                feedbackEl.innerText = "Errore nel parsing JSON. Controlla la sintassi.";
+            }
+        }
+
+        function resetToDefaultLevels() {
+            localStorage.removeItem('minigolf_custom_levels');
+            LEVEL_DEFINITIONS = [...DEFAULT_LEVEL_DEFINITIONS];
+            document.getElementById('btn-reset-levels').style.display = 'none';
+            document.getElementById('modal-content').innerText = "Ripristinati i 50 campi di default!";
+            resetGame();
+        }
+
+        function saveGameProgress() {
+            localStorage.setItem('minigolf_save', JSON.stringify({
+                currentHole: gameState.currentHole,
+                totalStrokes: gameState.totalStrokes
+            }));
+        }
+
+        function loadGameProgress() {
+            const data = localStorage.getItem('minigolf_save');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    gameState.currentHole = parsed.currentHole || 1;
+                    gameState.totalStrokes = parsed.totalStrokes || 0;
+                } catch(e) {}
+            }
+        }
+
+        function saveToLeaderboard(score) {
+            let lb = JSON.parse(localStorage.getItem('minigolf_lb') || '[]');
+            lb.push({ score: score, date: new Date().toLocaleDateString('it-IT') });
+            lb.sort((a, b) => a.score - b.score);
+            lb = lb.slice(0, 5);
+            localStorage.setItem('minigolf_lb', JSON.stringify(lb));
+            localStorage.removeItem('minigolf_save');
+        }
+
+        function showLeaderboardUI() {
+            const lb = JSON.parse(localStorage.getItem('minigolf_lb') || '[]');
+            const listEl = document.getElementById('lb-list');
+            if (lb.length === 0) {
+                listEl.innerHTML = '<div style="color:#888; text-align:center;">Nessun record salvato</div>';
+            } else {
+                listEl.innerHTML = '';
+                lb.forEach((entry, idx) => {
+                    listEl.innerHTML += `
+                        <div class="lb-entry">
+                            <span>#${idx + 1} - ${entry.date}</span>
+                            <span style="color:#55ff55; font-weight:bold;">${entry.score} colpi</span>
+                        </div>`;
+                });
+            }
+            document.getElementById('leaderboard-sec').style.display = 'block';
+        }
+
+        function updateUI() {
+            const def = LEVEL_DEFINITIONS[gameState.currentHole - 1] || LEVEL_DEFINITIONS[0];
+            document.getElementById('hole-name').innerText = def.name;
+            document.getElementById('hole-num').innerText = gameState.currentHole;
+            document.getElementById('current-strokes').innerText = gameState.strokesCurrentHole;
+            document.getElementById('total-strokes').innerText = gameState.totalStrokes;
+        }
+
+        function togglePauseModal(show = true) {
+            const modal = document.getElementById('game-modal');
+            if (show) {
+                document.getElementById('modal-title').innerText = "PAUSA";
+                document.getElementById('modal-content').innerText = "Partita salvata automaticamente.";
+                showLeaderboardUI();
+                updateFullscreenButtonText();
+                modal.style.display = 'block';
+            } else {
+                modal.style.display = 'none';
+                document.getElementById('import-modal').style.display = 'none';
+                document.getElementById('editor-modal').style.display = 'none';
+            }
+        }
+
+        function showEndGameModal() {
+            const modal = document.getElementById('game-modal');
+            document.getElementById('modal-title').innerText = "CAMPIONE!";
+            document.getElementById('modal-content').innerText = `Tutti i ${LEVEL_DEFINITIONS.length} livelli completati con ${gameState.totalStrokes} colpi totali!`;
+            showLeaderboardUI();
+            updateFullscreenButtonText();
+            modal.style.display = 'block';
+        }
+
+        function resetGame() {
+            localStorage.removeItem('minigolf_save');
+            gameState.currentHole = 1;
+            gameState.totalStrokes = 0;
+            togglePauseModal(false);
+            buildHole(0);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updatePhysics();
+
+            renderer.setRenderTarget(renderTarget);
+            renderer.render(scene, camera);
+            renderer.setRenderTarget(null);
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
