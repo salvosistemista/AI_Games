@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Solar System Simulator - Fullscreen & Fuel System</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000002;
+            color: #ffffff;
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Menu Principale / Pausa */
+        #main-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background: rgba(2, 4, 10, 0.92);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        #main-menu h1 {
+            font-size: 2.2rem;
+            color: #00f0ff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .menu-btn {
+            width: 280px;
+            padding: 14px 24px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid #00f0ff;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            text-align: center;
+        }
+
+        .menu-btn:hover, .menu-btn:active {
+            background: rgba(0, 240, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+            transform: scale(1.03);
+        }
+
+        .menu-btn:disabled {
+            border-color: #444;
+            color: #666;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* HUD Overlay */
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            background: rgba(5, 8, 15, 0.88);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            border-radius: 10px;
+            padding: 12px 18px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+            pointer-events: none;
+        }
+
+        .hud-row {
+            font-size: 0.78rem;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+            color: #8ab4f8;
+            text-transform: uppercase;
+        }
+
+        .hud-val {
+            font-weight: bold;
+            color: #00f0ff;
+            font-size: 0.95rem;
+        }
+
+        /* BARRA VERTICALE DEL CARBURANTE */
+        #fuel-container {
+            position: absolute;
+            top: 15px;
+            left: 310px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(5, 8, 15, 0.88);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            border-radius: 10px;
+            padding: 8px 10px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+            pointer-events: none;
+        }
+
+        .fuel-title {
+            font-size: 0.6rem;
+            color: #8ab4f8;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        #fuel-bar-bg {
+            width: 18px;
+            height: 110px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.5);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        #fuel-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(0deg, #ff0055, #00f0ff);
+            border-radius: 6px;
+            transition: height 0.1s linear, background 0.2s ease;
+        }
+
+        #fuel-val-text {
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #00f0ff;
+            margin-top: 6px;
+        }
+
+        /* Pulsante Menu per Mobile */
+        #menu-toggle-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            padding: 10px 16px;
+            background: rgba(5, 8, 15, 0.88);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            border-radius: 8px;
+            color: #00f0ff;
+            font-weight: bold;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Etichette Nomi Pianeti/Satelliti */
+        #labels-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .celestial-label {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #00f0ff;
+            background: rgba(0, 10, 25, 0.75);
+            border: 1px solid rgba(0, 240, 255, 0.5);
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            display: none;
+            text-shadow: 0 0 4px #00f0ff;
+        }
+
+        /* Controlli Touch Overlay */
+        #touch-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .interactive-zone {
+            pointer-events: auto;
+        }
+
+        #joystick-base {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(0, 240, 255, 0.5);
+            border-radius: 50%;
+        }
+
+        #joystick-stick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #00f0ff, #0077ff);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 12px #00f0ff;
+            pointer-events: none;
+        }
+
+        #throttle-container {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 180px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(0, 240, 255, 0.5);
+            border-radius: 35px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        #throttle-knob {
+            position: absolute;
+            top: 130px;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ff0055, #990033);
+            border-radius: 50%;
+            box-shadow: 0 0 12px #ff0055;
+            cursor: pointer;
+            pointer-events: none;
+        }
+
+        #warp-btn {
+            position: absolute;
+            bottom: 220px;
+            right: 30px;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #7928ca, #ff0080);
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            box-shadow: 0 0 12px rgba(255, 0, 128, 0.5);
+            cursor: pointer;
+        }
+
+        /* PULSANTI D-PAD MOBILE */
+        .target-nav-btn {
+            position: absolute;
+            bottom: 30px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 240, 255, 0.15);
+            border: 1px solid #00f0ff;
+            border-radius: 12px;
+            color: #00f0ff;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+
+        #prev-target-btn { left: 170px; }
+        #next-target-btn { left: 230px; }
+
+        #target-marker {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border: 2px solid #00f0ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 6;
+            display: none;
+        }
+
+        #target-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            background: #ff0055;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="webgl-container"></div>
+    <div id="labels-container"></div>
+
+    <!-- MENU PRINCIPALE / PAUSA CON FULLSCREEN -->
+    <div id="main-menu">
+        <h1>SOLAR SYSTEM SIMULATOR</h1>
+        <button id="btn-continue" class="menu-btn">CONTINUA PARTITA</button>
+        <button id="btn-newgame" class="menu-btn">NUOVA PARTITA</button>
+        <button id="btn-fullscreen" class="menu-btn">ATTIVA FULLSCREEN ⛶</button>
+    </div>
+
+    <!-- HUD PRINCIPALE -->
+    <div id="hud">
+        <div class="hud-row">VELOCITÀ: <span id="hud-speed" class="hud-val">0</span> km/h</div>
+        <div class="hud-row">MODALITÀ: <span id="hud-mode" class="hud-val" style="color:#00ff88;">SUB-LIGHT</span></div>
+        <div class="hud-row">CORPO VICINO: <span id="hud-nearest" class="hud-val">MARTE</span></div>
+        <div class="hud-row">TARGET SELEZIONATO: <span id="hud-target-name" class="hud-val" style="color:#ff0080;">--</span></div>
+        <div class="hud-row">DISTANZA PISTA TARGET: <span id="hud-target-dist" class="hud-val">--</span> km</div>
+    </div>
+
+    <!-- BARRA DEL CARBURANTE -->
+    <div id="fuel-container">
+        <div class="fuel-title">FUEL</div>
+        <div id="fuel-bar-bg">
+            <div id="fuel-bar-fill"></div>
+        </div>
+        <div id="fuel-val-text">100%</div>
+    </div>
+
+    <button id="menu-toggle-btn">MENU (ESC)</button>
+
+    <div id="target-marker"></div>
+
+    <!-- CONTROLLI TOUCH MOBILE -->
+    <div id="touch-controls">
+        <div id="joystick-base" class="interactive-zone">
+            <div id="joystick-stick"></div>
+        </div>
+        <div id="throttle-container" class="interactive-zone">
+            <div style="font-size:0.55rem; color:#00f0ff; font-weight:bold; pointer-events:none;">500k km/h</div>
+            <div id="throttle-knob"></div>
+            <div style="font-size:0.55rem; color:#00f0ff; font-weight:bold; pointer-events:none;">0</div>
+        </div>
+        <button id="warp-btn" class="interactive-zone">WARP (R1)</button>
+        <button id="prev-target-btn" class="target-nav-btn interactive-zone">◄</button>
+        <button id="next-target-btn" class="target-nav-btn interactive-zone">►</button>
+    </div>
+
+    <script>
+    (function() {
+        const SCALE = 0.01; 
+        const LIGHT_SPEED_KMH = 1079252848.8;
+        const MAX_SUB_LIGHT_KMH = 500000;
+
+        const EARTH_ORBIT_PERIOD_SEC = 1440; 
+        const EARTH_DAY_SEC = EARTH_ORBIT_PERIOD_SEC / 365.25;
+
+        // CARBURANTE VARS
+        const MAX_FUEL_KM = 500000000;
+        let currentFuelKm = MAX_FUEL_KM;
+        const REGEN_SPEED_LIMIT = 100000;
+        const REGEN_RATE_KM_PER_SEC = 5000000;
+
+        const SAVE_KEY = "SOLAR_SIM_SAVE_DATA";
+
+        const CELESTIAL_DATA = {
+            Sun:     { name: "Sole", radius: 696340, color: 0xffcc00 },
+            Mercury: { name: "Mercurio", radius: 2439.7, dist: 57909050, orbitPeriod: 0.241, rotPeriod: 58.6, color: 0xa6a6a6, moons: [] },
+            Venus:   { name: "Venere", radius: 6051.8, dist: 108208000, orbitPeriod: 0.615, rotPeriod: -243, color: 0xe3bb76, moons: [] },
+            Earth:   { name: "Terra", radius: 6371.0, dist: 149598023, orbitPeriod: 1.0, rotPeriod: 1.0, color: 0x2b82c5,
+                       moons: [{ name: "Luna", radius: 1737.4, dist: 384400, orbitPeriod: 0.0748, color: 0xcccccc }] },
+            Mars:    { name: "Marte", radius: 3389.5, dist: 227939200, orbitPeriod: 1.881, rotPeriod: 1.02, color: 0xc8522d,
+                       moons: [{ name: "Phobos", radius: 11.2, dist: 9376, orbitPeriod: 0.0008, color: 0x888888 },
+                               { name: "Deimos", radius: 6.2, dist: 23463, orbitPeriod: 0.003, color: 0x666666 }] },
+            Jupiter: { name: "Giove", radius: 69911, dist: 778570000, orbitPeriod: 11.86, rotPeriod: 0.41, color: 0xb07f35,
+                       moons: [
+                           { name: "Io", radius: 1821.6, dist: 421700, orbitPeriod: 0.0048, color: 0xd4ca68 },
+                           { name: "Europa", radius: 1560.8, dist: 670900, orbitPeriod: 0.0097, color: 0xa8b5bd },
+                           { name: "Ganimede", radius: 2634.1, dist: 1070400, orbitPeriod: 0.0196, color: 0x857d77 },
+                           { name: "Callisto", radius: 2410.3, dist: 1882700, orbitPeriod: 0.0457, color: 0x4e545c }
+                       ] },
+            Saturn:  { name: "Saturno", radius: 58232, dist: 1433530000, orbitPeriod: 29.45, rotPeriod: 0.44, color: 0xe2bf7d, hasRings: true,
+                       moons: [
+                           { name: "Mimas", radius: 198.2, dist: 185520, orbitPeriod: 0.0025, color: 0xaaaaaa },
+                           { name: "Encelado", radius: 252.1, dist: 238020, orbitPeriod: 0.0037, color: 0xffffff },
+                           { name: "Teti", radius: 531.1, dist: 294660, orbitPeriod: 0.0052, color: 0xdddddd },
+                           { name: "Dione", radius: 561.4, dist: 377400, orbitPeriod: 0.0075, color: 0xcccccc },
+                           { name: "Rea", radius: 763.8, dist: 527040, orbitPeriod: 0.0123, color: 0xbbbbbb },
+                           { name: "Titano", radius: 2574.7, dist: 1221870, orbitPeriod: 0.0436, color: 0xc49a45 },
+                           { name: "Giapeto", radius: 734.5, dist: 3561300, orbitPeriod: 0.217, color: 0x999999 }
+                       ] },
+            Uranus:  { name: "Urano", radius: 25362, dist: 2870972200, orbitPeriod: 84.02, rotPeriod: -0.72, color: 0x4b70dd,
+                       moons: [
+                           { name: "Miranda", radius: 235.8, dist: 129390, orbitPeriod: 0.0038, color: 0xaaaaaa },
+                           { name: "Ariel", radius: 578.9, dist: 191020, orbitPeriod: 0.0068, color: 0xcccccc },
+                           { name: "Umbriel", radius: 584.7, dist: 266000, orbitPeriod: 0.0114, color: 0x888888 },
+                           { name: "Titania", radius: 788.4, dist: 435910, orbitPeriod: 0.0238, color: 0xbbbbbb },
+                           { name: "Oberon", radius: 761.4, dist: 583520, orbitPeriod: 0.0369, color: 0x999999 }
+                       ] },
+            Neptune: { name: "Nettuno", radius: 24622, dist: 4498252900, orbitPeriod: 164.8, rotPeriod: 0.67, color: 0x274687,
+                       moons: [
+                           { name: "Tritone", radius: 1353.4, dist: 354759, orbitPeriod: -0.016, color: 0xc4d4e0 }
+                       ] }
+        };
+
+        // THREE.JS VARS
+        let scene, camera, renderer;
+        let shipGroup, shipMeshGroup, cameraRigNode;
+        let solarSystemGroup = {};
+        let runwayLights = [];
+
+        // TARGETS
+        let targetList = [];
+        let currentTargetIndex = 0;
+
+        // POLVERE SPAZIALE
+        let spaceDust;
+        const DUST_COUNT = 3000;
+        const DUST_BOUNDS = 1000;
+
+        // GUIDA & SPEED
+        let targetSpeedKmh = 0;
+        let currentSpeedKmh = 0;
+        let warpActive = false;
+        
+        let pitchInput = 0;
+        let yawInput = 0;
+        let rollVisual = 0;
+        let pitchVisual = 0;
+
+        // CAMERA
+        let camYawOffset = 0;
+        let camPitchOffset = 0;
+        let rightStickActive = false;
+        let isDraggingCam = false;
+
+        let currentCamDist = 0.002;
+        const MIN_CAM_DIST = 0.0003;
+        const MAX_CAM_DIST = 0.015;
+
+        // NAVICELLA
+        let shipPos = new THREE.Vector3();
+        let shipRot = new THREE.Quaternion();
+
+        // MENUS & GAME PAUSE STATE
+        let isPaused = true;
+
+        const targetMarker = document.getElementById('target-marker');
+        const labelsContainer = document.getElementById('labels-container');
+        const mainMenu = document.getElementById('main-menu');
+        const btnContinue = document.getElementById('btn-continue');
+        const btnNewGame = document.getElementById('btn-newgame');
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+
+        const fuelBarFill = document.getElementById('fuel-bar-fill');
+        const fuelValText = document.getElementById('fuel-val-text');
+
+        let dpadLeftPressedLast = false;
+        let dpadRightPressedLast = false;
+
+        function init() {
+            const container = document.getElementById('webgl-container');
+            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000002);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.00001, 100000000);
+
+            const ambientLight = new THREE.AmbientLight(0x333344, 0.5);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.PointLight(0xffffff, 2.5, 0, 0.000001);
+            sunLight.position.set(0, 0, 0);
+            scene.add(sunLight);
+
+            createStarfield();
+            createSolarSystem();
+            createSpaceship();
+            createSpaceDust();
+
+            // GERARCHIA CAMERA
+            cameraRigNode = new THREE.Group();
+            shipGroup.add(cameraRigNode);
+            
+            camera.position.set(0, 0.0003, currentCamDist);
+            camera.lookAt(0, 0, -0.001);
+            cameraRigNode.add(camera);
+
+            setupControls();
+            setupMenuEvents();
+
+            checkSaveFileStatus();
+
+            window.addEventListener('resize', onWindowResize);
+            animate(0);
+        }
+
+        function createStarfield() {
+            const count = 6000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 500000000;
+                positions[i+1] = (Math.random() - 0.5) * 500000000;
+                positions[i+2] = (Math.random() - 0.5) * 500000000;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 200000, sizeAttenuation: true });
+            scene.add(new THREE.Points(geometry, material));
+        }
+
+        function create10KmRunway(parentGroup, bodyRadius, displayName) {
+            const runwayGroup = new THREE.Group();
+            const rWidth = 0.01;   
+            const rLength = 0.1;  
+
+            const runwayMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(rWidth, 0.001, rLength),
+                new THREE.MeshStandardMaterial({ color: 0x111118, roughness: 0.5 })
+            );
+            runwayGroup.add(runwayMesh);
+
+            const lightGeo = new THREE.BoxGeometry(0.002, 0.002, 0.002);
+            for (let i = 0; i <= 10; i++) {
+                const zPos = -rLength / 2 + (i * (rLength / 10));
+                
+                const lL = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: 0xff0055 }));
+                lL.position.set(-rWidth / 2, 0.001, zPos);
+                runwayGroup.add(lL);
+                runwayLights.push(lL);
+
+                const lR = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
+                lR.position.set(rWidth / 2, 0.001, zPos);
+                runwayGroup.add(lR);
+                runwayLights.push(lR);
+            }
+
+            runwayGroup.position.set(0, bodyRadius + 0.0005, 0);
+            parentGroup.add(runwayGroup);
+
+            const labelEl = document.createElement('div');
+            labelEl.className = 'celestial-label';
+            labelEl.innerText = displayName.toUpperCase();
+            labelsContainer.appendChild(labelEl);
+
+            return { runwayGroup: runwayGroup, labelEl: labelEl };
+        }
+
+        function createSolarSystem() {
+            const sunRadiusScaled = CELESTIAL_DATA.Sun.radius * SCALE;
+            const sunMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(sunRadiusScaled, 64, 64),
+                new THREE.MeshBasicMaterial({ color: CELESTIAL_DATA.Sun.color })
+            );
+            scene.add(sunMesh);
+
+            Object.keys(CELESTIAL_DATA).forEach(key => {
+                if (key === 'Sun') return;
+                const data = CELESTIAL_DATA[key];
+
+                const orbitPivot = new THREE.Group();
+                scene.add(orbitPivot);
+
+                const bodyGroup = new THREE.Group();
+                bodyGroup.position.set(data.dist * SCALE, 0, 0);
+                orbitPivot.add(bodyGroup);
+
+                const radiusScaled = data.radius * SCALE;
+                const mesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(radiusScaled, 32, 32),
+                    new THREE.MeshStandardMaterial({ color: data.color, roughness: 0.8 })
+                );
+                bodyGroup.add(mesh);
+
+                if (data.hasRings) {
+                    const ringMesh = new THREE.Mesh(
+                        new THREE.RingGeometry(radiusScaled * 1.2, radiusScaled * 2.3, 64),
+                        new THREE.MeshBasicMaterial({ color: 0xc2a468, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+                    );
+                    ringMesh.rotation.x = Math.PI / 2;
+                    bodyGroup.add(ringMesh);
+                }
+
+                const planetRunway = create10KmRunway(bodyGroup, radiusScaled, data.name);
+                targetList.push({
+                    name: data.name,
+                    group: bodyGroup,
+                    runway: planetRunway.runwayGroup,
+                    labelEl: planetRunway.labelEl
+                });
+
+                const moonPivots = [];
+                if (data.moons) {
+                    data.moons.forEach(m => {
+                        const mPivot = new THREE.Group();
+                        bodyGroup.add(mPivot);
+
+                        const mRadius = m.radius * SCALE;
+                        const mGroup = new THREE.Group();
+                        mGroup.position.set(m.dist * SCALE, 0, 0);
+                        mPivot.add(mGroup);
+
+                        const mMesh = new THREE.Mesh(
+                            new THREE.SphereGeometry(mRadius, 16, 16),
+                            new THREE.MeshStandardMaterial({ color: m.color, roughness: 0.9 })
+                        );
+                        mGroup.add(mMesh);
+
+                        const moonRunway = create10KmRunway(mGroup, mRadius, `${m.name} (${data.name})`);
+                        targetList.push({
+                            name: `${m.name} [Luna di ${data.name}]`,
+                            group: mGroup,
+                            runway: moonRunway.runwayGroup,
+                            labelEl: moonRunway.labelEl
+                        });
+
+                        moonPivots.push({ pivot: mPivot, period: m.orbitPeriod });
+                    });
+                }
+
+                solarSystemGroup[key] = { pivot: orbitPivot, group: bodyGroup, mesh: mesh, data: data, moons: moonPivots };
+            });
+        }
+
+        function cycleTarget(direction) {
+            if (direction === 'next') {
+                currentTargetIndex = (currentTargetIndex + 1) % targetList.length;
+            } else if (direction === 'prev') {
+                currentTargetIndex = (currentTargetIndex - 1 + targetList.length) % targetList.length;
+            }
+        }
+
+        function createSpaceship() {
+            shipGroup = new THREE.Group();
+            shipMeshGroup = new THREE.Group();
+
+            const widthUnits = 20 / 100000;
+            const lengthUnits = 10 / 100000;
+            const heightUnits = 4 / 100000;   
+
+            const matBody = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, flatShading: true, roughness: 0.2 });
+            const matWings = new THREE.MeshStandardMaterial({ color: 0x2563eb, flatShading: true });
+            const matCockpit = new THREE.MeshStandardMaterial({ color: 0x00f0ff, roughness: 0.1, metalness: 0.9 });
+            const matEngine = new THREE.MeshBasicMaterial({ color: 0xff5500 });
+
+            const bodyGeo = new THREE.ConeGeometry(widthUnits * 0.3, lengthUnits, 5);
+            bodyGeo.rotateX(Math.PI / 2);
+            shipMeshGroup.add(new THREE.Mesh(bodyGeo, matBody));
+
+            const wings = new THREE.Mesh(new THREE.BoxGeometry(widthUnits, heightUnits * 0.5, lengthUnits * 0.4), matWings);
+            wings.position.set(0, 0, lengthUnits * 0.1);
+            shipMeshGroup.add(wings);
+
+            const cockpit = new THREE.Mesh(new THREE.BoxGeometry(widthUnits * 0.3, heightUnits, lengthUnits * 0.3), matCockpit);
+            cockpit.position.set(0, heightUnits * 0.5, -lengthUnits * 0.1);
+            shipMeshGroup.add(cockpit);
+
+            const engineGeo = new THREE.CylinderGeometry(widthUnits * 0.1, widthUnits * 0.12, lengthUnits * 0.2, 6);
+            engineGeo.rotateX(Math.PI / 2);
+            const e1 = new THREE.Mesh(engineGeo, matEngine);
+            e1.position.set(-widthUnits * 0.25, 0, lengthUnits * 0.45);
+            const e2 = new THREE.Mesh(engineGeo, matEngine);
+            e2.position.set(widthUnits * 0.25, 0, lengthUnits * 0.45);
+            shipMeshGroup.add(e1);
+            shipMeshGroup.add(e2);
+
+            shipGroup.add(shipMeshGroup);
+            scene.add(shipGroup);
+        }
+
+        function createSpaceDust() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(DUST_COUNT * 3);
+
+            for (let i = 0; i < DUST_COUNT * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
+                positions[i + 1] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
+                positions[i + 2] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            spaceDust = new THREE.Points(geometry, new THREE.PointsMaterial({
+                color: 0x00f0ff, size: 1.5, transparent: true, opacity: 0.5,
+                blending: THREE.AdditiveBlending, sizeAttenuation: true
+            }));
+            scene.add(spaceDust);
+        }
+
+        function updateSpaceDust(dt, speedMps) {
+            spaceDust.position.copy(shipPos);
+            const effectiveMove = Math.max(speedMps * dt, 10.0 * dt);
+            const positions = spaceDust.geometry.attributes.position.array;
+            const invRot = shipRot.clone().invert();
+            const localMove = new THREE.Vector3(0, 0, effectiveMove).applyQuaternion(invRot);
+
+            for (let i = 0; i < DUST_COUNT * 3; i += 3) {
+                positions[i] += localMove.x;
+                positions[i + 1] += localMove.y;
+                positions[i + 2] += localMove.z;
+
+                if (positions[i] > DUST_BOUNDS) positions[i] -= DUST_BOUNDS * 2;
+                if (positions[i] < -DUST_BOUNDS) positions[i] += DUST_BOUNDS * 2;
+                if (positions[i + 1] > DUST_BOUNDS) positions[i + 1] -= DUST_BOUNDS * 2;
+                if (positions[i + 1] < -DUST_BOUNDS) positions[i + 1] += DUST_BOUNDS * 2;
+                if (positions[i + 2] > DUST_BOUNDS) positions[i + 2] -= DUST_BOUNDS * 2;
+                if (positions[i + 2] < -DUST_BOUNDS) positions[i + 2] += DUST_BOUNDS * 2;
+            }
+            spaceDust.geometry.attributes.position.needsUpdate = true;
+        }
+
+        function updateSolarSystemOrbits(elapsedSec) {
+            Object.keys(solarSystemGroup).forEach(key => {
+                const item = solarSystemGroup[key];
+                item.pivot.rotation.y = (elapsedSec / (EARTH_ORBIT_PERIOD_SEC * item.data.orbitPeriod)) * Math.PI * 2;
+                item.mesh.rotation.y = (elapsedSec / (EARTH_DAY_SEC * item.data.rotPeriod)) * Math.PI * 2;
+
+                item.moons.forEach(m => {
+                    m.pivot.rotation.y = (elapsedSec / (EARTH_ORBIT_PERIOD_SEC * m.period)) * Math.PI * 2;
+                });
+            });
+        }
+
+        // --- SISTEMA CARBURANTE ---
+        function updateFuelLogic(dt, distanceMovedKm) {
+            let nearRunway = false;
+            for (let t of targetList) {
+                const rPos = new THREE.Vector3();
+                t.runway.getWorldPosition(rPos);
+                if ((shipPos.distanceTo(rPos) / SCALE) <= 1.0) {
+                    nearRunway = true;
+                    break;
+                }
+            }
+
+            if (nearRunway) {
+                currentFuelKm = MAX_FUEL_KM;
+            } else {
+                let multiplier = warpActive ? 2.0 : 1.0;
+                let consumedKm = distanceMovedKm * multiplier;
+                currentFuelKm = Math.max(0, currentFuelKm - consumedKm);
+
+                if (currentSpeedKmh < REGEN_SPEED_LIMIT) {
+                    currentFuelKm = Math.min(MAX_FUEL_KM, currentFuelKm + (REGEN_RATE_KM_PER_SEC * dt));
+                }
+            }
+
+            const pct = Math.max(0, Math.min(100, (currentFuelKm / MAX_FUEL_KM) * 100));
+            fuelBarFill.style.height = `${pct}%`;
+            fuelValText.innerText = `${Math.round(pct)}%`;
+
+            if (pct < 20) {
+                fuelBarFill.style.background = 'linear-gradient(0deg, #ff0055, #ff5500)';
+            } else {
+                fuelBarFill.style.background = 'linear-gradient(0deg, #ff0055, #00f0ff)';
+            }
+        }
+
+        // --- GESTIONE FULLSCREEN ---
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen();
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        function updateFullscreenBtnText() {
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                btnFullscreen.innerText = "ESCI DA FULLSCREEN 🗗";
+            } else {
+                btnFullscreen.innerText = "ATTIVA FULLSCREEN ⛶";
+            }
+        }
+
+        document.addEventListener('fullscreenchange', updateFullscreenBtnText);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenBtnText);
+
+        // --- SALVATAGGIO AUTOMATICO E MENU ---
+        function checkSaveFileStatus() {
+            const saveData = localStorage.getItem(SAVE_KEY);
+            btnContinue.disabled = !saveData;
+        }
+
+        function saveGameState() {
+            const data = {
+                shipPos: { x: shipPos.x, y: shipPos.y, z: shipPos.z },
+                shipRot: { _x: shipRot.x, _y: shipRot.y, _z: shipRot.z, _w: shipRot.w },
+                targetSpeedKmh: targetSpeedKmh,
+                currentSpeedKmh: currentSpeedKmh,
+                currentTargetIndex: currentTargetIndex,
+                currentCamDist: currentCamDist,
+                currentFuelKm: currentFuelKm
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            btnContinue.disabled = false;
+        }
+
+        function loadGameState() {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return false;
+
+            const data = JSON.parse(raw);
+            shipPos.set(data.shipPos.x, data.shipPos.y, data.shipPos.z);
+            shipRot.set(data.shipRot._x, data.shipRot._y, data.shipRot._z, data.shipRot._w);
+            targetSpeedKmh = data.targetSpeedKmh;
+            currentSpeedKmh = data.currentSpeedKmh;
+            currentTargetIndex = data.currentTargetIndex || 0;
+            currentCamDist = data.currentCamDist || 0.002;
+            currentFuelKm = (data.currentFuelKm !== undefined) ? data.currentFuelKm : MAX_FUEL_KM;
+
+            shipGroup.position.copy(shipPos);
+            shipGroup.quaternion.copy(shipRot);
+            updateThrottleKnobVisual();
+            return true;
+        }
+
+        function startNewRandomGame() {
+            const randomIndex = Math.floor(Math.random() * targetList.length);
+            const randomTarget = targetList[randomIndex];
+
+            const worldPos = new THREE.Vector3();
+            randomTarget.group.getWorldPosition(worldPos);
+
+            const offset = new THREE.Vector3(
+                (Math.random() - 0.5) * 50,
+                (Math.random() - 0.5) * 50,
+                (Math.random() - 0.5) * 50
+            );
+
+            shipPos.copy(worldPos).add(offset);
+            shipRot.setFromEuler(new THREE.Euler(
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2
+            ));
+
+            targetSpeedKmh = 0;
+            currentSpeedKmh = 0;
+            currentTargetIndex = randomIndex;
+            currentCamDist = 0.002;
+            currentFuelKm = MAX_FUEL_KM;
+
+            shipGroup.position.copy(shipPos);
+            shipGroup.quaternion.copy(shipRot);
+            updateThrottleKnobVisual();
+        }
+
+        function toggleMenu(show) {
+            isPaused = show;
+            mainMenu.style.display = show ? 'flex' : 'none';
+            if (show) {
+                saveGameState();
+            }
+        }
+
+        function setupMenuEvents() {
+            btnContinue.addEventListener('click', () => {
+                if (loadGameState()) {
+                    toggleMenu(false);
+                }
+            });
+
+            btnNewGame.addEventListener('click', () => {
+                startNewRandomGame();
+                toggleMenu(false);
+            });
+
+            btnFullscreen.addEventListener('click', () => {
+                toggleFullscreen();
+            });
+
+            document.getElementById('menu-toggle-btn').addEventListener('click', () => {
+                toggleMenu(!isPaused);
+            });
+        }
+
+        function setThrottleFromY(py) {
+            const container = document.getElementById('throttle-container');
+            const knob = document.getElementById('throttle-knob');
+            const rect = container.getBoundingClientRect();
+
+            let clampedY = Math.max(15, Math.min(rect.height - 35, py));
+            const pct = 1 - ((clampedY - 15) / (rect.height - 50));
+            targetSpeedKmh = pct * MAX_SUB_LIGHT_KMH;
+            knob.style.top = `${clampedY}px`;
+        }
+
+        function updateThrottleKnobVisual() {
+            const container = document.getElementById('throttle-container');
+            const knob = document.getElementById('throttle-knob');
+            const rect = container.getBoundingClientRect();
+            const pct = Math.min(1, Math.max(0, targetSpeedKmh / MAX_SUB_LIGHT_KMH));
+            knob.style.top = `${(1 - pct) * (rect.height - 50) + 15}px`;
+        }
+
+        function setupControls() {
+            // JOYSTICK
+            const jBase = document.getElementById('joystick-base');
+            const jStick = document.getElementById('joystick-stick');
+            let jActive = false, jCenter = { x: 0, y: 0 };
+
+            jBase.addEventListener('pointerdown', (e) => {
+                if (isPaused) return;
+                e.preventDefault();
+                jActive = true;
+                jBase.setPointerCapture(e.pointerId);
+                const rect = jBase.getBoundingClientRect();
+                jCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateJoystick(e);
+            });
+
+            jBase.addEventListener('pointermove', (e) => { if (jActive) { e.preventDefault(); updateJoystick(e); } });
+
+            const stopJoystick = () => {
+                if (jActive) {
+                    jActive = false;
+                    jStick.style.transform = `translate(-50%, -50%)`;
+                    pitchInput = 0; yawInput = 0;
+                }
+            };
+            jBase.addEventListener('pointerup', stopJoystick);
+            jBase.addEventListener('pointercancel', stopJoystick);
+
+            function updateJoystick(e) {
+                const dx = e.clientX - jCenter.x;
+                const dy = e.clientY - jCenter.y;
+                const maxDist = 45;
+                const dist = Math.min(Math.hypot(dx, dy), maxDist);
+                const angle = Math.atan2(dy, dx);
+
+                const nx = (Math.cos(angle) * dist) / maxDist;
+                const ny = (Math.sin(angle) * dist) / maxDist;
+
+                jStick.style.transform = `translate(calc(-50% + ${nx * maxDist}px), calc(-50% + ${ny * maxDist}px))`;
+                yawInput = -nx; pitchInput = -ny;
+            }
+
+            // THROTTLE
+            const tContainer = document.getElementById('throttle-container');
+            let tActive = false;
+            tContainer.addEventListener('pointerdown', (e) => {
+                if (isPaused) return;
+                e.preventDefault(); tActive = true;
+                tContainer.setPointerCapture(e.pointerId);
+                setThrottleFromY(e.clientY - tContainer.getBoundingClientRect().top);
+            });
+            tContainer.addEventListener('pointermove', (e) => {
+                if (tActive) { e.preventDefault(); setThrottleFromY(e.clientY - tContainer.getBoundingClientRect().top); }
+            });
+            tContainer.addEventListener('pointerup', () => { tActive = false; });
+
+            // CAMERA DRAG
+            let lastMouseX = 0, lastMouseY = 0;
+            window.addEventListener('pointerdown', (e) => {
+                if (!isPaused && !e.target.closest('.interactive-zone') && !e.target.closest('#main-menu') && !e.target.closest('#menu-toggle-btn')) {
+                    isDraggingCam = true;
+                    lastMouseX = e.clientX; lastMouseY = e.clientY;
+                }
+            });
+            window.addEventListener('pointermove', (e) => {
+                if (isDraggingCam && !isPaused) {
+                    camYawOffset -= (e.clientX - lastMouseX) * 0.005;
+                    camPitchOffset = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, camPitchOffset + (e.clientY - lastMouseY) * 0.005));
+                    lastMouseX = e.clientX; lastMouseY = e.clientY;
+                    rightStickActive = true;
+                }
+            });
+            window.addEventListener('pointerup', () => { isDraggingCam = false; });
+
+            // PULSANTI TARGET TOUCH
+            document.getElementById('prev-target-btn').addEventListener('click', () => { if(!isPaused) cycleTarget('prev'); });
+            document.getElementById('next-target-btn').addEventListener('click', () => { if(!isPaused) cycleTarget('next'); });
+
+            // WARP TOUCH / R1
+            const warpBtn = document.getElementById('warp-btn');
+            const setWarpState = (active) => {
+                if (currentFuelKm <= 0 && active) return;
+                warpActive = active;
+                warpBtn.style.background = active ? '#00f0ff' : 'linear-gradient(135deg, #7928ca, #ff0080)';
+            };
+
+            warpBtn.addEventListener('pointerdown', (e) => { if(!isPaused) { e.preventDefault(); setWarpState(true); } });
+            warpBtn.addEventListener('pointerup', () => setWarpState(false));
+
+            // TASTIERA & ESC
+            const keys = {};
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    toggleMenu(!isPaused);
+                    return;
+                }
+
+                if (isPaused) return;
+
+                if (e.key === 'ArrowLeft') { e.preventDefault(); if (!keys['ArrowLeft']) cycleTarget('prev'); }
+                if (e.key === 'ArrowRight') { e.preventDefault(); if (!keys['ArrowRight']) cycleTarget('next'); }
+                
+                keys[e.key] = true;
+                keys[e.key.toLowerCase()] = true;
+
+                if (e.key === 'Shift') setWarpState(true);
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (isPaused) return;
+                keys[e.key] = false;
+                keys[e.key.toLowerCase()] = false;
+
+                if (e.key === 'Shift') setWarpState(false);
+            });
+
+            window.updateKeyboard = () => {
+                if (isPaused) return;
+                if (keys['w']) pitchInput = 0.8;
+                else if (keys['s']) pitchInput = -0.8;
+                else if (!jActive && !window.gamepadActive) pitchInput = 0;
+
+                if (keys['a']) yawInput = 0.8;
+                else if (keys['d']) yawInput = -0.8;
+                else if (!jActive && !window.gamepadActive) yawInput = 0;
+
+                if (keys['ArrowUp']) {
+                    currentCamDist = Math.max(MIN_CAM_DIST, currentCamDist - 0.0001);
+                }
+                if (keys['ArrowDown']) {
+                    currentCamDist = Math.min(MAX_CAM_DIST, currentCamDist + 0.0001);
+                }
+
+                if (keys['r']) { targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + 5000); updateThrottleKnobVisual(); }
+                if (keys['f']) { targetSpeedKmh = Math.max(0, targetSpeedKmh - 5000); updateThrottleKnobVisual(); }
+            };
+        }
+
+        function pollGamepad(dt) {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            window.gamepadActive = false;
+
+            for (let gp of gamepads) {
+                if (gp && gp.connected) {
+                    window.gamepadActive = true;
+
+                    if (gp.buttons[9] && gp.buttons[9].pressed) {
+                        toggleMenu(!isPaused);
+                    }
+
+                    if (isPaused) return;
+
+                    const deadzone = (v) => Math.abs(v) > 0.15 ? Math.sign(v) * Math.pow((Math.abs(v) - 0.15) / 0.85, 2) : 0;
+
+                    const gx = deadzone(gp.axes[0]);
+                    const gy = deadzone(gp.axes[1]);
+                    if (Math.abs(gx) > 0 || Math.abs(gy) > 0) {
+                        yawInput = -gx;
+                        pitchInput = -gy;
+                    }
+
+                    const rx = deadzone(gp.axes[2]);
+                    const ry = deadzone(gp.axes[3]);
+                    if (Math.abs(rx) > 0 || Math.abs(ry) > 0) {
+                        rightStickActive = true;
+                        camYawOffset -= rx * 2.5 * dt;
+                        camPitchOffset = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, camPitchOffset - ry * 2.5 * dt));
+                    } else if (!isDraggingCam) {
+                        rightStickActive = false;
+                    }
+
+                    const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
+                    const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
+
+                    if (dpadLeft && !dpadLeftPressedLast) cycleTarget('prev');
+                    if (dpadRight && !dpadRightPressedLast) cycleTarget('next');
+
+                    dpadLeftPressedLast = dpadLeft;
+                    dpadRightPressedLast = dpadRight;
+
+                    if (gp.buttons[12] && gp.buttons[12].pressed) {
+                        currentCamDist = Math.max(MIN_CAM_DIST, currentCamDist - 0.002 * dt);
+                    }
+                    if (gp.buttons[13] && gp.buttons[13].pressed) {
+                        currentCamDist = Math.min(MAX_CAM_DIST, currentCamDist + 0.002 * dt);
+                    }
+
+                    if (currentFuelKm > 0) {
+                        warpActive = gp.buttons[5] && gp.buttons[5].pressed;
+                    } else {
+                        warpActive = false;
+                    }
+
+                    if (gp.buttons[7] && gp.buttons[7].pressed) {
+                        targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + 150000 * dt);
+                        updateThrottleKnobVisual();
+                    }
+                    if (gp.buttons[6] && gp.buttons[6].pressed) {
+                        targetSpeedKmh = Math.max(0, targetSpeedKmh - 150000 * dt);
+                        updateThrottleKnobVisual();
+                    }
+                    break;
+                }
+            }
+
+            if (!rightStickActive) {
+                camYawOffset += (0 - camYawOffset) * 5.0 * dt;
+                camPitchOffset += (0 - camPitchOffset) * 5.0 * dt;
+            }
+
+            camera.position.z = currentCamDist;
+            cameraRigNode.rotation.set(camPitchOffset, camYawOffset, 0, 'YXZ');
+        }
+
+        let lastTime = 0;
+        let totalElapsedSec = 0;
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
+            lastTime = time;
+
+            if (!isPaused) {
+                totalElapsedSec += dt;
+
+                if (window.updateKeyboard) window.updateKeyboard();
+                pollGamepad(dt);
+
+                updateSolarSystemOrbits(totalElapsedSec);
+
+                if (currentFuelKm <= 0) {
+                    warpActive = false;
+                    targetSpeedKmh = 0;
+                    updateThrottleKnobVisual();
+                }
+
+                let goalSpeed = warpActive ? LIGHT_SPEED_KMH : Math.min(targetSpeedKmh, MAX_SUB_LIGHT_KMH);
+                currentSpeedKmh += (goalSpeed - currentSpeedKmh) * 5.0 * dt;
+
+                const distanceMovedKm = (currentSpeedKmh / 3600) * dt;
+                updateFuelLogic(dt, distanceMovedKm);
+
+                const unitsPerSec = (currentSpeedKmh / 3600) * SCALE;
+
+                const ROT_SPEED = 0.8;
+                const deltaRot = new THREE.Quaternion();
+                deltaRot.setFromEuler(new THREE.Euler(pitchInput * ROT_SPEED * dt, yawInput * ROT_SPEED * dt, 0, 'YXZ'));
+                shipRot.multiply(deltaRot);
+
+                rollVisual += (-yawInput * 0.5 - rollVisual) * 6.0 * dt;
+                pitchVisual += (pitchInput * 0.2 - pitchVisual) * 6.0 * dt;
+                shipMeshGroup.rotation.set(pitchVisual, 0, rollVisual);
+
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(shipRot);
+                shipPos.addScaledVector(forward, unitsPerSec * dt);
+
+                shipGroup.position.copy(shipPos);
+                shipGroup.quaternion.copy(shipRot);
+
+                updateSpaceDust(dt, unitsPerSec * 10);
+
+                const blink = Math.sin(time * 0.008) > 0;
+                runwayLights.forEach((light, i) => {
+                    light.material.color.setHex((i % 2 === 0 === blink) ? 0x00f0ff : 0xff0055);
+                });
+
+                updateLabelsAndTargetHUD();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateLabelsAndTargetHUD() {
+            const speedEl = document.getElementById('hud-speed');
+            const modeEl = document.getElementById('hud-mode');
+
+            if (warpActive || currentSpeedKmh > MAX_SUB_LIGHT_KMH + 1000) {
+                speedEl.innerText = (currentSpeedKmh / 1000000).toFixed(1) + "M";
+                modeEl.innerText = "WARP BURST (c)";
+                modeEl.style.color = "#00f0ff";
+            } else {
+                speedEl.innerText = Math.round(currentSpeedKmh).toLocaleString();
+                modeEl.innerText = "SUB-LIGHT";
+                modeEl.style.color = "#00ff88";
+            }
+
+            let minDistance = Infinity;
+            let nearestName = "SOLE";
+
+            Object.keys(solarSystemGroup).forEach(key => {
+                const item = solarSystemGroup[key];
+                const pPos = new THREE.Vector3();
+                item.group.getWorldPosition(pPos);
+                const distKm = shipPos.distanceTo(pPos) / SCALE;
+
+                if (distKm < minDistance) {
+                    minDistance = distKm;
+                    nearestName = item.data.name.toUpperCase();
+                }
+            });
+
+            document.getElementById('hud-nearest').innerText = nearestName;
+
+            targetList.forEach(t => {
+                const worldPos = new THREE.Vector3();
+                t.group.getWorldPosition(worldPos);
+
+                const screenPos = worldPos.clone().project(camera);
+                if (screenPos.z < 1 && screenPos.x >= -1 && screenPos.x <= 1 && screenPos.y >= -1 && screenPos.y <= 1) {
+                    const x = (screenPos.x * .5 + .5) * window.innerWidth;
+                    const y = (-(screenPos.y * .5) + .5) * window.innerHeight;
+                    t.labelEl.style.left = `${x}px`;
+                    t.labelEl.style.top = `${y}px`;
+                    t.labelEl.style.display = 'block';
+                } else {
+                    t.labelEl.style.display = 'none';
+                }
+            });
+
+            const activeTarget = targetList[currentTargetIndex];
+            document.getElementById('hud-target-name').innerText = activeTarget.name.toUpperCase();
+
+            const targetRunwayWorldPos = new THREE.Vector3();
+            activeTarget.runway.getWorldPosition(targetRunwayWorldPos);
+
+            const targetDistKm = shipPos.distanceTo(targetRunwayWorldPos) / SCALE;
+            document.getElementById('hud-target-dist').innerText = Math.round(targetDistKm).toLocaleString();
+
+            const targetScreenPos = targetRunwayWorldPos.clone().project(camera);
+            if (targetScreenPos.z < 1 && targetScreenPos.x >= -1 && targetScreenPos.x <= 1 && targetScreenPos.y >= -1 && targetScreenPos.y <= 1) {
+                targetMarker.style.left = `${(targetScreenPos.x * .5 + .5) * window.innerWidth}px`;
+                targetMarker.style.top = `${(-(targetScreenPos.y * .5) + .5) * window.innerHeight}px`;
+                targetMarker.style.display = 'block';
+            } else {
+                targetMarker.style.display = 'none';
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+    })();
+    </script>
+</body>
+</html>
