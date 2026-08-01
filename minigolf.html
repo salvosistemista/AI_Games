@@ -105,7 +105,7 @@
     <div class="hud">
         <div style="color:#55ff55; font-weight:bold; margin-bottom:4px;" id="hole-name">Livello 1</div>
         <div>BUCA: <span id="hole-num">1</span>/50</div>
-        <div>COLPI BUCA: <span id="current-strokes" style="color:#ffff55;">0</span></div>
+        <div>COLPI BUCA: <span id="current-strokes" style="color:#ffff55;">0</span>/<span id="max-strokes" style="color:#ff5555;">3</span></div>
         <div>TOTALE COLPI: <span id="total-strokes" style="color:#55ff55;">0</span></div>
     </div>
 
@@ -245,6 +245,13 @@
 
         let currentHoleObstacles = [];
         let holePosition = new THREE.Vector3();
+
+        function getMaxStrokesForLevel(levelNum) {
+            if (levelNum >= 1 && levelNum <= 25) return 3;
+            if (levelNum >= 26 && levelNum <= 40) return 4;
+            if (levelNum >= 41 && levelNum <= 50) return 5;
+            return 5;
+        }
 
         const DEFAULT_LEVEL_DEFINITIONS = [
           {
@@ -848,6 +855,12 @@
             updateUI();
         }
 
+        function restartCurrentHole() {
+            // gameState.totalStrokes -= gameState.strokesCurrentHole;
+            buildHole(gameState.currentHole - 1);
+            saveGameProgress();
+        }
+
         function updatePhysics() {
             if (!gameState.isBallMoving) return;
 
@@ -889,11 +902,6 @@
 
             gameState.ballVelocity.multiplyScalar(FRICTION);
 
-            if (gameState.ballVelocity.length() < 0.003) {
-                gameState.ballVelocity.set(0, 0, 0);
-                gameState.isBallMoving = false;
-            }
-
             const distToHole = new THREE.Vector2(ball.position.x, ball.position.z)
                 .distanceTo(new THREE.Vector2(holePosition.x, holePosition.z));
 
@@ -901,6 +909,19 @@
                 gameState.isBallMoving = false;
                 gameState.ballVelocity.set(0, 0, 0);
                 setTimeout(nextHole, 350);
+                return;
+            }
+
+            if (gameState.ballVelocity.length() < 0.003) {
+                gameState.ballVelocity.set(0, 0, 0);
+                gameState.isBallMoving = false;
+
+                const maxStrokes = getMaxStrokesForLevel(gameState.currentHole);
+                if (gameState.strokesCurrentHole >= maxStrokes) {
+                    setTimeout(() => {
+                        restartCurrentHole();
+                    }, 400);
+                }
             }
         }
 
@@ -1004,7 +1025,7 @@
             });
 
             window.addEventListener('keydown', (e) => {
-                if (e.key === 'r' || e.key === 'R') buildHole(gameState.currentHole - 1);
+                if (e.key === 'r' || e.key === 'R') restartCurrentHole();
                 if (e.key === 'Escape') togglePauseModal();
             });
 
@@ -1321,6 +1342,7 @@
             document.getElementById('hole-name').innerText = def.name;
             document.getElementById('hole-num').innerText = gameState.currentHole;
             document.getElementById('current-strokes').innerText = gameState.strokesCurrentHole;
+            document.getElementById('max-strokes').innerText = getMaxStrokesForLevel(gameState.currentHole);
             document.getElementById('total-strokes').innerText = gameState.totalStrokes;
         }
 
