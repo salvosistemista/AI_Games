@@ -530,7 +530,7 @@
             <div id="throttle-knob"></div>
             <div style="font-size:0.55rem; color:#00f0ff; font-weight:bold; pointer-events:none;">0</div>
         </div>
-        <button id="warp-btn" class="interactive-zone">WARP (R1)</button>
+        <button id="warp-btn" class="interactive-zone">WARP (X)</button>
         <button id="prev-target-btn" class="target-nav-btn interactive-zone">◄</button>
         <button id="next-target-btn" class="target-nav-btn interactive-zone">►</button>
     </div>
@@ -538,10 +538,9 @@
     <script>
     (function() {
         const SCALE = 0.01; 
-        const WARP_SPEED_KMH = 1000000; // Modificato a 1.000.000 km/h
+        const WARP_SPEED_KMH = 1000000;
         const MAX_SUB_LIGHT_KMH = 500000;
 
-        // Rivoluzione della Terra: 30 minuti = 1800 secondi
         const EARTH_ORBIT_PERIOD_SEC = 1800; 
         const EARTH_DAY_SEC = EARTH_ORBIT_PERIOD_SEC / 365.25;
 
@@ -553,7 +552,6 @@
 
         const SAVE_KEY = "SOLAR_SIM_SAVE_DATA";
 
-        // RATIO DI SCALA BASATI SU TERRA (Raggio = 500km, Distanza = 5.87M km)
         const REAL_EARTH_RADIUS = 6371.0;
         const NEW_EARTH_RADIUS = 500.0;
         const SIZE_SCALE = NEW_EARTH_RADIUS / REAL_EARTH_RADIUS;
@@ -562,7 +560,6 @@
         const NEW_EARTH_DIST = 5870000.0;
         const DIST_SCALE = NEW_EARTH_DIST / REAL_EARTH_DIST;
 
-        // DATI REALI SCALATI AUTOMATICAMENTE
         const RAW_CELESTIAL_DATA = {
             Sun:     { name: "Sole", radius: 696340, color: 0xffcc00 },
             Mercury: { name: "Mercurio", radius: 2439.7, dist: 57909050, orbitPeriod: 0.241, rotPeriod: 58.6, color: 0xa6a6a6, moons: [] },
@@ -625,28 +622,23 @@
             "Cibo Sintetico", "Moduli Solari", "Lantanidi Puri", "Elio-3"
         ];
 
-        // THREE.JS VARS
         let scene, camera, renderer;
         let shipGroup, shipMeshGroup, cameraRigNode;
         let solarSystemGroup = {};
         let runwayLights = [];
 
-        // TARGETS
         let targetList = [];
         let currentTargetIndex = 0;
 
-        // MISSION SYSTEM VARS
         let currentMission = null;
         const missionMarker = document.getElementById('mission-marker');
         const missionBanner = document.getElementById('mission-banner');
         let bannerTimeout = null;
 
-        // POLVERE SPAZIALE
         let spaceDust;
         const DUST_COUNT = 3000;
         const DUST_BOUNDS = 100;
 
-        // GUIDA & SPEED
         let targetSpeedKmh = 0;
         let currentSpeedKmh = 0;
         let warpActive = false;
@@ -656,7 +648,6 @@
         let rollVisual = 0;
         let pitchVisual = 0;
 
-        // CAMERA
         let camYawOffset = 0;
         let camPitchOffset = 0;
         let isDraggingCam = false;
@@ -665,23 +656,22 @@
         const MIN_CAM_DIST = 0.0003;
         const MAX_CAM_DIST = 0.015;
 
-        // NAVICELLA
         let shipPos = new THREE.Vector3();
         let shipRot = new THREE.Quaternion();
 
-        // MAPPA TATTIKA VARS
         let isMapOpen = false;
         const mapModal = document.getElementById('map-modal');
         const mapCanvas = document.getElementById('map-canvas');
         const mapCtx = mapCanvas.getContext('2d');
 
-        // ZOOM MAPPA
         let mapRangeKm = CELESTIAL_DATA.Neptune.dist * 1.25;
         const MIN_MAP_RANGE_KM = 200000;            
         const MAX_MAP_RANGE_KM = 500000000;         
 
-        // MENUS & GAME PAUSE STATE
         let isPaused = true;
+
+        // GAMEPAD STATES PER DEBOUNCE
+        let gamepadPrevButtons = {};
 
         const targetMarker = document.getElementById('target-marker');
         const labelsContainer = document.getElementById('labels-container');
@@ -934,6 +924,14 @@
             }
         }
 
+        function toggleWarpMode() {
+            warpActive = !warpActive;
+            const warpBtn = document.getElementById('warp-btn');
+            if (warpBtn) {
+                warpBtn.style.background = warpActive ? 'linear-gradient(135deg, #00f0ff, #0077ff)' : 'linear-gradient(135deg, #7928ca, #ff0080)';
+            }
+        }
+
         function createSpaceship() {
             shipGroup = new THREE.Group();
             shipMeshGroup = new THREE.Group();
@@ -1116,7 +1114,6 @@
             }
         }
 
-        /* --- MAPPA TATTIKA RADAR (2D) & PINCH TO ZOOM --- */
         function setupMapEvents() {
             const mapToggleBtn = document.getElementById('map-toggle-btn');
             const mapCloseBtn = document.getElementById('map-close-btn');
@@ -1380,7 +1377,6 @@
             return { x: mapX, y: mapY };
         }
 
-        /* --- CONTROLLI INPUT --- */
         function setupControls() {
             const joystickBase = document.getElementById('joystick-base');
             const joystickStick = document.getElementById('joystick-stick');
@@ -1448,7 +1444,6 @@
                 pitchInput = -(stickY / maxJoyRadius);
             }
 
-            // --- TRASCINAMENTO TOUCH SULLO SCHERMO PER DIREZIONE NAVICELLA ---
             let touchDragId = null;
             let lastTouchX = 0;
             let lastTouchY = 0;
@@ -1482,7 +1477,6 @@
                         lastTouchX = touch.clientX;
                         lastTouchY = touch.clientY;
 
-                        // Sensibilità di sterzata touch (0.012 per massima responsività)
                         yawInput = -deltaX * 0.012;
                         pitchInput = deltaY * 0.012;
 
@@ -1509,7 +1503,6 @@
             window.addEventListener('touchend', resetTouchDrag);
             window.addEventListener('touchcancel', resetTouchDrag);
 
-            // MANETTA ACCELERATORE
             let touchIdThrottle = null;
 
             throttleContainer.addEventListener('touchstart', (e) => {
@@ -1549,16 +1542,11 @@
                 targetSpeedKmh = percent * MAX_SUB_LIGHT_KMH;
             }
 
-            // PULSANTE WARP
-            warpBtn.addEventListener('click', () => {
-                warpActive = !warpActive;
-                warpBtn.style.background = warpActive ? 'linear-gradient(135deg, #00f0ff, #0077ff)' : 'linear-gradient(135deg, #7928ca, #ff0080)';
-            });
+            warpBtn.addEventListener('click', toggleWarpMode);
 
             prevBtn.addEventListener('click', () => cycleTarget('prev'));
             nextBtn.addEventListener('click', () => cycleTarget('next'));
 
-            // TASTIERA & MOUSE CONTROLS
             const keys = {};
             window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
             window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
@@ -1589,18 +1577,114 @@
 
                 if (keys['w'] || keys['arrowup']) pitchInput = 1;
                 else if (keys['s'] || keys['arrowdown']) pitchInput = -1;
-                else if (touchIdJoystick === null && touchDragId === null) pitchInput = 0;
+                else if (touchIdJoystick === null && touchDragId === null && !isGamepadActive()) pitchInput = 0;
 
                 if (keys['a'] || keys['arrowleft']) yawInput = 1;
                 else if (keys['d'] || keys['arrowright']) yawInput = -1;
-                else if (touchIdJoystick === null && touchDragId === null) yawInput = 0;
+                else if (touchIdJoystick === null && touchDragId === null && !isGamepadActive()) yawInput = 0;
 
                 if (keys['shift']) targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + 20000);
                 if (keys['control']) targetSpeedKmh = Math.max(0, targetSpeedKmh - 20000);
             }, 1000 / 60);
         }
 
-        /* --- LOOP DI ANIMAZIONE --- */
+        function isGamepadActive() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i] && gamepads[i].connected) return true;
+            }
+            return false;
+        }
+
+        function updateGamepad() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            let gp = null;
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i] && gamepads[i].connected) {
+                    gp = gamepads[i];
+                    break;
+                }
+            }
+
+            if (!gp) return;
+
+            const deadzone = 0.15;
+            const applyDeadzone = (val) => Math.abs(val) > deadzone ? val : 0;
+
+            const isBtnJustPressed = (btnIndex) => {
+                const isPressed = gp.buttons[btnIndex] && gp.buttons[btnIndex].pressed;
+                const wasPressed = gamepadPrevButtons[btnIndex] || false;
+                gamepadPrevButtons[btnIndex] = isPressed;
+                return isPressed && !wasPressed;
+            };
+
+            // 1. MENU PRINCIPALE / PAUSA (START - Button 9)
+            if (isBtnJustPressed(9)) {
+                if (isMapOpen) closeMap();
+                toggleMenu();
+                return;
+            }
+
+            // 2. TASTO B / CERCHIO (Button 1) -> CHIUDI MAPPA / MENU
+            if (isBtnJustPressed(1)) {
+                if (isMapOpen) closeMap();
+                else if (!isPaused) showMenu();
+                else hideMenu();
+                return;
+            }
+
+            if (isPaused) return;
+
+            // 3. TOGGLE WARP -> TASTO X / QUADRATO (Button 2)
+            if (isBtnJustPressed(2)) {
+                toggleWarpMode();
+            }
+
+            // 4. MAPPA TATTICA RADAR -> TASTO Y / TRIANGOLO (Button 3)
+            if (isBtnJustPressed(3)) {
+                toggleMap();
+            }
+
+            // 5. CAMBIO TARGET (D-Pad Sinistra / Button 14, D-Pad Destra / Button 15, LB / Button 4, RB / Button 5)
+            if (isBtnJustPressed(14) || isBtnJustPressed(4)) {
+                cycleTarget('prev');
+            }
+            if (isBtnJustPressed(15) || isBtnJustPressed(5)) {
+                cycleTarget('next');
+            }
+
+            // 6. VOLO E DIREZIONE (Stick SX - Axis 0 & 1 con sensibilità ridotta)
+            const joyX = applyDeadzone(gp.axes[0]);
+            const joyY = applyDeadzone(gp.axes[1]);
+
+            if (joyX !== 0 || joyY !== 0) {
+                const sensitivity = 0.45; // Sensibilità ridotta per un controllo più preciso
+                yawInput = -joyX * sensitivity;
+                pitchInput = -joyY * sensitivity;
+            }
+
+            // 7. CONTROLLO TELECAMERA (Stick DX - Axis 2 & 3)
+            const camX = applyDeadzone(gp.axes[2]);
+            const camY = applyDeadzone(gp.axes[3]);
+
+            if (camX !== 0 || camY !== 0) {
+                camYawOffset -= camX * 0.03;
+                camPitchOffset -= camY * 0.03;
+                camPitchOffset = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camPitchOffset));
+            }
+
+            // 8. MANETTA ACCELERAZIONE / DECELERAZIONE (Grilletti RT / Button 7 e LT / Button 6)
+            const triggerRT = gp.buttons[7] ? gp.buttons[7].value : 0;
+            const triggerLT = gp.buttons[6] ? gp.buttons[6].value : 0;
+
+            if (triggerRT > 0.1) {
+                targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + triggerRT * 15000);
+            }
+            if (triggerLT > 0.1) {
+                targetSpeedKmh = Math.max(0, targetSpeedKmh - triggerLT * 15000);
+            }
+        }
+
         let lastTime = 0;
 
         function animate(time) {
@@ -1608,6 +1692,8 @@
 
             const delta = Math.min(0.1, (time - lastTime) / 1000);
             lastTime = time;
+
+            updateGamepad();
 
             if (!isPaused) {
                 updateCelestials(delta);
@@ -1644,19 +1730,31 @@
         }
 
         function updateSpaceship(delta) {
-            // WARP SPEED AGGIORNATO A 1.000.000 km/h
             const targetSpeed = warpActive ? WARP_SPEED_KMH : targetSpeedKmh;
             currentSpeedKmh += (targetSpeed - currentSpeedKmh) * 0.05;
 
+            // LOGICA DI CONSUMO E RIGENERAZIONE CARBURANTE
+            const WARP_CONSUMPTION_FACTOR = 50;
+
             if (warpActive) {
-                currentFuelKm -= (currentSpeedKmh / 3600) * delta * 50;
+                // CONSUMO WARP
+                currentFuelKm -= (currentSpeedKmh / 3600) * delta * WARP_CONSUMPTION_FACTOR;
                 if (currentFuelKm <= 0) {
                     currentFuelKm = 0;
                     warpActive = false;
                     const warpBtn = document.getElementById('warp-btn');
                     if (warpBtn) warpBtn.style.background = 'linear-gradient(135deg, #7928ca, #ff0080)';
                 }
-            } else if (currentSpeedKmh <= REGEN_SPEED_LIMIT) {
+            } else if (currentSpeedKmh > REGEN_SPEED_LIMIT) {
+                // CONSUMO SUB-LIGHT ELEVATO (> 100.000 km/h) -> 1/3 RISPETTO A WARP
+                const subLightConsumptionFactor = WARP_CONSUMPTION_FACTOR / 3;
+                currentFuelKm -= (currentSpeedKmh / 3600) * delta * subLightConsumptionFactor;
+                if (currentFuelKm <= 0) {
+                    currentFuelKm = 0;
+                    targetSpeedKmh = 0;
+                }
+            } else {
+                // RIGENERAZIONE SUBLIGHT BASSISSIMA O DA FERMO (<= 100.000 km/h)
                 currentFuelKm = Math.min(MAX_FUEL_KM, currentFuelKm + REGEN_RATE_KM_PER_SEC * delta);
             }
 
@@ -1685,7 +1783,6 @@
             cameraRigNode.rotation.x += (camPitchOffset - cameraRigNode.rotation.x) * 0.1;
         }
 
-        /* --- RENDER HUD & MARKERS --- */
         function renderHUD() {
             document.getElementById('hud-speed').innerText = Math.round(currentSpeedKmh).toLocaleString();
             
