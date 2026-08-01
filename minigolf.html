@@ -18,20 +18,21 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5;
         }
 
-        .controls-hint {
-            position: absolute; bottom: 15px; left: 15px;
-            background: rgba(0,0,0,0.85); padding: 10px 14px; border-radius: 6px; font-size: 12px;
-            border: 1px solid #444; line-height: 1.4; z-index: 5;
+        /* Tasto Pausa in alto a destra */
+        .pause-control {
+            position: absolute; top: 15px; right: 15px; z-index: 10;
         }
 
-        .cam-controls {
-            position: absolute; top: 15px; right: 15px;
-            display: flex; gap: 10px; z-index: 10;
+        /* Controlli Telecamera in basso al centro */
+        .bottom-cam-controls {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 20px; z-index: 10;
         }
+
         .cam-btn {
-            width: 44px; height: 44px; background: rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(85, 255, 85, 0.7); color: #55ff55;
-            font-size: 20px; font-weight: bold; border-radius: 50%;
+            width: 50px; height: 50px; background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(85, 255, 85, 0.8); color: #55ff55;
+            font-size: 22px; font-weight: bold; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; backdrop-filter: blur(4px); transition: all 0.1s ease;
         }
@@ -51,6 +52,13 @@
             z-index: 20; max-height: 90vh; overflow-y: auto;
         }
         .modal h2 { color: #55ff55; margin-bottom: 10px; font-size: 20px; }
+
+        /* Legenda Comandi */
+        .controls-legend {
+            background: #111; border: 1px solid #333; padding: 10px; border-radius: 4px;
+            margin: 10px 0; text-align: left; font-size: 11px; line-height: 1.6; color: #ccc;
+        }
+        .controls-legend b { color: #55ff55; }
         
         .btn {
             background: #2a2a2a; color: #fff; border: 2px solid #55ff55; padding: 8px 12px;
@@ -101,15 +109,15 @@
         <div>TOTALE COLPI: <span id="total-strokes" style="color:#55ff55;">0</span></div>
     </div>
 
-    <div class="cam-controls">
-        <div class="cam-btn" id="btn-cam-ccw" title="Ruota Antiorario">↺</div>
-        <div class="cam-btn" id="btn-cam-cw" title="Ruota Orario">↻</div>
+    <!-- Tasto Pausa Alto Destra -->
+    <div class="pause-control">
+        <div class="cam-btn" id="btn-pause" title="Pausa" style="border-color: #ffff55; color: #ffff55;">⏸️</div>
     </div>
 
-    <div class="controls-hint">
-        <b>[Trascina]</b> Mira e Forza<br>
-        <b>[Doppio Click/Tap Palla]</b> Centra Cam<br>
-        <b>[R]</b> Riavvia Buca | <b>[ESC]</b> Pausa
+    <!-- Tasti Telecamera Basso Centro -->
+    <div class="bottom-cam-controls">
+        <div class="cam-btn" id="btn-cam-ccw" title="Ruota Vista Antiorario">↺</div>
+        <div class="cam-btn" id="btn-cam-cw" title="Ruota Vista Orario">↻</div>
     </div>
 
     <div class="power-bar-container" id="power-container">
@@ -121,6 +129,14 @@
         <h2 id="modal-title">PAUSA</h2>
         <div id="modal-content" style="margin-bottom:10px; font-size: 12px;"></div>
         
+        <div class="controls-legend">
+            <div style="color:#55ff55; font-weight:bold; margin-bottom:4px; text-align:center;">LEGENDA COMANDI</div>
+            • <b>Trascina sullo schermo</b>: Mira e regola la forza del tiro<br>
+            • <b>Pulsanti ↺ / ↻ (In basso)</b>: Ruota la visuale attorno alla palla<br>
+            • <b>[R]</b>: Riavvia la buca corrente<br>
+            • <b>[ESC] / [⏸️]</b>: Apri o chiudi il menu di pausa
+        </div>
+
         <div id="leaderboard-sec" style="display:none;">
             <h3 style="font-size:12px; color:#aaa; margin-top:6px;">TOP 5 CLASSIFICA</h3>
             <div class="leaderboard-list" id="lb-list"></div>
@@ -211,7 +227,7 @@
         const T = 0.3; 
         const H = 0.5; 
 
-        let scene, camera, renderer, renderTarget, raycaster, mouseVec;
+        let scene, camera, renderer, renderTarget;
         let ball, aimingArrow;
         let isAiming = false, dragStartPos = { x: 0, y: 0 }, currentPower = 0;
         
@@ -309,8 +325,6 @@
             scene.background = new THREE.Color(0x12131c);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            raycaster = new THREE.Raycaster();
-            mouseVec = new THREE.Vector2();
 
             renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -539,14 +553,6 @@
             }
         }
 
-        function isClickOnBall(clientX, clientY) {
-            mouseVec.x = (clientX / window.innerWidth) * 2 - 1;
-            mouseVec.y = -(clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouseVec, camera);
-            const intersects = raycaster.intersectObject(ball);
-            return intersects.length > 0;
-        }
-
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {});
@@ -567,8 +573,6 @@
         }
 
         function setupInputEvents() {
-            let lastTapTime = 0;
-
             const rotateSpeed = 0.12;
             document.getElementById('btn-cam-ccw').addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
@@ -580,26 +584,17 @@
                 cameraAngle += rotateSpeed;
                 centerCameraOnBall();
             });
+            document.getElementById('btn-pause').addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                togglePauseModal(true);
+            });
 
             window.addEventListener('pointerdown', (e) => {
                 if (gameState.isBallMoving) return;
                 if (document.getElementById('game-modal').style.display === 'block' || 
                     document.getElementById('import-modal').style.display === 'block' ||
                     document.getElementById('editor-modal').style.display === 'block') return;
-                if (e.target.closest('.cam-controls') || e.target.closest('.modal')) return;
-
-                const now = Date.now();
-                if (now - lastTapTime < 300) {
-                    if (isClickOnBall(e.clientX, e.clientY)) {
-                        centerCameraOnBall();
-                        isAiming = false;
-                        aimingArrow.visible = false;
-                        document.getElementById('power-container').style.display = 'none';
-                        lastTapTime = 0;
-                        return;
-                    }
-                }
-                lastTapTime = now;
+                if (e.target.closest('.bottom-cam-controls') || e.target.closest('.pause-control') || e.target.closest('.modal')) return;
 
                 isAiming = true;
                 dragStartPos = { x: e.clientX, y: e.clientY };
@@ -932,7 +927,9 @@
 
         function saveToLeaderboard(score) {
             let lb = JSON.parse(localStorage.getItem('minigolf_lb') || '[]');
-            lb.push({ score: score, date: new Date().toLocaleDateString('it-IT') });
+            const now = new Date();
+            const formattedDate = `${now.getDate()} ${now.toLocaleString('it-IT', { month: 'long' })} ${now.getFullYear()}`;
+            lb.push({ score: score, date: formattedDate });
             lb.sort((a, b) => a.score - b.score);
             lb = lb.slice(0, 5);
             localStorage.setItem('minigolf_lb', JSON.stringify(lb));
