@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Solar System Simulator - Fullscreen & Fuel System</title>
+    <title>Solar System Simulator - Rescaled System</title>
     <style>
         * {
             box-sizing: border-box;
@@ -102,10 +102,11 @@
             backdrop-filter: blur(8px);
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
             pointer-events: none;
+            max-width: 320px;
         }
 
         .hud-row {
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             margin-bottom: 4px;
             letter-spacing: 1px;
             color: #8ab4f8;
@@ -115,14 +116,21 @@
         .hud-val {
             font-weight: bold;
             color: #00f0ff;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
+        }
+
+        .hud-divider {
+            height: 1px;
+            background: rgba(0, 240, 255, 0.3);
+            margin: 6px 0;
         }
 
         /* BARRA VERTICALE DEL CARBURANTE */
         #fuel-container {
             position: absolute;
-            top: 15px;
-            left: 310px;
+            top: 50%;
+            left: 15px;
+            transform: translateY(-50%);
             z-index: 10;
             display: flex;
             flex-direction: column;
@@ -130,7 +138,7 @@
             background: rgba(5, 8, 15, 0.88);
             border: 1px solid rgba(0, 240, 255, 0.4);
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 10px 8px;
             backdrop-filter: blur(8px);
             box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
             pointer-events: none;
@@ -146,7 +154,7 @@
 
         #fuel-bar-bg {
             width: 18px;
-            height: 110px;
+            height: 140px;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(0, 240, 255, 0.5);
             border-radius: 8px;
@@ -171,7 +179,7 @@
             margin-top: 6px;
         }
 
-        /* Pulsante Menu per Mobile */
+        /* Pulsante Menu Mobile */
         #menu-toggle-btn {
             position: absolute;
             top: 15px;
@@ -189,15 +197,89 @@
             backdrop-filter: blur(8px);
         }
 
+        /* PULSANTE MAPPA CENTRO-DESTRA PER MOBILE */
+        #map-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            z-index: 12;
+            padding: 12px 14px;
+            background: rgba(5, 8, 15, 0.88);
+            border: 2px solid #00f0ff;
+            border-radius: 12px;
+            color: #00f0ff;
+            font-weight: bold;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        #map-toggle-btn:active {
+            background: rgba(0, 240, 255, 0.3);
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        /* SOVRAIMPRESSIONE MAPPA TATTIKA 2D */
+        #map-modal {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 90;
+            background: rgba(2, 4, 10, 0.92);
+            backdrop-filter: blur(10px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #map-header {
+            position: absolute;
+            top: 15px;
+            font-size: 1.1rem;
+            color: #00f0ff;
+            letter-spacing: 2px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00f0ff;
+            text-align: center;
+        }
+
+        #map-canvas {
+            background: radial-gradient(circle, rgba(0,20,40,0.6) 0%, rgba(0,2,8,0.95) 100%);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.2);
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #map-close-btn {
+            position: absolute;
+            bottom: 20px;
+            padding: 10px 24px;
+            background: rgba(255, 0, 85, 0.2);
+            border: 1px solid #ff0055;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+
         /* Etichette Nomi Pianeti/Satelliti */
         #labels-container {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             pointer-events: none;
-            z-index: 5;
+            z-index: 4;
             overflow: hidden;
         }
 
@@ -220,10 +302,8 @@
         /* Controlli Touch Overlay */
         #touch-controls {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            bottom: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 10;
             pointer-events: none;
         }
@@ -234,10 +314,8 @@
 
         #joystick-base {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 130px;
-            height: 130px;
+            bottom: 30px; left: 30px;
+            width: 130px; height: 130px;
             background: rgba(255, 255, 255, 0.08);
             border: 2px solid rgba(0, 240, 255, 0.5);
             border-radius: 50%;
@@ -245,10 +323,8 @@
 
         #joystick-stick {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 50px;
-            height: 50px;
+            top: 50%; left: 50%;
+            width: 50px; height: 50px;
             background: radial-gradient(circle, #00f0ff, #0077ff);
             border-radius: 50%;
             transform: translate(-50%, -50%);
@@ -258,10 +334,8 @@
 
         #throttle-container {
             position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 70px;
-            height: 180px;
+            bottom: 30px; right: 30px;
+            width: 70px; height: 180px;
             background: rgba(255, 255, 255, 0.08);
             border: 2px solid rgba(0, 240, 255, 0.5);
             border-radius: 35px;
@@ -275,8 +349,7 @@
         #throttle-knob {
             position: absolute;
             top: 130px;
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
             background: radial-gradient(circle, #ff0055, #990033);
             border-radius: 50%;
             box-shadow: 0 0 12px #ff0055;
@@ -286,8 +359,7 @@
 
         #warp-btn {
             position: absolute;
-            bottom: 220px;
-            right: 30px;
+            bottom: 220px; right: 30px;
             padding: 12px 18px;
             background: linear-gradient(135deg, #7928ca, #ff0080);
             border: none;
@@ -304,8 +376,7 @@
         .target-nav-btn {
             position: absolute;
             bottom: 30px;
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -322,10 +393,10 @@
         #prev-target-btn { left: 170px; }
         #next-target-btn { left: 230px; }
 
+        /* MARKER TARGET NORMALE */
         #target-marker {
             position: absolute;
-            width: 28px;
-            height: 28px;
+            width: 28px; height: 28px;
             border: 2px solid #00f0ff;
             border-radius: 50%;
             transform: translate(-50%, -50%);
@@ -343,6 +414,57 @@
             transform: translate(-50%, -50%);
             border-radius: 50%;
         }
+
+        /* MARKER TARGET MISSIONE (GIALLO ORO) */
+        #mission-marker {
+            position: absolute;
+            width: 36px; height: 36px;
+            border: 2px dashed #ffcc00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 7;
+            display: none;
+            box-shadow: 0 0 10px rgba(255, 204, 0, 0.6);
+            animation: pulse-mission 1.5s infinite alternate;
+        }
+
+        #mission-marker::after {
+            content: '★';
+            position: absolute;
+            top: 50%; left: 50%;
+            font-size: 12px;
+            color: #ffcc00;
+            transform: translate(-50%, -55%);
+            font-weight: bold;
+        }
+
+        @keyframes pulse-mission {
+            0% { transform: translate(-50%, -50%) scale(0.9); border-color: #ffcc00; }
+            100% { transform: translate(-50%, -50%) scale(1.15); border-color: #ffe600; }
+        }
+
+        /* NOTIFICA BANNER MISSIONE */
+        #mission-banner {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: rgba(255, 204, 0, 0.2);
+            border: 1px solid #ffcc00;
+            border-radius: 20px;
+            padding: 8px 20px;
+            color: #ffe600;
+            font-size: 0.85rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            display: none;
+            pointer-events: none;
+        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -351,7 +473,8 @@
     <div id="webgl-container"></div>
     <div id="labels-container"></div>
 
-    <!-- MENU PRINCIPALE / PAUSA CON FULLSCREEN -->
+    <div id="mission-banner">NUOVA MISSIONE ASSEGNATA</div>
+
     <div id="main-menu">
         <h1>SOLAR SYSTEM SIMULATOR</h1>
         <button id="btn-continue" class="menu-btn">CONTINUA PARTITA</button>
@@ -359,16 +482,21 @@
         <button id="btn-fullscreen" class="menu-btn">ATTIVA FULLSCREEN ⛶</button>
     </div>
 
-    <!-- HUD PRINCIPALE -->
     <div id="hud">
         <div class="hud-row">VELOCITÀ: <span id="hud-speed" class="hud-val">0</span> km/h</div>
         <div class="hud-row">MODALITÀ: <span id="hud-mode" class="hud-val" style="color:#00ff88;">SUB-LIGHT</span></div>
         <div class="hud-row">CORPO VICINO: <span id="hud-nearest" class="hud-val">MARTE</span></div>
         <div class="hud-row">TARGET SELEZIONATO: <span id="hud-target-name" class="hud-val" style="color:#ff0080;">--</span></div>
-        <div class="hud-row">DISTANZA PISTA TARGET: <span id="hud-target-dist" class="hud-val">--</span> km</div>
+        <div class="hud-row">DISTANZA TARGET: <span id="hud-target-dist" class="hud-val">--</span> km</div>
+
+        <div class="hud-divider"></div>
+
+        <div class="hud-row" style="color:#ffcc00; font-weight:bold;">★ MISSIONE ATTIVA ★</div>
+        <div class="hud-row">CARICO: <span id="hud-mission-cargo" class="hud-val" style="color:#fff;">--</span></div>
+        <div class="hud-row">OBIETTIVO: <span id="hud-mission-target" class="hud-val" style="color:#ffcc00;">--</span></div>
+        <div class="hud-row">DIST. MISSIONE: <span id="hud-mission-dist" class="hud-val" style="color:#ffcc00;">--</span> km</div>
     </div>
 
-    <!-- BARRA DEL CARBURANTE -->
     <div id="fuel-container">
         <div class="fuel-title">FUEL</div>
         <div id="fuel-bar-bg">
@@ -379,9 +507,20 @@
 
     <button id="menu-toggle-btn">MENU (ESC)</button>
 
-    <div id="target-marker"></div>
+    <button id="map-toggle-btn">
+        <span>MAPPA</span>
+        <span style="font-size:0.6rem; color:#8ab4f8;">(M / △)</span>
+    </button>
 
-    <!-- CONTROLLI TOUCH MOBILE -->
+    <div id="map-modal">
+        <div id="map-header">MAPPA TATTICA RADAR<br><span style="font-size:0.75rem; color:#8ab4f8;">ZOOM: ROTELLA / PINCH TO ZOOM</span></div>
+        <canvas id="map-canvas"></canvas>
+        <button id="map-close-btn">CHIUDI MAPPA (ESC/M)</button>
+    </div>
+
+    <div id="target-marker"></div>
+    <div id="mission-marker"></div>
+
     <div id="touch-controls">
         <div id="joystick-base" class="interactive-zone">
             <div id="joystick-stick"></div>
@@ -399,10 +538,11 @@
     <script>
     (function() {
         const SCALE = 0.01; 
-        const LIGHT_SPEED_KMH = 1079252848.8;
+        const WARP_SPEED_KMH = 1000000; // Modificato a 1.000.000 km/h
         const MAX_SUB_LIGHT_KMH = 500000;
 
-        const EARTH_ORBIT_PERIOD_SEC = 1440; 
+        // Rivoluzione della Terra: 30 minuti = 1800 secondi
+        const EARTH_ORBIT_PERIOD_SEC = 1800; 
         const EARTH_DAY_SEC = EARTH_ORBIT_PERIOD_SEC / 365.25;
 
         // CARBURANTE VARS
@@ -413,7 +553,17 @@
 
         const SAVE_KEY = "SOLAR_SIM_SAVE_DATA";
 
-        const CELESTIAL_DATA = {
+        // RATIO DI SCALA BASATI SU TERRA (Raggio = 500km, Distanza = 5.87M km)
+        const REAL_EARTH_RADIUS = 6371.0;
+        const NEW_EARTH_RADIUS = 500.0;
+        const SIZE_SCALE = NEW_EARTH_RADIUS / REAL_EARTH_RADIUS;
+
+        const REAL_EARTH_DIST = 149598023.0;
+        const NEW_EARTH_DIST = 5870000.0;
+        const DIST_SCALE = NEW_EARTH_DIST / REAL_EARTH_DIST;
+
+        // DATI REALI SCALATI AUTOMATICAMENTE
+        const RAW_CELESTIAL_DATA = {
             Sun:     { name: "Sole", radius: 696340, color: 0xffcc00 },
             Mercury: { name: "Mercurio", radius: 2439.7, dist: 57909050, orbitPeriod: 0.241, rotPeriod: 58.6, color: 0xa6a6a6, moons: [] },
             Venus:   { name: "Venere", radius: 6051.8, dist: 108208000, orbitPeriod: 0.615, rotPeriod: -243, color: 0xe3bb76, moons: [] },
@@ -453,6 +603,28 @@
                        ] }
         };
 
+        const CELESTIAL_DATA = {};
+        Object.keys(RAW_CELESTIAL_DATA).forEach(key => {
+            const item = RAW_CELESTIAL_DATA[key];
+            CELESTIAL_DATA[key] = {
+                ...item,
+                radius: item.radius * SIZE_SCALE,
+                dist: item.dist ? item.dist * DIST_SCALE : 0
+            };
+            if (item.moons) {
+                CELESTIAL_DATA[key].moons = item.moons.map(m => ({
+                    ...m,
+                    radius: m.radius * SIZE_SCALE,
+                    dist: m.dist * DIST_SCALE
+                }));
+            }
+        });
+
+        const CARGO_TYPES = [
+            "Minerali Rari", "Componenti Quantum", "Acqua Liquida", "Reattori Arc",
+            "Cibo Sintetico", "Moduli Solari", "Lantanidi Puri", "Elio-3"
+        ];
+
         // THREE.JS VARS
         let scene, camera, renderer;
         let shipGroup, shipMeshGroup, cameraRigNode;
@@ -463,10 +635,16 @@
         let targetList = [];
         let currentTargetIndex = 0;
 
+        // MISSION SYSTEM VARS
+        let currentMission = null;
+        const missionMarker = document.getElementById('mission-marker');
+        const missionBanner = document.getElementById('mission-banner');
+        let bannerTimeout = null;
+
         // POLVERE SPAZIALE
         let spaceDust;
         const DUST_COUNT = 3000;
-        const DUST_BOUNDS = 1000;
+        const DUST_BOUNDS = 100;
 
         // GUIDA & SPEED
         let targetSpeedKmh = 0;
@@ -481,7 +659,6 @@
         // CAMERA
         let camYawOffset = 0;
         let camPitchOffset = 0;
-        let rightStickActive = false;
         let isDraggingCam = false;
 
         let currentCamDist = 0.002;
@@ -491,6 +668,17 @@
         // NAVICELLA
         let shipPos = new THREE.Vector3();
         let shipRot = new THREE.Quaternion();
+
+        // MAPPA TATTIKA VARS
+        let isMapOpen = false;
+        const mapModal = document.getElementById('map-modal');
+        const mapCanvas = document.getElementById('map-canvas');
+        const mapCtx = mapCanvas.getContext('2d');
+
+        // ZOOM MAPPA
+        let mapRangeKm = CELESTIAL_DATA.Neptune.dist * 1.25;
+        const MIN_MAP_RANGE_KM = 200000;            
+        const MAX_MAP_RANGE_KM = 500000000;         
 
         // MENUS & GAME PAUSE STATE
         let isPaused = true;
@@ -504,9 +692,6 @@
 
         const fuelBarFill = document.getElementById('fuel-bar-fill');
         const fuelValText = document.getElementById('fuel-val-text');
-
-        let dpadLeftPressedLast = false;
-        let dpadRightPressedLast = false;
 
         function init() {
             const container = document.getElementById('webgl-container');
@@ -532,7 +717,6 @@
             createSpaceship();
             createSpaceDust();
 
-            // GERARCHIA CAMERA
             cameraRigNode = new THREE.Group();
             shipGroup.add(cameraRigNode);
             
@@ -542,6 +726,7 @@
 
             setupControls();
             setupMenuEvents();
+            setupMapEvents();
 
             checkSaveFileStatus();
 
@@ -639,10 +824,13 @@
 
                 const planetRunway = create10KmRunway(bodyGroup, radiusScaled, data.name);
                 targetList.push({
+                    id: targetList.length,
                     name: data.name,
                     group: bodyGroup,
                     runway: planetRunway.runwayGroup,
-                    labelEl: planetRunway.labelEl
+                    labelEl: planetRunway.labelEl,
+                    orbitDistKm: data.dist,
+                    parentPivot: null
                 });
 
                 const moonPivots = [];
@@ -664,18 +852,78 @@
 
                         const moonRunway = create10KmRunway(mGroup, mRadius, `${m.name} (${data.name})`);
                         targetList.push({
-                            name: `${m.name} [Luna di ${data.name}]`,
+                            id: targetList.length,
+                            name: `${m.name} [${data.name}]`,
                             group: mGroup,
                             runway: moonRunway.runwayGroup,
-                            labelEl: moonRunway.labelEl
+                            labelEl: moonRunway.labelEl,
+                            orbitDistKm: m.dist,
+                            parentGroup: bodyGroup
                         });
 
                         moonPivots.push({ pivot: mPivot, period: m.orbitPeriod });
                     });
                 }
 
-                solarSystemGroup[key] = { pivot: orbitPivot, group: bodyGroup, mesh: mesh, data: data, moons: moonPivots };
+                solarSystemGroup[key] = {
+                    pivot: orbitPivot,
+                    group: bodyGroup,
+                    mesh: mesh,
+                    data: data,
+                    moons: moonPivots
+                };
             });
+        }
+
+        function generateRandomMission() {
+            if (targetList.length < 2) return;
+            const pickupIdx = Math.floor(Math.random() * targetList.length);
+            let deliveryIdx = Math.floor(Math.random() * targetList.length);
+            while (deliveryIdx === pickupIdx) {
+                deliveryIdx = Math.floor(Math.random() * targetList.length);
+            }
+
+            const cargoName = CARGO_TYPES[Math.floor(Math.random() * CARGO_TYPES.length)];
+
+            currentMission = {
+                pickupIndex: pickupIdx,
+                deliveryIndex: deliveryIdx,
+                cargoName: cargoName,
+                status: 'PICKUP'
+            };
+
+            showMissionBanner(`NUOVA MISSIONE: RITIRA ${cargoName.toUpperCase()} SU ${targetList[pickupIdx].name.toUpperCase()}`);
+        }
+
+        function showMissionBanner(msg) {
+            missionBanner.innerText = msg;
+            missionBanner.style.display = 'block';
+            if (bannerTimeout) clearTimeout(bannerTimeout);
+            bannerTimeout = setTimeout(() => {
+                missionBanner.style.display = 'none';
+            }, 5000);
+        }
+
+        function checkMissionProgress() {
+            if (!currentMission) return;
+
+            const targetIdx = (currentMission.status === 'PICKUP') ? currentMission.pickupIndex : currentMission.deliveryIndex;
+            const targetObj = targetList[targetIdx];
+
+            const runwayPos = new THREE.Vector3();
+            targetObj.runway.getWorldPosition(runwayPos);
+
+            const distKm = shipPos.distanceTo(runwayPos) / SCALE;
+
+            if (distKm <= 3.0) {
+                if (currentMission.status === 'PICKUP') {
+                    currentMission.status = 'DELIVERY';
+                    showMissionBanner(`CARICO CARICATO! CONSEGNA A: ${targetList[currentMission.deliveryIndex].name.toUpperCase()}`);
+                } else if (currentMission.status === 'DELIVERY') {
+                    showMissionBanner(`MISSIONE COMPLETATA! CARICO CONSEGNATO SU ${targetObj.name.toUpperCase()}`);
+                    generateRandomMission();
+                }
+            }
         }
 
         function cycleTarget(direction) {
@@ -692,7 +940,7 @@
 
             const widthUnits = 20 / 100000;
             const lengthUnits = 10 / 100000;
-            const heightUnits = 4 / 100000;   
+            const heightUnits = 4 / 100000;
 
             const matBody = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, flatShading: true, roughness: 0.2 });
             const matWings = new THREE.MeshStandardMaterial({ color: 0x2563eb, flatShading: true });
@@ -713,10 +961,12 @@
 
             const engineGeo = new THREE.CylinderGeometry(widthUnits * 0.1, widthUnits * 0.12, lengthUnits * 0.2, 6);
             engineGeo.rotateX(Math.PI / 2);
+
             const e1 = new THREE.Mesh(engineGeo, matEngine);
             e1.position.set(-widthUnits * 0.25, 0, lengthUnits * 0.45);
             const e2 = new THREE.Mesh(engineGeo, matEngine);
             e2.position.set(widthUnits * 0.25, 0, lengthUnits * 0.45);
+
             shipMeshGroup.add(e1);
             shipMeshGroup.add(e2);
 
@@ -730,548 +980,746 @@
 
             for (let i = 0; i < DUST_COUNT * 3; i += 3) {
                 positions[i] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
-                positions[i + 1] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
-                positions[i + 2] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
+                positions[i+1] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
+                positions[i+2] = (Math.random() - 0.5) * DUST_BOUNDS * 2;
             }
 
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            spaceDust = new THREE.Points(geometry, new THREE.PointsMaterial({
-                color: 0x00f0ff, size: 1.5, transparent: true, opacity: 0.5,
-                blending: THREE.AdditiveBlending, sizeAttenuation: true
-            }));
+            const material = new THREE.PointsMaterial({ color: 0x88ccff, size: 0.05, transparent: true, opacity: 0.6 });
+            spaceDust = new THREE.Points(geometry, material);
             scene.add(spaceDust);
         }
 
-        function updateSpaceDust(dt, speedMps) {
-            spaceDust.position.copy(shipPos);
-            const effectiveMove = Math.max(speedMps * dt, 10.0 * dt);
-            const positions = spaceDust.geometry.attributes.position.array;
-            const invRot = shipRot.clone().invert();
-            const localMove = new THREE.Vector3(0, 0, effectiveMove).applyQuaternion(invRot);
+        function spawnShipAtEarthRunway() {
+            const earthData = solarSystemGroup['Earth'];
+            if (!earthData) return;
 
-            for (let i = 0; i < DUST_COUNT * 3; i += 3) {
-                positions[i] += localMove.x;
-                positions[i + 1] += localMove.y;
-                positions[i + 2] += localMove.z;
+            scene.updateMatrixWorld(true);
 
-                if (positions[i] > DUST_BOUNDS) positions[i] -= DUST_BOUNDS * 2;
-                if (positions[i] < -DUST_BOUNDS) positions[i] += DUST_BOUNDS * 2;
-                if (positions[i + 1] > DUST_BOUNDS) positions[i + 1] -= DUST_BOUNDS * 2;
-                if (positions[i + 1] < -DUST_BOUNDS) positions[i + 1] += DUST_BOUNDS * 2;
-                if (positions[i + 2] > DUST_BOUNDS) positions[i + 2] -= DUST_BOUNDS * 2;
-                if (positions[i + 2] < -DUST_BOUNDS) positions[i + 2] += DUST_BOUNDS * 2;
-            }
-            spaceDust.geometry.attributes.position.needsUpdate = true;
-        }
+            const earthRunway = targetList[0].runway;
+            const runwayWorldPos = new THREE.Vector3();
+            earthRunway.getWorldPosition(runwayWorldPos);
 
-        function updateSolarSystemOrbits(elapsedSec) {
-            Object.keys(solarSystemGroup).forEach(key => {
-                const item = solarSystemGroup[key];
-                item.pivot.rotation.y = (elapsedSec / (EARTH_ORBIT_PERIOD_SEC * item.data.orbitPeriod)) * Math.PI * 2;
-                item.mesh.rotation.y = (elapsedSec / (EARTH_DAY_SEC * item.data.rotPeriod)) * Math.PI * 2;
+            shipPos.copy(runwayWorldPos);
+            shipPos.y += 0.0005;
 
-                item.moons.forEach(m => {
-                    m.pivot.rotation.y = (elapsedSec / (EARTH_ORBIT_PERIOD_SEC * m.period)) * Math.PI * 2;
-                });
-            });
-        }
+            shipRot.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
-        // --- SISTEMA CARBURANTE ---
-        function updateFuelLogic(dt, distanceMovedKm) {
-            let nearRunway = false;
-            for (let t of targetList) {
-                const rPos = new THREE.Vector3();
-                t.runway.getWorldPosition(rPos);
-                if ((shipPos.distanceTo(rPos) / SCALE) <= 1.0) {
-                    nearRunway = true;
-                    break;
-                }
+            shipGroup.position.copy(shipPos);
+            shipGroup.quaternion.copy(shipRot);
+
+            targetSpeedKmh = 0;
+            currentSpeedKmh = 0;
+            warpActive = false;
+            currentFuelKm = MAX_FUEL_KM;
+
+            if (!currentMission) {
+                generateRandomMission();
             }
 
-            if (nearRunway) {
-                currentFuelKm = MAX_FUEL_KM;
-            } else {
-                let multiplier = warpActive ? 2.0 : 1.0;
-                let consumedKm = distanceMovedKm * multiplier;
-                currentFuelKm = Math.max(0, currentFuelKm - consumedKm);
-
-                if (currentSpeedKmh < REGEN_SPEED_LIMIT) {
-                    currentFuelKm = Math.min(MAX_FUEL_KM, currentFuelKm + (REGEN_RATE_KM_PER_SEC * dt));
-                }
-            }
-
-            const pct = Math.max(0, Math.min(100, (currentFuelKm / MAX_FUEL_KM) * 100));
-            fuelBarFill.style.height = `${pct}%`;
-            fuelValText.innerText = `${Math.round(pct)}%`;
-
-            if (pct < 20) {
-                fuelBarFill.style.background = 'linear-gradient(0deg, #ff0055, #ff5500)';
-            } else {
-                fuelBarFill.style.background = 'linear-gradient(0deg, #ff0055, #00f0ff)';
-            }
-        }
-
-        // --- GESTIONE FULLSCREEN ---
-        function toggleFullscreen() {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                const docEl = document.documentElement;
-                if (docEl.requestFullscreen) {
-                    docEl.requestFullscreen();
-                } else if (docEl.webkitRequestFullscreen) {
-                    docEl.webkitRequestFullscreen();
-                } else if (docEl.msRequestFullscreen) {
-                    docEl.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        }
-
-        function updateFullscreenBtnText() {
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-                btnFullscreen.innerText = "ESCI DA FULLSCREEN 🗗";
-            } else {
-                btnFullscreen.innerText = "ATTIVA FULLSCREEN ⛶";
-            }
-        }
-
-        document.addEventListener('fullscreenchange', updateFullscreenBtnText);
-        document.addEventListener('webkitfullscreenchange', updateFullscreenBtnText);
-
-        // --- SALVATAGGIO AUTOMATICO E MENU ---
-        function checkSaveFileStatus() {
-            const saveData = localStorage.getItem(SAVE_KEY);
-            btnContinue.disabled = !saveData;
+            saveGameState();
         }
 
         function saveGameState() {
-            const data = {
+            const saveData = {
                 shipPos: { x: shipPos.x, y: shipPos.y, z: shipPos.z },
-                shipRot: { _x: shipRot.x, _y: shipRot.y, _z: shipRot.z, _w: shipRot.w },
-                targetSpeedKmh: targetSpeedKmh,
-                currentSpeedKmh: currentSpeedKmh,
+                shipRot: { x: shipRot.x, y: shipRot.y, z: shipRot.z, w: shipRot.w },
+                fuel: currentFuelKm,
                 currentTargetIndex: currentTargetIndex,
-                currentCamDist: currentCamDist,
-                currentFuelKm: currentFuelKm
+                currentMission: currentMission
             };
-            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-            btnContinue.disabled = false;
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
         }
 
         function loadGameState() {
             const raw = localStorage.getItem(SAVE_KEY);
             if (!raw) return false;
 
-            const data = JSON.parse(raw);
-            shipPos.set(data.shipPos.x, data.shipPos.y, data.shipPos.z);
-            shipRot.set(data.shipRot._x, data.shipRot._y, data.shipRot._z, data.shipRot._w);
-            targetSpeedKmh = data.targetSpeedKmh;
-            currentSpeedKmh = data.currentSpeedKmh;
-            currentTargetIndex = data.currentTargetIndex || 0;
-            currentCamDist = data.currentCamDist || 0.002;
-            currentFuelKm = (data.currentFuelKm !== undefined) ? data.currentFuelKm : MAX_FUEL_KM;
-
-            shipGroup.position.copy(shipPos);
-            shipGroup.quaternion.copy(shipRot);
-            updateThrottleKnobVisual();
-            return true;
-        }
-
-        function startNewRandomGame() {
-            const randomIndex = Math.floor(Math.random() * targetList.length);
-            const randomTarget = targetList[randomIndex];
-
-            const worldPos = new THREE.Vector3();
-            randomTarget.group.getWorldPosition(worldPos);
-
-            const offset = new THREE.Vector3(
-                (Math.random() - 0.5) * 50,
-                (Math.random() - 0.5) * 50,
-                (Math.random() - 0.5) * 50
-            );
-
-            shipPos.copy(worldPos).add(offset);
-            shipRot.setFromEuler(new THREE.Euler(
-                Math.random() * Math.PI * 2,
-                Math.random() * Math.PI * 2,
-                Math.random() * Math.PI * 2
-            ));
-
-            targetSpeedKmh = 0;
-            currentSpeedKmh = 0;
-            currentTargetIndex = randomIndex;
-            currentCamDist = 0.002;
-            currentFuelKm = MAX_FUEL_KM;
-
-            shipGroup.position.copy(shipPos);
-            shipGroup.quaternion.copy(shipRot);
-            updateThrottleKnobVisual();
-        }
-
-        function toggleMenu(show) {
-            isPaused = show;
-            mainMenu.style.display = show ? 'flex' : 'none';
-            if (show) {
-                saveGameState();
-            }
-        }
-
-        function setupMenuEvents() {
-            btnContinue.addEventListener('click', () => {
-                if (loadGameState()) {
-                    toggleMenu(false);
-                }
-            });
-
-            btnNewGame.addEventListener('click', () => {
-                startNewRandomGame();
-                toggleMenu(false);
-            });
-
-            btnFullscreen.addEventListener('click', () => {
-                toggleFullscreen();
-            });
-
-            document.getElementById('menu-toggle-btn').addEventListener('click', () => {
-                toggleMenu(!isPaused);
-            });
-        }
-
-        function setThrottleFromY(py) {
-            const container = document.getElementById('throttle-container');
-            const knob = document.getElementById('throttle-knob');
-            const rect = container.getBoundingClientRect();
-
-            let clampedY = Math.max(15, Math.min(rect.height - 35, py));
-            const pct = 1 - ((clampedY - 15) / (rect.height - 50));
-            targetSpeedKmh = pct * MAX_SUB_LIGHT_KMH;
-            knob.style.top = `${clampedY}px`;
-        }
-
-        function updateThrottleKnobVisual() {
-            const container = document.getElementById('throttle-container');
-            const knob = document.getElementById('throttle-knob');
-            const rect = container.getBoundingClientRect();
-            const pct = Math.min(1, Math.max(0, targetSpeedKmh / MAX_SUB_LIGHT_KMH));
-            knob.style.top = `${(1 - pct) * (rect.height - 50) + 15}px`;
-        }
-
-        function setupControls() {
-            // JOYSTICK
-            const jBase = document.getElementById('joystick-base');
-            const jStick = document.getElementById('joystick-stick');
-            let jActive = false, jCenter = { x: 0, y: 0 };
-
-            jBase.addEventListener('pointerdown', (e) => {
-                if (isPaused) return;
-                e.preventDefault();
-                jActive = true;
-                jBase.setPointerCapture(e.pointerId);
-                const rect = jBase.getBoundingClientRect();
-                jCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                updateJoystick(e);
-            });
-
-            jBase.addEventListener('pointermove', (e) => { if (jActive) { e.preventDefault(); updateJoystick(e); } });
-
-            const stopJoystick = () => {
-                if (jActive) {
-                    jActive = false;
-                    jStick.style.transform = `translate(-50%, -50%)`;
-                    pitchInput = 0; yawInput = 0;
-                }
-            };
-            jBase.addEventListener('pointerup', stopJoystick);
-            jBase.addEventListener('pointercancel', stopJoystick);
-
-            function updateJoystick(e) {
-                const dx = e.clientX - jCenter.x;
-                const dy = e.clientY - jCenter.y;
-                const maxDist = 45;
-                const dist = Math.min(Math.hypot(dx, dy), maxDist);
-                const angle = Math.atan2(dy, dx);
-
-                const nx = (Math.cos(angle) * dist) / maxDist;
-                const ny = (Math.sin(angle) * dist) / maxDist;
-
-                jStick.style.transform = `translate(calc(-50% + ${nx * maxDist}px), calc(-50% + ${ny * maxDist}px))`;
-                yawInput = -nx; pitchInput = -ny;
-            }
-
-            // THROTTLE
-            const tContainer = document.getElementById('throttle-container');
-            let tActive = false;
-            tContainer.addEventListener('pointerdown', (e) => {
-                if (isPaused) return;
-                e.preventDefault(); tActive = true;
-                tContainer.setPointerCapture(e.pointerId);
-                setThrottleFromY(e.clientY - tContainer.getBoundingClientRect().top);
-            });
-            tContainer.addEventListener('pointermove', (e) => {
-                if (tActive) { e.preventDefault(); setThrottleFromY(e.clientY - tContainer.getBoundingClientRect().top); }
-            });
-            tContainer.addEventListener('pointerup', () => { tActive = false; });
-
-            // CAMERA DRAG
-            let lastMouseX = 0, lastMouseY = 0;
-            window.addEventListener('pointerdown', (e) => {
-                if (!isPaused && !e.target.closest('.interactive-zone') && !e.target.closest('#main-menu') && !e.target.closest('#menu-toggle-btn')) {
-                    isDraggingCam = true;
-                    lastMouseX = e.clientX; lastMouseY = e.clientY;
-                }
-            });
-            window.addEventListener('pointermove', (e) => {
-                if (isDraggingCam && !isPaused) {
-                    camYawOffset -= (e.clientX - lastMouseX) * 0.005;
-                    camPitchOffset = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, camPitchOffset + (e.clientY - lastMouseY) * 0.005));
-                    lastMouseX = e.clientX; lastMouseY = e.clientY;
-                    rightStickActive = true;
-                }
-            });
-            window.addEventListener('pointerup', () => { isDraggingCam = false; });
-
-            // PULSANTI TARGET TOUCH
-            document.getElementById('prev-target-btn').addEventListener('click', () => { if(!isPaused) cycleTarget('prev'); });
-            document.getElementById('next-target-btn').addEventListener('click', () => { if(!isPaused) cycleTarget('next'); });
-
-            // WARP TOUCH / R1
-            const warpBtn = document.getElementById('warp-btn');
-            const setWarpState = (active) => {
-                if (currentFuelKm <= 0 && active) return;
-                warpActive = active;
-                warpBtn.style.background = active ? '#00f0ff' : 'linear-gradient(135deg, #7928ca, #ff0080)';
-            };
-
-            warpBtn.addEventListener('pointerdown', (e) => { if(!isPaused) { e.preventDefault(); setWarpState(true); } });
-            warpBtn.addEventListener('pointerup', () => setWarpState(false));
-
-            // TASTIERA & ESC
-            const keys = {};
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    toggleMenu(!isPaused);
-                    return;
-                }
-
-                if (isPaused) return;
-
-                if (e.key === 'ArrowLeft') { e.preventDefault(); if (!keys['ArrowLeft']) cycleTarget('prev'); }
-                if (e.key === 'ArrowRight') { e.preventDefault(); if (!keys['ArrowRight']) cycleTarget('next'); }
-                
-                keys[e.key] = true;
-                keys[e.key.toLowerCase()] = true;
-
-                if (e.key === 'Shift') setWarpState(true);
-            });
-
-            window.addEventListener('keyup', (e) => {
-                if (isPaused) return;
-                keys[e.key] = false;
-                keys[e.key.toLowerCase()] = false;
-
-                if (e.key === 'Shift') setWarpState(false);
-            });
-
-            window.updateKeyboard = () => {
-                if (isPaused) return;
-                if (keys['w']) pitchInput = 0.8;
-                else if (keys['s']) pitchInput = -0.8;
-                else if (!jActive && !window.gamepadActive) pitchInput = 0;
-
-                if (keys['a']) yawInput = 0.8;
-                else if (keys['d']) yawInput = -0.8;
-                else if (!jActive && !window.gamepadActive) yawInput = 0;
-
-                if (keys['ArrowUp']) {
-                    currentCamDist = Math.max(MIN_CAM_DIST, currentCamDist - 0.0001);
-                }
-                if (keys['ArrowDown']) {
-                    currentCamDist = Math.min(MAX_CAM_DIST, currentCamDist + 0.0001);
-                }
-
-                if (keys['r']) { targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + 5000); updateThrottleKnobVisual(); }
-                if (keys['f']) { targetSpeedKmh = Math.max(0, targetSpeedKmh - 5000); updateThrottleKnobVisual(); }
-            };
-        }
-
-        function pollGamepad(dt) {
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            window.gamepadActive = false;
-
-            for (let gp of gamepads) {
-                if (gp && gp.connected) {
-                    window.gamepadActive = true;
-
-                    if (gp.buttons[9] && gp.buttons[9].pressed) {
-                        toggleMenu(!isPaused);
-                    }
-
-                    if (isPaused) return;
-
-                    const deadzone = (v) => Math.abs(v) > 0.15 ? Math.sign(v) * Math.pow((Math.abs(v) - 0.15) / 0.85, 2) : 0;
-
-                    const gx = deadzone(gp.axes[0]);
-                    const gy = deadzone(gp.axes[1]);
-                    if (Math.abs(gx) > 0 || Math.abs(gy) > 0) {
-                        yawInput = -gx;
-                        pitchInput = -gy;
-                    }
-
-                    const rx = deadzone(gp.axes[2]);
-                    const ry = deadzone(gp.axes[3]);
-                    if (Math.abs(rx) > 0 || Math.abs(ry) > 0) {
-                        rightStickActive = true;
-                        camYawOffset -= rx * 2.5 * dt;
-                        camPitchOffset = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, camPitchOffset - ry * 2.5 * dt));
-                    } else if (!isDraggingCam) {
-                        rightStickActive = false;
-                    }
-
-                    const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
-                    const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
-
-                    if (dpadLeft && !dpadLeftPressedLast) cycleTarget('prev');
-                    if (dpadRight && !dpadRightPressedLast) cycleTarget('next');
-
-                    dpadLeftPressedLast = dpadLeft;
-                    dpadRightPressedLast = dpadRight;
-
-                    if (gp.buttons[12] && gp.buttons[12].pressed) {
-                        currentCamDist = Math.max(MIN_CAM_DIST, currentCamDist - 0.002 * dt);
-                    }
-                    if (gp.buttons[13] && gp.buttons[13].pressed) {
-                        currentCamDist = Math.min(MAX_CAM_DIST, currentCamDist + 0.002 * dt);
-                    }
-
-                    if (currentFuelKm > 0) {
-                        warpActive = gp.buttons[5] && gp.buttons[5].pressed;
-                    } else {
-                        warpActive = false;
-                    }
-
-                    if (gp.buttons[7] && gp.buttons[7].pressed) {
-                        targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + 150000 * dt);
-                        updateThrottleKnobVisual();
-                    }
-                    if (gp.buttons[6] && gp.buttons[6].pressed) {
-                        targetSpeedKmh = Math.max(0, targetSpeedKmh - 150000 * dt);
-                        updateThrottleKnobVisual();
-                    }
-                    break;
-                }
-            }
-
-            if (!rightStickActive) {
-                camYawOffset += (0 - camYawOffset) * 5.0 * dt;
-                camPitchOffset += (0 - camPitchOffset) * 5.0 * dt;
-            }
-
-            camera.position.z = currentCamDist;
-            cameraRigNode.rotation.set(camPitchOffset, camYawOffset, 0, 'YXZ');
-        }
-
-        let lastTime = 0;
-        let totalElapsedSec = 0;
-
-        function animate(time) {
-            requestAnimationFrame(animate);
-
-            const dt = Math.min((time - lastTime) / 1000, 0.1);
-            lastTime = time;
-
-            if (!isPaused) {
-                totalElapsedSec += dt;
-
-                if (window.updateKeyboard) window.updateKeyboard();
-                pollGamepad(dt);
-
-                updateSolarSystemOrbits(totalElapsedSec);
-
-                if (currentFuelKm <= 0) {
-                    warpActive = false;
-                    targetSpeedKmh = 0;
-                    updateThrottleKnobVisual();
-                }
-
-                let goalSpeed = warpActive ? LIGHT_SPEED_KMH : Math.min(targetSpeedKmh, MAX_SUB_LIGHT_KMH);
-                currentSpeedKmh += (goalSpeed - currentSpeedKmh) * 5.0 * dt;
-
-                const distanceMovedKm = (currentSpeedKmh / 3600) * dt;
-                updateFuelLogic(dt, distanceMovedKm);
-
-                const unitsPerSec = (currentSpeedKmh / 3600) * SCALE;
-
-                const ROT_SPEED = 0.8;
-                const deltaRot = new THREE.Quaternion();
-                deltaRot.setFromEuler(new THREE.Euler(pitchInput * ROT_SPEED * dt, yawInput * ROT_SPEED * dt, 0, 'YXZ'));
-                shipRot.multiply(deltaRot);
-
-                rollVisual += (-yawInput * 0.5 - rollVisual) * 6.0 * dt;
-                pitchVisual += (pitchInput * 0.2 - pitchVisual) * 6.0 * dt;
-                shipMeshGroup.rotation.set(pitchVisual, 0, rollVisual);
-
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(shipRot);
-                shipPos.addScaledVector(forward, unitsPerSec * dt);
+            try {
+                const saveData = JSON.parse(raw);
+                shipPos.set(saveData.shipPos.x, saveData.shipPos.y, saveData.shipPos.z);
+                shipRot.set(saveData.shipRot.x, saveData.shipRot.y, saveData.shipRot.z, saveData.shipRot.w);
 
                 shipGroup.position.copy(shipPos);
                 shipGroup.quaternion.copy(shipRot);
 
-                updateSpaceDust(dt, unitsPerSec * 10);
+                currentFuelKm = (saveData.fuel !== undefined) ? saveData.fuel : MAX_FUEL_KM;
+                currentTargetIndex = saveData.currentTargetIndex || 0;
+                currentMission = saveData.currentMission || null;
 
-                const blink = Math.sin(time * 0.008) > 0;
-                runwayLights.forEach((light, i) => {
-                    light.material.color.setHex((i % 2 === 0 === blink) ? 0x00f0ff : 0xff0055);
-                });
+                if (!currentMission) generateRandomMission();
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
 
-                updateLabelsAndTargetHUD();
+        function checkSaveFileStatus() {
+            const raw = localStorage.getItem(SAVE_KEY);
+            btnContinue.disabled = !raw;
+        }
+
+        function setupMenuEvents() {
+            document.getElementById('menu-toggle-btn').addEventListener('click', toggleMenu);
+
+            btnContinue.addEventListener('click', () => {
+                if (loadGameState()) {
+                    hideMenu();
+                } else {
+                    spawnShipAtEarthRunway();
+                    hideMenu();
+                }
+            });
+
+            btnNewGame.addEventListener('click', () => {
+                spawnShipAtEarthRunway();
+                hideMenu();
+            });
+
+            btnFullscreen.addEventListener('click', toggleFullscreen);
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (isMapOpen) {
+                        closeMap();
+                    } else {
+                        toggleMenu();
+                    }
+                }
+            });
+        }
+
+        function toggleMenu() {
+            if (mainMenu.style.display === 'none' || mainMenu.style.display === '') {
+                showMenu();
+            } else {
+                hideMenu();
+            }
+        }
+
+        function showMenu() {
+            mainMenu.style.display = 'flex';
+            isPaused = true;
+            checkSaveFileStatus();
+        }
+
+        function hideMenu() {
+            mainMenu.style.display = 'none';
+            isPaused = false;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        /* --- MAPPA TATTIKA RADAR (2D) & PINCH TO ZOOM --- */
+        function setupMapEvents() {
+            const mapToggleBtn = document.getElementById('map-toggle-btn');
+            const mapCloseBtn = document.getElementById('map-close-btn');
+
+            mapToggleBtn.addEventListener('click', toggleMap);
+            mapCloseBtn.addEventListener('click', closeMap);
+
+            mapCanvas.addEventListener('wheel', (e) => {
+                if (!isMapOpen) return;
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    mapRangeKm *= 0.8;
+                } else {
+                    mapRangeKm *= 1.25;
+                }
+                mapRangeKm = Math.max(MIN_MAP_RANGE_KM, Math.min(MAX_MAP_RANGE_KM, mapRangeKm));
+            }, { passive: false });
+
+            let initialPinchDistance = null;
+            let initialMapRangeKm = mapRangeKm;
+
+            mapCanvas.addEventListener('touchstart', (e) => {
+                if (!isMapOpen) return;
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    initialPinchDistance = Math.hypot(dx, dy);
+                    initialMapRangeKm = mapRangeKm;
+                }
+            }, { passive: false });
+
+            mapCanvas.addEventListener('touchmove', (e) => {
+                if (!isMapOpen) return;
+                if (e.touches.length === 2 && initialPinchDistance) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const currentDistance = Math.hypot(dx, dy);
+
+                    if (currentDistance > 0) {
+                        const scaleFactor = initialPinchDistance / currentDistance;
+                        mapRangeKm = initialMapRangeKm * scaleFactor;
+                        mapRangeKm = Math.max(MIN_MAP_RANGE_KM, Math.min(MAX_MAP_RANGE_KM, mapRangeKm));
+                    }
+                }
+            }, { passive: false });
+
+            mapCanvas.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    initialPinchDistance = null;
+                }
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'm' || e.key === 'M') {
+                    toggleMap();
+                }
+            });
+        }
+
+        function toggleMap() {
+            if (isMapOpen) closeMap();
+            else openMap();
+        }
+
+        function openMap() {
+            isMapOpen = true;
+            mapModal.style.display = 'flex';
+            resizeMapCanvas();
+        }
+
+        function closeMap() {
+            isMapOpen = false;
+            mapModal.style.display = 'none';
+        }
+
+        function resizeMapCanvas() {
+            const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.7);
+            mapCanvas.width = size;
+            mapCanvas.height = size;
+        }
+
+        function drawOrbitOnMap(centerMapPos, radiusKm, mapRangeKm, canvasWidth, styleOptions = {}) {
+            const scalePx = (canvasWidth / 2) / mapRangeKm;
+            const radiusPx = radiusKm * scalePx;
+
+            if (radiusPx < 0.5) return;
+
+            mapCtx.save();
+            mapCtx.beginPath();
+            mapCtx.arc(centerMapPos.x, centerMapPos.y, radiusPx, 0, Math.PI * 2);
+            mapCtx.strokeStyle = styleOptions.color || 'rgba(0, 240, 255, 0.15)';
+            mapCtx.lineWidth = styleOptions.lineWidth || 1;
+
+            if (styleOptions.dash) {
+                mapCtx.setLineDash(styleOptions.dash);
+            } else {
+                mapCtx.setLineDash([]);
             }
 
+            if (styleOptions.glow) {
+                mapCtx.shadowColor = styleOptions.color;
+                mapCtx.shadowBlur = styleOptions.glow;
+            }
+
+            mapCtx.stroke();
+            mapCtx.restore();
+        }
+
+        function renderMap() {
+            if (!isMapOpen) return;
+
+            const w = mapCanvas.width;
+            const h = mapCanvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            mapCtx.clearRect(0, 0, w, h);
+
+            mapCtx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+            mapCtx.lineWidth = 1;
+            for (let r = 1; r <= 4; r++) {
+                mapCtx.beginPath();
+                mapCtx.arc(cx, cy, (w / 2) * (r / 4), 0, Math.PI * 2);
+                mapCtx.stroke();
+            }
+
+            mapCtx.beginPath();
+            mapCtx.moveTo(cx, 0); mapCtx.lineTo(cx, h);
+            mapCtx.moveTo(0, cy); mapCtx.lineTo(w, cy);
+            mapCtx.stroke();
+
+            const sunWorldPos = new THREE.Vector3(0,0,0);
+            const sunMapPos = worldToMapCoords(sunWorldPos, shipPos, mapRangeKm, w, h);
+
+            const activeTarget = targetList[currentTargetIndex];
+            let missionTargetObj = null;
+            if (currentMission) {
+                const mIdx = (currentMission.status === 'PICKUP') ? currentMission.pickupIndex : currentMission.deliveryIndex;
+                missionTargetObj = targetList[mIdx];
+            }
+
+            Object.keys(solarSystemGroup).forEach(key => {
+                const sys = solarSystemGroup[key];
+                
+                drawOrbitOnMap(sunMapPos, sys.data.dist, mapRangeKm, w, {
+                    color: 'rgba(0, 240, 255, 0.18)',
+                    lineWidth: 1
+                });
+
+                const pWorldPos = new THREE.Vector3();
+                sys.group.getWorldPosition(pWorldPos);
+                const pMapPos = worldToMapCoords(pWorldPos, shipPos, mapRangeKm, w, h);
+
+                sys.moons.forEach((m, idx) => {
+                    const moonData = sys.data.moons[idx];
+                    drawOrbitOnMap(pMapPos, moonData.dist, mapRangeKm, w, {
+                        color: 'rgba(255, 255, 255, 0.12)',
+                        lineWidth: 0.8
+                    });
+                });
+            });
+
+            if (activeTarget) {
+                let centerPos = sunMapPos;
+                if (activeTarget.parentGroup) {
+                    const parentWorldPos = new THREE.Vector3();
+                    activeTarget.parentGroup.getWorldPosition(parentWorldPos);
+                    centerPos = worldToMapCoords(parentWorldPos, shipPos, mapRangeKm, w, h);
+                }
+
+                drawOrbitOnMap(centerPos, activeTarget.orbitDistKm, mapRangeKm, w, {
+                    color: '#ff0080',
+                    lineWidth: 2,
+                    dash: [6, 4],
+                    glow: 8
+                });
+            }
+
+            if (missionTargetObj && missionTargetObj !== activeTarget) {
+                let centerPos = sunMapPos;
+                if (missionTargetObj.parentGroup) {
+                    const parentWorldPos = new THREE.Vector3();
+                    missionTargetObj.parentGroup.getWorldPosition(parentWorldPos);
+                    centerPos = worldToMapCoords(parentWorldPos, shipPos, mapRangeKm, w, h);
+                }
+
+                drawOrbitOnMap(centerPos, missionTargetObj.orbitDistKm, mapRangeKm, w, {
+                    color: '#ffcc00',
+                    lineWidth: 2,
+                    dash: [8, 4],
+                    glow: 8
+                });
+            }
+
+            mapCtx.fillStyle = '#ffcc00';
+            mapCtx.shadowColor = '#ffcc00';
+            mapCtx.shadowBlur = 10;
+            mapCtx.beginPath();
+            mapCtx.arc(sunMapPos.x, sunMapPos.y, 6, 0, Math.PI * 2);
+            mapCtx.fill();
+            mapCtx.shadowBlur = 0;
+
+            Object.keys(solarSystemGroup).forEach(key => {
+                const sys = solarSystemGroup[key];
+                const pWorldPos = new THREE.Vector3();
+                sys.group.getWorldPosition(pWorldPos);
+
+                const pMapPos = worldToMapCoords(pWorldPos, shipPos, mapRangeKm, w, h);
+
+                mapCtx.fillStyle = '#' + sys.data.color.toString(16).padStart(6, '0');
+                mapCtx.beginPath();
+                mapCtx.arc(pMapPos.x, pMapPos.y, 4, 0, Math.PI * 2);
+                mapCtx.fill();
+
+                mapCtx.fillStyle = '#00f0ff';
+                mapCtx.font = '10px sans-serif';
+                mapCtx.fillText(sys.data.name.toUpperCase(), pMapPos.x + 6, pMapPos.y + 3);
+
+                sys.moons.forEach(m => {
+                    const mWorldPos = new THREE.Vector3();
+                    m.pivot.children[0].getWorldPosition(mWorldPos);
+                    const mMapPos = worldToMapCoords(mWorldPos, shipPos, mapRangeKm, w, h);
+
+                    mapCtx.fillStyle = '#aaaaaa';
+                    mapCtx.beginPath();
+                    mapCtx.arc(mMapPos.x, mMapPos.y, 2, 0, Math.PI * 2);
+                    mapCtx.fill();
+                });
+            });
+
+            mapCtx.save();
+            mapCtx.translate(cx, cy);
+
+            const shipForward = new THREE.Vector3(0, 0, -1).applyQuaternion(shipRot);
+            const angle = Math.atan2(shipForward.x, -shipForward.z);
+            mapCtx.rotate(angle);
+
+            mapCtx.fillStyle = '#ff0055';
+            mapCtx.shadowColor = '#ff0055';
+            mapCtx.shadowBlur = 8;
+            mapCtx.beginPath();
+            mapCtx.moveTo(0, -8);
+            mapCtx.lineTo(-5, 6);
+            mapCtx.lineTo(5, 6);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.restore();
+        }
+
+        function worldToMapCoords(worldPos, centerWorldPos, rangeKm, canvasWidth, canvasHeight) {
+            const dxKm = (worldPos.x - centerWorldPos.x) / SCALE;
+            const dzKm = (worldPos.z - centerWorldPos.z) / SCALE;
+
+            const scalePx = (canvasWidth / 2) / rangeKm;
+
+            const mapX = (canvasWidth / 2) + (dxKm * scalePx);
+            const mapY = (canvasHeight / 2) + (dzKm * scalePx);
+
+            return { x: mapX, y: mapY };
+        }
+
+        /* --- CONTROLLI INPUT --- */
+        function setupControls() {
+            const joystickBase = document.getElementById('joystick-base');
+            const joystickStick = document.getElementById('joystick-stick');
+            const throttleContainer = document.getElementById('throttle-container');
+            const throttleKnob = document.getElementById('throttle-knob');
+            const warpBtn = document.getElementById('warp-btn');
+            const prevBtn = document.getElementById('prev-target-btn');
+            const nextBtn = document.getElementById('next-target-btn');
+
+            let touchIdJoystick = null;
+            let joystickCenter = { x: 0, y: 0 };
+            const maxJoyRadius = 40;
+
+            joystickBase.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                touchIdJoystick = touch.identifier;
+                const rect = joystickBase.getBoundingClientRect();
+                joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                updateJoystick(touch);
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (touchIdJoystick !== null) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchIdJoystick) {
+                            updateJoystick(e.changedTouches[i]);
+                            break;
+                        }
+                    }
+                }
+            });
+
+            const resetJoystick = () => {
+                touchIdJoystick = null;
+                joystickStick.style.transform = `translate(-50%, -50%)`;
+                yawInput = 0;
+                pitchInput = 0;
+            };
+
+            window.addEventListener('touchend', (e) => {
+                if (touchIdJoystick !== null) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchIdJoystick) {
+                            resetJoystick();
+                            break;
+                        }
+                    }
+                }
+            });
+
+            function updateJoystick(touch) {
+                const dx = touch.clientX - joystickCenter.x;
+                const dy = touch.clientY - joystickCenter.y;
+                const dist = Math.hypot(dx, dy);
+                const angle = Math.atan2(dy, dx);
+                const clampedDist = Math.min(dist, maxJoyRadius);
+
+                const stickX = Math.cos(angle) * clampedDist;
+                const stickY = Math.sin(angle) * clampedDist;
+
+                joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+
+                yawInput = -(stickX / maxJoyRadius);
+                pitchInput = -(stickY / maxJoyRadius);
+            }
+
+            // --- TRASCINAMENTO TOUCH SULLO SCHERMO PER DIREZIONE NAVICELLA ---
+            let touchDragId = null;
+            let lastTouchX = 0;
+            let lastTouchY = 0;
+
+            window.addEventListener('touchstart', (e) => {
+                if (isMapOpen || isPaused) return;
+
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.target.closest('.interactive-zone, #hud, #fuel-container, #menu-toggle-btn, #map-toggle-btn')) {
+                        continue;
+                    }
+                    if (touchDragId === null) {
+                        touchDragId = touch.identifier;
+                        lastTouchX = touch.clientX;
+                        lastTouchY = touch.clientY;
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (touchDragId === null) return;
+
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === touchDragId) {
+                        const deltaX = touch.clientX - lastTouchX;
+                        const deltaY = touch.clientY - lastTouchY;
+
+                        lastTouchX = touch.clientX;
+                        lastTouchY = touch.clientY;
+
+                        // Sensibilità di sterzata touch (0.012 per massima responsività)
+                        yawInput = -deltaX * 0.012;
+                        pitchInput = deltaY * 0.012;
+
+                        yawInput = Math.max(-1, Math.min(1, yawInput));
+                        pitchInput = Math.max(-1, Math.min(1, pitchInput));
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            const resetTouchDrag = (e) => {
+                if (touchDragId !== null) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchDragId) {
+                            touchDragId = null;
+                            yawInput = 0;
+                            pitchInput = 0;
+                            break;
+                        }
+                    }
+                }
+            };
+
+            window.addEventListener('touchend', resetTouchDrag);
+            window.addEventListener('touchcancel', resetTouchDrag);
+
+            // MANETTA ACCELERATORE
+            let touchIdThrottle = null;
+
+            throttleContainer.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                touchIdThrottle = touch.identifier;
+                updateThrottle(touch);
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (touchIdThrottle !== null) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchIdThrottle) {
+                            updateThrottle(e.changedTouches[i]);
+                            break;
+                        }
+                    }
+                }
+            });
+
+            window.addEventListener('touchend', (e) => {
+                if (touchIdThrottle !== null) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === touchIdThrottle) {
+                            touchIdThrottle = null;
+                            break;
+                        }
+                    }
+                }
+            });
+
+            function updateThrottle(touch) {
+                const rect = throttleContainer.getBoundingClientRect();
+                const relativeY = Math.max(0, Math.min(rect.height, touch.clientY - rect.top));
+                const percent = 1 - (relativeY / rect.height);
+                throttleKnob.style.top = `${relativeY - 25}px`;
+                targetSpeedKmh = percent * MAX_SUB_LIGHT_KMH;
+            }
+
+            // PULSANTE WARP
+            warpBtn.addEventListener('click', () => {
+                warpActive = !warpActive;
+                warpBtn.style.background = warpActive ? 'linear-gradient(135deg, #00f0ff, #0077ff)' : 'linear-gradient(135deg, #7928ca, #ff0080)';
+            });
+
+            prevBtn.addEventListener('click', () => cycleTarget('prev'));
+            nextBtn.addEventListener('click', () => cycleTarget('next'));
+
+            // TASTIERA & MOUSE CONTROLS
+            const keys = {};
+            window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+            window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+            window.addEventListener('wheel', (e) => {
+                if (isMapOpen) return;
+                currentCamDist += e.deltaY * 0.000005;
+                currentCamDist = Math.max(MIN_CAM_DIST, Math.min(MAX_CAM_DIST, currentCamDist));
+                camera.position.z = currentCamDist;
+            });
+
+            window.addEventListener('mousedown', (e) => {
+                if (e.target.closest('#hud, #touch-controls, #main-menu, #map-modal, #menu-toggle-btn, #map-toggle-btn')) return;
+                isDraggingCam = true;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDraggingCam) return;
+                camYawOffset -= e.movementX * 0.003;
+                camPitchOffset -= e.movementY * 0.003;
+                camPitchOffset = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camPitchOffset));
+            });
+
+            window.addEventListener('mouseup', () => { isDraggingCam = false; });
+
+            setInterval(() => {
+                if (isPaused) return;
+
+                if (keys['w'] || keys['arrowup']) pitchInput = 1;
+                else if (keys['s'] || keys['arrowdown']) pitchInput = -1;
+                else if (touchIdJoystick === null && touchDragId === null) pitchInput = 0;
+
+                if (keys['a'] || keys['arrowleft']) yawInput = 1;
+                else if (keys['d'] || keys['arrowright']) yawInput = -1;
+                else if (touchIdJoystick === null && touchDragId === null) yawInput = 0;
+
+                if (keys['shift']) targetSpeedKmh = Math.min(MAX_SUB_LIGHT_KMH, targetSpeedKmh + 20000);
+                if (keys['control']) targetSpeedKmh = Math.max(0, targetSpeedKmh - 20000);
+            }, 1000 / 60);
+        }
+
+        /* --- LOOP DI ANIMAZIONE --- */
+        let lastTime = 0;
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+
+            const delta = Math.min(0.1, (time - lastTime) / 1000);
+            lastTime = time;
+
+            if (!isPaused) {
+                updateCelestials(delta);
+                updateSpaceship(delta);
+                checkMissionProgress();
+                saveGameState();
+            }
+
+            renderHUD();
+            renderMap();
             renderer.render(scene, camera);
         }
 
-        function updateLabelsAndTargetHUD() {
-            const speedEl = document.getElementById('hud-speed');
-            const modeEl = document.getElementById('hud-mode');
+        function updateCelestials(delta) {
+            Object.keys(solarSystemGroup).forEach(key => {
+                const sys = solarSystemGroup[key];
+                
+                const orbitSpeed = (Math.PI * 2) / (sys.data.orbitPeriod * EARTH_ORBIT_PERIOD_SEC);
+                sys.pivot.rotation.y += orbitSpeed * delta;
 
-            if (warpActive || currentSpeedKmh > MAX_SUB_LIGHT_KMH + 1000) {
-                speedEl.innerText = (currentSpeedKmh / 1000000).toFixed(1) + "M";
-                modeEl.innerText = "WARP BURST (c)";
-                modeEl.style.color = "#00f0ff";
+                const rotSpeed = (Math.PI * 2) / (sys.data.rotPeriod * EARTH_DAY_SEC);
+                sys.mesh.rotation.y += rotSpeed * delta;
+
+                sys.moons.forEach(m => {
+                    const mOrbitSpeed = (Math.PI * 2) / (m.period * EARTH_ORBIT_PERIOD_SEC);
+                    m.pivot.rotation.y += mOrbitSpeed * delta;
+                });
+            });
+
+            const pulse = (Math.sin(lastTime * 0.005) + 1) * 0.5;
+            runwayLights.forEach(l => {
+                l.material.opacity = pulse;
+            });
+        }
+
+        function updateSpaceship(delta) {
+            // WARP SPEED AGGIORNATO A 1.000.000 km/h
+            const targetSpeed = warpActive ? WARP_SPEED_KMH : targetSpeedKmh;
+            currentSpeedKmh += (targetSpeed - currentSpeedKmh) * 0.05;
+
+            if (warpActive) {
+                currentFuelKm -= (currentSpeedKmh / 3600) * delta * 50;
+                if (currentFuelKm <= 0) {
+                    currentFuelKm = 0;
+                    warpActive = false;
+                    const warpBtn = document.getElementById('warp-btn');
+                    if (warpBtn) warpBtn.style.background = 'linear-gradient(135deg, #7928ca, #ff0080)';
+                }
+            } else if (currentSpeedKmh <= REGEN_SPEED_LIMIT) {
+                currentFuelKm = Math.min(MAX_FUEL_KM, currentFuelKm + REGEN_RATE_KM_PER_SEC * delta);
+            }
+
+            const rotSpeed = 1.2;
+            const pitchDelta = pitchInput * rotSpeed * delta;
+            const yawDelta = yawInput * rotSpeed * delta;
+
+            const rotChange = new THREE.Quaternion();
+            rotChange.setFromEuler(new THREE.Euler(pitchDelta, yawDelta, 0, 'YXZ'));
+            shipRot.multiply(rotChange);
+            shipGroup.quaternion.copy(shipRot);
+
+            rollVisual += (-yawInput * 0.4 - rollVisual) * 0.1;
+            pitchVisual += (pitchInput * 0.2 - pitchVisual) * 0.1;
+            shipMeshGroup.rotation.z = rollVisual;
+            shipMeshGroup.rotation.x = pitchVisual;
+
+            const speedUnitsPerSec = (currentSpeedKmh / 3600) * SCALE;
+            const moveVector = new THREE.Vector3(0, 0, -speedUnitsPerSec * delta).applyQuaternion(shipRot);
+            shipPos.add(moveVector);
+            shipGroup.position.copy(shipPos);
+
+            if (spaceDust) spaceDust.position.copy(shipPos);
+
+            cameraRigNode.rotation.y += (camYawOffset - cameraRigNode.rotation.y) * 0.1;
+            cameraRigNode.rotation.x += (camPitchOffset - cameraRigNode.rotation.x) * 0.1;
+        }
+
+        /* --- RENDER HUD & MARKERS --- */
+        function renderHUD() {
+            document.getElementById('hud-speed').innerText = Math.round(currentSpeedKmh).toLocaleString();
+            
+            const modeEl = document.getElementById('hud-mode');
+            if (warpActive) {
+                modeEl.innerText = "WARP SPEED";
+                modeEl.style.color = "#ff0080";
             } else {
-                speedEl.innerText = Math.round(currentSpeedKmh).toLocaleString();
                 modeEl.innerText = "SUB-LIGHT";
                 modeEl.style.color = "#00ff88";
             }
 
-            let minDistance = Infinity;
-            let nearestName = "SOLE";
+            const fuelPercent = Math.max(0, Math.min(100, (currentFuelKm / MAX_FUEL_KM) * 100));
+            fuelBarFill.style.height = `${fuelPercent}%`;
+            fuelValText.innerText = `${Math.round(fuelPercent)}%`;
 
-            Object.keys(solarSystemGroup).forEach(key => {
-                const item = solarSystemGroup[key];
-                const pPos = new THREE.Vector3();
-                item.group.getWorldPosition(pPos);
-                const distKm = shipPos.distanceTo(pPos) / SCALE;
-
-                if (distKm < minDistance) {
-                    minDistance = distKm;
-                    nearestName = item.data.name.toUpperCase();
-                }
-            });
-
-            document.getElementById('hud-nearest').innerText = nearestName;
-
+            let nearestName = "--";
+            let minDist = Infinity;
             targetList.forEach(t => {
                 const worldPos = new THREE.Vector3();
                 t.group.getWorldPosition(worldPos);
+                const d = shipPos.distanceTo(worldPos) / SCALE;
+                if (d < minDist) {
+                    minDist = d;
+                    nearestName = t.name;
+                }
+            });
+            document.getElementById('hud-nearest').innerText = nearestName.toUpperCase();
 
-                const screenPos = worldPos.clone().project(camera);
+            targetList.forEach((t, idx) => {
+                const labelPos = new THREE.Vector3();
+                t.group.getWorldPosition(labelPos);
+                const screenPos = labelPos.clone().project(camera);
+
                 if (screenPos.z < 1 && screenPos.x >= -1 && screenPos.x <= 1 && screenPos.y >= -1 && screenPos.y <= 1) {
                     const x = (screenPos.x * .5 + .5) * window.innerWidth;
                     const y = (-(screenPos.y * .5) + .5) * window.innerHeight;
@@ -1300,12 +1748,39 @@
             } else {
                 targetMarker.style.display = 'none';
             }
+
+            if (currentMission) {
+                const isPickup = (currentMission.status === 'PICKUP');
+                const mTargetIdx = isPickup ? currentMission.pickupIndex : currentMission.deliveryIndex;
+                const mTargetObj = targetList[mTargetIdx];
+
+                document.getElementById('hud-mission-cargo').innerText = currentMission.cargoName.toUpperCase();
+                document.getElementById('hud-mission-target').innerText = `${isPickup ? '[PRELIEVO] ' : '[CONSEGNA] '}${mTargetObj.name.toUpperCase()}`;
+
+                const mRunwayWorldPos = new THREE.Vector3();
+                mTargetObj.runway.getWorldPosition(mRunwayWorldPos);
+
+                const mDistKm = shipPos.distanceTo(mRunwayWorldPos) / SCALE;
+                document.getElementById('hud-mission-dist').innerText = Math.round(mDistKm).toLocaleString();
+
+                const mScreenPos = mRunwayWorldPos.clone().project(camera);
+                if (mScreenPos.z < 1 && mScreenPos.x >= -1 && mScreenPos.x <= 1 && mScreenPos.y >= -1 && mScreenPos.y <= 1) {
+                    missionMarker.style.left = `${(mScreenPos.x * .5 + .5) * window.innerWidth}px`;
+                    missionMarker.style.top = `${(-(mScreenPos.y * .5) + .5) * window.innerHeight}px`;
+                    missionMarker.style.display = 'block';
+                } else {
+                    missionMarker.style.display = 'none';
+                }
+            } else {
+                missionMarker.style.display = 'none';
+            }
         }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            if (isMapOpen) resizeMapCanvas();
         }
 
         window.onload = init;
