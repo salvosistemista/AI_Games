@@ -78,6 +78,7 @@
     background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; border-radius: 8px;
     padding: 5px 9px; display: flex; align-items: center; gap: 5px;
   }
+  #invRecintiChip.active { background: rgba(255,209,102,0.35); }
 
   /* Overlay del banco da lavoro */
   #craft-overlay {
@@ -131,6 +132,7 @@
     <div class="inv-item"><span>🪨</span><span id="invPietra">0</span></div>
     <div class="inv-item"><span>🍎</span><span id="invFrutta">0</span></div>
     <div class="inv-item"><span>🧱</span><span id="invRecinti">0</span></div>
+    <div class="inv-item" id="invRecintiChip" style="pointer-events:auto;"><span>🔨</span><span>piazza</span></div>
   </div>
 </div>
 
@@ -930,14 +932,136 @@ function updatePlayer(dt) {
     const nextZ = player.position.z + dz;
 
     // Collisione semplice: prova prima il movimento pieno, poi solo asse per asse
-    if (isWalkable(nextX, nextZ)) {
+    if (isWalkable(nextX, nextZ) && !blockedByFences(nextX, nextZ)) {
       player.position.x = nextX;
       player.position.z = nextZ;
-    } else if (isWalkable(nextX, player.position.z)) {
+    } else if (isWalkable(nextX, player.position.z) && !blockedByFences(nextX, player.position.z)) {
       player.position.x = nextX;
-    } else if (isWalkable(player.position.x, nextZ)) {
+    } else if (isWalkable(player.position.x, nextZ) && !blockedByFences(player.position.x, nextZ)) {
       player.position.z = nextZ;
     }
+  }
+}
+
+/* =========================================================================
+   PIAZZAMENTO OGGETTI: per ora solo il pannello di recinto craftato.
+   Un "fantasma" semitrasparente segue il player a distanza fissa davanti a
+   sé, agganciato a una griglia; verde se la posizione è valida, rosso se no.
+   ========================================================================= */
+const GRID_SIZE = 2.4;
+const PLACEMENT_DISTANCE = 3.6;
+const placedFences = []; // { x, z, yaw, mesh }
+
+function makeFencePanel(x, z, yaw) {
+  const group = new THREE.Group();
+  const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
+  const railMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+  [-1, 1].forEach(side => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.3, 6), postMat);
+    post.position.set(side * 1.05, 0.65, 0);
+    post.castShadow = true;
+    group.add(post);
+  });
+  [0.45, 0.95].forEach(h => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.14, 0.1), railMat);
+    rail.position.set(0, h, 0);
+    rail.castShadow = true;
+    group.add(rail);
+  });
+  group.position.set(x, 0, z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
+const ghostMat = new THREE.MeshBasicMaterial({ color: 0x7fe08a, transparent: true, opacity: 0.55 });
+const ghostMesh = makeFencePanel(0, 0, 0);
+ghostMesh.traverse(o => { if (o.isMesh) { o.material = ghostMat; o.castShadow = false; } });
+ghostMesh.visible = false;
+
+function isPlacementValid(x, z) {
+  if (!isWalkable(x, z)) return false;
+  if (insideBridge(x, z)) return false;
+  if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 5) return false;
+  for (const f of placedFences) if (Math.hypot(x - f.x, z - f.z) < GRID_SIZE * 0.9) return false;
+  for (const it of interactables) if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < 2.4) return false;
+  return true;
+}
+
+function blockedByFences(x, z) {
+  for (const f of placedFences) if (Math.hypot(x - f.x, z - f.z) < 1.3) return true;
+  return false;
+}
+
+let placementMode = false;
+const invRecintiChip = document.getElementById('invRecintiChip');
+
+function enterPlacementMode() {
+  if (inventory.recinti <= 0) return;
+  placementMode = true;
+  invRecintiChip.classList.add('active');
+}
+function exitPlacementMode() {
+  placementMode = false;
+  ghostMesh.visible = false;
+  invRecintiChip.classList.remove('active');
+}
+function togglePlacementMode() {
+  if (placementMode) exitPlacementMode(); else enterPlacementMode();
+}
+invRecintiChip.addEventListener('click', togglePlacementMode);
+invRecintiChip.addEventListener('touchstart', e => { e.preventDefault(); togglePlacementMode(); }, { passive: false });
+
+function updatePlacementGhost() {
+  ghostMesh.visible = true;
+  const yaw = player.userData.yaw;
+  const rawX = player.position.x + Math.sin(yaw) * PLACEMENT_DISTANCE;
+  const rawZ = player.position.z + Math.cos(yaw) * PLACEMENT_DISTANCE;
+  const gx = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
+  const gz = Math.round(rawZ / GRID_SIZE) * GRID_SIZE;
+  const snappedYaw = Math.round(yaw / (Math.PI / 2)) * (Math.PI / 2);
+  ghostMesh.position.set(gx, 0, gz);
+  ghostMesh.rotation.y = snappedYaw;
+  const valid = isPlacementValid(gx, gz);
+  ghostMat.color.setHex(valid ? 0x7fe08a : 0xe0625a);
+  ghostMesh.userData.valid = valid;
+  ghostMesh.userData.gx = gx;
+  ghostMesh.userData.gz = gz;
+  ghostMesh.userData.yaw = snappedYaw;
+}
+
+function confirmPlacement() {
+  if (!ghostMesh.userData.valid) return;
+  const { gx, gz, yaw } = ghostMesh.userData;
+  const mesh = makeFencePanel(gx, gz, yaw);
+  placedFences.push({ x: gx, z: gz, yaw, mesh });
+  inventory.recinti--;
+  refreshInventoryHud();
+  if (inventory.recinti <= 0) exitPlacementMode();
+}
+
+/* Attivazione modalità piazzamento: tastiera [B], gamepad Y/Triangle (indice 3)
+   o D-pad sinistro (indice 14, mappatura quasi sempre affidabile anche su
+   gamepad non "standard" — usato come alternativa nel caso Y non risponda) */
+let prevKeyB = false;
+let prevPadY = false;
+let prevPadDpadLeft = false;
+function updateBuildToggleInput() {
+  if (sleepMenuOpen || craftMenuOpen || clock.sleeping) return;
+  const keyB = !!keys['KeyB'];
+  if (keyB && !prevKeyB) togglePlacementMode();
+  prevKeyB = keyB;
+
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  if (pad) {
+    const yBtn = !!(pad.buttons[3] && pad.buttons[3].pressed);
+    if (yBtn && !prevPadY) togglePlacementMode();
+    prevPadY = yBtn;
+
+    const dpadLeft = !!(pad.buttons[14] && pad.buttons[14].pressed);
+    if (dpadLeft && !prevPadDpadLeft) togglePlacementMode();
+    prevPadDpadLeft = dpadLeft;
   }
 }
 
@@ -1134,6 +1258,17 @@ const INTERACT_HINTS = {
 
 function checkInteractions() {
   const debugEl = document.getElementById('debug');
+
+  if (placementMode) {
+    updatePlacementGhost();
+    if (input.actionJustPressed) confirmPlacement();
+    debugEl.textContent =
+      `Piazzamento recinto — ${ghostMesh.userData.valid ? 'posizione valida' : 'posizione non valida'}\n` +
+      `[E] conferma — [B] / Y / D-pad sinistro per uscire\n` +
+      `pannelli rimasti: ${inventory.recinti}`;
+    return;
+  }
+
   const target = clock.sleeping ? null : findNearestInteractable();
   let hint = '';
   if (target) {
@@ -1177,6 +1312,7 @@ function animate() {
   updateInput();
   updateInputEdges();
   updateMenuGamepadNav(dt);
+  updateBuildToggleInput();
 
   const controlsLocked = sleepMenuOpen || craftMenuOpen || clock.sleeping;
   if (!controlsLocked) {
