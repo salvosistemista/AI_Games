@@ -886,7 +886,162 @@
 
     const fsBtn = document.getElementById('setting-fullscreen');
     if (fsBtn) { const isFs = !!document.fullscreenElement; fsBtn.textContent = isFs ? 'ON' : 'OFF'; fsBtn.classList.toggle('on', isFs); }
+
+    if (AUDIO.masterGain) AUDIO.masterGain.gain.value = SETTINGS.audioVolume / 100;
   }
+
+  /* ============================================================
+     AUDIO (Step 6) — tutto sintetizzato via Web Audio API, nessun
+     file esterno (coerente col vincolo di file singolo).
+
+     NOTE SULLE ASSUNZIONI:
+     - I browser bloccano l'audio finché non c'è un gesto dell'utente:
+       il contesto audio viene creato/ripreso al primo tocco/click/tasto.
+     - Rumore ambientale: rumore bianco filtrato passa-basso, molto
+       sommesso, sempre presente (anche nei menu, per atmosfera).
+     - Motore: un oscillatore la cui frequenza e volume seguono la
+       velocità mostrata — un tono distinto e più acuto per il warp.
+       Suona solo mentre il gioco è "vivo" (in volo o a mappa aperta),
+       silenzioso nei menu.
+     - Effetti puntuali: innesto/disinnesto warp, checkpoint di
+       missione (ritiro/consegna), collisione con un corpo celeste.
+     ============================================================ */
+  const AUDIO = { ctx: null, masterGain: null, ambientGain: null, engineGain: null, engineOsc: null };
+
+  function initAudio() {
+    if (AUDIO.ctx) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      AUDIO.ctx = new Ctx();
+
+      AUDIO.masterGain = AUDIO.ctx.createGain();
+      AUDIO.masterGain.gain.value = SETTINGS.audioVolume / 100;
+      AUDIO.masterGain.connect(AUDIO.ctx.destination);
+
+      // Rumore spaziale ambientale
+      const bufferSize = 2 * AUDIO.ctx.sampleRate;
+      const noiseBuffer = AUDIO.ctx.createBuffer(1, bufferSize, AUDIO.ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noiseSource = AUDIO.ctx.createBufferSource();
+      noiseSource.buffer = noiseBuffer;
+      noiseSource.loop = true;
+      const noiseFilter = AUDIO.ctx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.value = 260;
+      AUDIO.ambientGain = AUDIO.ctx.createGain();
+      AUDIO.ambientGain.gain.value = 0.05;
+      noiseSource.connect(noiseFilter).connect(AUDIO.ambientGain).connect(AUDIO.masterGain);
+      noiseSource.start();
+
+      // Motore: intensità/tono seguono la velocità mostrata
+      AUDIO.engineOsc = AUDIO.ctx.createOscillator();
+      AUDIO.engineOsc.type = 'sawtooth';
+      AUDIO.engineOsc.frequency.value = 40;
+      const engineFilter = AUDIO.ctx.createBiquadFilter();
+      engineFilter.type = 'lowpass';
+      engineFilter.frequency.value = 350;
+      AUDIO.engineGain = AUDIO.ctx.createGain();
+      AUDIO.engineGain.gain.value = 0;
+      AUDIO.engineOsc.connect(engineFilter).connect(AUDIO.engineGain).connect(AUDIO.masterGain);
+      AUDIO.engineOsc.start();
+    } catch (e) {
+      // Web Audio non disponibile: il gioco continua senza audio, nessun popup
+    }
+  }
+
+  function resumeAudioIfNeeded() {
+    if (AUDIO.ctx && AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume().catch(function () {});
+  }
+
+  function firstGestureAudioUnlock() { initAudio(); resumeAudioIfNeeded(); }
+  document.addEventListener('pointerdown', firstGestureAudioUnlock, { once: true });
+  document.addEventListener('keydown', firstGestureAudioUnlock, { once: true });
+
+  function updateAudio() {
+    if (!AUDIO.ctx) return;
+    const t = AUDIO.ctx.currentTime;
+    const isWarp = flightState.mode === 'warp';
+    const speedRatio = isWarp ? 1 : clamp(flightState.throttleKmh / FLIGHT.MAX_SUBLIGHT_KMH, 0, 1);
+    const targetFreq = isWarp ? 260 : (36 + speedRatio * 150);
+    const engineActive = isSimulating();
+    const targetGain = engineActive ? (0.025 + speedRatio * 0.10) : 0;
+    AUDIO.engineOsc.frequency.setTargetAtTime(targetFreq, t, 0.15);
+    AUDIO.engineGain.gain.setTargetAtTime(targetGain, t, 0.25);
+  }
+
+  function playTone(freq, duration, type, gainPeak, startDelay) {
+    if (!AUDIO.ctx) return;
+    const t = AUDIO.ctx.currentTime + (startDelay || 0);
+    const osc = AUDIO.ctx.createOscillator();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    const g = AUDIO.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gainPeak, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.connect(g).connect(AUDIO.masterGain);
+    osc.start(t);
+    osc.stop(t + duration + 0.05);
+  }
+
+  function playWarpEngageSound() {
+    if (!AUDIO.ctx) return;
+    const t = AUDIO.ctx.currentTime;
+    const osc = AUDIO.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.exponentialRampToValueAtTime(900, t + 0.55);
+    const g = AUDIO.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+    osc.connect(g).connect(AUDIO.masterGain);
+    osc.start(t); osc.stop(t + 0.7);
+  }
+
+  function playWarpDisengageSound() {
+    if (!AUDIO.ctx) return;
+    const t = AUDIO.ctx.currentTime;
+    const osc = AUDIO.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(700, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.4);
+    const g = AUDIO.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.13, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    osc.connect(g).connect(AUDIO.masterGain);
+    osc.start(t); osc.stop(t + 0.55);
+  }
+
+  function playChimeSound() {
+    playTone(660, 0.35, 'sine', 0.12, 0);
+    playTone(990, 0.4, 'sine', 0.10, 0.08);
+  }
+
+  function playCollisionSound() {
+    if (!AUDIO.ctx) return;
+    const t = AUDIO.ctx.currentTime;
+    const osc = AUDIO.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = 55;
+    const g = AUDIO.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.connect(g).connect(AUDIO.masterGain);
+    osc.start(t); osc.stop(t + 0.25);
+  }
+
+  function playClickSound() {
+    playTone(520, 0.08, 'sine', 0.05, 0);
+  }
+
+  document.querySelectorAll('.menu-btn, .toggle-btn, .top-btn').forEach(function (el) {
+    el.addEventListener('click', playClickSound);
+  });
 
   loadSettings();
   applySettings();
@@ -905,8 +1060,9 @@
     SETTINGS.invertY = !SETTINGS.invertY; applySettings(); persistSettings();
   });
   document.getElementById('setting-audio').addEventListener('input', function (e) {
-    SETTINGS.audioVolume = parseInt(e.target.value, 10); persistSettings();
-    // Nota: l'audio arriva nello Step 6 — il volume è già salvato e pronto per allora.
+    SETTINGS.audioVolume = parseInt(e.target.value, 10);
+    persistSettings();
+    if (AUDIO.masterGain) AUDIO.masterGain.gain.setTargetAtTime(SETTINGS.audioVolume / 100, AUDIO.ctx.currentTime, 0.05);
   });
   document.getElementById('setting-fullscreen').addEventListener('click', function () {
     if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(function () {}); }
@@ -1208,6 +1364,7 @@
   const SHIP_COLLISION_RADIUS = 0.5;
 
   const hullState = { integrity: HULL_MAX };
+  let wasCollidedLastFrame = false;
 
   const collidableBodies = [{ radius: SCALE.SUN_RADIUS, mesh: sun, name: 'il Sole' }];
   PLANETS.forEach(function (cfg) {
@@ -1256,9 +1413,13 @@
         showMissionToast('Scafo danneggiato — riparalo prima di attivare il warp');
         return;
       }
-      if (flightState.fuelKm > 0) flightState.mode = 'warp';
+      if (flightState.fuelKm > 0) {
+        flightState.mode = 'warp';
+        playWarpEngageSound();
+      }
     } else {
       flightState.mode = 'sublight';
+      playWarpDisengageSound();
     }
   }
 
@@ -1311,9 +1472,11 @@
       if (currentMission.phase === 'PICKUP') {
         currentMission.phase = 'DELIVERY';
         showMissionToast('Carico ritirato — dirigersi verso ' + findPad(currentMission.destId).name);
+        playChimeSound();
         saveGame();
       } else if (currentMission.phase === 'DELIVERY') {
         showMissionToast('Consegna completata su ' + targetPad.name);
+        playChimeSound();
         generateMission();
         saveGame();
       }
@@ -1824,6 +1987,9 @@
       hullState.integrity = Math.min(HULL_MAX, hullState.integrity + HULL_REPAIR_RATE_PER_SEC * dt);
     }
 
+    if (collided && !wasCollidedLastFrame) { playCollisionSound(); }
+    wasCollidedLastFrame = collided;
+
     document.getElementById('collision-flash').classList.toggle('active', collided);
     document.getElementById('repair-status').classList.toggle('active', !collided && isStopped && hullState.integrity < HULL_MAX);
   }
@@ -1947,6 +2113,7 @@
     updateCamera();
     updateHud();
     updateDebugPanel(dt);
+    updateAudio();
 
     if (screen === 'map') { drawMap(); }
 
