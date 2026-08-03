@@ -579,11 +579,15 @@
 
   // Calibrazione scala: a manetta piena (MAX_SUBLIGHT_KMH) il tragitto Venere-Terra
   // (i due pianeti interni più vicini) deve durare esattamente 4 minuti reali (240s).
+  // Calibrazione scala: a manetta piena (MAX_SUBLIGHT_KMH) il tragitto Mercurio-Nettuno
+  // (allineati sullo stesso lato, la tratta più lunga possibile) deve durare esattamente
+  // 24 ore reali (86400s) — col percorso offline, un viaggio così lungo si "lancia e
+  // richiude" invece di doverlo guardare in diretta.
   (function calibrateSpeedScale() {
-    const venusOrbit = PLANETS.find(function (p) { return p.key === 'venus'; }).orbitRadius;
-    const earthOrbit = PLANETS.find(function (p) { return p.key === 'earth'; }).orbitRadius;
-    const sceneDistance = earthOrbit - venusOrbit;
-    FLIGHT.UNITS_PER_KMH = sceneDistance / (240 * FLIGHT.MAX_SUBLIGHT_KMH);
+    const mercuryOrbit = PLANETS.find(function (p) { return p.key === 'mercury'; }).orbitRadius;
+    const neptuneOrbit = PLANETS.find(function (p) { return p.key === 'neptune'; }).orbitRadius;
+    const sceneDistance = neptuneOrbit - mercuryOrbit;
+    FLIGHT.UNITS_PER_KMH = sceneDistance / (86400 * FLIGHT.MAX_SUBLIGHT_KMH);
   })();
 
   // km reali percorsi al secondo per ogni km/h di velocità mostrata — usato sia dal
@@ -790,35 +794,35 @@
   const hullMaterial = new THREE.MeshStandardMaterial({ color: 0x0c1420, roughness: 0.55, metalness: 0.55 });
   const accentMaterial = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00838f, roughness: 0.35, metalness: 0.6 });
 
-  const hullGeometry = new THREE.CylinderGeometry(0.5, 0.55, 0.14, 20);
+  const hullGeometry = new THREE.CylinderGeometry(0.064935, 0.071429, 0.018182, 20);
   const hull = new THREE.Mesh(hullGeometry, hullMaterial);
   ship.add(hull);
 
   // Anello accento lungo il bordo dello scafo
-  const rimGeometry = new THREE.TorusGeometry(0.5, 0.025, 8, 20);
+  const rimGeometry = new THREE.TorusGeometry(0.064935, 0.003247, 8, 20);
   const rim = new THREE.Mesh(rimGeometry, accentMaterial);
   rim.rotation.x = Math.PI / 2;
   ship.add(rim);
 
   // Cabina di pilotaggio, spostata di lato
-  const cockpitGeometry = new THREE.SphereGeometry(0.13, 12, 10);
+  const cockpitGeometry = new THREE.SphereGeometry(0.016883, 12, 10);
   const cockpit = new THREE.Mesh(cockpitGeometry, accentMaterial);
-  cockpit.position.set(0.22, 0.11, -0.05);
+  cockpit.position.set(0.028571, 0.014286, -0.006494);
   ship.add(cockpit);
 
   // Due mandibole anteriori parallele
-  const mandibleGeometry = new THREE.BoxGeometry(0.09, 0.07, 0.5);
+  const mandibleGeometry = new THREE.BoxGeometry(0.011688, 0.009091, 0.064935);
   const mandibleLeft = new THREE.Mesh(mandibleGeometry, hullMaterial);
-  mandibleLeft.position.set(-0.22, 0, -0.45);
+  mandibleLeft.position.set(-0.028571, 0, -0.058442);
   ship.add(mandibleLeft);
   const mandibleRight = new THREE.Mesh(mandibleGeometry, hullMaterial);
-  mandibleRight.position.set(0.22, 0, -0.45);
+  mandibleRight.position.set(0.028571, 0, -0.058442);
   ship.add(mandibleRight);
 
-  const engineGlowGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+  const engineGlowGeometry = new THREE.SphereGeometry(0.012987, 8, 8);
   const engineGlowMaterial = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85 });
   const engineGlow = new THREE.Mesh(engineGlowGeometry, engineGlowMaterial);
-  engineGlow.position.set(0, 0, 0.35);
+  engineGlow.position.set(0, 0, 0.045455);
   ship.add(engineGlow);
 
   scene.add(ship);
@@ -833,9 +837,9 @@
   }
   placeShipAtStart();
 
-  const cameraOffset = new THREE.Vector3(0, 1.1, 4);
-  const CAMERA_ZOOM_MIN = 2;
-  const CAMERA_ZOOM_MAX = 12;
+  const cameraOffset = new THREE.Vector3(0, 0.142857, 0.519481);
+  const CAMERA_ZOOM_MIN = 0.259740;
+  const CAMERA_ZOOM_MAX = 1.558442;
   const cameraLook = { yaw: 0, pitch: 0 };
 
   const ROTATION_SPEED = 1.4;
@@ -1128,7 +1132,7 @@
   });
 
   window.addEventListener('wheel', function (e) {
-    cameraOffset.z = clamp(cameraOffset.z + e.deltaY * 0.008, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
+    cameraOffset.z = clamp(cameraOffset.z + e.deltaY * 0.001039, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
   }, { passive: true });
 
   const gamepadState = {
@@ -1290,10 +1294,10 @@
   throttleZone.addEventListener('pointercancel', releaseThrottle);
 
   document.getElementById('dpad-zoom-in').addEventListener('pointerdown', function () {
-    cameraOffset.z = clamp(cameraOffset.z - 1, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
+    cameraOffset.z = clamp(cameraOffset.z - 0.12987, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
   });
   document.getElementById('dpad-zoom-out').addEventListener('pointerdown', function () {
-    cameraOffset.z = clamp(cameraOffset.z + 1, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
+    cameraOffset.z = clamp(cameraOffset.z + 0.12987, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
   });
   document.getElementById('dpad-target-prev').addEventListener('pointerdown', function () { /* nessun elenco multiplo da ciclare, per ora */ });
   document.getElementById('dpad-target-next').addEventListener('pointerdown', function () { /* nessun elenco multiplo da ciclare, per ora */ });
@@ -1361,7 +1365,7 @@
   const HULL_MAX = 100;
   const HULL_DAMAGE_RATE_PER_SEC = 18;   // %/sec a contatto — placeholder da tarare
   const HULL_REPAIR_RATE_PER_SEC = 2;    // %/sec da fermi — lento come richiesto
-  const SHIP_COLLISION_RADIUS = 0.5;
+  const SHIP_COLLISION_RADIUS = 0.064935;
 
   const hullState = { integrity: HULL_MAX };
   let wasCollidedLastFrame = false;
