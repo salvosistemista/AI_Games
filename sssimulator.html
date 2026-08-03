@@ -59,6 +59,8 @@
     background: rgba(0, 240, 255, 0.06);
   }
   #ship-panel-icon:hover { background: rgba(0, 240, 255, 0.18); }
+  #ship-panel-icon.disabled { opacity: 0.3; color: #5fb7c9; cursor: default; }
+  #ship-panel-icon.disabled:hover { background: rgba(0, 240, 255, 0.06); }
   #hull-pct { color: #00f0ff; font-weight: 700; }
   #hull-bar-track { margin-top: 4px; width: 100%; height: 5px; background: rgba(0, 240, 255, 0.12); border-radius: 3px; overflow: hidden; }
   #hull-bar-fill { height: 100%; width: 100%; background: #00f0ff; transition: width 0.2s linear, background-color 0.3s linear; }
@@ -295,6 +297,7 @@
     <div id="target-phase">Ritiro</div>
     <div id="target-body">—</div>
     <div id="target-distance">— km</div>
+    <div id="target-reward" style="color:#ffd23f;">— €$</div>
     <div id="target-arrow-wrap"><span id="target-arrow">▲</span></div>
   </div>
 
@@ -434,6 +437,31 @@
   </div>
 </div>
 
+<!-- ============ STAZIONE (fermata obbligatoria a qualunque pista) ============ -->
+<div id="station-screen" class="menu-screen">
+  <div class="menu-box sci-fi-panel">
+    <div class="menu-title" id="station-title">Stazione di …</div>
+    <div id="station-mission-info" style="font-size:12px; color:#cfe9ff; line-height:1.5; margin-bottom:6px;"></div>
+
+    <div class="setting-row">
+      <span class="setting-label">Carburante attuale</span>
+      <span id="station-fuel-pct" style="color:#00f0ff; font-weight:700;">100%</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Acquista carburante</span>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="toggle-btn" id="station-fuel-minus">−</div>
+        <span id="station-fuel-buy-amount" style="min-width:34px; text-align:center;">0%</span>
+        <div class="toggle-btn" id="station-fuel-plus">+</div>
+      </div>
+    </div>
+    <div id="station-fuel-cost" style="font-size:11px; color:#ffd23f; text-align:right;">Costo: 0 €$</div>
+    <div id="station-money" style="font-size:11px; color:#ffd23f; text-align:right; margin-bottom:6px;">Fondi: 500 €$</div>
+
+    <div class="menu-btn" id="btn-station-close">Chiudi</div>
+  </div>
+</div>
+
 <!-- ============ NAVICELLA (scafo, stiva, riparazione manuale) ============ -->
 <div id="ship-panel-screen" class="menu-screen">
   <div class="menu-box sci-fi-panel">
@@ -450,10 +478,30 @@
       <span id="ship-panel-cargo" style="color:#cfe9ff; text-align:right; max-width:180px;">Vuota</span>
     </div>
 
+    <div class="setting-row">
+      <span class="setting-label">Fondi</span>
+      <span id="ship-panel-money" style="color:#ffd23f; font-weight:700;">500 €$</span>
+    </div>
+
     <div class="menu-btn" id="ship-panel-repair-btn">Riparazione rapida (+3%)</div>
     <div id="ship-panel-repair-note" style="font-size:10px; color:#5fb7c9; text-align:center; min-height: 14px;"></div>
 
+    <div class="menu-btn" id="ship-panel-hatch-btn">Apri portello di riparazione</div>
+
     <div class="menu-btn" id="btn-ship-panel-back">Indietro</div>
+  </div>
+</div>
+
+<!-- ============ MINIGIOCO DI RIPARAZIONE (portello) ============ -->
+<div id="repair-minigame-screen" class="menu-screen">
+  <div class="menu-box sci-fi-panel" style="width:340px; align-items:center;">
+    <div class="menu-title">Portello di Riparazione</div>
+    <div style="font-size:10px; color:#5fb7c9; text-align:center; margin-bottom:8px;">
+      Trascina il cavo dal centro fino alla scarica elettrica e mantienilo attaccato per 1 secondo
+    </div>
+    <canvas id="repair-canvas" width="280" height="280" style="touch-action:none; cursor:pointer;"></canvas>
+    <div id="repair-status-text" style="font-size:11px; color:#00f0ff; text-align:center; min-height:16px; margin-top:6px;"></div>
+    <div class="menu-btn" id="btn-repair-minigame-close" style="margin-top:10px;">Chiudi</div>
   </div>
 </div>
 
@@ -497,7 +545,7 @@
   let previousScreenBeforeConfirm = 'title';
   let menuFocusIndex = 0;
 
-  const MENU_SCREENS = ['title', 'pause', 'settings', 'controls', 'map', 'confirm', 'offline-report', 'ship-panel'];
+  const MENU_SCREENS = ['title', 'pause', 'settings', 'controls', 'map', 'confirm', 'offline-report', 'ship-panel', 'station', 'repair-minigame'];
   function isMenuScreen(s) { return MENU_SCREENS.indexOf(s) !== -1; }
 
   function getScreenEl(name) { return document.getElementById(name + '-screen') || document.getElementById(name + '-modal'); }
@@ -548,6 +596,8 @@
     else if (screen === 'settings') { persistSettings(); showScreen(settingsReturnTo || 'title'); }
     else if (screen === 'controls') { showScreen(controlsReturnTo || 'title'); }
     else if (screen === 'ship-panel') { showScreen('playing'); }
+    else if (screen === 'repair-minigame') { showScreen('ship-panel'); }
+    else if (screen === 'station') { closeStation(); }
     else if (screen === 'confirm') { document.getElementById('confirm-no').click(); }
   }
 
@@ -605,9 +655,6 @@
     // percorsi, quindi un pieno esaurito di netto copre esattamente questa distanza, non di più.
     FUEL_CAPACITY_KM: 720600000,
     THROTTLE_RAMP_KMH_PER_SEC: 150000,
-    // Stesso tempo di rigenerazione da vuoto a pieno di prima (~167s), solo riscalato alla
-    // nuova capienza (0,6%/sec del serbatoio) — resta un valore di bilanciamento regolabile.
-    FUEL_REGEN_KM_PER_SEC: 4323600,
     UNITS_PER_KMH: 0 // calcolato sotto, dopo aver definito PLANETS
   };
 
@@ -700,7 +747,10 @@
 
   function createRunway(parentMesh, bodyRadius, id, displayName, sizeScale) {
     const group = new THREE.Object3D();
-    group.position.set(0, bodyRadius + 0.05, 0);
+    // Offset scelto per restare comodamente fuori dal raggio di collisione della
+    // navicella (0,065 unità): altrimenti il semplice arrivo sulla pista genererebbe
+    // una collisione spuria ad ogni consegna.
+    group.position.set(0, bodyRadius + 0.15, 0);
     parentMesh.add(group);
 
     const padLength = Math.max(2.2, bodyRadius * 0.5) * sizeScale;
@@ -1116,9 +1166,27 @@
   document.getElementById('btn-controls-back').addEventListener('click', function () { showScreen(controlsReturnTo); });
 
   document.getElementById('ship-panel-icon').addEventListener('click', function () {
-    if (screen === 'playing') { updateShipPanel(); showScreen('ship-panel'); }
+    if (screen === 'playing' && flightState.mode !== 'warp') { updateShipPanel(); showScreen('ship-panel'); }
   });
   document.getElementById('btn-ship-panel-back').addEventListener('click', function () { showScreen('playing'); });
+
+  document.getElementById('ship-panel-hatch-btn').addEventListener('click', function () {
+    if (hullState.integrity < 90) { showScreen('repair-minigame'); }
+  });
+  document.getElementById('btn-repair-minigame-close').addEventListener('click', function () {
+    repairCanvasPointerUp(null);
+    showScreen('ship-panel');
+  });
+
+  document.getElementById('station-fuel-plus').addEventListener('click', function () {
+    pendingFuelPurchasePercent += FUEL_PURCHASE_STEP_PERCENT;
+    updateStationScreen();
+  });
+  document.getElementById('station-fuel-minus').addEventListener('click', function () {
+    pendingFuelPurchasePercent = Math.max(0, pendingFuelPurchasePercent - FUEL_PURCHASE_STEP_PERCENT);
+    updateStationScreen();
+  });
+  document.getElementById('btn-station-close').addEventListener('click', function () { closeStation(); });
   document.getElementById('ship-panel-repair-btn').addEventListener('click', function () {
     const isStoppedForRepair = flightState.mode === 'sublight' && flightState.throttleKmh === 0;
     if (hullState.integrity < HULL_MAX && quickRepairCooldownRemaining <= 0 && isStoppedForRepair) {
@@ -1155,7 +1223,7 @@
       case 'ControlLeft': case 'ControlRight': inputState.throttleDown = true; break;
       case 'Space':
         e.preventDefault();
-        if (!warpKeyDown) { warpKeyDown = true; toggleWarp(); }
+        if (!warpKeyDown && screen === 'playing') { warpKeyDown = true; toggleWarp(); }
         break;
       case 'Escape':
         e.preventDefault();
@@ -1222,7 +1290,7 @@
     gamepadState.throttleDown = (gp.buttons[6] && gp.buttons[6].value) || 0;
 
     const warpPressed = !!(gp.buttons[2] && gp.buttons[2].pressed);
-    if (warpPressed && !gamepadState.warpBtnPrev) toggleWarp();
+    if (warpPressed && !gamepadState.warpBtnPrev && screen === 'playing') toggleWarp();
     gamepadState.warpBtnPrev = warpPressed;
 
     const mapPressed = !!(gp.buttons[3] && gp.buttons[3].pressed);
@@ -1392,6 +1460,13 @@
     fuelKm: FLIGHT.FUEL_CAPACITY_KM
   };
 
+  // Economia: valuta inventata "€$". Una nuova partita parte con carburante al 50%
+  // e 500 €$ — la valuta verrà spesa/guadagnata dagli step successivi (premi
+  // missione, acquisto carburante alla stazione).
+  const NEW_GAME_FUEL_FRACTION = 0.5;
+  const NEW_GAME_STARTING_MONEY = 500;
+  let playerMoney = NEW_GAME_STARTING_MONEY;
+
   /* ============================================================
      SCAFO E COLLISIONI
 
@@ -1412,7 +1487,12 @@
      ============================================================ */
   const HULL_MAX = 100;
   const HULL_DAMAGE_RATE_PER_SEC = 18;   // %/sec a contatto — placeholder da tarare
-  const HULL_REPAIR_RATE_PER_SEC = 2;    // %/sec da fermi — lento come richiesto
+  // Riparazione passiva: 1% ogni minuto REALE da fermi (non di gioco/frame) — stesso
+  // approccio a orologio già usato per lo stress warp, robusto a rallentamenti/tab
+  // in background.
+  const PASSIVE_REPAIR_PERCENT_PER_MIN = 1;
+  const PASSIVE_REPAIR_INTERVAL_MS = 60000;
+  let passiveRepairLastCheckMs = null;
 
   // Riparazione manuale rapida (pannello Navicella): un piccolo incremento immediato,
   // utilizzabile solo da fermi e con un tempo di recupero tra un uso e l'altro —
@@ -1429,6 +1509,21 @@
   // controlli se il browser rallenta o la scheda va in background.
   const WARP_DAMAGE_CHECK_INTERVAL_MS = 60000;
   const WARP_DAMAGE_CHANCE = 0.75;
+  const WARP_AUTO_SHUTOFF_HULL_PERCENT = 75; // il warp si spegne da solo a questa soglia
+
+  // Rischio severo aggiuntivo: sotto il 91% di integrità, ogni minuto reale in warp
+  // c'è anche 1 possibilità su 5 di un danno ulteriore e più grave (10-25%),
+  // indipendente dal danno da stress base che scatta comunque.
+  const SEVERE_WARP_RISK_HULL_THRESHOLD = 91;
+  const SEVERE_WARP_RISK_CHANCE = 0.2;
+  const SEVERE_WARP_DAMAGE_MIN = 10;
+  const SEVERE_WARP_DAMAGE_MAX = 25;
+  function rollSevereWarpDamage() {
+    if (hullState.integrity < SEVERE_WARP_RISK_HULL_THRESHOLD && Math.random() < SEVERE_WARP_RISK_CHANCE) {
+      return SEVERE_WARP_DAMAGE_MIN + Math.random() * (SEVERE_WARP_DAMAGE_MAX - SEVERE_WARP_DAMAGE_MIN);
+    }
+    return 0;
+  }
   const WARP_DAMAGE_BASE_PERCENT = 1;
   function warpDamagePercentForCurrentHull() {
     if (hullState.integrity < 80) return WARP_DAMAGE_BASE_PERCENT * 3;
@@ -1521,10 +1616,51 @@
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
+  // Premio missione: 100 €$ base + una quota che dipende dalla distanza tra il corpo
+  // di partenza e quello di arrivo (i satelliti usano la distanza del pianeta madre).
+  // Scala non lineare (radice quadrata) così anche le tratte "medie" rendono un premio
+  // decente, non solo quelle estreme tra Mercurio e Nettuno.
+  const PLANET_ORBIT_LOOKUP = {};
+  PLANETS.forEach(function (cfg) {
+    PLANET_ORBIT_LOOKUP[cfg.key] = cfg.orbitRadius;
+    (cfg.moons || []).forEach(function (m) { PLANET_ORBIT_LOOKUP[m.key] = cfg.orbitRadius; });
+  });
+  const MISSION_REWARD_MAX_DISTANCE = (function () {
+    const vals = Object.values(PLANET_ORBIT_LOOKUP);
+    return Math.max.apply(null, vals) - Math.min.apply(null, vals);
+  })();
+  const MISSION_REWARD_BASE = 100;
+  const MISSION_REWARD_MAX = 1000;
+  const CARGO_DAMAGE_CHANCE = 0.2; // 1 su 5, ad ogni evento di danno scafo mentre si trasporta merce
+  const CARGO_DAMAGE_PERCENT = 5;
+  const CARGO_MIN_INTEGRITY_FOR_PAYOUT = 50;
+
+  function calculateMissionReward(originId, destId) {
+    const distance = Math.abs((PLANET_ORBIT_LOOKUP[originId] || 0) - (PLANET_ORBIT_LOOKUP[destId] || 0));
+    const normalized = Math.sqrt(clamp(distance / MISSION_REWARD_MAX_DISTANCE, 0, 1));
+    return Math.round(MISSION_REWARD_BASE + (MISSION_REWARD_MAX - MISSION_REWARD_BASE) * normalized);
+  }
+
+  // Chiamata ad ogni evento di danno scafo distinto (non per ogni frame di contatto
+  // prolungato): se si sta trasportando merce, 1 possibilità su 5 che si danneggi del 5%.
+  function maybeDamageCargo() {
+    if (currentMission && currentMission.phase === 'DELIVERY' && currentMission.cargoIntegrity > 0) {
+      if (Math.random() < CARGO_DAMAGE_CHANCE) {
+        currentMission.cargoIntegrity = Math.max(0, currentMission.cargoIntegrity - CARGO_DAMAGE_PERCENT);
+      }
+    }
+  }
+
   function generateMission(preferredOriginId) {
     const origin = preferredOriginId ? findPad(preferredOriginId) : landingPads[Math.floor(Math.random() * landingPads.length)];
     const dest = pickRandomPad(origin.id);
-    currentMission = { originId: origin.id, destId: dest.id, phase: 'PICKUP' };
+    currentMission = {
+      originId: origin.id,
+      destId: dest.id,
+      phase: 'PICKUP',
+      reward: calculateMissionReward(origin.id, dest.id),
+      cargoIntegrity: 100
+    };
   }
 
   function showMissionToast(text) {
@@ -1536,24 +1672,126 @@
 
   const _tmpPadPos = new THREE.Vector3();
 
-  function updateMissionProgress() {
+  /* ============================================================
+     STAZIONI (Step 5)
+
+     Avvicinandosi a QUALUNQUE pista (non solo quella della missione
+     corrente) la simulazione si ferma del tutto — l'unico punto in
+     cui tutto è bloccato — e si apre "Stazione di [nome]". Se la
+     pista è pertinente alla missione in corso (ritiro o consegna),
+     la merce viene presa/consegnata automaticamente qui, non prima.
+     ============================================================ */
+  const FUEL_PRICE_PER_PERCENT = 15; // €$ per 1% di carburante
+  const FUEL_PURCHASE_STEP_PERCENT = 5;
+
+  let activeStationExitGuardPadId = null;
+  let stationCurrentPad = null;
+  let stationMissionEvent = null; // 'pickup' | 'delivery' | null
+  let stationLastPayout = 0;
+  let pendingFuelPurchasePercent = 0;
+
+  function checkStationArrival() {
+    if (screen !== 'playing' && screen !== 'map') return;
+    let nearPad = null;
+    for (let i = 0; i < landingPads.length; i++) {
+      const pad = landingPads[i];
+      pad.group.getWorldPosition(_tmpPadPos);
+      if (ship.position.distanceTo(_tmpPadPos) <= MISSION_DETECTION_RADIUS_UNITS) { nearPad = pad; break; }
+    }
+    if (!nearPad) { activeStationExitGuardPadId = null; return; }
+    if (nearPad.id === activeStationExitGuardPadId) return; // stessa pista appena lasciata, non riaprire finché non ci si allontana
+    openStation(nearPad);
+  }
+
+  function openStation(pad) {
+    stationCurrentPad = pad;
+    stationMissionEvent = null;
+    stationLastPayout = 0;
+    pendingFuelPurchasePercent = 0;
+
+    if (currentMission && currentMission.phase === 'PICKUP' && currentMission.originId === pad.id) {
+      currentMission.phase = 'DELIVERY';
+      currentMission.cargoIntegrity = 100;
+      stationMissionEvent = 'pickup';
+      playChimeSound();
+    } else if (currentMission && currentMission.phase === 'DELIVERY' && currentMission.destId === pad.id) {
+      let payout = 0;
+      if (currentMission.cargoIntegrity >= CARGO_MIN_INTEGRITY_FOR_PAYOUT) {
+        payout = Math.round(currentMission.reward * (currentMission.cargoIntegrity / 100));
+      }
+      playerMoney += payout;
+      stationLastPayout = payout;
+      stationMissionEvent = 'delivery';
+      playChimeSound();
+    }
+
+    updateStationScreen();
+    showScreen('station');
+    saveGame();
+
+    if (stationMissionEvent === 'delivery') { generateMission(); }
+  }
+
+  function updateStationScreen() {
+    if (!stationCurrentPad) return;
+    document.getElementById('station-title').textContent = 'Stazione di ' + stationCurrentPad.name;
+
+    const infoEl = document.getElementById('station-mission-info');
+    if (stationMissionEvent === 'pickup') {
+      infoEl.innerHTML = 'Carico preso in consegna.<br>Destinazione: <b>' + findPad(currentMission.destId).name + '</b><br>Premio: <b>' + currentMission.reward.toLocaleString('it-IT') + ' €$</b>';
+    } else if (stationMissionEvent === 'delivery') {
+      infoEl.innerHTML = stationLastPayout > 0
+        ? 'Consegna completata — incassati <b>' + stationLastPayout.toLocaleString('it-IT') + ' €$</b>'
+        : 'Consegna completata — merce troppo danneggiata, nessun compenso';
+    } else {
+      infoEl.textContent = 'Nessuna operazione di missione qui.';
+    }
+
+    const currentFuelPct = (flightState.fuelKm / FLIGHT.FUEL_CAPACITY_KM) * 100;
+    document.getElementById('station-fuel-pct').textContent = Math.round(currentFuelPct) + '%';
+
+    const maxAffordable = Math.floor(playerMoney / FUEL_PRICE_PER_PERCENT);
+    const maxBySpace = Math.floor(100 - currentFuelPct);
+    const maxPurchase = Math.max(0, Math.min(maxAffordable, maxBySpace));
+    pendingFuelPurchasePercent = clamp(pendingFuelPurchasePercent, 0, maxPurchase);
+
+    document.getElementById('station-fuel-buy-amount').textContent = pendingFuelPurchasePercent + '%';
+    document.getElementById('station-fuel-cost').textContent = 'Costo: ' + (pendingFuelPurchasePercent * FUEL_PRICE_PER_PERCENT).toLocaleString('it-IT') + ' €$';
+    document.getElementById('station-money').textContent = 'Fondi: ' + Math.round(playerMoney).toLocaleString('it-IT') + ' €$';
+  }
+
+  function closeStation() {
+    if (pendingFuelPurchasePercent > 0) {
+      const cost = pendingFuelPurchasePercent * FUEL_PRICE_PER_PERCENT;
+      playerMoney = Math.max(0, playerMoney - cost);
+      flightState.fuelKm = Math.min(FLIGHT.FUEL_CAPACITY_KM, flightState.fuelKm + FLIGHT.FUEL_CAPACITY_KM * (pendingFuelPurchasePercent / 100));
+    }
+    activeStationExitGuardPadId = stationCurrentPad ? stationCurrentPad.id : null;
+    stationCurrentPad = null;
+    saveGame();
+    showScreen('playing');
+  }
+
+  // Versione offline del completamento missione (usata dal calcolo del percorso
+  // offline): stessa logica di ritiro/consegna, ma senza aprire la finestra stazione
+  // (il giocatore non è presente per interagire con l'acquisto carburante).
+  function checkMissionCompletionOffline() {
     if (!currentMission) return;
     const targetId = currentMission.phase === 'PICKUP' ? currentMission.originId : currentMission.destId;
     const targetPad = findPad(targetId);
     targetPad.group.getWorldPosition(_tmpPadPos);
     const dist = ship.position.distanceTo(_tmpPadPos);
-
     if (dist <= MISSION_DETECTION_RADIUS_UNITS) {
       if (currentMission.phase === 'PICKUP') {
         currentMission.phase = 'DELIVERY';
-        showMissionToast('Carico ritirato — dirigersi verso ' + findPad(currentMission.destId).name);
-        playChimeSound();
-        saveGame();
+        currentMission.cargoIntegrity = 100;
       } else if (currentMission.phase === 'DELIVERY') {
-        showMissionToast('Consegna completata su ' + targetPad.name);
-        playChimeSound();
+        let payout = 0;
+        if (currentMission.cargoIntegrity >= CARGO_MIN_INTEGRITY_FOR_PAYOUT) {
+          payout = Math.round(currentMission.reward * (currentMission.cargoIntegrity / 100));
+        }
+        playerMoney += payout;
         generateMission();
-        saveGame();
       }
     }
   }
@@ -1751,6 +1989,7 @@
         flightMode: flightState.mode,
         throttleKmh: flightState.throttleKmh,
         hullIntegrity: hullState.integrity,
+        money: playerMoney,
         mission: currentMission,
         savedAtISO: now.toISOString(),
         savedAtLabel: formatItalianDate(now)
@@ -1775,7 +2014,18 @@
       if (data.flightMode === 'sublight' || data.flightMode === 'warp') flightState.mode = data.flightMode;
       if (typeof data.throttleKmh === 'number') flightState.throttleKmh = data.throttleKmh;
       if (typeof data.hullIntegrity === 'number') hullState.integrity = data.hullIntegrity;
-      if (data.mission) currentMission = data.mission;
+      if (typeof data.money === 'number') playerMoney = data.money;
+      if (data.mission) {
+        currentMission = data.mission;
+        // Salvataggi precedenti a questo aggiornamento non hanno questi campi: li
+        // completo con valori ragionevoli invece di rischiare un errore a runtime.
+        if (typeof currentMission.reward !== 'number') {
+          currentMission.reward = calculateMissionReward(currentMission.originId, currentMission.destId);
+        }
+        if (typeof currentMission.cargoIntegrity !== 'number') {
+          currentMission.cargoIntegrity = 100;
+        }
+      }
       lastSaveLabel = data.savedAtLabel || null;
       lastLoadedSaveISO = data.savedAtISO || null;
       return true;
@@ -1829,19 +2079,65 @@
     let realKmTraveled = 0;
     let ranOutOfFuel = false;
     let hullDamageFromWarpStress = 0;
+    let warpShutOffByHull = false;
 
-    if (displayedKmh > 0 && isConsuming) {
-      const consumptionRate = realKmPerSec * consumingMultiplier; // km carburante/sec
+    if (wasWarp) {
+      // Warp: consumo carburante e stress da integrità gestiti insieme, minuto per
+      // minuto, perché lo spegnimento automatico al 75% può avvenire a metà periodo
+      // (prima ancora che finisca il carburante o il tempo offline stesso).
+      const consumptionRate = realKmPerSec * consumingMultiplier;
+      const secondsToEmptyFuel = consumptionRate > 0 ? flightState.fuelKm / consumptionRate : Infinity;
+      const maxSeconds = Math.min(elapsedSeconds, secondsToEmptyFuel);
+      const minuteSec = WARP_DAMAGE_CHECK_INTERVAL_MS / 1000;
+      const fullMinutes = Math.floor(maxSeconds / minuteSec);
+
+      for (let i = 0; i < fullMinutes; i++) {
+        if (Math.random() < WARP_DAMAGE_CHANCE) {
+          const dmg = warpDamagePercentForCurrentHull();
+          hullState.integrity = Math.max(0, hullState.integrity - dmg);
+          hullDamageFromWarpStress += dmg;
+          maybeDamageCargo();
+        }
+        const severeDmg = rollSevereWarpDamage();
+        if (severeDmg > 0) {
+          hullState.integrity = Math.max(0, hullState.integrity - severeDmg);
+          hullDamageFromWarpStress += severeDmg;
+          maybeDamageCargo();
+        }
+        if (hullState.integrity <= WARP_AUTO_SHUTOFF_HULL_PERCENT) {
+          movingSeconds = (i + 1) * minuteSec;
+          warpShutOffByHull = true;
+          break;
+        }
+      }
+      if (!warpShutOffByHull) { movingSeconds = maxSeconds; }
+      stoppedSeconds = elapsedSeconds - movingSeconds;
+
+      fuelUsed = consumptionRate * movingSeconds;
+      realKmTraveled = realKmPerSec * movingSeconds;
+
+      if (movingSeconds >= secondsToEmptyFuel) {
+        flightState.fuelKm = 0;
+        flightState.mode = 'sublight';
+        flightState.throttleKmh = 0;
+        ranOutOfFuel = true;
+      } else {
+        flightState.fuelKm = Math.max(0, flightState.fuelKm - fuelUsed);
+        if (warpShutOffByHull) { flightState.mode = 'sublight'; }
+        // Se nessuno dei due, il tempo offline è semplicemente finito mentre si era
+        // ancora in warp: il modo resta 'warp' per quando si riapre il gioco.
+      }
+    } else if (displayedKmh > 0 && isConsuming) {
+      const consumptionRate = realKmPerSec; // sub-luce: moltiplicatore 1
       const secondsToEmpty = consumptionRate > 0 ? flightState.fuelKm / consumptionRate : Infinity;
 
       if (elapsedSeconds > secondsToEmpty) {
-        // Il carburante si esaurisce a metà periodo (warp o sub-luce): viaggia fino a
-        // quel momento, poi resta ferma per il resto — stessa regola del volo live.
+        // Il carburante si esaurisce a metà periodo: viaggia fino a quel momento,
+        // poi resta ferma per il resto — stessa regola del volo live.
         movingSeconds = Math.max(0, secondsToEmpty);
         stoppedSeconds = elapsedSeconds - movingSeconds;
         fuelUsed = flightState.fuelKm;
         flightState.fuelKm = 0;
-        flightState.mode = 'sublight';
         flightState.throttleKmh = 0;
         ranOutOfFuel = true;
       } else {
@@ -1856,26 +2152,11 @@
       stoppedSeconds = elapsedSeconds;
     }
 
-    // Stress da warp: stessa regola del volo live, applicata una volta per ogni
-    // minuto pieno trascorso effettivamente in warp durante il periodo offline.
-    if (wasWarp) {
-      const warpMinutes = Math.floor(movingSeconds / (WARP_DAMAGE_CHECK_INTERVAL_MS / 1000));
-      for (let i = 0; i < warpMinutes; i++) {
-        if (Math.random() < WARP_DAMAGE_CHANCE) {
-          const dmg = warpDamagePercentForCurrentHull();
-          hullState.integrity = Math.max(0, hullState.integrity - dmg);
-          hullDamageFromWarpStress += dmg;
-        }
-      }
-    }
-
-    // Rigenerazione carburante/scafo per la parte di tempo in cui è restata ferma
-    if (stoppedSeconds > 0) {
-      if (hullState.integrity >= HULL_MAX) {
-        flightState.fuelKm = Math.min(FLIGHT.FUEL_CAPACITY_KM, flightState.fuelKm + FLIGHT.FUEL_REGEN_KM_PER_SEC * stoppedSeconds);
-      } else {
-        hullState.integrity = Math.min(HULL_MAX, hullState.integrity + HULL_REPAIR_RATE_PER_SEC * stoppedSeconds);
-      }
+    // Riparazione passiva dello scafo per la parte di tempo in cui è restata ferma
+    // (il carburante non si rigenera più da solo: ora si può solo comprare)
+    if (stoppedSeconds > 0 && hullState.integrity < HULL_MAX) {
+      const repairMinutes = Math.floor(stoppedSeconds / (PASSIVE_REPAIR_INTERVAL_MS / 1000));
+      hullState.integrity = Math.min(HULL_MAX, hullState.integrity + repairMinutes * PASSIVE_REPAIR_PERCENT_PER_MIN);
     }
 
     if (realKmTraveled > 0) {
@@ -1884,7 +2165,7 @@
       ship.position.add(forward);
     }
 
-    updateMissionProgress();
+    checkMissionCompletionOffline();
 
     return {
       elapsedSeconds: elapsedSeconds,
@@ -1892,7 +2173,8 @@
       fuelUsed: fuelUsed,
       ranOutOfFuel: ranOutOfFuel,
       wasMoving: displayedKmh > 0,
-      hullDamageFromWarpStress: hullDamageFromWarpStress
+      hullDamageFromWarpStress: hullDamageFromWarpStress,
+      warpShutOffByHull: warpShutOffByHull
     };
   }
 
@@ -1919,6 +2201,7 @@
         'La navicella ha percorso circa <b>' + Math.round(summary.realKmTraveled).toLocaleString('it-IT') + ' km</b> lungo la rotta impostata' +
         (summary.fuelUsed > 0 ? ', consumando circa ' + Math.round(summary.fuelUsed).toLocaleString('it-IT') + ' km di carburante.' : '.') +
         (summary.ranOutOfFuel ? '<br>Il serbatoio si è esaurito durante il viaggio — la navicella si è fermata ad aspettarti.' : '') +
+        (summary.warpShutOffByHull ? '<br>Il warp si è disattivato da solo al 75% di integrità scafo.' : '') +
         (summary.hullDamageFromWarpStress > 0 ? '<br>Lo stress del warp ha danneggiato lo scafo di circa ' + Math.round(summary.hullDamageFromWarpStress) + '%.' : '');
     }
     showScreen('offline-report');
@@ -1930,7 +2213,8 @@
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignorato */ }
     flightState.throttleKmh = 0;
     flightState.mode = 'sublight';
-    flightState.fuelKm = FLIGHT.FUEL_CAPACITY_KM;
+    flightState.fuelKm = FLIGHT.FUEL_CAPACITY_KM * NEW_GAME_FUEL_FRACTION;
+    playerMoney = NEW_GAME_STARTING_MONEY;
     hullState.integrity = HULL_MAX;
     cameraLook.yaw = 0;
     cameraLook.pitch = 0;
@@ -2058,8 +2342,23 @@
         warpDamageLastCheckMs += WARP_DAMAGE_CHECK_INTERVAL_MS;
         if (Math.random() < WARP_DAMAGE_CHANCE) {
           hullState.integrity = Math.max(0, hullState.integrity - warpDamagePercentForCurrentHull());
+          maybeDamageCargo();
+        }
+        const severeDmg = rollSevereWarpDamage();
+        if (severeDmg > 0) {
+          hullState.integrity = Math.max(0, hullState.integrity - severeDmg);
+          maybeDamageCargo();
         }
       }
+    }
+
+    // Spegnimento automatico del warp: raggiunta la soglia del 75% di integrità,
+    // il warp si disattiva da solo (ma può essere stato attivato solo al 100%,
+    // quindi resta comunque coerente scendere fino al 75% durante un salto già in corso).
+    if (flightState.mode === 'warp' && hullState.integrity <= WARP_AUTO_SHUTOFF_HULL_PERCENT) {
+      flightState.mode = 'sublight';
+      warpDamageLastCheckMs = null;
+      playWarpDisengageSound();
     }
 
     const displayedKmh = currentDisplayedSpeedKmh();
@@ -2073,10 +2372,9 @@
     } else if (displayedKmh >= FLIGHT.REGEN_THRESHOLD_KMH) {
       flightState.fuelKm = Math.max(0, flightState.fuelKm - realKmThisFrame);
       if (flightState.fuelKm <= 0) { flightState.throttleKmh = 0; } // carburante esaurito: la navicella si ferma
-    } else if (hullState.integrity >= HULL_MAX) {
-      // Il carburante si ricarica solo a scafo integro
-      flightState.fuelKm = Math.min(FLIGHT.FUEL_CAPACITY_KM, flightState.fuelKm + FLIGHT.FUEL_REGEN_KM_PER_SEC * dt);
     }
+    // Sotto la soglia il carburante non si consuma, ma non si rigenera più da solo:
+    // ora si può solo comprare presso una stazione.
 
     let collided = false;
     const prevPos = ship.position.clone();
@@ -2106,11 +2404,19 @@
 
     if (collided) {
       hullState.integrity = Math.max(0, hullState.integrity - HULL_DAMAGE_RATE_PER_SEC * dt);
+      passiveRepairLastCheckMs = null; // un urto interrompe il "credito" di riparazione accumulato
     } else if (isStopped && hullState.integrity < HULL_MAX) {
-      hullState.integrity = Math.min(HULL_MAX, hullState.integrity + HULL_REPAIR_RATE_PER_SEC * dt);
+      const nowMs = Date.now();
+      if (passiveRepairLastCheckMs === null) passiveRepairLastCheckMs = nowMs;
+      while (nowMs - passiveRepairLastCheckMs >= PASSIVE_REPAIR_INTERVAL_MS && hullState.integrity < HULL_MAX) {
+        passiveRepairLastCheckMs += PASSIVE_REPAIR_INTERVAL_MS;
+        hullState.integrity = Math.min(HULL_MAX, hullState.integrity + PASSIVE_REPAIR_PERCENT_PER_MIN);
+      }
+    } else {
+      passiveRepairLastCheckMs = null;
     }
 
-    if (collided && !wasCollidedLastFrame) { playCollisionSound(); }
+    if (collided && !wasCollidedLastFrame) { playCollisionSound(); maybeDamageCargo(); }
     wasCollidedLastFrame = collided;
 
     document.getElementById('collision-flash').classList.toggle('active', collided);
@@ -2164,6 +2470,13 @@
     const distKm = distUnits * KM_PER_UNIT;
     el.targetDistance.textContent = Math.round(distKm).toLocaleString('it-IT') + ' km';
 
+    const rewardEl = document.getElementById('target-reward');
+    if (isPickup) {
+      rewardEl.textContent = 'Premio: ' + currentMission.reward.toLocaleString('it-IT') + ' €$';
+    } else {
+      rewardEl.textContent = 'Merce: ' + Math.round(currentMission.cargoIntegrity) + '% — ' + currentMission.reward.toLocaleString('it-IT') + ' €$';
+    }
+
     const ndc = _tmpTargetPos.clone().project(camera);
     const behind = ndc.z > 1;
     el.targetArrow.classList.toggle('behind', behind);
@@ -2186,9 +2499,12 @@
     else if (hullState.integrity < 60) hullColor = '#ffb020';
     hullFillEl.style.backgroundColor = hullColor;
 
+    document.getElementById('ship-panel-money').textContent = Math.round(playerMoney).toLocaleString('it-IT') + ' €$';
+
     if (currentMission) {
       if (currentMission.phase === 'DELIVERY') {
-        cargoEl.textContent = 'Carica — diretta a ' + findPad(currentMission.destId).name;
+        cargoEl.textContent = 'Carica (' + Math.round(currentMission.cargoIntegrity) + '% integra) — diretta a ' +
+          findPad(currentMission.destId).name + ', premio: ' + currentMission.reward.toLocaleString('it-IT') + ' €$';
       } else {
         cargoEl.textContent = 'Vuota — ritiro presso ' + findPad(currentMission.originId).name;
       }
@@ -2210,7 +2526,174 @@
       repairBtn.classList.remove('disabled');
       repairNote.textContent = '';
     }
+
+    const hatchBtn = document.getElementById('ship-panel-hatch-btn');
+    hatchBtn.classList.toggle('disabled', hullState.integrity >= 90);
   }
+
+  /* ============================================================
+     MINIGIOCO DI RIPARAZIONE (Step 6)
+
+     Un cerchio con una scarica elettrica che scorre in senso orario;
+     il giocatore trascina un cavo dal centro fino alla scarica e lo
+     mantiene attaccato per 1 secondo continuo per riparare lo scafo
+     di una quantità casuale (1-5%). 1 possibilità su 5 che il cavo si
+     stacchi appena raggiunge la scarica. Ogni riparazione riuscita
+     inverte il verso di rotazione.
+     ============================================================ */
+  const REPAIR_MINIGAME_HOLD_MS = 1000;
+  const REPAIR_MINIGAME_SNAP_CHANCE = 0.2; // 1 su 5
+  const REPAIR_MINIGAME_HEAL_MIN = 1;
+  const REPAIR_MINIGAME_HEAL_MAX = 5;
+  const REPAIR_MINIGAME_CONTACT_RADIUS_PX = 18;
+  const REPAIR_MINIGAME_CIRCLE_RADIUS_PX = 100;
+
+  function getRepairDischargeLapSeconds(hullPct) {
+    if (hullPct > 95) return 10;
+    if (hullPct > 90) return 8;
+    if (hullPct > 85) return 7;
+    if (hullPct > 80) return 6;
+    if (hullPct > 75) return 5;
+    return 4;
+  }
+
+  const repairMinigame = {
+    angleRad: -Math.PI / 2, // parte dall'alto
+    direction: 1,
+    dragging: false,
+    pointerId: null,
+    cableX: 0, cableY: 0, // relative al centro del canvas
+    attached: false,
+    holdStartMs: null,
+    justEvaluatedContact: false
+  };
+
+  const repairCanvas = document.getElementById('repair-canvas');
+  const repairCtx = repairCanvas.getContext('2d');
+
+  function dischargePosition() {
+    return {
+      x: Math.cos(repairMinigame.angleRad) * REPAIR_MINIGAME_CIRCLE_RADIUS_PX,
+      y: Math.sin(repairMinigame.angleRad) * REPAIR_MINIGAME_CIRCLE_RADIUS_PX
+    };
+  }
+
+  function updateRepairMinigame(dt) {
+    const lapSeconds = getRepairDischargeLapSeconds(hullState.integrity);
+    const angularSpeed = (2 * Math.PI / lapSeconds) * repairMinigame.direction;
+    repairMinigame.angleRad += angularSpeed * dt;
+
+    if (repairMinigame.dragging) {
+      const dPos = dischargePosition();
+      const dist = Math.hypot(repairMinigame.cableX - dPos.x, repairMinigame.cableY - dPos.y);
+      const inContact = dist <= REPAIR_MINIGAME_CONTACT_RADIUS_PX;
+
+      if (inContact && !repairMinigame.attached) {
+        // Primo contatto: possibilità di distacco
+        if (Math.random() < REPAIR_MINIGAME_SNAP_CHANCE) {
+          repairMinigame.dragging = false;
+          repairMinigame.attached = false;
+          repairMinigame.holdStartMs = null;
+          document.getElementById('repair-status-text').textContent = 'Il cavo si è staccato!';
+          playCollisionSound();
+        } else {
+          repairMinigame.attached = true;
+          repairMinigame.holdStartMs = Date.now();
+        }
+      } else if (inContact && repairMinigame.attached) {
+        const heldMs = Date.now() - repairMinigame.holdStartMs;
+        document.getElementById('repair-status-text').textContent = 'Tieni fermo… ' + Math.min(100, Math.round(heldMs / REPAIR_MINIGAME_HOLD_MS * 100)) + '%';
+        if (heldMs >= REPAIR_MINIGAME_HOLD_MS) {
+          const heal = REPAIR_MINIGAME_HEAL_MIN + Math.random() * (REPAIR_MINIGAME_HEAL_MAX - REPAIR_MINIGAME_HEAL_MIN);
+          hullState.integrity = Math.min(HULL_MAX, hullState.integrity + heal);
+          repairMinigame.direction *= -1;
+          repairMinigame.attached = false;
+          repairMinigame.holdStartMs = null;
+          repairMinigame.dragging = false;
+          document.getElementById('repair-status-text').textContent = 'Riparato +' + heal.toFixed(1) + '%!';
+          playChimeSound();
+          updateShipPanel();
+        }
+      } else if (!inContact && repairMinigame.attached) {
+        // Contatto perso per allontanamento del giocatore: si deve ricominciare l'attesa
+        repairMinigame.attached = false;
+        repairMinigame.holdStartMs = null;
+      }
+    }
+  }
+
+  function drawRepairMinigame() {
+    const w = repairCanvas.width, h = repairCanvas.height;
+    const cx = w / 2, cy = h / 2;
+    repairCtx.clearRect(0, 0, w, h);
+    repairCtx.fillStyle = '#05080f';
+    repairCtx.fillRect(0, 0, w, h);
+
+    // Cerchio guida
+    repairCtx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+    repairCtx.lineWidth = 2;
+    repairCtx.beginPath();
+    repairCtx.arc(cx, cy, REPAIR_MINIGAME_CIRCLE_RADIUS_PX, 0, Math.PI * 2);
+    repairCtx.stroke();
+
+    // Centro
+    repairCtx.fillStyle = '#5fb7c9';
+    repairCtx.beginPath();
+    repairCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+    repairCtx.fill();
+
+    // Scarica elettrica
+    const dPos = dischargePosition();
+    repairCtx.fillStyle = repairMinigame.attached ? '#ffd23f' : '#ff4d4d';
+    repairCtx.shadowColor = repairCtx.fillStyle;
+    repairCtx.shadowBlur = 12;
+    repairCtx.beginPath();
+    repairCtx.arc(cx + dPos.x, cy + dPos.y, 8, 0, Math.PI * 2);
+    repairCtx.fill();
+    repairCtx.shadowBlur = 0;
+
+    // Cavo
+    if (repairMinigame.dragging) {
+      repairCtx.strokeStyle = repairMinigame.attached ? '#ffd23f' : '#00f0ff';
+      repairCtx.lineWidth = 3;
+      repairCtx.beginPath();
+      repairCtx.moveTo(cx, cy);
+      repairCtx.lineTo(cx + repairMinigame.cableX, cy + repairMinigame.cableY);
+      repairCtx.stroke();
+      repairCtx.fillStyle = repairCtx.strokeStyle;
+      repairCtx.beginPath();
+      repairCtx.arc(cx + repairMinigame.cableX, cy + repairMinigame.cableY, 6, 0, Math.PI * 2);
+      repairCtx.fill();
+    }
+  }
+
+  function repairCanvasPointerDown(e) {
+    const rect = repairCanvas.getBoundingClientRect();
+    repairMinigame.dragging = true;
+    repairMinigame.pointerId = e.pointerId;
+    repairMinigame.cableX = (e.clientX - rect.left) - repairCanvas.width / 2;
+    repairMinigame.cableY = (e.clientY - rect.top) - repairCanvas.height / 2;
+    repairMinigame.attached = false;
+    repairMinigame.holdStartMs = null;
+    document.getElementById('repair-status-text').textContent = '';
+  }
+  function repairCanvasPointerMove(e) {
+    if (!repairMinigame.dragging || e.pointerId !== repairMinigame.pointerId) return;
+    const rect = repairCanvas.getBoundingClientRect();
+    repairMinigame.cableX = (e.clientX - rect.left) - repairCanvas.width / 2;
+    repairMinigame.cableY = (e.clientY - rect.top) - repairCanvas.height / 2;
+  }
+  function repairCanvasPointerUp(e) {
+    if (e && e.pointerId !== repairMinigame.pointerId) return;
+    repairMinigame.dragging = false;
+    repairMinigame.attached = false;
+    repairMinigame.holdStartMs = null;
+    document.getElementById('repair-status-text').textContent = '';
+  }
+  repairCanvas.addEventListener('pointerdown', repairCanvasPointerDown);
+  repairCanvas.addEventListener('pointermove', repairCanvasPointerMove);
+  repairCanvas.addEventListener('pointerup', repairCanvasPointerUp);
+  repairCanvas.addEventListener('pointercancel', repairCanvasPointerUp);
 
   function updateHud() {
     const displayedKmh = Math.round(currentDisplayedSpeedKmh());
@@ -2245,6 +2728,8 @@
     el.dbgGamepad.textContent = gamepadState.connected ? 'Connesso' : 'Non connesso';
     el.dbgSave.textContent = lastSaveLabel || '—';
 
+    document.getElementById('ship-panel-icon').classList.toggle('disabled', flightState.mode === 'warp');
+
     updateMissionHud();
     updateShipPanel();
   }
@@ -2264,6 +2749,12 @@
 
 
 
+
+
+
+
+
+
   function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -2274,7 +2765,7 @@
       updateOrbits(dt);
       updateShipOrientation(dt);
       updateFlightPhysics(dt);
-      updateMissionProgress();
+      checkStationArrival();
       if (quickRepairCooldownRemaining > 0) { quickRepairCooldownRemaining = Math.max(0, quickRepairCooldownRemaining - dt); }
     }
 
@@ -2284,6 +2775,7 @@
     updateAudio();
 
     if (screen === 'map') { drawMap(); }
+    if (screen === 'repair-minigame') { updateRepairMinigame(dt); drawRepairMinigame(); }
 
     renderer.render(scene, camera);
   }
