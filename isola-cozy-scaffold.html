@@ -41,6 +41,72 @@
   /* Nasconde i controlli touch su desktop con mouse */
   body.desktop-mode #joystick-zone,
   body.desktop-mode #action-buttons { display: none; }
+
+  /* Overlay del sonno */
+  #sleep-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #sleep-overlay.open { display: flex; }
+  #sleep-panel {
+    background: rgba(20, 24, 38, 0.92); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px; padding: 22px 26px; text-align: center; color: #fff;
+    font-family: -apple-system, sans-serif;
+  }
+  #sleep-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 14px; }
+  #sleep-panel .hours-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .hour-btn {
+    padding: 10px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08); color: #fff; font-size: 14px;
+  }
+  .hour-btn:active { background: rgba(255,255,255,0.25); }
+  #sleep-cancel { font-size: 12px; color: rgba(255,255,255,0.6); padding: 6px; }
+
+  #zzz-indicator {
+    position: fixed; inset: 0; z-index: 25; display: none;
+    align-items: center; justify-content: center;
+    font-size: 48px; color: #fff; pointer-events: none;
+  }
+  #zzz-indicator.show { display: flex; }
+
+  /* HUD inventario */
+  #inventory-hud {
+    position: absolute; top: 8px; right: 8px; display: flex; gap: 8px;
+  }
+  .inv-item {
+    background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; border-radius: 8px;
+    padding: 5px 9px; display: flex; align-items: center; gap: 5px;
+  }
+
+  /* Overlay del banco da lavoro */
+  #craft-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #craft-overlay.open { display: flex; }
+  #craft-panel {
+    background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
+    font-family: -apple-system, sans-serif;
+  }
+  #craft-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 12px; }
+  .recipe-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  .recipe-info { font-size: 13px; }
+  .recipe-cost { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+  .recipe-btn {
+    padding: 7px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1); color: #fff; font-size: 12px;
+  }
+  .recipe-btn:disabled { opacity: 0.35; }
+  #craft-cancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+
+  /* Evidenzia l'elemento selezionato col gamepad nei menu */
+  .gp-selected { outline: 2px solid #ffd166; outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -57,9 +123,38 @@
 
   <div id="action-buttons">
     <div class="action-btn" id="btnPhoto">📷</div>
-    <div class="action-btn" id="btnAction">✋</div>
+    <div class="action-btn" id="btnAction">⚒️</div>
+  </div>
+
+  <div id="inventory-hud">
+    <div class="inv-item"><span>🪵</span><span id="invLegna">0</span></div>
+    <div class="inv-item"><span>🪨</span><span id="invPietra">0</span></div>
+    <div class="inv-item"><span>🍎</span><span id="invFrutta">0</span></div>
+    <div class="inv-item"><span>🧱</span><span id="invRecinti">0</span></div>
   </div>
 </div>
+
+<div id="sleep-overlay">
+  <div id="sleep-panel">
+    <h3>Vai a dormire per quante ore?</h3>
+    <div class="hours-row">
+      <div class="hour-btn" data-hours="4">4 ore</div>
+      <div class="hour-btn" data-hours="8">8 ore</div>
+      <div class="hour-btn" data-hours="12">12 ore</div>
+    </div>
+    <div id="sleep-cancel">annulla</div>
+  </div>
+</div>
+
+<div id="craft-overlay">
+  <div id="craft-panel">
+    <h3>Banco da lavoro</h3>
+    <div id="recipe-list"></div>
+    <div id="craft-cancel">chiudi</div>
+  </div>
+</div>
+
+<div id="zzz-indicator">💤</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -83,6 +178,94 @@ const ISLAND = {
 const TENT_POS = { x: -25, z: -25 };
 
 /* =========================================================================
+   STAGIONI, METEO E OROLOGIO DI GIOCO
+   Un solo "orologio" (GameClock) è la sorgente di verità del tempo: tutto
+   il resto (meteo, luce, lucciole, in futuro traghetto/colture/riscaldamento)
+   si aggancia ai suoi eventi invece di tenere un proprio timer separato.
+   Durata stagioni: 7 giorni ciascuna per ora, facilmente estendibile.
+   ========================================================================= */
+const SEASONS = [
+  { name: 'Primavera', lengthDays: 7, weatherPool: ['sereno', 'sereno', 'nuvoloso', 'pioggia'], coldness: 0.35 },
+  { name: 'Estate',     lengthDays: 7, weatherPool: ['sereno', 'sereno', 'sereno', 'nuvoloso'],  coldness: 0.05 },
+  { name: 'Autunno',    lengthDays: 7, weatherPool: ['nuvoloso', 'pioggia', 'pioggia', 'sereno'], coldness: 0.55 },
+  { name: 'Inverno',    lengthDays: 7, weatherPool: ['sereno', 'nuvoloso', 'neve', 'neve'],        coldness: 1.0 },
+];
+
+class GameClock {
+  constructor(cfg) {
+    this.totalMinutes = cfg.startMinutes ?? 8 * 60;
+    this.baseMinutesPerRealSecond = cfg.minutesPerRealSecond;
+    this.seasons = cfg.seasons;
+    this.sleeping = false;
+    this.sleepMinutesPerRealSecond = 0;
+    this.sleepRemaining = 0;
+    this.listeners = { hour: [], day: [], season: [] };
+    this._prevHour = this.hour;
+    this._prevDay = this.dayIndex;
+    this._prevSeasonIdx = this.seasonIndex;
+  }
+  on(evt, cb) { this.listeners[evt].push(cb); }
+  emit(evt, ...args) { this.listeners[evt].forEach(cb => cb(...args)); }
+
+  get hour() { return Math.floor(this.totalMinutes / 60) % 24; }
+  get minuteOfHour() { return Math.floor(this.totalMinutes) % 60; }
+  get dayIndex() { return Math.floor(this.totalMinutes / (24 * 60)); }
+  get totalSeasonDays() { return this.seasons.reduce((s, x) => s + x.lengthDays, 0); }
+  get dayInCycle() { return this.dayIndex % this.totalSeasonDays; }
+  get seasonIndex() {
+    let acc = 0;
+    for (let i = 0; i < this.seasons.length; i++) {
+      acc += this.seasons[i].lengthDays;
+      if (this.dayInCycle < acc) return i;
+    }
+    return this.seasons.length - 1;
+  }
+  get season() { return this.seasons[this.seasonIndex]; }
+  get dayInSeason() {
+    let acc = 0;
+    for (let i = 0; i < this.seasonIndex; i++) acc += this.seasons[i].lengthDays;
+    return this.dayInCycle - acc;
+  }
+  // Progresso continuo 0..1 dentro la stagione corrente, usato per far
+  // "entrare" gradualmente la stagione successiva (niente salti secchi)
+  get seasonProgress() { return this.dayInSeason / this.season.lengthDays; }
+
+  startSleep(hours, realSeconds = 6) {
+    this.sleeping = true;
+    this.sleepMinutesPerRealSecond = (hours * 60) / realSeconds;
+    this.sleepRemaining = realSeconds;
+  }
+
+  update(dt) {
+    const rate = this.sleeping ? this.sleepMinutesPerRealSecond : this.baseMinutesPerRealSecond;
+    if (this.sleeping) {
+      this.sleepRemaining -= dt;
+      if (this.sleepRemaining <= 0) this.sleeping = false;
+    }
+    this.totalMinutes += dt * rate;
+
+    const h = this.hour;
+    if (h !== this._prevHour) { this._prevHour = h; this.emit('hour', h); }
+    const d = this.dayIndex;
+    if (d !== this._prevDay) { this._prevDay = d; this.emit('day', d); }
+    const s = this.seasonIndex;
+    if (s !== this._prevSeasonIdx) { this._prevSeasonIdx = s; this.emit('season', this.season); }
+  }
+}
+
+// Velocità tarata per testare rapidamente: 1 giorno di gioco ≈ 2.4 minuti reali.
+// In seguito la rallenteremo per il ritmo definitivo del gioco.
+const clock = new GameClock({ startMinutes: 7 * 60, minutesPerRealSecond: 10, seasons: SEASONS });
+
+let currentWeather = 'sereno';
+function pickNewWeather() {
+  const pool = clock.season.weatherPool;
+  currentWeather = pool[Math.floor(Math.random() * pool.length)];
+}
+pickNewWeather();
+clock.on('day', pickNewWeather); // per ora il meteo cambia una volta al giorno, si può affinare dopo
+
+/* =========================================================================
    SETUP BASE THREE.JS
    ========================================================================= */
 const scene = new THREE.Scene();
@@ -103,9 +286,12 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-/* Luce - stub semplice, il ciclo giorno/notte vero arriverà in una fase successiva */
+/* =========================================================================
+   LUCE E CIELO DINAMICI (giorno/notte + meteo)
+   Nessun timer proprio: ogni frame si legge semplicemente clock.hour e
+   currentWeather, si interpola colore/intensità, niente stato duplicato.
+   ========================================================================= */
 const sun = new THREE.DirectionalLight(0xfff2d6, 1.1);
-sun.position.set(80, 120, 40);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -160;
@@ -113,7 +299,147 @@ sun.shadow.camera.right = 160;
 sun.shadow.camera.top = 160;
 sun.shadow.camera.bottom = -160;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0xcfe8ff, 0.55));
+scene.add(sun.target);
+
+const ambient = new THREE.AmbientLight(0xcfe8ff, 0.55);
+scene.add(ambient);
+
+// Colori chiave del cielo lungo le 24 ore (alba, giorno, tramonto, notte)
+const SKY_KEYFRAMES = [
+  { h: 0,  sky: 0x0a1a35, sun: 0x24304f, ambientI: 0.25, sunI: 0.05 },
+  { h: 5,  sky: 0x1c2a4a, sun: 0x8a6a8f, ambientI: 0.3,  sunI: 0.15 },
+  { h: 7,  sky: 0xf3c98a, sun: 0xffcf9a, ambientI: 0.5,  sunI: 0.8  },
+  { h: 12, sky: 0x9fd3e8, sun: 0xfff2d6, ambientI: 0.6,  sunI: 1.15 },
+  { h: 17, sky: 0xf0b06a, sun: 0xffb877, ambientI: 0.55, sunI: 0.85 },
+  { h: 19, sky: 0x2c2a4a, sun: 0x5a4a7f, ambientI: 0.35, sunI: 0.2  },
+  { h: 21, sky: 0x0a1a35, sun: 0x24304f, ambientI: 0.25, sunI: 0.05 },
+  { h: 24, sky: 0x0a1a35, sun: 0x24304f, ambientI: 0.25, sunI: 0.05 },
+];
+
+const _skyColor = new THREE.Color();
+const _sunColor = new THREE.Color();
+function updateSky() {
+  const h = clock.hour + clock.minuteOfHour / 60;
+  let a = SKY_KEYFRAMES[0], b = SKY_KEYFRAMES[SKY_KEYFRAMES.length - 1];
+  for (let i = 0; i < SKY_KEYFRAMES.length - 1; i++) {
+    if (h >= SKY_KEYFRAMES[i].h && h <= SKY_KEYFRAMES[i + 1].h) {
+      a = SKY_KEYFRAMES[i]; b = SKY_KEYFRAMES[i + 1]; break;
+    }
+  }
+  const span = (b.h - a.h) || 1;
+  const t = (h - a.h) / span;
+
+  _skyColor.setHex(a.sky).lerp(new THREE.Color(b.sky), t);
+  _sunColor.setHex(a.sun).lerp(new THREE.Color(b.sun), t);
+  let ambientI = a.ambientI + (b.ambientI - a.ambientI) * t;
+  let sunI = a.sunI + (b.sunI - a.sunI) * t;
+
+  // Il meteo attenua la luce e appiattisce un po' i colori (nuvole/pioggia/neve)
+  const dim = currentWeather === 'sereno' ? 1 : currentWeather === 'nuvoloso' ? 0.75 : 0.55;
+  ambientI *= dim;
+  sunI *= dim;
+  if (currentWeather === 'neve') _skyColor.lerp(new THREE.Color(0xdfe8ee), 0.4);
+
+  scene.background.copy(_skyColor);
+  scene.fog.color.copy(_skyColor);
+  ambient.color.copy(_skyColor);
+  ambient.intensity = ambientI;
+  sun.color.copy(_sunColor);
+  sun.intensity = sunI;
+
+  // Il sole percorre un arco sopra l'isola: alto a mezzogiorno, basso all'alba/tramonto
+  const sunAngle = ((h - 6) / 12) * Math.PI; // 0 all'alba (h=6), PI al tramonto (h=18)
+  const sunHeight = Math.max(Math.sin(sunAngle), 0.05) * 130 + 20;
+  const sunSide = Math.cos(sunAngle) * 130;
+  sun.position.set(sunSide, sunHeight, 40);
+  sun.target.position.set(0, 0, 20);
+  sun.target.updateMatrixWorld();
+}
+
+/* --- Pioggia / neve: un semplice sistema a punti, riusato per entrambe --- */
+const WEATHER_PARTICLE_COUNT = 500;
+const weatherGeo = new THREE.BufferGeometry();
+const weatherPositions = new Float32Array(WEATHER_PARTICLE_COUNT * 3);
+for (let i = 0; i < WEATHER_PARTICLE_COUNT; i++) {
+  weatherPositions[i * 3 + 0] = (Math.random() - 0.5) * 140;
+  weatherPositions[i * 3 + 1] = Math.random() * 60;
+  weatherPositions[i * 3 + 2] = (Math.random() - 0.5) * 140;
+}
+weatherGeo.setAttribute('position', new THREE.BufferAttribute(weatherPositions, 3));
+const weatherMat = new THREE.PointsMaterial({ color: 0xcfe6ff, size: 0.6, transparent: true, opacity: 0.7 });
+const weatherParticles = new THREE.Points(weatherGeo, weatherMat);
+weatherParticles.visible = false;
+scene.add(weatherParticles);
+
+function updateWeatherParticles(dt) {
+  const isRain = currentWeather === 'pioggia';
+  const isSnow = currentWeather === 'neve';
+  weatherParticles.visible = isRain || isSnow;
+  if (!weatherParticles.visible) return;
+
+  weatherParticles.position.x = player.position.x;
+  weatherParticles.position.z = player.position.z;
+  weatherMat.color.setHex(isSnow ? 0xffffff : 0xcfe6ff);
+  weatherMat.size = isSnow ? 0.5 : 0.6;
+
+  const fallSpeed = isSnow ? 6 : 45;
+  const pos = weatherGeo.attributes.position;
+  for (let i = 0; i < WEATHER_PARTICLE_COUNT; i++) {
+    let y = pos.getY(i) - fallSpeed * dt;
+    if (isSnow) pos.setX(i, pos.getX(i) + Math.sin(y * 0.5) * 0.3 * dt);
+    if (y < 0) y = 60;
+    pos.setY(i, y);
+  }
+  pos.needsUpdate = true;
+}
+
+/* --- Lucciole: solo a tarda primavera/estate, di sera/notte, vicino al fiume --- */
+const FIREFLY_COUNT = 60;
+const fireflyGeo = new THREE.BufferGeometry();
+const fireflyBase = [];
+const fireflyPositions = new Float32Array(FIREFLY_COUNT * 3);
+for (let i = 0; i < FIREFLY_COUNT; i++) {
+  // sparse lungo il percorso del fiume, dove l'atmosfera serale rende meglio
+  const t = Math.random();
+  const bx = ISLAND.riverA.x + (ISLAND.riverB.x - ISLAND.riverA.x) * t + (Math.random() - 0.5) * 30;
+  const bz = ISLAND.riverA.z + (ISLAND.riverB.z - ISLAND.riverA.z) * t + (Math.random() - 0.5) * 30;
+  const by = 1 + Math.random() * 3;
+  fireflyBase.push({ x: bx, y: by, z: bz, phase: Math.random() * Math.PI * 2 });
+  fireflyPositions[i * 3 + 0] = bx;
+  fireflyPositions[i * 3 + 1] = by;
+  fireflyPositions[i * 3 + 2] = bz;
+}
+fireflyGeo.setAttribute('position', new THREE.BufferAttribute(fireflyPositions, 3));
+const fireflyMat = new THREE.PointsMaterial({ color: 0xd9ff8a, size: 0.9, transparent: true, opacity: 0.9 });
+const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
+fireflies.visible = false;
+scene.add(fireflies);
+
+function fireflySeasonActive() {
+  // "tarda primavera" = seconda metà della Primavera, poi tutta l'Estate
+  const s = clock.season.name;
+  if (s === 'Estate') return true;
+  if (s === 'Primavera' && clock.seasonProgress > 0.5) return true;
+  return false;
+}
+
+function updateFireflies(elapsedTime) {
+  const eveningOrNight = clock.hour >= 20 || clock.hour < 5;
+  fireflies.visible = fireflySeasonActive() && eveningOrNight;
+  if (!fireflies.visible) return;
+  const pos = fireflyGeo.attributes.position;
+  for (let i = 0; i < FIREFLY_COUNT; i++) {
+    const b = fireflyBase[i];
+    pos.setXYZ(
+      i,
+      b.x + Math.sin(elapsedTime * 0.6 + b.phase) * 2.5,
+      b.y + Math.sin(elapsedTime * 1.3 + b.phase * 2) * 0.6,
+      b.z + Math.cos(elapsedTime * 0.5 + b.phase) * 2.5
+    );
+  }
+  pos.needsUpdate = true;
+  fireflyMat.opacity = 0.6 + Math.sin(elapsedTime * 3) * 0.3;
+}
 
 /* =========================================================================
    TERRENO: oceano + Valle + Cala + fiume + ponte
@@ -196,6 +522,29 @@ function makeTent() {
 }
 const tent = makeTent();
 
+// Banco da lavoro - placeholder (tavolo + attrezzi appoggiati), vicino alla tenda
+function makeWorkbench() {
+  const group = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.35, 1.8), new THREE.MeshLambertMaterial({ color: 0x8a6339 }));
+  top.position.y = 1.1;
+  top.castShadow = true;
+  top.receiveShadow = true;
+  group.add(top);
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x5f4426 });
+  const legGeo = new THREE.BoxGeometry(0.25, 1.1, 0.25);
+  [[-1.4, -0.75], [1.4, -0.75], [-1.4, 0.75], [1.4, 0.75]].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(lx, 0.55, lz);
+    leg.castShadow = true;
+    group.add(leg);
+  });
+  const pos = { x: TENT_POS.x + 8, z: TENT_POS.z + 3 };
+  group.position.set(pos.x, 0, pos.z);
+  scene.add(group);
+  return group;
+}
+const workbench = makeWorkbench();
+
 /* =========================================================================
    COLLISIONI SEMPLICI: il player può stare solo su Valle, Cala o Ponte
    ========================================================================= */
@@ -217,6 +566,158 @@ function insideBridge(x, z) {
 
 function isWalkable(x, z) {
   return insideEllipse(x, z, ISLAND.valley) || insideEllipse(x, z, ISLAND.cala) || insideBridge(x, z);
+}
+
+/* =========================================================================
+   RISORSE: alberi da frutta (raccolta a mano), alberi da legna e rocce
+   (da colpire con l'attrezzo)
+   ========================================================================= */
+const interactables = []; // { obj, type, ...stato specifico }
+interactables.push({ obj: tent, type: 'tent' });
+interactables.push({ obj: workbench, type: 'workbench' });
+const placedPoints = [];  // per tenere le risorse spaziate tra loro
+
+/* =========================================================================
+   BANCO DA LAVORO - ricette Livello 1
+   ========================================================================= */
+let toolTier = 1; // 1 = attrezzo base, 2 = rinforzato (meno colpi per abbattere)
+const RECIPES = [
+  {
+    id: 'attrezzo_rinforzato',
+    name: 'Attrezzo rinforzato',
+    cost: { legna: 5, pietra: 5 },
+    once: true,
+    isDone: () => toolTier >= 2,
+    craft: () => {
+      toolTier = 2;
+      // gli alberi/rocce già piazzati diventano più veloci da abbattere da subito
+      for (const it of interactables) {
+        if ((it.type === 'woodTree' || it.type === 'rock') && it.obj.userData.maxHits > 2) {
+          it.obj.userData.maxHits = 2;
+        }
+      }
+    },
+  },
+  {
+    id: 'recinto',
+    name: 'Pannello di recinto',
+    cost: { legna: 4 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.recinti++; },
+  },
+];
+
+function scatterPoints(count, zoneCfg, minSpacing) {
+  const pts = [];
+  let attempts = 0;
+  while (pts.length < count && attempts < count * 50) {
+    attempts++;
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * 0.88; // resta un po' dentro il bordo dell'isola
+    const x = zoneCfg.cx + Math.cos(a) * zoneCfg.rx * r;
+    const z = zoneCfg.cz + Math.sin(a) * zoneCfg.rz * r;
+    if (!isWalkable(x, z)) continue;
+    if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 11) continue;
+    if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < 15) continue;
+    let tooClose = false;
+    for (const p of placedPoints) {
+      if (Math.hypot(x - p.x, z - p.z) < minSpacing) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
+    pts.push({ x, z });
+    placedPoints.push({ x, z });
+  }
+  return pts;
+}
+
+function makeFruitTree(x, z) {
+  const group = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.65, 3, 8), new THREE.MeshLambertMaterial({ color: 0x7a5230 }));
+  trunk.position.y = 1.5;
+  trunk.castShadow = true;
+  group.add(trunk);
+  const canopy = new THREE.Mesh(new THREE.SphereGeometry(2.6, 8, 7), new THREE.MeshLambertMaterial({ color: 0x6fa84f }));
+  canopy.position.y = 4.3;
+  canopy.castShadow = true;
+  group.add(canopy);
+  const fruitsGroup = new THREE.Group();
+  const fruitMat = new THREE.MeshLambertMaterial({ color: 0xe0672e });
+  for (let i = 0; i < 5; i++) {
+    const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 6), fruitMat);
+    const a = (i / 5) * Math.PI * 2;
+    fruit.position.set(Math.cos(a) * 2.1, 4.1 + Math.sin(i) * 0.6, Math.sin(a) * 2.1);
+    fruitsGroup.add(fruit);
+  }
+  group.add(fruitsGroup);
+  group.position.set(x, 0, z);
+  group.userData = { fruitsGroup, harvested: false, regrowTimer: 0 };
+  scene.add(group);
+  interactables.push({ obj: group, type: 'fruitTree' });
+}
+
+function makeWoodTree(x, z) {
+  const group = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.75, 4.5, 8), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+  trunk.position.y = 2.25;
+  trunk.castShadow = true;
+  group.add(trunk);
+  const canopy = new THREE.Mesh(new THREE.ConeGeometry(2.4, 5.5, 8), new THREE.MeshLambertMaterial({ color: 0x3f7a44 }));
+  canopy.position.y = 6.5;
+  canopy.castShadow = true;
+  group.add(canopy);
+  group.position.set(x, 0, z);
+  group.userData = { hits: 0, maxHits: 3, felled: false, respawnTimer: 0, shakeTimer: 0 };
+  scene.add(group);
+  interactables.push({ obj: group, type: 'woodTree' });
+}
+
+function makeRock(x, z) {
+  const group = new THREE.Group();
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.3, 0), new THREE.MeshLambertMaterial({ color: 0x8a8578 }));
+  rock.position.y = 0.9;
+  rock.rotation.set(Math.random(), Math.random(), Math.random());
+  rock.castShadow = true;
+  group.add(rock);
+  const mineral = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), new THREE.MeshLambertMaterial({ color: 0x6fa8c9 }));
+  mineral.position.set(0.5, 1.3, 0.3);
+  group.add(mineral);
+  group.position.set(x, 0, z);
+  group.userData = { hits: 0, maxHits: 3, felled: false, respawnTimer: 0, shakeTimer: 0 };
+  scene.add(group);
+  interactables.push({ obj: group, type: 'rock' });
+}
+
+scatterPoints(10, ISLAND.valley, 9).forEach(p => makeFruitTree(p.x, p.z));
+scatterPoints(14, ISLAND.valley, 8).forEach(p => makeWoodTree(p.x, p.z));
+scatterPoints(6, ISLAND.valley, 8).forEach(p => makeRock(p.x, p.z));
+scatterPoints(10, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
+scatterPoints(9, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
+
+const RESPAWN_TIME = 40;   // secondi reali prima che un albero da legna/roccia ricresca
+const REGROW_TIME = 30;    // secondi reali prima che l'albero da frutta ridia frutti
+
+function updateResources(dt) {
+  for (const it of interactables) {
+    const d = it.obj.userData;
+    if (it.type === 'fruitTree') {
+      if (d.harvested) {
+        d.regrowTimer -= dt;
+        if (d.regrowTimer <= 0) { d.harvested = false; d.fruitsGroup.visible = true; }
+      }
+    } else if (it.type === 'woodTree' || it.type === 'rock') {
+      if (d.felled) {
+        d.respawnTimer -= dt;
+        if (d.respawnTimer <= 0) { d.felled = false; d.hits = 0; it.obj.visible = true; }
+      }
+      if (d.shakeTimer > 0) {
+        d.shakeTimer -= dt;
+        const s = Math.sin(d.shakeTimer * 60) * 0.06;
+        it.obj.rotation.z = d.felled ? 0 : s;
+        if (d.shakeTimer <= 0) it.obj.rotation.z = 0;
+      }
+    }
+  }
 }
 
 /* =========================================================================
@@ -371,6 +872,19 @@ if (!('ontouchstart' in window)) {
   document.body.classList.add('desktop-mode');
 }
 
+/* "Fronte di salita" del pulsante azione/foto: true solo nel frame in cui il
+   pulsante passa da rilasciato a premuto, non per tutta la durata in cui resta
+   tenuto — altrimenti un singolo tap (che dura più frame) conterebbe come più
+   colpi consecutivi su alberi/rocce. */
+let prevActionPressed = false;
+let prevPhotoPressed = false;
+function updateInputEdges() {
+  input.actionJustPressed = input.actionPressed && !prevActionPressed;
+  input.photoJustPressed = input.photoPressed && !prevPhotoPressed;
+  prevActionPressed = input.actionPressed;
+  prevPhotoPressed = input.photoPressed;
+}
+
 /* =========================================================================
    CAMERA A DISTANZA FISSA (terza persona, segue il player)
    ========================================================================= */
@@ -428,17 +942,214 @@ function updatePlayer(dt) {
 }
 
 /* =========================================================================
-   INTERAZIONI (stub minimo, pronto per essere esteso)
+   NAVIGAZIONE MENU VIA GAMEPAD
+   Generico: qualunque menu registra la lista dei suoi "bottoni" (anche div
+   con un listener click), e questo sistema li evidenzia/naviga a turno.
+   D-pad o levetta sinistra = sposta selezione, A = conferma, B = annulla.
    ========================================================================= */
-function checkInteractions() {
-  const dist = player.position.distanceTo(tent.position);
-  const debugEl = document.getElementById('debug');
-  let hint = '';
-  if (dist < 6) {
-    hint = 'Vicino alla tenda — [E] per dormire';
-    if (input.actionPressed) console.log('TODO: apri il menu del sonno (scegli ore)');
+const gamepadNav = { buttons: [], index: 0 };
+function setMenuButtons(buttons) {
+  gamepadNav.buttons = buttons;
+  gamepadNav.index = 0;
+  updateMenuHighlight();
+}
+function updateMenuHighlight() {
+  gamepadNav.buttons.forEach((b, i) => b.classList.toggle('gp-selected', i === gamepadNav.index));
+}
+
+let navRepeatTimer = 0;
+let prevPadConfirm = false;
+let prevPadCancel = false;
+
+function updateMenuGamepadNav(dt) {
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen;
+  if (!anyMenuOpen) { prevPadConfirm = false; prevPadCancel = false; return; }
+
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  if (!pad) return;
+
+  const dpadUp = pad.buttons[12] && pad.buttons[12].pressed;
+  const dpadDown = pad.buttons[13] && pad.buttons[13].pressed;
+  const stickY = pad.axes[1] || 0;
+  const wantUp = dpadUp || stickY < -0.5;
+  const wantDown = dpadDown || stickY > 0.5;
+
+  navRepeatTimer -= dt;
+  if ((wantUp || wantDown) && navRepeatTimer <= 0 && gamepadNav.buttons.length > 0) {
+    navRepeatTimer = 0.22; // ritmo di ripetizione tenendo premuto
+    const n = gamepadNav.buttons.length;
+    gamepadNav.index = wantUp ? (gamepadNav.index - 1 + n) % n : (gamepadNav.index + 1) % n;
+    updateMenuHighlight();
   }
+  if (!wantUp && !wantDown) navRepeatTimer = 0;
+
+  const confirmNow = !!(pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
+  const cancelNow = !!(pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
+
+  if (confirmNow && !prevPadConfirm) {
+    const btn = gamepadNav.buttons[gamepadNav.index];
+    if (btn && !btn.disabled) btn.click();
+  }
+  if (cancelNow && !prevPadCancel) {
+    if (sleepMenuOpen) closeSleepMenu();
+    if (craftMenuOpen) closeCraftMenu();
+  }
+  prevPadConfirm = confirmNow;
+  prevPadCancel = cancelNow;
+}
+
+/* =========================================================================
+   INTERAZIONI: tenda, alberi, rocce — tutte gestite dallo stesso sistema.
+   Ogni frame si cerca l'interactable più vicino entro un certo raggio,
+   e in base al suo "type" si decide cosa fare quando si preme azione.
+   ========================================================================= */
+const sleepOverlay = document.getElementById('sleep-overlay');
+const zzzIndicator = document.getElementById('zzz-indicator');
+let sleepMenuOpen = false;
+
+function openSleepMenu() {
+  sleepMenuOpen = true;
+  sleepOverlay.classList.add('open');
+  setMenuButtons([...document.querySelectorAll('.hour-btn'), document.getElementById('sleep-cancel')]);
+}
+function closeSleepMenu() {
+  sleepMenuOpen = false;
+  sleepOverlay.classList.remove('open');
+}
+document.querySelectorAll('.hour-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const hours = parseInt(btn.dataset.hours, 10);
+    closeSleepMenu();
+    clock.startSleep(hours, 6);
+    zzzIndicator.classList.add('show');
+  });
+});
+document.getElementById('sleep-cancel').addEventListener('click', closeSleepMenu);
+
+const craftOverlay = document.getElementById('craft-overlay');
+const recipeListEl = document.getElementById('recipe-list');
+let craftMenuOpen = false;
+
+function renderRecipes() {
+  recipeListEl.innerHTML = '';
+  for (const r of RECIPES) {
+    const done = r.once && r.isDone();
+    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k}`).join(', ');
+    const affordable = Object.entries(r.cost).every(([k, v]) => inventory[k] >= v);
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `
+      <div class="recipe-info">${r.name}<div class="recipe-cost">${done ? 'già ottenuto' : costText}</div></div>
+      <button class="recipe-btn" ${(done || !affordable) ? 'disabled' : ''}>${done ? '✓' : 'crea'}</button>
+    `;
+    if (!done) {
+      row.querySelector('.recipe-btn').addEventListener('click', () => {
+        if (!Object.entries(r.cost).every(([k, v]) => inventory[k] >= v)) return;
+        for (const [k, v] of Object.entries(r.cost)) inventory[k] -= v;
+        r.craft();
+        refreshInventoryHud();
+        renderRecipes();
+      });
+    }
+    recipeListEl.appendChild(row);
+  }
+  setMenuButtons([...recipeListEl.querySelectorAll('.recipe-btn'), document.getElementById('craft-cancel')]);
+}
+
+function openCraftMenu() {
+  craftMenuOpen = true;
+  renderRecipes();
+  craftOverlay.classList.add('open');
+}
+function closeCraftMenu() {
+  craftMenuOpen = false;
+  craftOverlay.classList.remove('open');
+}
+document.getElementById('craft-cancel').addEventListener('click', closeCraftMenu);
+
+const WEATHER_LABELS = { sereno: 'Sereno', nuvoloso: 'Nuvoloso', pioggia: 'Pioggia', neve: 'Neve' };
+
+const inventory = { legna: 0, pietra: 0, frutta: 0, recinti: 0 };
+const invEls = {
+  legna: document.getElementById('invLegna'), pietra: document.getElementById('invPietra'),
+  frutta: document.getElementById('invFrutta'), recinti: document.getElementById('invRecinti'),
+};
+function refreshInventoryHud() {
+  invEls.legna.textContent = inventory.legna;
+  invEls.pietra.textContent = inventory.pietra;
+  invEls.frutta.textContent = inventory.frutta;
+  invEls.recinti.textContent = inventory.recinti;
+}
+
+const INTERACT_RANGE = 6;
+
+function findNearestInteractable() {
+  let best = null, bestDist = Infinity;
+  for (const it of interactables) {
+    const d = player.position.distanceTo(it.obj.position);
+    if (d < INTERACT_RANGE && d < bestDist) { best = it; bestDist = d; }
+  }
+  return best;
+}
+
+function handleAction(target) {
+  const d = target.obj.userData;
+  if (target.type === 'tent') {
+    if (!clock.sleeping && !sleepMenuOpen) openSleepMenu();
+  } else if (target.type === 'workbench') {
+    if (!craftMenuOpen) openCraftMenu();
+  } else if (target.type === 'fruitTree') {
+    if (!d.harvested) {
+      d.harvested = true;
+      d.fruitsGroup.visible = false;
+      d.regrowTimer = REGROW_TIME;
+      inventory.frutta++;
+      refreshInventoryHud();
+    }
+  } else if (target.type === 'woodTree' || target.type === 'rock') {
+    if (!d.felled) {
+      d.hits++;
+      d.shakeTimer = 0.2;
+      if (d.hits >= d.maxHits) {
+        d.felled = true;
+        d.respawnTimer = RESPAWN_TIME;
+        target.obj.visible = false;
+        if (target.type === 'woodTree') inventory.legna += 3; else inventory.pietra += 3;
+      } else {
+        if (target.type === 'woodTree') inventory.legna += 1; else inventory.pietra += 1;
+      }
+      refreshInventoryHud();
+    }
+  }
+}
+
+const INTERACT_HINTS = {
+  tent: 'Vicino alla tenda — [E] per dormire',
+  workbench: 'Banco da lavoro — [E] per creare oggetti',
+  fruitTree: 'Albero da frutta — [E] per raccogliere',
+  woodTree: 'Albero da legna — [E] per colpire',
+  rock: 'Roccia — [E] per colpire',
+};
+
+function checkInteractions() {
+  const debugEl = document.getElementById('debug');
+  const target = clock.sleeping ? null : findNearestInteractable();
+  let hint = '';
+  if (target) {
+    const d = target.obj.userData;
+    const depleted = (target.type === 'fruitTree' && d.harvested) || ((target.type === 'woodTree' || target.type === 'rock') && d.felled);
+    if (!depleted) {
+      hint = INTERACT_HINTS[target.type];
+      if (input.actionJustPressed && !sleepMenuOpen && !craftMenuOpen) handleAction(target);
+    }
+  }
+  const h = String(clock.hour).padStart(2, '0');
+  const m = String(clock.minuteOfHour).padStart(2, '0');
   debugEl.textContent =
+    `${h}:${m} — giorno ${clock.dayInSeason + 1}/${clock.season.lengthDays} di ${clock.season.name}\n` +
+    `meteo: ${WEATHER_LABELS[currentWeather]}${clock.sleeping ? ' — sto dormendo...' : ''}\n` +
+    `attrezzo: ${toolTier >= 2 ? 'rinforzato' : 'base'}\n` +
     `pos: ${player.position.x.toFixed(1)}, ${player.position.z.toFixed(1)}\n` +
     (hint ? hint : '');
 }
@@ -447,19 +1158,34 @@ function checkInteractions() {
    LOOP DI GIOCO
    ========================================================================= */
 let lastTime = performance.now();
+let elapsedTime = 0;
 function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
   const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp per evitare salti su tab inattivo
   lastTime = now;
+  elapsedTime += dt;
+
+  clock.update(dt);
+  updateSky();
+  updateWeatherParticles(dt);
+  updateFireflies(elapsedTime);
+  updateResources(dt);
 
   input.actionPressed = false;
   input.photoPressed = false;
   updateInput();
+  updateInputEdges();
+  updateMenuGamepadNav(dt);
 
-  updatePlayer(dt);
+  const controlsLocked = sleepMenuOpen || craftMenuOpen || clock.sleeping;
+  if (!controlsLocked) {
+    updatePlayer(dt);
+  }
   updateCamera();
   checkInteractions();
+
+  if (!clock.sleeping) zzzIndicator.classList.remove('show');
 
   renderer.render(scene, camera);
 }
