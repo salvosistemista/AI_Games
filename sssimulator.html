@@ -51,6 +51,14 @@
   #throttle-bar-track { margin-top: 8px; width: 100%; height: 5px; background: rgba(0, 240, 255, 0.12); border-radius: 3px; overflow: hidden; }
 
   #hull-row { display: flex; justify-content: space-between; font-size: 10px; color: #5fb7c9; margin-top: 10px; letter-spacing: 0.5px; }
+  #ship-panel-icon {
+    position: absolute; top: 6px; right: 6px; width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; border: 1px solid rgba(0, 240, 255, 0.4); border-radius: 4px;
+    color: #00f0ff; cursor: pointer; pointer-events: auto;
+    background: rgba(0, 240, 255, 0.06);
+  }
+  #ship-panel-icon:hover { background: rgba(0, 240, 255, 0.18); }
   #hull-pct { color: #00f0ff; font-weight: 700; }
   #hull-bar-track { margin-top: 4px; width: 100%; height: 5px; background: rgba(0, 240, 255, 0.12); border-radius: 3px; overflow: hidden; }
   #hull-bar-fill { height: 100%; width: 100%; background: #00f0ff; transition: width 0.2s linear, background-color 0.3s linear; }
@@ -293,6 +301,7 @@
   <div id="mission-toast" class="sci-fi-panel"></div>
 
   <div id="speed-panel" class="sci-fi-panel">
+    <div id="ship-panel-icon" title="Navicella">🔧</div>
     <div class="mode-badge" id="mode-badge">Sub-Luce</div>
     <div id="speed-value">0<span class="unit">km/h</span></div>
     <div id="throttle-bar-track"><div id="throttle-bar-fill"></div></div>
@@ -419,8 +428,32 @@
   <div class="menu-btn" id="map-close-btn">Chiudi</div>
   <div id="map-legend" class="sci-fi-panel" style="padding:8px 12px;">
     <div><span class="dot" style="background:#00f0ff;"></span>Navicella</div>
+    <div><span class="dot" style="background:#ffffff;"></span>Rotta attuale</div>
     <div><span class="dot" style="background:#ffd23f;"></span>Ritiro</div>
     <div><span class="dot" style="background:#00f0ff;"></span>Consegna</div>
+  </div>
+</div>
+
+<!-- ============ NAVICELLA (scafo, stiva, riparazione manuale) ============ -->
+<div id="ship-panel-screen" class="menu-screen">
+  <div class="menu-box sci-fi-panel">
+    <div class="menu-title">Navicella</div>
+
+    <div class="setting-row">
+      <span class="setting-label">Integrità scafo</span>
+      <span id="ship-panel-hull-pct" style="color:#00f0ff; font-weight:700;">100%</span>
+    </div>
+    <div id="hull-bar-track" style="margin-bottom:6px;"><div id="ship-panel-hull-fill" style="height:100%; width:100%; background:#00f0ff; border-radius:3px; transition: width 0.2s linear, background-color 0.3s linear;"></div></div>
+
+    <div class="setting-row">
+      <span class="setting-label">Stiva</span>
+      <span id="ship-panel-cargo" style="color:#cfe9ff; text-align:right; max-width:180px;">Vuota</span>
+    </div>
+
+    <div class="menu-btn" id="ship-panel-repair-btn">Riparazione rapida (+3%)</div>
+    <div id="ship-panel-repair-note" style="font-size:10px; color:#5fb7c9; text-align:center; min-height: 14px;"></div>
+
+    <div class="menu-btn" id="btn-ship-panel-back">Indietro</div>
   </div>
 </div>
 
@@ -464,7 +497,7 @@
   let previousScreenBeforeConfirm = 'title';
   let menuFocusIndex = 0;
 
-  const MENU_SCREENS = ['title', 'pause', 'settings', 'controls', 'map', 'confirm', 'offline-report'];
+  const MENU_SCREENS = ['title', 'pause', 'settings', 'controls', 'map', 'confirm', 'offline-report', 'ship-panel'];
   function isMenuScreen(s) { return MENU_SCREENS.indexOf(s) !== -1; }
 
   function getScreenEl(name) { return document.getElementById(name + '-screen') || document.getElementById(name + '-modal'); }
@@ -514,6 +547,7 @@
     else if (screen === 'map') { showScreen(mapReturnTo || 'playing'); }
     else if (screen === 'settings') { persistSettings(); showScreen(settingsReturnTo || 'title'); }
     else if (screen === 'controls') { showScreen(controlsReturnTo || 'title'); }
+    else if (screen === 'ship-panel') { showScreen('playing'); }
     else if (screen === 'confirm') { document.getElementById('confirm-no').click(); }
   }
 
@@ -1081,6 +1115,20 @@
   document.getElementById('btn-controls-title').addEventListener('click', function () { controlsReturnTo = 'title'; showScreen('controls'); });
   document.getElementById('btn-controls-back').addEventListener('click', function () { showScreen(controlsReturnTo); });
 
+  document.getElementById('ship-panel-icon').addEventListener('click', function () {
+    if (screen === 'playing') { updateShipPanel(); showScreen('ship-panel'); }
+  });
+  document.getElementById('btn-ship-panel-back').addEventListener('click', function () { showScreen('playing'); });
+  document.getElementById('ship-panel-repair-btn').addEventListener('click', function () {
+    const isStoppedForRepair = flightState.mode === 'sublight' && flightState.throttleKmh === 0;
+    if (hullState.integrity < HULL_MAX && quickRepairCooldownRemaining <= 0 && isStoppedForRepair) {
+      hullState.integrity = Math.min(HULL_MAX, hullState.integrity + QUICK_REPAIR_AMOUNT_PERCENT);
+      quickRepairCooldownRemaining = QUICK_REPAIR_COOLDOWN_SEC;
+      playChimeSound();
+      updateShipPanel();
+    }
+  });
+
   document.getElementById('confirm-yes').addEventListener('click', function () {
     const cb = pendingConfirmCallback;
     pendingConfirmCallback = null;
@@ -1365,7 +1413,29 @@
   const HULL_MAX = 100;
   const HULL_DAMAGE_RATE_PER_SEC = 18;   // %/sec a contatto — placeholder da tarare
   const HULL_REPAIR_RATE_PER_SEC = 2;    // %/sec da fermi — lento come richiesto
+
+  // Riparazione manuale rapida (pannello Navicella): un piccolo incremento immediato,
+  // utilizzabile solo da fermi e con un tempo di recupero tra un uso e l'altro —
+  // un intervento mirato che affianca (senza sostituire) la riparazione passiva lenta.
+  const QUICK_REPAIR_AMOUNT_PERCENT = 3;
+  const QUICK_REPAIR_COOLDOWN_SEC = 45;
+  let quickRepairCooldownRemaining = 0;
   const SHIP_COLLISION_RADIUS = 0.064935;
+
+  // Stress da warp: ogni minuto trascorso in warp c'è il 75% di probabilità di un
+  // danno da stress strutturale. Il danno base è 1%, raddoppia sotto il 90% di
+  // integrità, triplica sotto l'80% (lo scafo già ammaccato regge peggio i salti).
+  // Basato sull'orologio reale (Date.now), non sui frame accumulati: così non perde
+  // controlli se il browser rallenta o la scheda va in background.
+  const WARP_DAMAGE_CHECK_INTERVAL_MS = 60000;
+  const WARP_DAMAGE_CHANCE = 0.75;
+  const WARP_DAMAGE_BASE_PERCENT = 1;
+  function warpDamagePercentForCurrentHull() {
+    if (hullState.integrity < 80) return WARP_DAMAGE_BASE_PERCENT * 3;
+    if (hullState.integrity < 90) return WARP_DAMAGE_BASE_PERCENT * 2;
+    return WARP_DAMAGE_BASE_PERCENT;
+  }
+  let warpDamageLastCheckMs = null;
 
   const hullState = { integrity: HULL_MAX };
   let wasCollidedLastFrame = false;
@@ -1423,6 +1493,7 @@
       }
     } else {
       flightState.mode = 'sublight';
+      warpDamageLastCheckMs = null;
       playWarpDisengageSound();
     }
   }
@@ -1582,6 +1653,26 @@
     mapCtx.strokeStyle = '#00f0ff';
     mapCtx.beginPath(); mapCtx.arc(shipSx, shipSy, 8, 0, Math.PI * 2); mapCtx.stroke();
 
+    // Freccia di rotta: direzione verso cui punta effettivamente la navicella (la sua
+    // prua), ben visibile e distinta dalla freccia verso l'obiettivo missione sotto.
+    const shipForward = new THREE.Vector3(0, 0, -1).applyQuaternion(ship.quaternion);
+    const headingAngle = Math.atan2(shipForward.z, shipForward.x);
+    mapCtx.save();
+    mapCtx.translate(shipSx, shipSy);
+    mapCtx.rotate(headingAngle);
+    mapCtx.fillStyle = '#ffffff';
+    mapCtx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    mapCtx.lineWidth = 1;
+    mapCtx.beginPath();
+    mapCtx.moveTo(22, 0);
+    mapCtx.lineTo(10, 6);
+    mapCtx.lineTo(13, 0);
+    mapCtx.lineTo(10, -6);
+    mapCtx.closePath();
+    mapCtx.fill();
+    mapCtx.stroke();
+    mapCtx.restore();
+
     // Freccia attorno alla navicella che punta verso l'obiettivo missione corrente
     if (currentMission) {
       const targetId = currentMission.phase === 'PICKUP' ? currentMission.originId : currentMission.destId;
@@ -1726,16 +1817,18 @@
     // Le orbite avanzano comunque, indipendentemente dal moto della navicella
     updateOrbits(elapsedSeconds);
 
-    const displayedKmh = flightState.mode === 'warp' ? FLIGHT.WARP_KMH : flightState.throttleKmh;
+    const wasWarp = flightState.mode === 'warp';
+    const displayedKmh = wasWarp ? FLIGHT.WARP_KMH : flightState.throttleKmh;
     const realKmPerSec = displayedKmh * REAL_KM_PER_SEC_PER_KMH;
-    const consumingMultiplier = flightState.mode === 'warp' ? FLIGHT.WARP_FUEL_MULTIPLIER : 1;
-    const isConsuming = flightState.mode === 'warp' || displayedKmh >= FLIGHT.REGEN_THRESHOLD_KMH;
+    const consumingMultiplier = wasWarp ? FLIGHT.WARP_FUEL_MULTIPLIER : 1;
+    const isConsuming = wasWarp || displayedKmh >= FLIGHT.REGEN_THRESHOLD_KMH;
 
     let movingSeconds = elapsedSeconds;
     let stoppedSeconds = 0;
     let fuelUsed = 0;
     let realKmTraveled = 0;
     let ranOutOfFuel = false;
+    let hullDamageFromWarpStress = 0;
 
     if (displayedKmh > 0 && isConsuming) {
       const consumptionRate = realKmPerSec * consumingMultiplier; // km carburante/sec
@@ -1763,6 +1856,19 @@
       stoppedSeconds = elapsedSeconds;
     }
 
+    // Stress da warp: stessa regola del volo live, applicata una volta per ogni
+    // minuto pieno trascorso effettivamente in warp durante il periodo offline.
+    if (wasWarp) {
+      const warpMinutes = Math.floor(movingSeconds / (WARP_DAMAGE_CHECK_INTERVAL_MS / 1000));
+      for (let i = 0; i < warpMinutes; i++) {
+        if (Math.random() < WARP_DAMAGE_CHANCE) {
+          const dmg = warpDamagePercentForCurrentHull();
+          hullState.integrity = Math.max(0, hullState.integrity - dmg);
+          hullDamageFromWarpStress += dmg;
+        }
+      }
+    }
+
     // Rigenerazione carburante/scafo per la parte di tempo in cui è restata ferma
     if (stoppedSeconds > 0) {
       if (hullState.integrity >= HULL_MAX) {
@@ -1785,7 +1891,8 @@
       realKmTraveled: realKmTraveled,
       fuelUsed: fuelUsed,
       ranOutOfFuel: ranOutOfFuel,
-      wasMoving: displayedKmh > 0
+      wasMoving: displayedKmh > 0,
+      hullDamageFromWarpStress: hullDamageFromWarpStress
     };
   }
 
@@ -1811,7 +1918,8 @@
       el.innerHTML = 'Sei stato via <b>' + formatElapsedDuration(summary.elapsedSeconds) + '</b>.<br>' +
         'La navicella ha percorso circa <b>' + Math.round(summary.realKmTraveled).toLocaleString('it-IT') + ' km</b> lungo la rotta impostata' +
         (summary.fuelUsed > 0 ? ', consumando circa ' + Math.round(summary.fuelUsed).toLocaleString('it-IT') + ' km di carburante.' : '.') +
-        (summary.ranOutOfFuel ? '<br>Il serbatoio si è esaurito durante il viaggio — la navicella si è fermata ad aspettarti.' : '');
+        (summary.ranOutOfFuel ? '<br>Il serbatoio si è esaurito durante il viaggio — la navicella si è fermata ad aspettarti.' : '') +
+        (summary.hullDamageFromWarpStress > 0 ? '<br>Lo stress del warp ha danneggiato lo scafo di circa ' + Math.round(summary.hullDamageFromWarpStress) + '%.' : '');
     }
     showScreen('offline-report');
   }
@@ -1937,10 +2045,21 @@
       flightState.mode = 'sublight';
       flightState.throttleKmh = 0;
     }
-    // Scafo danneggiato: il warp si disattiva da solo, anche se era già attivo
-    // (es. danno appena subito mentre si viaggiava in warp).
-    if (flightState.mode === 'warp' && hullState.integrity < HULL_MAX) {
-      flightState.mode = 'sublight';
+
+    // Stress da warp: possibile danno stocastico una volta al minuto REALE (non di
+    // gioco), mentre si resta in warp — non blocca più il warp in corso: quello si
+    // può solo attivare a scafo integro, ma un salto già iniziato può proseguire
+    // accumulando danno. Basato sull'orologio (Date.now), quindi recupera
+    // correttamente eventuali controlli "persi" se il browser ha rallentato.
+    if (flightState.mode === 'warp') {
+      const nowMs = Date.now();
+      if (warpDamageLastCheckMs === null) warpDamageLastCheckMs = nowMs;
+      while (nowMs - warpDamageLastCheckMs >= WARP_DAMAGE_CHECK_INTERVAL_MS) {
+        warpDamageLastCheckMs += WARP_DAMAGE_CHECK_INTERVAL_MS;
+        if (Math.random() < WARP_DAMAGE_CHANCE) {
+          hullState.integrity = Math.max(0, hullState.integrity - warpDamagePercentForCurrentHull());
+        }
+      }
     }
 
     const displayedKmh = currentDisplayedSpeedKmh();
@@ -2052,6 +2171,47 @@
     el.targetArrow.style.transform = 'rotate(' + angleRad + 'rad)';
   }
 
+  function updateShipPanel() {
+    const hullPctEl = document.getElementById('ship-panel-hull-pct');
+    const hullFillEl = document.getElementById('ship-panel-hull-fill');
+    const cargoEl = document.getElementById('ship-panel-cargo');
+    const repairBtn = document.getElementById('ship-panel-repair-btn');
+    const repairNote = document.getElementById('ship-panel-repair-note');
+    if (!hullPctEl) return;
+
+    hullPctEl.textContent = Math.round(hullState.integrity) + '%';
+    hullFillEl.style.width = hullState.integrity + '%';
+    let hullColor = '#00f0ff';
+    if (hullState.integrity < 30) hullColor = '#ff4d4d';
+    else if (hullState.integrity < 60) hullColor = '#ffb020';
+    hullFillEl.style.backgroundColor = hullColor;
+
+    if (currentMission) {
+      if (currentMission.phase === 'DELIVERY') {
+        cargoEl.textContent = 'Carica — diretta a ' + findPad(currentMission.destId).name;
+      } else {
+        cargoEl.textContent = 'Vuota — ritiro presso ' + findPad(currentMission.originId).name;
+      }
+    } else {
+      cargoEl.textContent = 'Vuota';
+    }
+
+    const isStoppedForRepair = flightState.mode === 'sublight' && flightState.throttleKmh === 0;
+    if (hullState.integrity >= HULL_MAX) {
+      repairBtn.classList.add('disabled');
+      repairNote.textContent = 'Scafo già integro';
+    } else if (quickRepairCooldownRemaining > 0) {
+      repairBtn.classList.add('disabled');
+      repairNote.textContent = 'Recupero in corso — ' + Math.ceil(quickRepairCooldownRemaining) + 's';
+    } else if (!isStoppedForRepair) {
+      repairBtn.classList.add('disabled');
+      repairNote.textContent = 'Fermati per poter riparare';
+    } else {
+      repairBtn.classList.remove('disabled');
+      repairNote.textContent = '';
+    }
+  }
+
   function updateHud() {
     const displayedKmh = Math.round(currentDisplayedSpeedKmh());
     el.speedValue.innerHTML = displayedKmh.toLocaleString('it-IT') + '<span class="unit">km/h</span>';
@@ -2086,6 +2246,7 @@
     el.dbgSave.textContent = lastSaveLabel || '—';
 
     updateMissionHud();
+    updateShipPanel();
   }
 
   function updateDebugPanel(dt) {
@@ -2101,6 +2262,8 @@
   function isSimulating() { return screen === 'playing' || screen === 'map'; }
 
 
+
+
   function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -2112,6 +2275,7 @@
       updateShipOrientation(dt);
       updateFlightPhysics(dt);
       updateMissionProgress();
+      if (quickRepairCooldownRemaining > 0) { quickRepairCooldownRemaining = Math.max(0, quickRepairCooldownRemaining - dt); }
     }
 
     updateCamera();
