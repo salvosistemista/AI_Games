@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Isola Cozy - Scaffold</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1a2a; font-family: -apple-system, sans-serif; touch-action: none; }
+  #canvas-container { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  #debug {
+    position: absolute; top: 8px; left: 8px; color: #fff; font-size: 11px;
+    background: rgba(0,0,0,0.4); padding: 6px 10px; border-radius: 6px; line-height: 1.5;
+  }
+
+  /* Joystick virtuale (touch) */
+  #joystick-zone { position: absolute; left: 0; bottom: 0; width: 45%; height: 55%; pointer-events: auto; }
+  .joy-base, .joy-stick {
+    position: absolute; border-radius: 50%; background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4); display: none;
+  }
+  .joy-base { width: 100px; height: 100px; margin-left: -50px; margin-top: -50px; }
+  .joy-stick { width: 46px; height: 46px; margin-left: -23px; margin-top: -23px; background: rgba(255,255,255,0.35); }
+
+  /* Pulsanti azione (touch) */
+  #action-buttons {
+    position: absolute; right: 20px; bottom: 20px; pointer-events: auto;
+    display: flex; gap: 14px; align-items: flex-end;
+  }
+  .action-btn {
+    width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.18);
+    border: 2px solid rgba(255,255,255,0.45); color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .action-btn:active { background: rgba(255,255,255,0.35); }
+
+  /* Nasconde i controlli touch su desktop con mouse */
+  body.desktop-mode #joystick-zone,
+  body.desktop-mode #action-buttons { display: none; }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="hud">
+  <div id="debug"></div>
+
+  <div id="joystick-zone">
+    <div class="joy-base" id="joyBase"></div>
+    <div class="joy-stick" id="joyStick"></div>
+  </div>
+
+  <div id="action-buttons">
+    <div class="action-btn" id="btnPhoto">📷</div>
+    <div class="action-btn" id="btnAction">✋</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+
+/* =========================================================================
+   CONFIG ISOLA
+   Coordinate approssimative in unità mondo, coerenti con lo schizzo mappa:
+   Valle a ovest/nord, Cala costiera a est/sud, fiume che le separa,
+   ponticello di legno come punto di attraversamento.
+   ========================================================================= */
+const ISLAND = {
+  valley:  { cx: 0,   cz: 0,  rx: 75, rz: 95 },
+  cala:    { cx: 115, cz: 65, rx: 75, rz: 75 },
+  bridge:  { cx: 58,  cz: 28, halfWidth: 9, halfLength: 16, rotY: -0.6 }, // area di attraversamento del fiume
+  riverHalfWidth: 11,
+  // Il fiume è approssimato come una fascia che va dal punto A al punto B
+  riverA: { x: 40, z: -90 },
+  riverB: { x: 95, z: 100 },
+};
+
+const TENT_POS = { x: -25, z: -25 };
+
+/* =========================================================================
+   SETUP BASE THREE.JS
+   ========================================================================= */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fd3e8);
+scene.fog = new THREE.Fog(0x9fd3e8, 180, 420);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* Luce - stub semplice, il ciclo giorno/notte vero arriverà in una fase successiva */
+const sun = new THREE.DirectionalLight(0xfff2d6, 1.1);
+sun.position.set(80, 120, 40);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -160;
+sun.shadow.camera.right = 160;
+sun.shadow.camera.top = 160;
+sun.shadow.camera.bottom = -160;
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0xcfe8ff, 0.55));
+
+/* =========================================================================
+   TERRENO: oceano + Valle + Cala + fiume + ponte
+   ========================================================================= */
+
+// Oceano (piano grande sotto tutto)
+const ocean = new THREE.Mesh(
+  new THREE.PlaneGeometry(2000, 2000),
+  new THREE.MeshLambertMaterial({ color: 0x3f8fb8 })
+);
+ocean.rotation.x = -Math.PI / 2;
+ocean.position.y = -0.3;
+ocean.receiveShadow = true;
+scene.add(ocean);
+
+// Funzione di supporto: crea un "prato" ellittico piatto con bordi morbidi
+function makeIslandPatch(cfg, color, y) {
+  const shape = new THREE.Shape();
+  const segments = 64;
+  for (let i = 0; i <= segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    const x = Math.cos(a) * cfg.rx;
+    const z = Math.sin(a) * cfg.rz;
+    if (i === 0) shape.moveTo(x, z); else shape.lineTo(x, z);
+  }
+  const geo = new THREE.ShapeGeometry(shape, 1);
+  geo.rotateX(-Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color }));
+  mesh.position.set(cfg.cx, y, cfg.cz);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
+
+makeIslandPatch(ISLAND.valley, 0x8fbc6b, 0.05); // Valle - verde
+makeIslandPatch(ISLAND.cala, 0xead9a8, 0.03);   // Cala costiera - sabbia
+
+// Fiume: nastro tra riverA e riverB
+function makeRiver() {
+  const a = ISLAND.riverA, b = ISLAND.riverB;
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const len = Math.sqrt(dx * dx + dz * dz);
+  const angle = Math.atan2(dz, dx);
+  const geo = new THREE.PlaneGeometry(len, ISLAND.riverHalfWidth * 2);
+  geo.rotateX(-Math.PI / 2);
+  geo.rotateY(-angle);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x5fa8d9 }));
+  mesh.position.set((a.x + b.x) / 2, 0.08, (a.z + b.z) / 2);
+  scene.add(mesh);
+}
+makeRiver();
+
+// Ponticello di legno
+function makeBridge() {
+  const b = ISLAND.bridge;
+  const geo = new THREE.BoxGeometry(b.halfLength * 2, 0.4, b.halfWidth * 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
+  mesh.position.set(b.cx, 0.25, b.cz);
+  mesh.rotation.y = b.rotY;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+}
+makeBridge();
+
+// Tenda di partenza (placeholder semplice, verrà sostituita con un modello dedicato)
+function makeTent() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0xd8622f });
+  const geo = new THREE.ConeGeometry(4.5, 4, 4);
+  geo.rotateY(Math.PI / 4);
+  const tent = new THREE.Mesh(geo, mat);
+  tent.position.y = 2;
+  tent.castShadow = true;
+  group.add(tent);
+  group.position.set(TENT_POS.x, 0, TENT_POS.z);
+  group.userData.interactable = 'tenda';
+  scene.add(group);
+  return group;
+}
+const tent = makeTent();
+
+/* =========================================================================
+   COLLISIONI SEMPLICI: il player può stare solo su Valle, Cala o Ponte
+   ========================================================================= */
+function insideEllipse(x, z, cfg) {
+  const dx = (x - cfg.cx) / cfg.rx;
+  const dz = (z - cfg.cz) / cfg.rz;
+  return dx * dx + dz * dz <= 1;
+}
+
+function insideBridge(x, z) {
+  const b = ISLAND.bridge;
+  // trasforma il punto nello spazio locale del ponte (ruotato)
+  const dx = x - b.cx, dz = z - b.cz;
+  const cos = Math.cos(-b.rotY), sin = Math.sin(-b.rotY);
+  const lx = dx * cos - dz * sin;
+  const lz = dx * sin + dz * cos;
+  return Math.abs(lx) <= b.halfLength && Math.abs(lz) <= b.halfWidth;
+}
+
+function isWalkable(x, z) {
+  return insideEllipse(x, z, ISLAND.valley) || insideEllipse(x, z, ISLAND.cala) || insideBridge(x, z);
+}
+
+/* =========================================================================
+   PLAYER (placeholder capsula, verrà sostituito con un modello vero)
+   ========================================================================= */
+const player = new THREE.Group();
+{
+  // "Capsula" costruita a mano (cilindro + calotta), CapsuleGeometry non è disponibile in r128
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3d5a80 });
+  const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.2, 12), bodyMat);
+  cylinder.position.y = 1.85;
+  cylinder.castShadow = true;
+  player.add(cylinder);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 10), bodyMat);
+  head.position.y = 2.95;
+  head.castShadow = true;
+  player.add(head);
+  // piccolo indicatore di direzione (naso) per capire dove guarda
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), new THREE.MeshLambertMaterial({ color: 0xffd166 }));
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 1.9, 1.2);
+  player.add(nose);
+}
+player.position.set(TENT_POS.x + 8, 0, TENT_POS.z + 4);
+player.userData.yaw = 0;
+scene.add(player);
+
+const PLAYER_SPEED = 22;      // unità/secondo in avanti
+const TURN_SPEED = 2.2;       // radianti/secondo alla massima inclinazione dello stick
+
+/* =========================================================================
+   INPUT LAYER UNIFICATO
+   Tutti i driver (tastiera, touch, gamepad) scrivono sullo stesso stato:
+   input.move = {x, z} normalizzato, input.actionPressed, input.photoPressed
+   Il resto del gioco legge solo "input", senza sapere da dove arriva.
+   ========================================================================= */
+const input = {
+  move: { x: 0, z: 0 },
+  actionPressed: false,
+  photoPressed: false,
+};
+
+/* --- Driver tastiera --- */
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true; });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function updateKeyboardInput() {
+  let x = 0, z = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) z -= 1;
+  if (keys['KeyS'] || keys['ArrowDown']) z += 1;
+  if (keys['KeyA'] || keys['ArrowLeft']) x -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) x += 1;
+  const len = Math.hypot(x, z);
+  if (len > 0) { x /= len; z /= len; }
+  input.move.x = x;
+  input.move.z = z;
+  input.actionPressed = !!keys['KeyE'] || !!keys['Space'];
+  input.photoPressed = !!keys['KeyF'];
+}
+
+/* --- Driver touch: joystick dinamico --- */
+const joyZone = document.getElementById('joystick-zone');
+const joyBase = document.getElementById('joyBase');
+const joyStick = document.getElementById('joyStick');
+let joyTouchId = null;
+let joyOrigin = { x: 0, y: 0 };
+let joyVector = { x: 0, y: 0 };
+const JOY_RADIUS = 50;
+
+joyZone.addEventListener('touchstart', e => {
+  if (joyTouchId !== null) return;
+  const t = e.changedTouches[0];
+  joyTouchId = t.identifier;
+  joyOrigin = { x: t.clientX, y: t.clientY };
+  joyBase.style.left = t.clientX + 'px';
+  joyBase.style.top = t.clientY + 'px';
+  joyStick.style.left = t.clientX + 'px';
+  joyStick.style.top = t.clientY + 'px';
+  joyBase.style.display = 'block';
+  joyStick.style.display = 'block';
+}, { passive: true });
+
+joyZone.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== joyTouchId) continue;
+    let dx = t.clientX - joyOrigin.x;
+    let dy = t.clientY - joyOrigin.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > JOY_RADIUS) { dx = dx / dist * JOY_RADIUS; dy = dy / dist * JOY_RADIUS; }
+    joyStick.style.left = (joyOrigin.x + dx) + 'px';
+    joyStick.style.top = (joyOrigin.y + dy) + 'px';
+    joyVector.x = dx / JOY_RADIUS;
+    joyVector.y = dy / JOY_RADIUS;
+  }
+}, { passive: true });
+
+function endJoystick(e) {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== joyTouchId) continue;
+    joyTouchId = null;
+    joyVector = { x: 0, y: 0 };
+    joyBase.style.display = 'none';
+    joyStick.style.display = 'none';
+  }
+}
+joyZone.addEventListener('touchend', endJoystick);
+joyZone.addEventListener('touchcancel', endJoystick);
+
+function updateTouchInput() {
+  if (joyTouchId === null) return;
+  input.move.x = joyVector.x;
+  input.move.z = joyVector.y;
+}
+
+/* Pulsanti azione touch */
+let touchActionDown = false, touchPhotoDown = false;
+const btnAction = document.getElementById('btnAction');
+const btnPhoto = document.getElementById('btnPhoto');
+btnAction.addEventListener('touchstart', e => { e.preventDefault(); touchActionDown = true; }, { passive: false });
+btnAction.addEventListener('touchend', () => touchActionDown = false);
+btnPhoto.addEventListener('touchstart', e => { e.preventDefault(); touchPhotoDown = true; }, { passive: false });
+btnPhoto.addEventListener('touchend', () => touchPhotoDown = false);
+
+/* --- Driver gamepad --- */
+function updateGamepadInput() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  if (!pad) return;
+  const x = pad.axes[0] || 0;
+  const z = pad.axes[1] || 0;
+  if (Math.hypot(x, z) > 0.15) { // deadzone
+    input.move.x = x;
+    input.move.z = z;
+  }
+  if (pad.buttons[0] && pad.buttons[0].pressed) input.actionPressed = true; // A / Cross
+  if (pad.buttons[2] && pad.buttons[2].pressed) input.photoPressed = true; // X / Square
+}
+
+/* Il driver tastiera è quello "di base": lo azzeriamo e poi gli altri driver
+   possono sovrascrivere se stanno effettivamente producendo input in quel frame. */
+function updateInput() {
+  updateKeyboardInput();
+  updateTouchInput();
+  updateGamepadInput();
+  if (touchActionDown) input.actionPressed = true;
+  if (touchPhotoDown) input.photoPressed = true;
+}
+
+/* Rileva desktop (mouse) vs mobile per nascondere i controlli touch */
+if (!('ontouchstart' in window)) {
+  document.body.classList.add('desktop-mode');
+}
+
+/* =========================================================================
+   CAMERA A DISTANZA FISSA (terza persona, segue il player)
+   ========================================================================= */
+const CAMERA_OFFSET = { distance: 16, height: 9 };
+const CAMERA_LERP = 0.08;
+const camTarget = new THREE.Vector3();
+
+function updateCamera() {
+  const yaw = player.userData.yaw;
+  const behindX = player.position.x - Math.sin(yaw) * CAMERA_OFFSET.distance;
+  const behindZ = player.position.z - Math.cos(yaw) * CAMERA_OFFSET.distance;
+  camTarget.set(behindX, CAMERA_OFFSET.height, behindZ);
+  camera.position.lerp(camTarget, CAMERA_LERP);
+  camera.lookAt(player.position.x, player.position.y + 2.2, player.position.z);
+}
+
+/* =========================================================================
+   MOVIMENTO PLAYER
+   Il movimento è relativo alla camera: "avanti" per il giocatore è la
+   direzione in cui la camera sta guardando, così i controlli sono intuitivi
+   indipendentemente da dove si trova il player sull'isola.
+   ========================================================================= */
+function updatePlayer(dt) {
+  const { x: ix, z: iz } = input.move;
+  const turnInput = Math.abs(ix) > 0.02 ? ix : 0;   // -1..1, quanto lo stick è inclinato lateralmente
+  const throttle  = Math.abs(iz) > 0.02 ? -iz : 0;  // -1..1, avanti positivo, indietro negativo
+
+  // Sterzo: velocità di rotazione proporzionale all'inclinazione dello stick, MAI un salto diretto.
+  // Un'inclinazione minima produce una rotazione lenta e controllabile invece di un giro secco.
+  if (turnInput !== 0) {
+    player.userData.yaw -= turnInput * TURN_SPEED * dt;
+    player.rotation.y = player.userData.yaw;
+  }
+
+  // Movimento: sempre lungo la direzione in cui il player è attualmente orientato
+  if (throttle !== 0) {
+    const yaw = player.userData.yaw;
+    const speed = PLAYER_SPEED * (throttle > 0 ? 1 : 0.55); // retromarcia più lenta
+    const dx = Math.sin(yaw) * speed * throttle * dt;
+    const dz = Math.cos(yaw) * speed * throttle * dt;
+
+    const nextX = player.position.x + dx;
+    const nextZ = player.position.z + dz;
+
+    // Collisione semplice: prova prima il movimento pieno, poi solo asse per asse
+    if (isWalkable(nextX, nextZ)) {
+      player.position.x = nextX;
+      player.position.z = nextZ;
+    } else if (isWalkable(nextX, player.position.z)) {
+      player.position.x = nextX;
+    } else if (isWalkable(player.position.x, nextZ)) {
+      player.position.z = nextZ;
+    }
+  }
+}
+
+/* =========================================================================
+   INTERAZIONI (stub minimo, pronto per essere esteso)
+   ========================================================================= */
+function checkInteractions() {
+  const dist = player.position.distanceTo(tent.position);
+  const debugEl = document.getElementById('debug');
+  let hint = '';
+  if (dist < 6) {
+    hint = 'Vicino alla tenda — [E] per dormire';
+    if (input.actionPressed) console.log('TODO: apri il menu del sonno (scegli ore)');
+  }
+  debugEl.textContent =
+    `pos: ${player.position.x.toFixed(1)}, ${player.position.z.toFixed(1)}\n` +
+    (hint ? hint : '');
+}
+
+/* =========================================================================
+   LOOP DI GIOCO
+   ========================================================================= */
+let lastTime = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp per evitare salti su tab inattivo
+  lastTime = now;
+
+  input.actionPressed = false;
+  input.photoPressed = false;
+  updateInput();
+
+  updatePlayer(dt);
+  updateCamera();
+  checkInteractions();
+
+  renderer.render(scene, camera);
+}
+
+// Posiziona la camera subito dietro al player prima del primo frame
+camera.position.set(player.position.x, CAMERA_OFFSET.height, player.position.z + CAMERA_OFFSET.distance);
+camera.lookAt(player.position);
+
+animate();
+</script>
+</body>
+</html>
