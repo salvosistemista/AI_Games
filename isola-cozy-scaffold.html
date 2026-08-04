@@ -131,6 +131,7 @@
     <div class="inv-item"><span>🪵</span><span id="invLegna">0</span></div>
     <div class="inv-item"><span>🪨</span><span id="invPietra">0</span></div>
     <div class="inv-item"><span>🍎</span><span id="invFrutta">0</span></div>
+    <div class="inv-item"><span>🐟</span><span id="invPesce">0</span></div>
     <div class="inv-item"><span>🧱</span><span id="invRecinti">0</span></div>
     <div class="inv-item" id="invRecintiChip" style="pointer-events:auto;"><span>🔨</span><span>piazza</span></div>
   </div>
@@ -507,6 +508,17 @@ function makeBridge() {
 }
 makeBridge();
 
+// Laghetto d'acqua dolce (separato dal mare, per una pesca diversa da quella marina)
+const LAKE = { cx: 155, cz: 40, rx: 13, rz: 10 };
+function makeLake() {
+  const geo = new THREE.CircleGeometry(1, 32).scale(LAKE.rx, LAKE.rz, 1);
+  geo.rotateX(-Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x4a90c9 }));
+  mesh.position.set(LAKE.cx, 0.1, LAKE.cz);
+  scene.add(mesh);
+}
+makeLake();
+
 // Tenda di partenza (placeholder semplice, verrà sostituita con un modello dedicato)
 function makeTent() {
   const group = new THREE.Group();
@@ -547,6 +559,23 @@ function makeWorkbench() {
 }
 const workbench = makeWorkbench();
 
+// Punto di pesca: piccolo molo di legno, con la posizione del galleggiante nell'acqua
+function makeFishingSpot(x, z, waterX, waterZ) {
+  const group = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.6, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+  post.position.y = 0.8;
+  post.castShadow = true;
+  group.add(post);
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.08), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
+  sign.position.set(0, 1.5, 0);
+  sign.castShadow = true;
+  group.add(sign);
+  group.position.set(x, 0, z);
+  group.userData = { bobberPos: new THREE.Vector3(waterX, 0.15, waterZ) };
+  scene.add(group);
+  return group;
+}
+
 /* =========================================================================
    COLLISIONI SEMPLICI: il player può stare solo su Valle, Cala o Ponte
    ========================================================================= */
@@ -577,6 +606,20 @@ function isWalkable(x, z) {
 const interactables = []; // { obj, type, ...stato specifico }
 interactables.push({ obj: tent, type: 'tent' });
 interactables.push({ obj: workbench, type: 'workbench' });
+
+// Punti di pesca: uno al laghetto (acqua dolce), due sulla costa della Cala (mare)
+const lakeSpot = makeFishingSpot(LAKE.cx - LAKE.rx - 2, LAKE.cz, LAKE.cx, LAKE.cz);
+lakeSpot.userData.zone = 'laghetto';
+interactables.push({ obj: lakeSpot, type: 'fishingSpot' });
+
+const seaSpot1 = makeFishingSpot(164, 114, 178, 128);
+seaSpot1.userData.zone = 'mare';
+interactables.push({ obj: seaSpot1, type: 'fishingSpot' });
+
+const seaSpot2 = makeFishingSpot(149, 5, 163, -8);
+seaSpot2.userData.zone = 'mare';
+interactables.push({ obj: seaSpot2, type: 'fishingSpot' });
+
 const placedPoints = [];  // per tenere le risorse spaziate tra loro
 
 /* =========================================================================
@@ -944,6 +987,88 @@ function updatePlayer(dt) {
 }
 
 /* =========================================================================
+   PESCA: stile contemplativo. Lanci l'amo, aspetti (la parte rilassante),
+   quando abbocca hai una finestra generosa per agganciare con un solo tasto.
+   Niente QTE nervoso, solo un ritmo da rispettare.
+   ========================================================================= */
+const bobberGroup = new THREE.Group();
+const bobberTop = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshLambertMaterial({ color: 0xd8402f }));
+bobberTop.position.y = 0.11;
+bobberGroup.add(bobberTop);
+const bobberBottom = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+bobberBottom.position.y = -0.11;
+bobberGroup.add(bobberBottom);
+bobberGroup.visible = false;
+scene.add(bobberGroup);
+
+const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+const fishingLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
+fishingLine.visible = false;
+scene.add(fishingLine);
+
+const FISH_POOLS = {
+  laghetto: ['persico', 'carpa', 'trota'],
+  mare: ['sgombro', 'orata', 'granchio'],
+};
+const BITE_WINDOW = 1.4;
+
+let fishingState = 'idle'; // idle | waiting | bite | result
+let fishingTimer = 0;
+let fishingZone = null;
+let fishingSpotObj = null;
+let fishingResultText = '';
+
+function startFishing(target) {
+  fishingState = 'waiting';
+  fishingTimer = 3 + Math.random() * 4; // 3-7 secondi di attesa, la parte rilassante
+  fishingZone = target.obj.userData.zone;
+  fishingSpotObj = target.obj;
+  bobberGroup.position.copy(target.obj.userData.bobberPos);
+  bobberGroup.visible = true;
+  fishingLine.visible = true;
+}
+
+function cancelFishing() {
+  fishingState = 'idle';
+  bobberGroup.visible = false;
+  fishingLine.visible = false;
+}
+
+function updateFishing(dt, elapsedTime) {
+  if (fishingState === 'idle') return;
+
+  if (fishingSpotObj) {
+    const linePts = fishingLine.geometry.attributes.position;
+    const rodTip = new THREE.Vector3(fishingSpotObj.position.x, 1.5, fishingSpotObj.position.z);
+    linePts.setXYZ(0, rodTip.x, rodTip.y, rodTip.z);
+    linePts.setXYZ(1, bobberGroup.position.x, bobberGroup.position.y, bobberGroup.position.z);
+    linePts.needsUpdate = true;
+  }
+
+  fishingTimer -= dt;
+
+  if (fishingState === 'waiting') {
+    bobberGroup.position.y = 0.15 + Math.sin(elapsedTime * 2) * 0.04; // ondeggia piano
+    if (fishingTimer <= 0) { fishingState = 'bite'; fishingTimer = BITE_WINDOW; }
+  } else if (fishingState === 'bite') {
+    bobberGroup.position.y = 0.05 + Math.sin(elapsedTime * 14) * 0.08; // scatti nervosi: sta abboccando
+    if (input.actionJustPressed) {
+      const pool = FISH_POOLS[fishingZone] || ['pesce'];
+      const catchName = pool[Math.floor(Math.random() * pool.length)];
+      inventory.pesce++;
+      refreshInventoryHud();
+      fishingResultText = `Hai pescato: ${catchName}!`;
+      fishingState = 'result'; fishingTimer = 1.6;
+    } else if (fishingTimer <= 0) {
+      fishingResultText = 'Il pesce è scappato...';
+      fishingState = 'result'; fishingTimer = 1.6;
+    }
+  } else if (fishingState === 'result') {
+    if (fishingTimer <= 0) cancelFishing();
+  }
+}
+
+/* =========================================================================
    PIAZZAMENTO OGGETTI: per ora solo il pannello di recinto craftato.
    Un "fantasma" semitrasparente segue il player a distanza fissa davanti a
    sé, agganciato a una griglia; verde se la posizione è valida, rosso se no.
@@ -1040,29 +1165,28 @@ function confirmPlacement() {
   if (inventory.recinti <= 0) exitPlacementMode();
 }
 
-/* Attivazione modalità piazzamento: tastiera [B], gamepad Y/Triangle (indice 3)
-   o D-pad sinistro (indice 14, mappatura quasi sempre affidabile anche su
-   gamepad non "standard" — usato come alternativa nel caso Y non risponda) */
+/* Pulsante secondario: tastiera [B], gamepad Y/Triangle (indice 3) o D-pad
+   sinistro (indice 14). Il suo effetto dipende dal contesto attuale:
+   annulla la pesca se si sta pescando, annulla il piazzamento se attivo,
+   altrimenti attiva/disattiva la modalità piazzamento. */
 let prevKeyB = false;
 let prevPadY = false;
 let prevPadDpadLeft = false;
-function updateBuildToggleInput() {
+function updateSecondaryButtonInput() {
   if (sleepMenuOpen || craftMenuOpen || clock.sleeping) return;
   const keyB = !!keys['KeyB'];
-  if (keyB && !prevKeyB) togglePlacementMode();
-  prevKeyB = keyB;
-
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
-  if (pad) {
-    const yBtn = !!(pad.buttons[3] && pad.buttons[3].pressed);
-    if (yBtn && !prevPadY) togglePlacementMode();
-    prevPadY = yBtn;
+  const yBtn = !!(pad && pad.buttons[3] && pad.buttons[3].pressed);
+  const dpadLeft = !!(pad && pad.buttons[14] && pad.buttons[14].pressed);
+  const pressed = keyB || yBtn || dpadLeft;
 
-    const dpadLeft = !!(pad.buttons[14] && pad.buttons[14].pressed);
-    if (dpadLeft && !prevPadDpadLeft) togglePlacementMode();
-    prevPadDpadLeft = dpadLeft;
+  if (pressed && !prevKeyB) {
+    if (placementMode) exitPlacementMode();
+    else if (fishingState !== 'idle') cancelFishing();
+    else togglePlacementMode();
   }
+  prevKeyB = pressed;
 }
 
 /* =========================================================================
@@ -1086,12 +1210,21 @@ let prevPadConfirm = false;
 let prevPadCancel = false;
 
 function updateMenuGamepadNav(dt) {
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen;
-  if (!anyMenuOpen) { prevPadConfirm = false; prevPadCancel = false; return; }
-
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
-  if (!pad) return;
+  const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
+  const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
+
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen;
+  if (!anyMenuOpen || !pad) {
+    // Aggiorniamo comunque lo stato "precedente" anche a menu chiuso: se non lo
+    // facessimo, un tasto A già tenuto premuto nel momento in cui il menu si
+    // apre (es. lo stesso input che ha aperto il menu della tenda) sembrerebbe
+    // "appena premuto" al frame successivo e confermerebbe subito la prima voce.
+    prevPadConfirm = confirmNow;
+    prevPadCancel = cancelNow;
+    return;
+  }
 
   const dpadUp = pad.buttons[12] && pad.buttons[12].pressed;
   const dpadDown = pad.buttons[13] && pad.buttons[13].pressed;
@@ -1107,9 +1240,6 @@ function updateMenuGamepadNav(dt) {
     updateMenuHighlight();
   }
   if (!wantUp && !wantDown) navRepeatTimer = 0;
-
-  const confirmNow = !!(pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
-  const cancelNow = !!(pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
   if (confirmNow && !prevPadConfirm) {
     const btn = gamepadNav.buttons[gamepadNav.index];
@@ -1194,16 +1324,18 @@ document.getElementById('craft-cancel').addEventListener('click', closeCraftMenu
 
 const WEATHER_LABELS = { sereno: 'Sereno', nuvoloso: 'Nuvoloso', pioggia: 'Pioggia', neve: 'Neve' };
 
-const inventory = { legna: 0, pietra: 0, frutta: 0, recinti: 0 };
+const inventory = { legna: 0, pietra: 0, frutta: 0, recinti: 0, pesce: 0 };
 const invEls = {
   legna: document.getElementById('invLegna'), pietra: document.getElementById('invPietra'),
   frutta: document.getElementById('invFrutta'), recinti: document.getElementById('invRecinti'),
+  pesce: document.getElementById('invPesce'),
 };
 function refreshInventoryHud() {
   invEls.legna.textContent = inventory.legna;
   invEls.pietra.textContent = inventory.pietra;
   invEls.frutta.textContent = inventory.frutta;
   invEls.recinti.textContent = inventory.recinti;
+  invEls.pesce.textContent = inventory.pesce;
 }
 
 const INTERACT_RANGE = 6;
@@ -1223,6 +1355,8 @@ function handleAction(target) {
     if (!clock.sleeping && !sleepMenuOpen) openSleepMenu();
   } else if (target.type === 'workbench') {
     if (!craftMenuOpen) openCraftMenu();
+  } else if (target.type === 'fishingSpot') {
+    if (fishingState === 'idle') startFishing(target);
   } else if (target.type === 'fruitTree') {
     if (!d.harvested) {
       d.harvested = true;
@@ -1251,6 +1385,7 @@ function handleAction(target) {
 const INTERACT_HINTS = {
   tent: 'Vicino alla tenda — [E] per dormire',
   workbench: 'Banco da lavoro — [E] per creare oggetti',
+  fishingSpot: 'Punto di pesca — [E] per lanciare l\'amo',
   fruitTree: 'Albero da frutta — [E] per raccogliere',
   woodTree: 'Albero da legna — [E] per colpire',
   rock: 'Roccia — [E] per colpire',
@@ -1266,6 +1401,15 @@ function checkInteractions() {
       `Piazzamento recinto — ${ghostMesh.userData.valid ? 'posizione valida' : 'posizione non valida'}\n` +
       `[E] conferma — [B] / Y / D-pad sinistro per uscire\n` +
       `pannelli rimasti: ${inventory.recinti}`;
+    return;
+  }
+
+  if (fishingState !== 'idle') {
+    let msg;
+    if (fishingState === 'waiting') msg = 'Amo in acqua... aspetta (B per annullare)';
+    else if (fishingState === 'bite') msg = 'Abbocca! [E] per agganciare!';
+    else msg = fishingResultText;
+    debugEl.textContent = msg;
     return;
   }
 
@@ -1306,15 +1450,16 @@ function animate() {
   updateWeatherParticles(dt);
   updateFireflies(elapsedTime);
   updateResources(dt);
+  updateFishing(dt, elapsedTime);
 
   input.actionPressed = false;
   input.photoPressed = false;
   updateInput();
   updateInputEdges();
   updateMenuGamepadNav(dt);
-  updateBuildToggleInput();
+  updateSecondaryButtonInput();
 
-  const controlsLocked = sleepMenuOpen || craftMenuOpen || clock.sleeping;
+  const controlsLocked = sleepMenuOpen || craftMenuOpen || clock.sleeping || fishingState !== 'idle';
   if (!controlsLocked) {
     updatePlayer(dt);
   }
