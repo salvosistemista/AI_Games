@@ -167,18 +167,105 @@
    Coordinate approssimative in unità mondo, coerenti con lo schizzo mappa:
    Valle a ovest/nord, Cala costiera a est/sud, fiume che le separa,
    ponticello di legno come punto di attraversamento.
+
+   ISLAND_SCALE: un solo numero per ridimensionare l'intera isola in futuro
+   (tutte le coordinate sotto ne dipendono) invece di dover ritoccare a mano
+   ogni singola posizione.
    ========================================================================= */
+const ISLAND_SCALE = 1.25;
 const ISLAND = {
-  valley:  { cx: 0,   cz: 0,  rx: 75, rz: 95 },
-  cala:    { cx: 115, cz: 65, rx: 75, rz: 75 },
-  bridge:  { cx: 58,  cz: 28, halfWidth: 9, halfLength: 16, rotY: -0.6 }, // area di attraversamento del fiume
-  riverHalfWidth: 11,
-  // Il fiume è approssimato come una fascia che va dal punto A al punto B
-  riverA: { x: 40, z: -90 },
-  riverB: { x: 95, z: 100 },
+  valley:  { cx: 0, cz: 0, rx: 75 * ISLAND_SCALE, rz: 95 * ISLAND_SCALE },
+  cala:    { cx: 115 * ISLAND_SCALE, cz: 65 * ISLAND_SCALE, rx: 75 * ISLAND_SCALE, rz: 75 * ISLAND_SCALE },
+  bridge:  { cx: 58 * ISLAND_SCALE, cz: 28 * ISLAND_SCALE, halfWidth: 9 * ISLAND_SCALE, halfLength: 16 * ISLAND_SCALE, rotY: -0.6 },
+  riverHalfWidth: 11 * ISLAND_SCALE,
+  riverA: { x: 40 * ISLAND_SCALE, z: -90 * ISLAND_SCALE },
+  riverB: { x: 95 * ISLAND_SCALE, z: 100 * ISLAND_SCALE },
 };
 
-const TENT_POS = { x: -25, z: -25 };
+const TENT_POS = { x: -25 * ISLAND_SCALE, z: -25 * ISLAND_SCALE };
+const LAKE = { cx: 155 * ISLAND_SCALE, cz: 40 * ISLAND_SCALE, rx: 13 * ISLAND_SCALE, rz: 10 * ISLAND_SCALE };
+const WATER_SURFACE_Y = -0.15; // quota di fiume e laghetto (il mare aperto è più in basso, a parte)
+
+/* =========================================================================
+   ALTEZZA DEL TERRENO
+   Isola convessa (più alta al centro, degrada verso la spiaggia), con una
+   trincea scavata lungo il fiume e una piccola conca per il laghetto.
+   Testata a parte (fuori da three.js) prima di essere integrata qui.
+   ========================================================================= */
+const PEAK_HEIGHT = 7;      // altezza massima al centro dell'isola
+const BEACH_HEIGHT = 0.35;  // altezza della spiaggia, appena sopra il livello del mare
+const UNDERWATER = -8;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function ellipticalDist(x, z, zone) {
+  const dx = (x - zone.cx) / zone.rx;
+  const dz = (z - zone.cz) / zone.rz;
+  return Math.sqrt(dx * dx + dz * dz);
+}
+
+function zoneHeight(d) {
+  if (d >= 1.12) return UNDERWATER;
+  if (d >= 1.0) {
+    const t = (d - 1.0) / 0.12;
+    return lerp(BEACH_HEIGHT, UNDERWATER, t * t);
+  }
+  const dome = Math.pow(Math.max(0, 1 - d * d), 1.3);
+  return BEACH_HEIGHT + dome * PEAK_HEIGHT;
+}
+
+function terrainNoise(x, z) {
+  return (
+    Math.sin(x * 0.12 + 1.7) * Math.cos(z * 0.11 + 0.4) * 0.9 +
+    Math.sin(x * 0.05 - 0.6) * Math.sin(z * 0.06 + 2.1) * 1.3
+  );
+}
+
+function distToRiverSegment(x, z) {
+  const a = ISLAND.riverA, b = ISLAND.riverB;
+  const abx = b.x - a.x, abz = b.z - a.z;
+  const apx = x - a.x, apz = z - a.z;
+  const abLenSq = abx * abx + abz * abz;
+  let t = abLenSq > 0 ? (apx * abx + apz * abz) / abLenSq : 0;
+  t = Math.max(0, Math.min(1, t));
+  const cx = a.x + abx * t, cz = a.z + abz * t;
+  return Math.hypot(x - cx, z - cz);
+}
+
+function lakeInfluence(x, z) {
+  const d = ellipticalDist(x, z, { cx: LAKE.cx, cz: LAKE.cz, rx: LAKE.rx + 2, rz: LAKE.rz + 2 });
+  if (d >= 1) return 0;
+  return Math.pow(Math.max(0, 1 - d * d), 1.5);
+}
+
+function terrainHeightAt(x, z) {
+  const dValley = ellipticalDist(x, z, ISLAND.valley);
+  const dCala = ellipticalDist(x, z, ISLAND.cala);
+  let h = Math.max(zoneHeight(dValley), zoneHeight(dCala));
+
+  // rumore organico, attenuato vicino alla spiaggia per non rompere il bordo
+  const domeFactor = Math.max(0, 1 - Math.min(dValley, dCala));
+  h += terrainNoise(x, z) * Math.min(1, domeFactor + 0.15);
+
+  // trincea del fiume
+  const riverD = distToRiverSegment(x, z);
+  const trenchWidth = ISLAND.riverHalfWidth + 5;
+  if (riverD < trenchWidth) {
+    const t = riverD / trenchWidth;
+    const bedHeight = -0.8;
+    const smooth = t * t * (3 - 2 * t);
+    h = h * smooth + bedHeight * (1 - smooth);
+  }
+
+  // conca del laghetto
+  const lakeD = lakeInfluence(x, z);
+  if (lakeD > 0) {
+    const bed = -0.5;
+    h = h * (1 - lakeD) + bed * lakeD;
+  }
+
+  return h;
+}
 
 /* =========================================================================
    STAGIONI, METEO E OROLOGIO DI GIOCO
@@ -273,7 +360,7 @@ clock.on('day', pickNewWeather); // per ora il meteo cambia una volta al giorno,
    ========================================================================= */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fd3e8);
-scene.fog = new THREE.Fog(0x9fd3e8, 180, 420);
+scene.fog = new THREE.Fog(0x9fd3e8, 220, 520);
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -297,10 +384,10 @@ window.addEventListener('resize', () => {
 const sun = new THREE.DirectionalLight(0xfff2d6, 1.1);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -160;
-sun.shadow.camera.right = 160;
-sun.shadow.camera.top = 160;
-sun.shadow.camera.bottom = -160;
+sun.shadow.camera.left = -220;
+sun.shadow.camera.right = 220;
+sun.shadow.camera.top = 220;
+sun.shadow.camera.bottom = -220;
 scene.add(sun);
 scene.add(sun.target);
 
@@ -445,12 +532,14 @@ function updateFireflies(elapsedTime) {
 }
 
 /* =========================================================================
-   TERRENO: oceano + Valle + Cala + fiume + ponte
+   TERRENO: oceano + isola a heightmap (Valle+Cala in un'unica mesh, con
+   trincea del fiume e conca del laghetto già scavate) + fiume + ponte
    ========================================================================= */
 
-// Oceano (piano grande sotto tutto)
+// Oceano (piano grande sotto tutto, resta visibile solo dove il terreno
+// scende sott'acqua fuori dai confini dell'isola)
 const ocean = new THREE.Mesh(
-  new THREE.PlaneGeometry(2000, 2000),
+  new THREE.PlaneGeometry(2400, 2400),
   new THREE.MeshLambertMaterial({ color: 0x3f8fb8 })
 );
 ocean.rotation.x = -Math.PI / 2;
@@ -458,29 +547,52 @@ ocean.position.y = -0.3;
 ocean.receiveShadow = true;
 scene.add(ocean);
 
-// Funzione di supporto: crea un "prato" ellittico piatto con bordi morbidi
-function makeIslandPatch(cfg, color, y) {
-  const shape = new THREE.Shape();
-  const segments = 64;
-  for (let i = 0; i <= segments; i++) {
-    const a = (i / segments) * Math.PI * 2;
-    const x = Math.cos(a) * cfg.rx;
-    const z = Math.sin(a) * cfg.rz;
-    if (i === 0) shape.moveTo(x, z); else shape.lineTo(x, z);
-  }
-  const geo = new THREE.ShapeGeometry(shape, 1);
+// Isola: un'unica mesh con altezza vera (convessa, più alta al centro),
+// colorata per zona/altezza con vertex colors invece di due "toppe" piatte
+function buildTerrain() {
+  const margin = 40;
+  const xMin = Math.min(ISLAND.valley.cx - ISLAND.valley.rx, ISLAND.cala.cx - ISLAND.cala.rx) - margin;
+  const xMax = Math.max(ISLAND.valley.cx + ISLAND.valley.rx, ISLAND.cala.cx + ISLAND.cala.rx) + margin;
+  const zMin = Math.min(ISLAND.valley.cz - ISLAND.valley.rz, ISLAND.cala.cz - ISLAND.cala.rz) - margin;
+  const zMax = Math.max(ISLAND.valley.cz + ISLAND.valley.rz, ISLAND.cala.cz + ISLAND.cala.rz) + margin;
+  const width = xMax - xMin, depth = zMax - zMin;
+  const segments = 140;
+
+  const geo = new THREE.PlaneGeometry(width, depth, segments, segments);
   geo.rotateX(-Math.PI / 2);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color }));
-  mesh.position.set(cfg.cx, y, cfg.cz);
+  geo.translate((xMin + xMax) / 2, 0, (zMin + zMax) / 2);
+
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const colorGrass = new THREE.Color(0x8fbc6b);
+  const colorSand = new THREE.Color(0xead9a8);
+  const colorRock = new THREE.Color(0x8a8578);
+  const tmp = new THREE.Color();
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const h = terrainHeightAt(x, z);
+    pos.setY(i, h);
+
+    const dCala = ellipticalDist(x, z, ISLAND.cala);
+    const dValley = ellipticalDist(x, z, ISLAND.valley);
+    tmp.copy(dCala < dValley ? colorSand : colorGrass);
+    if (h < 1.2) tmp.lerp(colorSand, THREE.MathUtils.clamp(1 - h / 1.2, 0, 1));
+    if (h > 5.5) tmp.lerp(colorRock, THREE.MathUtils.clamp((h - 5.5) / 5.5, 0, 0.5));
+    tmp.toArray(colors, i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
   mesh.receiveShadow = true;
   scene.add(mesh);
   return mesh;
 }
+buildTerrain();
 
-makeIslandPatch(ISLAND.valley, 0x8fbc6b, 0.05); // Valle - verde
-makeIslandPatch(ISLAND.cala, 0xead9a8, 0.03);   // Cala costiera - sabbia
-
-// Fiume: nastro tra riverA e riverB
+// Fiume: nastro d'acqua che segue il tracciato scavato nel terreno
 function makeRiver() {
   const a = ISLAND.riverA, b = ISLAND.riverB;
   const dx = b.x - a.x, dz = b.z - a.z;
@@ -490,31 +602,58 @@ function makeRiver() {
   geo.rotateX(-Math.PI / 2);
   geo.rotateY(-angle);
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x5fa8d9 }));
-  mesh.position.set((a.x + b.x) / 2, 0.08, (a.z + b.z) / 2);
+  mesh.position.set((a.x + b.x) / 2, WATER_SURFACE_Y, (a.z + b.z) / 2);
   scene.add(mesh);
 }
 makeRiver();
 
-// Ponticello di legno
+// Ponticello di legno: la quota si calcola in base al terreno reale intorno
+// alla campata, così resta sempre sopra sia la trincea del fiume sia le
+// sponde, qualunque sia la forma del terreno in quel punto
+function computeBridgeDeckHeight() {
+  const b = ISLAND.bridge;
+  let maxH = -Infinity;
+  for (const off of [-b.halfLength * 0.9, -b.halfLength * 0.4, 0, b.halfLength * 0.4, b.halfLength * 0.9]) {
+    const x = b.cx + Math.cos(b.rotY) * off;
+    const z = b.cz + Math.sin(b.rotY) * off;
+    maxH = Math.max(maxH, terrainHeightAt(x, z));
+  }
+  return maxH + 0.6;
+}
+
 function makeBridge() {
   const b = ISLAND.bridge;
+  const deckY = computeBridgeDeckHeight();
   const geo = new THREE.BoxGeometry(b.halfLength * 2, 0.4, b.halfWidth * 2);
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
-  mesh.position.set(b.cx, 0.25, b.cz);
+  mesh.position.set(b.cx, deckY, b.cz);
   mesh.rotation.y = b.rotY;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
+
+  // due supporti verso il terreno sottostante, uno per estremità, così il
+  // ponte non sembra sospeso nel vuoto
+  const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
+  [-b.halfLength * 0.75, b.halfLength * 0.75].forEach(off => {
+    const x = b.cx + Math.cos(b.rotY) * off;
+    const z = b.cz + Math.sin(b.rotY) * off;
+    const groundY = terrainHeightAt(x, z);
+    const postHeight = Math.max(0.5, deckY - groundY);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, postHeight, 6), postMat);
+    post.position.set(x, groundY + postHeight / 2, z);
+    post.castShadow = true;
+    scene.add(post);
+  });
 }
 makeBridge();
 
 // Laghetto d'acqua dolce (separato dal mare, per una pesca diversa da quella marina)
-const LAKE = { cx: 155, cz: 40, rx: 13, rz: 10 };
 function makeLake() {
   const geo = new THREE.CircleGeometry(1, 32).scale(LAKE.rx, LAKE.rz, 1);
   geo.rotateX(-Math.PI / 2);
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x4a90c9 }));
-  mesh.position.set(LAKE.cx, 0.1, LAKE.cz);
+  mesh.position.set(LAKE.cx, WATER_SURFACE_Y, LAKE.cz);
   scene.add(mesh);
 }
 makeLake();
@@ -529,7 +668,7 @@ function makeTent() {
   tent.position.y = 2;
   tent.castShadow = true;
   group.add(tent);
-  group.position.set(TENT_POS.x, 0, TENT_POS.z);
+  group.position.set(TENT_POS.x, terrainHeightAt(TENT_POS.x, TENT_POS.z), TENT_POS.z);
   group.userData.interactable = 'tenda';
   scene.add(group);
   return group;
@@ -553,7 +692,7 @@ function makeWorkbench() {
     group.add(leg);
   });
   const pos = { x: TENT_POS.x + 8, z: TENT_POS.z + 3 };
-  group.position.set(pos.x, 0, pos.z);
+  group.position.set(pos.x, terrainHeightAt(pos.x, pos.z), pos.z);
   scene.add(group);
   return group;
 }
@@ -570,8 +709,8 @@ function makeFishingSpot(x, z, waterX, waterZ) {
   sign.position.set(0, 1.5, 0);
   sign.castShadow = true;
   group.add(sign);
-  group.position.set(x, 0, z);
-  group.userData = { bobberPos: new THREE.Vector3(waterX, 0.15, waterZ) };
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.userData = { bobberPos: new THREE.Vector3(waterX, WATER_SURFACE_Y + 0.15, waterZ) };
   scene.add(group);
   return group;
 }
@@ -612,11 +751,11 @@ const lakeSpot = makeFishingSpot(LAKE.cx - LAKE.rx - 2, LAKE.cz, LAKE.cx, LAKE.c
 lakeSpot.userData.zone = 'laghetto';
 interactables.push({ obj: lakeSpot, type: 'fishingSpot' });
 
-const seaSpot1 = makeFishingSpot(164, 114, 178, 128);
+const seaSpot1 = makeFishingSpot(164 * ISLAND_SCALE, 114 * ISLAND_SCALE, 178 * ISLAND_SCALE, 128 * ISLAND_SCALE);
 seaSpot1.userData.zone = 'mare';
 interactables.push({ obj: seaSpot1, type: 'fishingSpot' });
 
-const seaSpot2 = makeFishingSpot(149, 5, 163, -8);
+const seaSpot2 = makeFishingSpot(149 * ISLAND_SCALE, 5 * ISLAND_SCALE, 163 * ISLAND_SCALE, -8 * ISLAND_SCALE);
 seaSpot2.userData.zone = 'mare';
 interactables.push({ obj: seaSpot2, type: 'fishingSpot' });
 
@@ -695,7 +834,7 @@ function makeFruitTree(x, z) {
     fruitsGroup.add(fruit);
   }
   group.add(fruitsGroup);
-  group.position.set(x, 0, z);
+  group.position.set(x, terrainHeightAt(x, z), z);
   group.userData = { fruitsGroup, harvested: false, regrowTimer: 0 };
   scene.add(group);
   interactables.push({ obj: group, type: 'fruitTree' });
@@ -711,7 +850,7 @@ function makeWoodTree(x, z) {
   canopy.position.y = 6.5;
   canopy.castShadow = true;
   group.add(canopy);
-  group.position.set(x, 0, z);
+  group.position.set(x, terrainHeightAt(x, z), z);
   group.userData = { hits: 0, maxHits: 3, felled: false, respawnTimer: 0, shakeTimer: 0 };
   scene.add(group);
   interactables.push({ obj: group, type: 'woodTree' });
@@ -727,17 +866,17 @@ function makeRock(x, z) {
   const mineral = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), new THREE.MeshLambertMaterial({ color: 0x6fa8c9 }));
   mineral.position.set(0.5, 1.3, 0.3);
   group.add(mineral);
-  group.position.set(x, 0, z);
+  group.position.set(x, terrainHeightAt(x, z), z);
   group.userData = { hits: 0, maxHits: 3, felled: false, respawnTimer: 0, shakeTimer: 0 };
   scene.add(group);
   interactables.push({ obj: group, type: 'rock' });
 }
 
-scatterPoints(10, ISLAND.valley, 9).forEach(p => makeFruitTree(p.x, p.z));
-scatterPoints(14, ISLAND.valley, 8).forEach(p => makeWoodTree(p.x, p.z));
-scatterPoints(6, ISLAND.valley, 8).forEach(p => makeRock(p.x, p.z));
-scatterPoints(10, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
-scatterPoints(9, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
+scatterPoints(16, ISLAND.valley, 9).forEach(p => makeFruitTree(p.x, p.z));
+scatterPoints(22, ISLAND.valley, 8).forEach(p => makeWoodTree(p.x, p.z));
+scatterPoints(9, ISLAND.valley, 8).forEach(p => makeRock(p.x, p.z));
+scatterPoints(16, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
+scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
 
 const RESPAWN_TIME = 40;   // secondi reali prima che un albero da legna/roccia ricresca
 const REGROW_TIME = 30;    // secondi reali prima che l'albero da frutta ridia frutti
@@ -770,23 +909,57 @@ function updateResources(dt) {
    ========================================================================= */
 const player = new THREE.Group();
 {
-  // "Capsula" costruita a mano (cilindro + calotta), CapsuleGeometry non è disponibile in r128
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3d5a80 });
-  const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.2, 12), bodyMat);
-  cylinder.position.y = 1.85;
-  cylinder.castShadow = true;
-  player.add(cylinder);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 10), bodyMat);
-  head.position.y = 2.95;
+  // Omino chibi a blocchi: testa grande, corpo piccolo, coerente con lo
+  // stile low-poly pixel-art-3D. Tutte primitive box/cilindro, niente mesh
+  // importate, facile da ricolorare in futuro (es. abiti diversi).
+  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x3d5a80 });
+  const shirtMat = new THREE.MeshLambertMaterial({ color: 0xd8622f });
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xe8b88a });
+  const hairMat = new THREE.MeshLambertMaterial({ color: 0x5a3d2b });
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x2c2c2a });
+
+  // Gambe
+  [-0.28, 0.28].forEach(lx => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.7, 0.36), pantsMat);
+    leg.position.set(lx, 0.35, 0);
+    leg.castShadow = true;
+    player.add(leg);
+  });
+
+  // Busto
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 0.7), shirtMat);
+  torso.position.y = 1.15;
+  torso.castShadow = true;
+  player.add(torso);
+
+  // Braccia
+  [-0.82, 0.82].forEach(ax => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.85, 0.32), shirtMat);
+    arm.position.set(ax, 1.15, 0);
+    arm.castShadow = true;
+    player.add(arm);
+  });
+
+  // Testa (grande, proporzioni chibi)
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.0, 1.0), skinMat);
+  head.position.y = 2.1;
   head.castShadow = true;
   player.add(head);
-  // piccolo indicatore di direzione (naso) per capire dove guarda
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), new THREE.MeshLambertMaterial({ color: 0xffd166 }));
-  nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, 1.9, 1.2);
-  player.add(nose);
+
+  // Capelli
+  const hair = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.4, 1.06), hairMat);
+  hair.position.y = 2.68;
+  hair.castShadow = true;
+  player.add(hair);
+
+  // Occhi, per leggere subito da che parte guarda
+  [-0.22, 0.22].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.06), eyeMat);
+    eye.position.set(ex, 2.12, 0.51);
+    player.add(eye);
+  });
 }
-player.position.set(TENT_POS.x + 8, 0, TENT_POS.z + 4);
+player.position.set(TENT_POS.x + 8, terrainHeightAt(TENT_POS.x + 8, TENT_POS.z + 4), TENT_POS.z + 4);
 player.userData.yaw = 0;
 scene.add(player);
 
@@ -943,7 +1116,7 @@ function updateCamera() {
   const behindZ = player.position.z - Math.cos(yaw) * CAMERA_OFFSET.distance;
   camTarget.set(behindX, CAMERA_OFFSET.height, behindZ);
   camera.position.lerp(camTarget, CAMERA_LERP);
-  camera.lookAt(player.position.x, player.position.y + 2.2, player.position.z);
+  camera.lookAt(player.position.x, player.position.y + 1.7, player.position.z);
 }
 
 /* =========================================================================
@@ -1093,7 +1266,7 @@ function makeFencePanel(x, z, yaw) {
     rail.castShadow = true;
     group.add(rail);
   });
-  group.position.set(x, 0, z);
+  group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
   scene.add(group);
   return group;
@@ -1145,7 +1318,7 @@ function updatePlacementGhost() {
   const gx = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
   const gz = Math.round(rawZ / GRID_SIZE) * GRID_SIZE;
   const snappedYaw = Math.round(yaw / (Math.PI / 2)) * (Math.PI / 2);
-  ghostMesh.position.set(gx, 0, gz);
+  ghostMesh.position.set(gx, terrainHeightAt(gx, gz), gz);
   ghostMesh.rotation.y = snappedYaw;
   const valid = isPlacementValid(gx, gz);
   ghostMat.color.setHex(valid ? 0x7fe08a : 0xe0625a);
@@ -1343,7 +1516,7 @@ const INTERACT_RANGE = 6;
 function findNearestInteractable() {
   let best = null, bestDist = Infinity;
   for (const it of interactables) {
-    const d = player.position.distanceTo(it.obj.position);
+    const d = Math.hypot(player.position.x - it.obj.position.x, player.position.z - it.obj.position.z);
     if (d < INTERACT_RANGE && d < bestDist) { best = it; bestDist = d; }
   }
   return best;
@@ -1463,6 +1636,7 @@ function animate() {
   if (!controlsLocked) {
     updatePlayer(dt);
   }
+  player.position.y = terrainHeightAt(player.position.x, player.position.z);
   updateCamera();
   checkInteractions();
 
