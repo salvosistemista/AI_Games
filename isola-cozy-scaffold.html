@@ -108,6 +108,34 @@
   }
   #storage-overlay.open { display: flex; }
   #storage-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+
+  /* Menu principale e overlay collegati (conferme, opzioni) */
+  #main-menu-overlay, #new-game-confirm-overlay, #options-overlay, #return-menu-confirm-overlay {
+    position: fixed; inset: 0; z-index: 50; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(10, 20, 30, 0.85); pointer-events: auto;
+  }
+  #main-menu-overlay.open, #new-game-confirm-overlay.open,
+  #options-overlay.open, #return-menu-confirm-overlay.open { display: flex; }
+  #main-menu-panel, #confirm-panel, #confirm-panel-2, #options-panel {
+    background: rgba(20, 24, 38, 0.96); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px; padding: 28px 30px; color: #fff; width: 300px; text-align: center;
+  }
+  #main-menu-panel h1 { font-weight: 600; font-size: 22px; margin-bottom: 22px; }
+  #confirm-panel h3, #confirm-panel-2 h3, #options-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 8px; }
+  #confirm-panel p, #confirm-panel-2 p { font-size: 12px; color: rgba(255,255,255,0.65); margin-bottom: 18px; }
+  .menu-btn {
+    padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08); color: #fff; font-size: 14px; margin-bottom: 10px;
+  }
+  .menu-btn:active { background: rgba(255,255,255,0.25); }
+  .menu-btn.disabled { opacity: 0.35; }
+  #pauseMenuBtn {
+    position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20;
+    background: rgba(0,0,0,0.4); color: #fff; font-size: 16px; border-radius: 8px;
+    padding: 5px 12px; display: none;
+  }
+  body.game-active #pauseMenuBtn { display: block; }
   .storage-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
   .storage-row .storage-btn { padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 11px; margin-left: 4px; }
   .storage-row .storage-btn:disabled { opacity: 0.35; }
@@ -256,6 +284,46 @@
 
 <div id="zzz-indicator">💤</div>
 
+<div id="main-menu-overlay" class="open">
+  <div id="main-menu-panel">
+    <h1>🏝️ Isola Cozy</h1>
+    <div class="menu-btn" id="mainMenuContinueBtn">Continua</div>
+    <div class="menu-btn" id="mainMenuNewBtn">Nuova avventura</div>
+    <div class="menu-btn" id="mainMenuOptionsBtn">Opzioni</div>
+  </div>
+</div>
+
+<div id="new-game-confirm-overlay">
+  <div id="confirm-panel">
+    <h3>Iniziare una nuova avventura?</h3>
+    <p>La partita in corso verrà persa per sempre.</p>
+    <div class="menu-btn" id="confirmNewGameBtn">Sì, ricomincia</div>
+    <div class="menu-btn" id="cancelNewGameBtn">Annulla</div>
+  </div>
+</div>
+
+<div id="options-overlay">
+  <div id="options-panel">
+    <h3>Opzioni</h3>
+    <div class="recipe-row">
+      <div class="recipe-info">Schermo intero</div>
+      <button class="recipe-btn" id="fullscreenToggleBtn">attiva</button>
+    </div>
+    <div id="options-close">chiudi</div>
+  </div>
+</div>
+
+<div id="return-menu-confirm-overlay">
+  <div id="confirm-panel-2">
+    <h3>Tornare al menu principale?</h3>
+    <p>La partita viene salvata automaticamente.</p>
+    <div class="menu-btn" id="confirmReturnMenuBtn">Sì, torna al menu</div>
+    <div class="menu-btn" id="cancelReturnMenuBtn">Annulla</div>
+  </div>
+</div>
+
+<div id="pauseMenuBtn" style="pointer-events:auto;">☰</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 
@@ -270,6 +338,22 @@
    ogni singola posizione.
    ========================================================================= */
 const ISLAND_SCALE = 1.25;
+
+// Generatore pseudo-casuale con seme fisso: la disposizione di alberi/rocce
+// deve essere sempre la stessa ad ogni avvio, altrimenti "Continua" non può
+// sapere a quale albero corrisponde ciascuno stato salvato (abbattuto,
+// numero di colpi, ecc.) — Math.random() puro darebbe un'isola diversa ogni volta.
+function makeSeededRandom(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const worldRandom = makeSeededRandom(20260804);
 const ISLAND = {
   valley:  { cx: 0, cz: 0, rx: 75 * ISLAND_SCALE, rz: 95 * ISLAND_SCALE },
   cala:    { cx: 115 * ISLAND_SCALE, cz: 65 * ISLAND_SCALE, rx: 75 * ISLAND_SCALE, rz: 75 * ISLAND_SCALE },
@@ -1051,8 +1135,8 @@ function scatterPoints(count, zoneCfg, minSpacing) {
   let attempts = 0;
   while (pts.length < count && attempts < count * 50) {
     attempts++;
-    const a = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * 0.88; // resta un po' dentro il bordo dell'isola
+    const a = worldRandom() * Math.PI * 2;
+    const r = Math.sqrt(worldRandom()) * 0.88; // resta un po' dentro il bordo dell'isola
     const x = zoneCfg.cx + Math.cos(a) * zoneCfg.rx * r;
     const z = zoneCfg.cz + Math.sin(a) * zoneCfg.rz * r;
     if (!isWalkable(x, z)) continue;
@@ -1837,7 +1921,7 @@ let prevKeyB = false;
 let prevPadY = false;
 let prevPadDpadLeft = false;
 function updateSecondaryButtonInput() {
-  if (sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || insideHouse || clock.sleeping) return;
+  if (sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
   const keyB = !!keys['KeyB'];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
@@ -1883,7 +1967,9 @@ function updateMenuGamepadNav(dt) {
   // col tasto Annulla, gestito qui a parte prima del resto della logica menu
   if (inventoryMenuOpen && cancelNow && !prevPadCancel) closeInventoryMenu();
 
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen;
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen ||
+    mainMenuOverlay.classList.contains('open') || optionsOverlay.classList.contains('open') ||
+    newGameConfirmOverlay.classList.contains('open') || returnMenuConfirmOverlay.classList.contains('open');
   if (!anyMenuOpen || !pad) {
     // Aggiorniamo comunque lo stato "precedente" anche a menu chiuso: se non lo
     // facessimo, un tasto A già tenuto premuto nel momento in cui il menu si
@@ -1948,6 +2034,7 @@ document.querySelectorAll('.hour-btn').forEach(btn => {
     closeSleepMenu();
     clock.startSleep(hours, 6);
     zzzIndicator.classList.add('show');
+    saveGame();
   });
 });
 document.getElementById('sleep-cancel').addEventListener('click', closeSleepMenu);
@@ -2114,7 +2201,7 @@ document.getElementById('inventory-close').addEventListener('click', closeInvent
 let prevKeyI = false;
 let prevPadStart = false;
 function updateInventoryToggleInput() {
-  if (sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || placementMode || insideHouse || clock.sleeping) return;
+  if (sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || placementMode || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
   const keyI = !!keys['KeyI'];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
@@ -2526,6 +2613,110 @@ function closeStorageMenu() {
 document.getElementById('storage-close').addEventListener('click', closeStorageMenu);
 
 /* =========================================================================
+   SALVATAGGIO
+   Un solo slot, in localStorage. Grazie al seme fisso della generazione
+   dell'isola, alberi e rocce sono sempre nella stessa posizione ad ogni
+   avvio: basta salvare il LORO STATO (abbattuto, colpi, ecc.) nello stesso
+   ordine in cui vengono creati, e ritrovarli per indice al caricamento.
+   ========================================================================= */
+const SAVE_KEY = 'isola-cozy-save-v1';
+
+function serializeGame() {
+  const fruitTrees = interactables.filter(it => it.type === 'fruitTree');
+  const woodTrees = interactables.filter(it => it.type === 'woodTree');
+  const rocks = interactables.filter(it => it.type === 'rock');
+  return {
+    version: 1,
+    player: { x: player.position.x, z: player.position.z, yaw: player.userData.yaw },
+    totalMinutes: clock.totalMinutes,
+    weather: currentWeather,
+    toolTier,
+    bridgeBuilt,
+    casettaBuilt,
+    inventory: { ...inventory },
+    houseChest: { ...houseChest },
+    houseFridge: { ...houseFridge },
+    placedItems: placedItems.map(it => ({ itemType: it.itemType, x: it.x, z: it.z, yaw: it.yaw })),
+    fruitTrees: fruitTrees.map(it => ({ harvested: it.obj.userData.harvested, regrowTimer: it.obj.userData.regrowTimer })),
+    woodTrees: woodTrees.map(it => ({
+      felled: it.obj.userData.felled, hits: it.obj.userData.hits,
+      seasonsSinceFelled: it.obj.userData.seasonsSinceFelled, maxHits: it.obj.userData.maxHits,
+    })),
+    rocks: rocks.map(it => ({
+      felled: it.obj.userData.felled, hits: it.obj.userData.hits,
+      seasonsSinceFelled: it.obj.userData.seasonsSinceFelled, maxHits: it.obj.userData.maxHits,
+    })),
+  };
+}
+
+function saveGame() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(serializeGame()));
+    return true;
+  } catch (e) {
+    console.warn('Salvataggio non riuscito:', e);
+    return false;
+  }
+}
+
+function hasSavedGame() {
+  try { return localStorage.getItem(SAVE_KEY) !== null; } catch (e) { return false; }
+}
+
+function loadGame() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return false; }
+  if (!data) return false;
+
+  player.position.set(data.player.x, terrainHeightAt(data.player.x, data.player.z), data.player.z);
+  player.userData.yaw = data.player.yaw;
+  player.rotation.y = data.player.yaw;
+
+  clock.totalMinutes = data.totalMinutes;
+  currentWeather = data.weather || currentWeather;
+  toolTier = data.toolTier || 1;
+  if (data.bridgeBuilt) buildRealBridge();
+  casettaBuilt = !!data.casettaBuilt;
+
+  Object.assign(inventory, data.inventory || {});
+  Object.assign(houseChest, data.houseChest || {});
+  Object.assign(houseFridge, data.houseFridge || {});
+
+  for (const it of [...placedItems]) removePlacedItem(it);
+  for (const saved of data.placedItems || []) {
+    const mesh = ITEM_FACTORY[saved.itemType](saved.x, saved.z, saved.yaw);
+    registerPlacedItem({ itemType: saved.itemType, x: saved.x, z: saved.z, yaw: saved.yaw, mesh });
+  }
+
+  const fruitTrees = interactables.filter(it => it.type === 'fruitTree');
+  (data.fruitTrees || []).forEach((s, i) => {
+    if (!fruitTrees[i]) return;
+    const d = fruitTrees[i].obj.userData;
+    d.harvested = s.harvested;
+    d.regrowTimer = s.regrowTimer;
+    d.fruitsGroup.visible = !s.harvested;
+  });
+  const woodTrees = interactables.filter(it => it.type === 'woodTree');
+  (data.woodTrees || []).forEach((s, i) => {
+    if (!woodTrees[i]) return;
+    const d = woodTrees[i].obj.userData;
+    d.felled = s.felled; d.hits = s.hits; d.seasonsSinceFelled = s.seasonsSinceFelled; d.maxHits = s.maxHits;
+    d.grownGroup.visible = !s.felled;
+    d.saplingGroup.visible = s.felled;
+  });
+  const rocks = interactables.filter(it => it.type === 'rock');
+  (data.rocks || []).forEach((s, i) => {
+    if (!rocks[i]) return;
+    const d = rocks[i].obj.userData;
+    d.felled = s.felled; d.hits = s.hits; d.seasonsSinceFelled = s.seasonsSinceFelled; d.maxHits = s.maxHits;
+    rocks[i].obj.visible = !s.felled;
+  });
+
+  refreshInventoryHud();
+  return true;
+}
+
+/* =========================================================================
    LOOP DI GIOCO
    ========================================================================= */
 let lastTime = performance.now();
@@ -2545,6 +2736,8 @@ function animate() {
   updateResources(dt);
   updateFishing(dt, elapsedTime);
   updateMenuGamepadNav(dt); // serve anche per i menu della casa/stoccaggio
+  updatePauseInput();
+  updateAutosave(dt);
 
   if (!clock.sleeping) zzzIndicator.classList.remove('show');
 
@@ -2565,7 +2758,7 @@ function animate() {
   updateSecondaryButtonInput();
   updateInventoryToggleInput();
 
-  const controlsLocked = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle';
+  const controlsLocked = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle' || isAnyOverlayOpen();
   if (!controlsLocked) {
     updatePlayer(dt);
   }
@@ -2578,11 +2771,118 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// Posiziona la camera subito dietro al player prima del primo frame
-camera.position.set(player.position.x, player.position.y + CAMERA_OFFSET.height, player.position.z + CAMERA_OFFSET.distance);
-camera.lookAt(player.position);
+/* =========================================================================
+   MENU PRINCIPALE
+   Il gioco non parte finché non si sceglie Continua o Nuova avventura. Il
+   mondo è comunque già generato (in modo deterministico) sotto il menu.
+   ========================================================================= */
+const mainMenuOverlay = document.getElementById('main-menu-overlay');
+const mainMenuContinueBtn = document.getElementById('mainMenuContinueBtn');
+const mainMenuNewBtn = document.getElementById('mainMenuNewBtn');
+const mainMenuOptionsBtn = document.getElementById('mainMenuOptionsBtn');
+const newGameConfirmOverlay = document.getElementById('new-game-confirm-overlay');
+const optionsOverlay = document.getElementById('options-overlay');
+const returnMenuConfirmOverlay = document.getElementById('return-menu-confirm-overlay');
 
-animate();
+function refreshMainMenu() {
+  mainMenuContinueBtn.classList.toggle('disabled', !hasSavedGame());
+}
+refreshMainMenu();
+
+let gameLoopStarted = false;
+function beginGameLoop() {
+  camera.position.set(player.position.x, player.position.y + CAMERA_OFFSET.height, player.position.z + CAMERA_OFFSET.distance);
+  camera.lookAt(player.position);
+  document.body.classList.add('game-active');
+  if (!gameLoopStarted) { gameLoopStarted = true; lastTime = performance.now(); animate(); }
+}
+
+mainMenuContinueBtn.addEventListener('click', () => {
+  if (!hasSavedGame()) return;
+  loadGame();
+  mainMenuOverlay.classList.remove('open');
+  beginGameLoop();
+});
+mainMenuNewBtn.addEventListener('click', () => {
+  if (hasSavedGame()) {
+    newGameConfirmOverlay.classList.add('open');
+  } else {
+    mainMenuOverlay.classList.remove('open');
+    beginGameLoop();
+  }
+});
+document.getElementById('confirmNewGameBtn').addEventListener('click', () => {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignora */ }
+  newGameConfirmOverlay.classList.remove('open');
+  mainMenuOverlay.classList.remove('open');
+  beginGameLoop();
+});
+document.getElementById('cancelNewGameBtn').addEventListener('click', () => {
+  newGameConfirmOverlay.classList.remove('open');
+});
+
+mainMenuOptionsBtn.addEventListener('click', () => optionsOverlay.classList.add('open'));
+document.getElementById('options-close').addEventListener('click', () => optionsOverlay.classList.remove('open'));
+
+const fullscreenToggleBtn = document.getElementById('fullscreenToggleBtn');
+function updateFullscreenLabel() {
+  fullscreenToggleBtn.textContent = document.fullscreenElement ? 'disattiva' : 'attiva';
+}
+fullscreenToggleBtn.addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+});
+document.addEventListener('fullscreenchange', updateFullscreenLabel);
+
+/* Ritorno al menu principale: salva e ricarica la pagina. Ricaricare è il
+   modo più affidabile per rimettere tutto in ordine (mondo pristino e
+   deterministico) prima di eventualmente scegliere "Nuova avventura". */
+function requestReturnToMenu() {
+  if (isAnyOverlayOpen()) return;
+  returnMenuConfirmOverlay.classList.add('open');
+}
+document.getElementById('confirmReturnMenuBtn').addEventListener('click', () => {
+  saveGame();
+  location.reload();
+});
+document.getElementById('cancelReturnMenuBtn').addEventListener('click', () => {
+  returnMenuConfirmOverlay.classList.remove('open');
+});
+document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnToMenu);
+document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
+
+function isAnyOverlayOpen() {
+  return sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen ||
+    optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
+    returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
+}
+
+/* Tasto pausa/menu: tastiera [Escape], gamepad Select/Back (indice 8) */
+let prevPauseBtn = false;
+function updatePauseInput() {
+  const keyEsc = !!keys['Escape'];
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  const padSelect = !!(pad && pad.buttons[8] && pad.buttons[8].pressed);
+  const pressed = keyEsc || padSelect;
+  if (pressed && !prevPauseBtn) requestReturnToMenu();
+  prevPauseBtn = pressed;
+}
+
+/* =========================================================================
+   AUTOSAVE PERIODICO
+   Ogni tot secondi reali, silenzioso, oltre al salvataggio quando si torna
+   al menu principale o quando ci si addormenta.
+   ========================================================================= */
+let autosaveTimer = 0;
+const AUTOSAVE_INTERVAL = 60; // secondi reali
+function updateAutosave(dt) {
+  autosaveTimer += dt;
+  if (autosaveTimer >= AUTOSAVE_INTERVAL) {
+    autosaveTimer = 0;
+    saveGame();
+  }
+}
 </script>
 </body>
 </html>
