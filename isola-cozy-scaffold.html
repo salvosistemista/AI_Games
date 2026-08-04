@@ -41,6 +41,8 @@
   /* Nasconde i controlli touch su desktop con mouse */
   body.desktop-mode #joystick-zone,
   body.desktop-mode #action-buttons { display: none; }
+  body.inside-house #joystick-zone,
+  body.inside-house #action-buttons { display: none; }
 
   /* Overlay del sonno */
   #sleep-overlay {
@@ -70,15 +72,59 @@
   }
   #zzz-indicator.show { display: flex; }
 
-  /* HUD inventario */
-  #inventory-hud {
+  /* Blocco compatto in alto a destra: chip di piazzamento + zaino */
+  #hud-top-right {
     position: absolute; top: 8px; right: 8px; display: flex; gap: 8px;
   }
   .inv-item {
     background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; border-radius: 8px;
     padding: 5px 9px; display: flex; align-items: center; gap: 5px;
   }
-  #invRecintiChip.active { background: rgba(255,209,102,0.35); }
+  #buildChip.active { background: rgba(255,209,102,0.35); }
+
+  /* Overlay del menu Costruisci */
+  #build-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #build-overlay.open { display: flex; }
+  #house-hud { position: fixed; inset: 0; z-index: 25; display: none; pointer-events: none; }
+  body.inside-house #house-hud { display: block; }
+  #houseExitBtn {
+    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.45); color: #fff;
+    font-size: 13px; border-radius: 8px; padding: 7px 12px;
+  }
+  #houseSelectionLabel {
+    position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #fff; font-size: 13px; border-radius: 10px;
+    padding: 8px 16px; display: none; text-align: center;
+  }
+  #houseSelectionLabel.show { display: block; }
+  #storage-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #storage-overlay.open { display: flex; }
+  #storage-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+  .storage-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
+  .storage-row .storage-btn { padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 11px; margin-left: 4px; }
+  .storage-row .storage-btn:disabled { opacity: 0.35; }
+  #build-cancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+
+  /* Overlay inventario */
+  #inventory-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #inventory-overlay.open { display: flex; }
+  .inv-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 14px;
+  }
+  #inventory-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
 
   /* Overlay del banco da lavoro */
   #craft-overlay {
@@ -87,12 +133,19 @@
     background: rgba(5, 10, 25, 0.55); pointer-events: auto;
   }
   #craft-overlay.open { display: flex; }
-  #craft-panel {
+  #fence-edit-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #fence-edit-overlay.open { display: flex; }
+  #fenceEditCancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+  #craft-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel {
     background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
     font-family: -apple-system, sans-serif;
   }
-  #craft-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 12px; }
+  #craft-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 12px; }
   .recipe-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);
@@ -127,13 +180,25 @@
     <div class="action-btn" id="btnAction">⚒️</div>
   </div>
 
-  <div id="inventory-hud">
-    <div class="inv-item"><span>🪵</span><span id="invLegna">0</span></div>
-    <div class="inv-item"><span>🪨</span><span id="invPietra">0</span></div>
-    <div class="inv-item"><span>🍎</span><span id="invFrutta">0</span></div>
-    <div class="inv-item"><span>🐟</span><span id="invPesce">0</span></div>
-    <div class="inv-item"><span>🧱</span><span id="invRecinti">0</span></div>
-    <div class="inv-item" id="invRecintiChip" style="pointer-events:auto;"><span>🔨</span><span>piazza</span></div>
+  <div id="hud-top-right">
+    <div class="inv-item" id="buildChip" style="pointer-events:auto;"><span>🏗️</span><span>costruisci</span></div>
+    <div class="inv-item" id="inventoryToggleBtn" style="pointer-events:auto;"><span>🎒</span></div>
+  </div>
+</div>
+
+<div id="build-overlay">
+  <div id="build-panel">
+    <h3>Costruisci</h3>
+    <div id="build-list"></div>
+    <div id="build-cancel">chiudi</div>
+  </div>
+</div>
+
+<div id="inventory-overlay">
+  <div id="inventory-panel">
+    <h3>Inventario</h3>
+    <div id="inventory-list"></div>
+    <div id="inventory-close">chiudi</div>
   </div>
 </div>
 
@@ -157,6 +222,38 @@
   </div>
 </div>
 
+<div id="house-hud">
+  <div id="houseExitBtn" style="pointer-events:auto;">🚪 esci</div>
+  <div id="houseSelectionLabel"></div>
+</div>
+
+<div id="storage-overlay">
+  <div id="storage-panel">
+    <h3 id="storageTitle">Cassa</h3>
+    <div id="storage-list"></div>
+    <div id="storage-close">chiudi</div>
+  </div>
+</div>
+
+<div id="fence-edit-overlay">
+  <div id="fence-edit-panel">
+    <h3 id="fenceEditTitle">Oggetto piazzato</h3>
+    <div class="recipe-row">
+      <div class="recipe-info">Ruota di 90°</div>
+      <button class="recipe-btn" id="fenceRotateBtn">ruota</button>
+    </div>
+    <div class="recipe-row">
+      <div class="recipe-info">Sposta altrove</div>
+      <button class="recipe-btn" id="fenceMoveBtn">sposta</button>
+    </div>
+    <div class="recipe-row">
+      <div class="recipe-info">Rimuovi<div class="recipe-cost" id="fenceRefundLabel"></div></div>
+      <button class="recipe-btn" id="fenceRemoveBtn">rimuovi</button>
+    </div>
+    <div id="fenceEditCancel">chiudi</div>
+  </div>
+</div>
+
 <div id="zzz-indicator">💤</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -176,14 +273,30 @@ const ISLAND_SCALE = 1.25;
 const ISLAND = {
   valley:  { cx: 0, cz: 0, rx: 75 * ISLAND_SCALE, rz: 95 * ISLAND_SCALE },
   cala:    { cx: 115 * ISLAND_SCALE, cz: 65 * ISLAND_SCALE, rx: 75 * ISLAND_SCALE, rz: 75 * ISLAND_SCALE },
-  bridge:  { cx: 58 * ISLAND_SCALE, cz: 28 * ISLAND_SCALE, halfWidth: 9 * ISLAND_SCALE, halfLength: 16 * ISLAND_SCALE, rotY: -0.6 },
+  bridge:  { cx: 0, cz: 0, halfWidth: 9 * ISLAND_SCALE, halfLength: 16 * ISLAND_SCALE, rotY: 0 },
   riverHalfWidth: 11 * ISLAND_SCALE,
   riverA: { x: 40 * ISLAND_SCALE, z: -90 * ISLAND_SCALE },
-  riverB: { x: 95 * ISLAND_SCALE, z: 100 * ISLAND_SCALE },
+  // Il fiume deve uscire DAVVERO dalla Cala verso il mare aperto, non fermarsi
+  // ancora dentro la terraferma (altrimenti si può aggirare dall'altra parte)
+  // Esteso quel poco che basta per uscire davvero dalla costa (verificato:
+  // dCala > 1 = fuori dalla Cala) — di più avrebbe tagliato fuori zone di
+  // terra libera più all'interno, bloccando piazzamento e movimento inutilmente
+  riverB: { x: 108.75 * ISLAND_SCALE, z: 147.5 * ISLAND_SCALE },
 };
 
+// Il ponte sorge SEMPRE su un punto reale del percorso del fiume (non più una
+// coordinata scelta a mano, che poteva finire fuori dal fiume) e con l'angolo
+// perpendicolare alla direzione reale del fiume in quel punto
+const BRIDGE_T = 0.4; // punto lungo il fiume (0 = sorgente, 1 = foce estesa) dove sorge il ponte
+ISLAND.bridge.cx = ISLAND.riverA.x + (ISLAND.riverB.x - ISLAND.riverA.x) * BRIDGE_T;
+ISLAND.bridge.cz = ISLAND.riverA.z + (ISLAND.riverB.z - ISLAND.riverA.z) * BRIDGE_T;
+ISLAND.bridge.rotY = Math.atan2(
+  ISLAND.riverB.x - ISLAND.riverA.x,
+  ISLAND.riverB.z - ISLAND.riverA.z
+) + Math.PI / 2;
+
 const TENT_POS = { x: -25 * ISLAND_SCALE, z: -25 * ISLAND_SCALE };
-const LAKE = { cx: 155 * ISLAND_SCALE, cz: 40 * ISLAND_SCALE, rx: 13 * ISLAND_SCALE, rz: 10 * ISLAND_SCALE };
+const LAKE = { cx: 10 * ISLAND_SCALE, cz: 20 * ISLAND_SCALE, rx: 13 * ISLAND_SCALE, rz: 10 * ISLAND_SCALE };
 const WATER_SURFACE_Y = -0.15; // quota di fiume e laghetto (il mare aperto è più in basso, a parte)
 
 /* =========================================================================
@@ -192,7 +305,8 @@ const WATER_SURFACE_Y = -0.15; // quota di fiume e laghetto (il mare aperto è p
    trincea scavata lungo il fiume e una piccola conca per il laghetto.
    Testata a parte (fuori da three.js) prima di essere integrata qui.
    ========================================================================= */
-const PEAK_HEIGHT = 7;      // altezza massima al centro dell'isola
+const PEAK_HEIGHT = 7;          // altezza massima al centro della Valle (IsolaV)
+const CALA_PEAK_HEIGHT = 4.5;   // la Cala (IsolaS) resta volutamente più bassa
 const BEACH_HEIGHT = 0.35;  // altezza della spiaggia, appena sopra il livello del mare
 const UNDERWATER = -8;
 
@@ -204,14 +318,14 @@ function ellipticalDist(x, z, zone) {
   return Math.sqrt(dx * dx + dz * dz);
 }
 
-function zoneHeight(d) {
+function zoneHeight(d, peak) {
   if (d >= 1.12) return UNDERWATER;
   if (d >= 1.0) {
     const t = (d - 1.0) / 0.12;
     return lerp(BEACH_HEIGHT, UNDERWATER, t * t);
   }
   const dome = Math.pow(Math.max(0, 1 - d * d), 1.3);
-  return BEACH_HEIGHT + dome * PEAK_HEIGHT;
+  return BEACH_HEIGHT + dome * peak;
 }
 
 function terrainNoise(x, z) {
@@ -241,7 +355,7 @@ function lakeInfluence(x, z) {
 function terrainHeightAt(x, z) {
   const dValley = ellipticalDist(x, z, ISLAND.valley);
   const dCala = ellipticalDist(x, z, ISLAND.cala);
-  let h = Math.max(zoneHeight(dValley), zoneHeight(dCala));
+  let h = Math.max(zoneHeight(dValley, PEAK_HEIGHT), zoneHeight(dCala, CALA_PEAK_HEIGHT));
 
   // rumore organico, attenuato vicino alla spiaggia per non rompere il bordo
   const domeFactor = Math.max(0, 1 - Math.min(dValley, dCala));
@@ -373,6 +487,10 @@ document.getElementById('canvas-container').appendChild(renderer.domElement);
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  if (typeof interiorCamera !== 'undefined') {
+    interiorCamera.aspect = window.innerWidth / window.innerHeight;
+    interiorCamera.updateProjectionMatrix();
+  }
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
@@ -489,8 +607,9 @@ const fireflyGeo = new THREE.BufferGeometry();
 const fireflyBase = [];
 const fireflyPositions = new Float32Array(FIREFLY_COUNT * 3);
 for (let i = 0; i < FIREFLY_COUNT; i++) {
-  // sparse lungo il percorso del fiume, dove l'atmosfera serale rende meglio
-  const t = Math.random();
+  // sparse lungo il tratto "vissuto" del fiume (non fino al punto esteso in
+  // mare aperto, che serve solo a garantire che non si possa aggirare)
+  const t = 0.05 + Math.random() * 0.55;
   const bx = ISLAND.riverA.x + (ISLAND.riverB.x - ISLAND.riverA.x) * t + (Math.random() - 0.5) * 30;
   const bz = ISLAND.riverA.z + (ISLAND.riverB.z - ISLAND.riverA.z) * t + (Math.random() - 0.5) * 30;
   const by = 1 + Math.random() * 3;
@@ -607,46 +726,145 @@ function makeRiver() {
 }
 makeRiver();
 
-// Ponticello di legno: la quota si calcola in base al terreno reale intorno
-// alla campata, così resta sempre sopra sia la trincea del fiume sia le
-// sponde, qualunque sia la forma del terreno in quel punto
-function computeBridgeDeckHeight() {
-  const b = ISLAND.bridge;
-  let maxH = -Infinity;
-  for (const off of [-b.halfLength * 0.9, -b.halfLength * 0.4, 0, b.halfLength * 0.4, b.halfLength * 0.9]) {
-    const x = b.cx + Math.cos(b.rotY) * off;
-    const z = b.cz + Math.sin(b.rotY) * off;
-    maxH = Math.max(maxH, terrainHeightAt(x, z));
+// Dorsale rocciosa lungo il fiume: alta, stretta, non scavalcabile — rinforza
+// visivamente il fatto che Valle e Cala sono separate finché non si costruisce
+// il ponte. Il blocco vero e proprio è già garantito dal fiume stesso (esteso
+// oltre la costa apposta per non lasciare varchi aggirabili); questa dorsale
+// è la sua controparte visiva.
+function buildRiverRidge() {
+  const a = ISLAND.riverA, b = ISLAND.riverB;
+  const totalLen = Math.hypot(b.x - a.x, b.z - a.z);
+  const spacing = 12;
+  const count = Math.floor(totalLen / spacing);
+  const rockMat = new THREE.MeshLambertMaterial({ color: 0x7a756a });
+  for (let i = 0; i <= count; i++) {
+    const t = i / count;
+    const x = a.x + (b.x - a.x) * t;
+    const z = a.z + (b.z - a.z) * t;
+    // lascia libero il varco dove passerà il ponte
+    if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < ISLAND.bridge.halfLength * 1.4) continue;
+    const groundY = Math.max(terrainHeightAt(x, z), WATER_SURFACE_Y - 1);
+    const height = 8 + Math.random() * 3;
+    const radius = 1.5 + Math.random() * 0.7;
+    const rock = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 5), rockMat);
+    rock.position.set(x, groundY + height / 2, z);
+    rock.rotation.y = Math.random() * Math.PI;
+    rock.castShadow = true;
+    scene.add(rock);
   }
-  return maxH + 0.6;
+}
+buildRiverRidge();
+
+/* =========================================================================
+   PONTE: ad arco, in legno, con parapetti — non più un'asse piatta.
+   Il profilo (altezza lungo la campata) si calcola una volta sola dal
+   terreno reale alle due sponde e al centro, poi viene riusato sia per
+   costruire la geometria sia per far camminare il player sulla curva.
+   ========================================================================= */
+function computeBridgeProfile() {
+  const b = ISLAND.bridge;
+  const N = 10;
+  const samples = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const off = -b.halfLength + t * b.halfLength * 2;
+    const x = b.cx + Math.sin(b.rotY) * off;
+    const z = b.cz + Math.cos(b.rotY) * off;
+    samples.push(terrainHeightAt(x, z));
+  }
+  const baseStart = samples[0] + 0.45;
+  const baseEnd = samples[N] + 0.45;
+  const midMin = Math.min(...samples.slice(2, N - 1));
+  const archPeak = Math.max(baseStart, baseEnd, midMin + 3.4);
+  const archBoost = archPeak - Math.max(baseStart, baseEnd);
+
+  function deckY(t) {
+    const linear = baseStart + (baseEnd - baseStart) * t;
+    return linear + Math.max(0, archBoost) * Math.sin(Math.PI * t);
+  }
+  return { deckY, segments: N };
+}
+
+let bridgeBuilt = false;
+const bridgeProfile = computeBridgeProfile();
+
+function bridgeLocalCoords(x, z) {
+  const b = ISLAND.bridge;
+  const dx = x - b.cx, dz = z - b.cz;
+  const cos = Math.cos(-b.rotY), sin = Math.sin(-b.rotY);
+  return { lx: dx * cos - dz * sin, lz: dx * sin + dz * cos };
+}
+
+function bridgeHeightAt(x, z) {
+  const { lz } = bridgeLocalCoords(x, z);
+  const t = THREE.MathUtils.clamp((lz + ISLAND.bridge.halfLength) / (ISLAND.bridge.halfLength * 2), 0, 1);
+  return bridgeProfile.deckY(t);
 }
 
 function makeBridge() {
   const b = ISLAND.bridge;
-  const deckY = computeBridgeDeckHeight();
-  const geo = new THREE.BoxGeometry(b.halfLength * 2, 0.4, b.halfWidth * 2);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
-  mesh.position.set(b.cx, deckY, b.cz);
-  mesh.rotation.y = b.rotY;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  scene.add(mesh);
+  const N = bridgeProfile.segments;
+  const segLen = (b.halfLength * 2) / N;
+  const plankMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+  const railMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
 
-  // due supporti verso il terreno sottostante, uno per estremità, così il
-  // ponte non sembra sospeso nel vuoto
-  const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
-  [-b.halfLength * 0.75, b.halfLength * 0.75].forEach(off => {
-    const x = b.cx + Math.cos(b.rotY) * off;
-    const z = b.cz + Math.sin(b.rotY) * off;
-    const groundY = terrainHeightAt(x, z);
-    const postHeight = Math.max(0.5, deckY - groundY);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, postHeight, 6), postMat);
-    post.position.set(x, groundY + postHeight / 2, z);
-    post.castShadow = true;
-    scene.add(post);
+  const group = new THREE.Group();
+
+  // Impalcato: assi segmentate che seguono la curva, ognuna leggermente
+  // inclinata per raccordarsi alla successiva invece di fare "gradini"
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N, t1 = (i + 1) / N;
+    const y0 = bridgeProfile.deckY(t0), y1 = bridgeProfile.deckY(t1);
+    const off0 = -b.halfLength + t0 * b.halfLength * 2;
+    const offC = off0 + segLen / 2;
+    const yc = (y0 + y1) / 2;
+    const slope = Math.atan2(y1 - y0, segLen);
+
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(b.halfWidth * 2, 0.3, segLen * 1.08), plankMat);
+    plank.position.set(0, yc, offC);
+    plank.rotation.x = -slope;
+    plank.castShadow = true;
+    plank.receiveShadow = true;
+    group.add(plank);
+  }
+
+  // Parapetti su entrambi i lati: montanti verticali + corrimano continuo,
+  // stessa curva dell'impalcato
+  const railHeight = 0.9;
+  [-1, 1].forEach(side => {
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const off = -b.halfLength + t * b.halfLength * 2;
+      const y = bridgeProfile.deckY(t);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, railHeight, 5), railMat);
+      post.position.set(side * (b.halfWidth - 0.15), y + railHeight / 2, off);
+      post.castShadow = true;
+      group.add(post);
+    }
+    for (let i = 0; i < N; i++) {
+      const t0 = i / N, t1 = (i + 1) / N;
+      const y0 = bridgeProfile.deckY(t0) + railHeight, y1 = bridgeProfile.deckY(t1) + railHeight;
+      const off0 = -b.halfLength + t0 * b.halfLength * 2;
+      const offC = off0 + segLen / 2;
+      const yc = (y0 + y1) / 2;
+      const slope = Math.atan2(y1 - y0, segLen);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, segLen * 1.08), railMat);
+      rail.position.set(side * (b.halfWidth - 0.15), yc, offC);
+      rail.rotation.x = -slope;
+      rail.castShadow = true;
+      group.add(rail);
+    }
   });
+
+  group.position.set(b.cx, 0, b.cz);
+  group.rotation.y = b.rotY;
+  scene.add(group);
 }
-makeBridge();
+function buildRealBridge() {
+  if (bridgeBuilt) return;
+  bridgeBuilt = true;
+  makeBridge();
+}
 
 // Laghetto d'acqua dolce (separato dal mare, per una pesca diversa da quella marina)
 function makeLake() {
@@ -726,16 +944,20 @@ function insideEllipse(x, z, cfg) {
 
 function insideBridge(x, z) {
   const b = ISLAND.bridge;
-  // trasforma il punto nello spazio locale del ponte (ruotato)
-  const dx = x - b.cx, dz = z - b.cz;
-  const cos = Math.cos(-b.rotY), sin = Math.sin(-b.rotY);
-  const lx = dx * cos - dz * sin;
-  const lz = dx * sin + dz * cos;
-  return Math.abs(lx) <= b.halfLength && Math.abs(lz) <= b.halfWidth;
+  const { lx, lz } = bridgeLocalCoords(x, z);
+  // la lunghezza (campata) è sull'asse Z locale, la larghezza sull'asse X
+  return Math.abs(lx) <= b.halfWidth && Math.abs(lz) <= b.halfLength;
 }
 
 function isWalkable(x, z) {
-  return insideEllipse(x, z, ISLAND.valley) || insideEllipse(x, z, ISLAND.cala) || insideBridge(x, z);
+  const onLand = insideEllipse(x, z, ISLAND.valley) || insideEllipse(x, z, ISLAND.cala) || insideBridge(x, z);
+  if (!onLand) return false;
+  // il fiume taglia fuori il passaggio anche se si è "tecnicamente" dentro
+  // Valle o Cala, finché il ponte vero non è stato costruito
+  const onBridgeDeck = bridgeBuilt && insideBridge(x, z);
+  const inRiver = distToRiverSegment(x, z) < ISLAND.riverHalfWidth;
+  if (inRiver && !onBridgeDeck) return false;
+  return true;
 }
 
 /* =========================================================================
@@ -767,6 +989,14 @@ const placedPoints = [];  // per tenere le risorse spaziate tra loro
 let toolTier = 1; // 1 = attrezzo base, 2 = rinforzato (meno colpi per abbattere)
 const RECIPES = [
   {
+    id: 'ponte',
+    name: 'Ponte',
+    cost: { legna: 12, pietra: 6 },
+    once: true,
+    isDone: () => bridgeBuilt,
+    craft: () => { buildRealBridge(); },
+  },
+  {
     id: 'attrezzo_rinforzato',
     name: 'Attrezzo rinforzato',
     cost: { legna: 5, pietra: 5 },
@@ -790,6 +1020,30 @@ const RECIPES = [
     isDone: () => false,
     craft: () => { inventory.recinti++; },
   },
+  {
+    id: 'torcia',
+    name: 'Torcia',
+    cost: { legna: 2, pietra: 1, selce: 1 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.torce++; },
+  },
+  {
+    id: 'muro',
+    name: 'Muro di pietra',
+    cost: { pietra: 3 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.muri++; },
+  },
+  {
+    id: 'casetta',
+    name: 'Casetta',
+    cost: { legna: 20, pietra: 10 },
+    once: true,
+    isDone: () => casettaBuilt,
+    craft: () => { inventory.casette = 1; },
+  },
 ];
 
 function scatterPoints(count, zoneCfg, minSpacing) {
@@ -804,6 +1058,7 @@ function scatterPoints(count, zoneCfg, minSpacing) {
     if (!isWalkable(x, z)) continue;
     if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 11) continue;
     if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < 15) continue;
+    if (Math.hypot(x - LAKE.cx, z - LAKE.cz) < Math.max(LAKE.rx, LAKE.rz) + 4) continue;
     let tooClose = false;
     for (const p of placedPoints) {
       if (Math.hypot(x - p.x, z - p.z) < minSpacing) { tooClose = true; break; }
@@ -842,16 +1097,34 @@ function makeFruitTree(x, z) {
 
 function makeWoodTree(x, z) {
   const group = new THREE.Group();
+
+  const grown = new THREE.Group();
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.75, 4.5, 8), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
   trunk.position.y = 2.25;
   trunk.castShadow = true;
-  group.add(trunk);
+  grown.add(trunk);
   const canopy = new THREE.Mesh(new THREE.ConeGeometry(2.4, 5.5, 8), new THREE.MeshLambertMaterial({ color: 0x3f7a44 }));
   canopy.position.y = 6.5;
   canopy.castShadow = true;
-  group.add(canopy);
+  grown.add(canopy);
+  group.add(grown);
+
+  // Piantina: resta al posto dell'albero abbattuto finché non è ricresciuto
+  const sapling = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.55, 6), new THREE.MeshLambertMaterial({ color: 0x6b8f4a }));
+  stem.position.y = 0.28;
+  sapling.add(stem);
+  const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6), new THREE.MeshLambertMaterial({ color: 0x7fbf5a }));
+  tuft.position.y = 0.58;
+  sapling.add(tuft);
+  sapling.visible = false;
+  group.add(sapling);
+
   group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData = { hits: 0, maxHits: 3, felled: false, respawnTimer: 0, shakeTimer: 0 };
+  group.userData = {
+    hits: 0, maxHits: 3, felled: false, shakeTimer: 0,
+    seasonsSinceFelled: 0, grownGroup: grown, saplingGroup: sapling,
+  };
   scene.add(group);
   interactables.push({ obj: group, type: 'woodTree' });
 }
@@ -867,7 +1140,7 @@ function makeRock(x, z) {
   mineral.position.set(0.5, 1.3, 0.3);
   group.add(mineral);
   group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData = { hits: 0, maxHits: 3, felled: false, respawnTimer: 0, shakeTimer: 0 };
+  group.userData = { hits: 0, maxHits: 3, felled: false, shakeTimer: 0, seasonsSinceFelled: 0 };
   scene.add(group);
   interactables.push({ obj: group, type: 'rock' });
 }
@@ -878,8 +1151,14 @@ scatterPoints(9, ISLAND.valley, 8).forEach(p => makeRock(p.x, p.z));
 scatterPoints(16, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
 scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
 
-const RESPAWN_TIME = 40;   // secondi reali prima che un albero da legna/roccia ricresca
-const REGROW_TIME = 30;    // secondi reali prima che l'albero da frutta ridia frutti
+const REGROW_TIME = 30;         // secondi reali prima che l'albero da frutta ridia frutti
+const TREE_REGROW_SEASONS = 4;  // stagioni prima che la piantina ridiventi albero
+const ROCK_RESPAWN_SEASONS = 6; // stagioni prima che la roccia ricompaia (se il posto è libero)
+
+function isSpotBuiltOver(x, z) {
+  for (const it of placedItems) if (Math.hypot(x - it.x, z - it.z) < 2.4) return true;
+  return false;
+}
 
 function updateResources(dt) {
   for (const it of interactables) {
@@ -890,10 +1169,6 @@ function updateResources(dt) {
         if (d.regrowTimer <= 0) { d.harvested = false; d.fruitsGroup.visible = true; }
       }
     } else if (it.type === 'woodTree' || it.type === 'rock') {
-      if (d.felled) {
-        d.respawnTimer -= dt;
-        if (d.respawnTimer <= 0) { d.felled = false; d.hits = 0; it.obj.visible = true; }
-      }
       if (d.shakeTimer > 0) {
         d.shakeTimer -= dt;
         const s = Math.sin(d.shakeTimer * 60) * 0.06;
@@ -903,6 +1178,32 @@ function updateResources(dt) {
     }
   }
 }
+
+// La ricrescita di alberi da legna e rocce è legata alle STAGIONI, non al
+// tempo reale: si aggiorna una sola volta per ogni cambio di stagione.
+clock.on('season', () => {
+  for (const it of interactables) {
+    const d = it.obj.userData;
+    if (it.type === 'woodTree' && d.felled) {
+      d.seasonsSinceFelled++;
+      if (d.seasonsSinceFelled >= TREE_REGROW_SEASONS) {
+        d.felled = false; d.hits = 0; d.seasonsSinceFelled = 0;
+        d.saplingGroup.visible = false;
+        d.grownGroup.visible = true;
+      }
+    } else if (it.type === 'rock' && d.felled) {
+      d.seasonsSinceFelled++;
+      if (d.seasonsSinceFelled >= ROCK_RESPAWN_SEASONS) {
+        if (!isSpotBuiltOver(it.obj.position.x, it.obj.position.z)) {
+          d.felled = false; d.hits = 0; d.seasonsSinceFelled = 0;
+          it.obj.visible = true;
+        }
+        // se il posto è stato costruito sopra, la roccia non ricompare:
+        // il conteggio si ferma qui (seasonsSinceFelled resta al massimo)
+      }
+    }
+  }
+});
 
 /* =========================================================================
    PLAYER (placeholder capsula, verrà sostituito con un modello vero)
@@ -959,7 +1260,7 @@ const player = new THREE.Group();
     player.add(eye);
   });
 }
-player.position.set(TENT_POS.x + 8, terrainHeightAt(TENT_POS.x + 8, TENT_POS.z + 4), TENT_POS.z + 4);
+player.position.set(TENT_POS.x + 13, terrainHeightAt(TENT_POS.x + 13, TENT_POS.z + 9), TENT_POS.z + 9);
 player.userData.yaw = 0;
 scene.add(player);
 
@@ -1114,7 +1415,7 @@ function updateCamera() {
   const yaw = player.userData.yaw;
   const behindX = player.position.x - Math.sin(yaw) * CAMERA_OFFSET.distance;
   const behindZ = player.position.z - Math.cos(yaw) * CAMERA_OFFSET.distance;
-  camTarget.set(behindX, CAMERA_OFFSET.height, behindZ);
+  camTarget.set(behindX, player.position.y + CAMERA_OFFSET.height, behindZ);
   camera.position.lerp(camTarget, CAMERA_LERP);
   camera.lookAt(player.position.x, player.position.y + 1.7, player.position.z);
 }
@@ -1148,12 +1449,12 @@ function updatePlayer(dt) {
     const nextZ = player.position.z + dz;
 
     // Collisione semplice: prova prima il movimento pieno, poi solo asse per asse
-    if (isWalkable(nextX, nextZ) && !blockedByFences(nextX, nextZ)) {
+    if (isWalkable(nextX, nextZ) && !blockedByFences(nextX, nextZ) && !blockedByObstacles(nextX, nextZ)) {
       player.position.x = nextX;
       player.position.z = nextZ;
-    } else if (isWalkable(nextX, player.position.z) && !blockedByFences(nextX, player.position.z)) {
+    } else if (isWalkable(nextX, player.position.z) && !blockedByFences(nextX, player.position.z) && !blockedByObstacles(nextX, player.position.z)) {
       player.position.x = nextX;
-    } else if (isWalkable(player.position.x, nextZ) && !blockedByFences(player.position.x, nextZ)) {
+    } else if (isWalkable(player.position.x, nextZ) && !blockedByFences(player.position.x, nextZ) && !blockedByObstacles(player.position.x, nextZ)) {
       player.position.z = nextZ;
     }
   }
@@ -1242,13 +1543,27 @@ function updateFishing(dt, elapsedTime) {
 }
 
 /* =========================================================================
-   PIAZZAMENTO OGGETTI: per ora solo il pannello di recinto craftato.
-   Un "fantasma" semitrasparente segue il player a distanza fissa davanti a
-   sé, agganciato a una griglia; verde se la posizione è valida, rosso se no.
+   PIAZZAMENTO OGGETTI: pannelli di recinto e torce. Un "fantasma" semitra-
+   sparente (uno per tipo) segue il player a distanza fissa davanti a sé,
+   agganciato a una griglia; verde se la posizione è valida, rosso se no.
    ========================================================================= */
 const GRID_SIZE = 2.4;
 const PLACEMENT_DISTANCE = 3.6;
-const placedFences = []; // { x, z, yaw, mesh }
+const placedItems = []; // { itemType: 'recinto'|'torcia', x, z, yaw, mesh }
+
+function registerPlacedItem(entry) {
+  entry.mesh.userData.placedEntry = entry;
+  placedItems.push(entry);
+  interactables.push({ obj: entry.mesh, type: 'placedItem' });
+}
+
+function removePlacedItem(entry) {
+  scene.remove(entry.mesh);
+  const fi = placedItems.indexOf(entry);
+  if (fi !== -1) placedItems.splice(fi, 1);
+  const ii = interactables.findIndex(it => it.obj === entry.mesh);
+  if (ii !== -1) interactables.splice(ii, 1);
+}
 
 function makeFencePanel(x, z, yaw) {
   const group = new THREE.Group();
@@ -1272,70 +1587,246 @@ function makeFencePanel(x, z, yaw) {
   return group;
 }
 
-const ghostMat = new THREE.MeshBasicMaterial({ color: 0x7fe08a, transparent: true, opacity: 0.55 });
-const ghostMesh = makeFencePanel(0, 0, 0);
-ghostMesh.traverse(o => { if (o.isMesh) { o.material = ghostMat; o.castShadow = false; } });
-ghostMesh.visible = false;
+function makeTorch(x, z, yaw) {
+  const group = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 1.6, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+  pole.position.y = 0.8;
+  pole.castShadow = true;
+  group.add(pole);
+  const flameMat = new THREE.MeshLambertMaterial({ color: 0xffa53d, emissive: 0xff7b1a, emissiveIntensity: 0.5 });
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 6), flameMat);
+  flame.position.y = 1.75;
+  group.add(flame);
+  const light = new THREE.PointLight(0xffb166, 0, 15, 2); // intensità 0 finché non è sera/notte
+  light.position.set(0, 1.8, 0);
+  group.add(light);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.rotation.y = yaw;
+  group.userData.light = light;
+  group.userData.flame = flame;
+  scene.add(group);
+  return group;
+}
+
+function makeWall(x, z, yaw) {
+  const group = new THREE.Group();
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 0.4), new THREE.MeshLambertMaterial({ color: 0x9a958a }));
+  wall.position.y = 0.8;
+  wall.castShadow = true;
+  wall.receiveShadow = true;
+  group.add(wall);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
+let casettaBuilt = false;
+function makeCasetta(x, z, yaw) {
+  const group = new THREE.Group();
+  const wallMat = new THREE.MeshLambertMaterial({ color: 0xb08a5a });
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(7, 4.5, 7), wallMat);
+  walls.position.y = 2.25;
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  group.add(walls);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(5.6, 3, 4), new THREE.MeshLambertMaterial({ color: 0x7a4a30 }));
+  roof.position.y = 6;
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  group.add(roof);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, 0.12), new THREE.MeshLambertMaterial({ color: 0x5a3d24 }));
+  door.position.set(0, 1.3, 3.51);
+  group.add(door);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
+function isNightTime() {
+  return clock.hour >= 19 || clock.hour < 6;
+}
+function updateTorches(elapsedTime) {
+  const lit = isNightTime();
+  for (const it of placedItems) {
+    if (it.itemType !== 'torcia') continue;
+    const light = it.mesh.userData.light;
+    const flame = it.mesh.userData.flame;
+    if (lit) {
+      light.intensity = 1.5 + Math.sin(elapsedTime * 9 + it.x) * 0.25;
+      flame.scale.y = 1 + Math.sin(elapsedTime * 11 + it.x) * 0.1;
+    } else {
+      light.intensity = 0;
+    }
+  }
+}
+
+// Fabbrica mesh, chiave inventario e "ingombro" (spaziatura minima) per ogni
+// tipo di oggetto piazzabile — aggiungere un tipo nuovo in futuro (es. una
+// futura fontana) significa solo aggiungere una riga in ciascuna di queste.
+const ITEM_FACTORY = { recinto: makeFencePanel, torcia: makeTorch, muro: makeWall, casetta: makeCasetta };
+const ITEM_INV_KEY = { recinto: 'recinti', torcia: 'torce', muro: 'muri', casetta: 'casette' };
+const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2 };
+const ITEM_SOLID = { recinto: true, torcia: false, muro: true, casetta: true }; // blocca il movimento?
+
+const ghostMats = {};
+const ghostMeshes = {};
+for (const type of Object.keys(ITEM_FACTORY)) {
+  const mat = new THREE.MeshBasicMaterial({ color: 0x7fe08a, transparent: true, opacity: 0.55 });
+  const mesh = ITEM_FACTORY[type](0, 0, 0);
+  mesh.traverse(o => { if (o.isMesh) { o.material = mat; o.castShadow = false; } });
+  if (mesh.userData.light) mesh.userData.light.intensity = 0; // il fantasma della torcia non deve mai illuminare
+  mesh.visible = false;
+  ghostMats[type] = mat;
+  ghostMeshes[type] = mesh;
+}
+
+function activeGhost() { return ghostMeshes[placementItemType]; }
+function activeGhostMat() { return ghostMats[placementItemType]; }
 
 function isPlacementValid(x, z) {
   if (!isWalkable(x, z)) return false;
   if (insideBridge(x, z)) return false;
   if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 5) return false;
-  for (const f of placedFences) if (Math.hypot(x - f.x, z - f.z) < GRID_SIZE * 0.9) return false;
-  for (const it of interactables) if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < 2.4) return false;
+  const myFootprint = ITEM_FOOTPRINT[placementItemType] || GRID_SIZE * 0.9;
+  for (const it of placedItems) {
+    const spacing = Math.max(myFootprint, ITEM_FOOTPRINT[it.itemType] || GRID_SIZE * 0.9);
+    if (Math.hypot(x - it.x, z - it.z) < spacing) return false;
+  }
+  for (const it of interactables) {
+    if (it.type === 'rock' && it.obj.userData.felled) continue; // posto libero: si può costruire sopra
+    if (it.type === 'placedItem') continue; // già gestito sopra con la spaziatura di griglia corretta
+    if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < Math.max(2.4, myFootprint)) return false;
+  }
   return true;
 }
 
 function blockedByFences(x, z) {
-  for (const f of placedFences) if (Math.hypot(x - f.x, z - f.z) < 1.3) return true;
+  for (const it of placedItems) {
+    if (!ITEM_SOLID[it.itemType]) continue;
+    const radius = it.itemType === 'casetta' ? 3.7 : 1.3;
+    if (Math.hypot(x - it.x, z - it.z) < radius) return true;
+  }
+  return false;
+}
+
+// Ostacoli fisici "naturali" o strutturali: non ci si cammina attraverso.
+// Un raggio per tipo, così si può estendere facilmente (es. una futura casetta).
+const OBSTACLE_RADIUS = { fruitTree: 1.1, woodTree: 1.1, rock: 1.3, tent: 3, workbench: 2.2 };
+function blockedByObstacles(x, z) {
+  for (const it of interactables) {
+    const radius = OBSTACLE_RADIUS[it.type];
+    if (!radius) continue;
+    // un albero abbattuto (piantina) o una roccia rimossa non bloccano il passo
+    if ((it.type === 'woodTree' || it.type === 'rock') && it.obj.userData.felled) continue;
+    if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < radius) return true;
+  }
   return false;
 }
 
 let placementMode = false;
-const invRecintiChip = document.getElementById('invRecintiChip');
+let placementItemType = null; // 'recinto' | 'torcia' | 'muro' | 'casetta'
+let movingItem = null; // { itemType, x, z, yaw } dell'oggetto "in mano" mentre lo si sposta
 
-function enterPlacementMode() {
-  if (inventory.recinti <= 0) return;
+function enterPlacementMode(itemType) {
+  if (inventory[ITEM_INV_KEY[itemType]] <= 0) return;
   placementMode = true;
-  invRecintiChip.classList.add('active');
+  placementItemType = itemType;
+  buildChip.classList.add('active');
 }
 function exitPlacementMode() {
   placementMode = false;
-  ghostMesh.visible = false;
-  invRecintiChip.classList.remove('active');
+  for (const type of Object.keys(ghostMeshes)) ghostMeshes[type].visible = false;
+  buildChip.classList.remove('active');
+  if (movingItem) {
+    // annullato mentre si spostava un oggetto: lo si ripiazza dov'era prima
+    const mesh = ITEM_FACTORY[movingItem.itemType](movingItem.x, movingItem.z, movingItem.yaw);
+    registerPlacedItem({ itemType: movingItem.itemType, x: movingItem.x, z: movingItem.z, yaw: movingItem.yaw, mesh });
+    movingItem = null;
+  }
+  placementItemType = null;
 }
-function togglePlacementMode() {
-  if (placementMode) exitPlacementMode(); else enterPlacementMode();
+
+/* Menu "Costruisci": un solo pulsante che elenca tutto ciò che si ha in
+   inventario e che si può piazzare — aggiungere un nuovo tipo di oggetto in
+   futuro non richiede nuovi tasti dedicati, solo una riga in ITEM_FACTORY. */
+const buildChip = document.getElementById('buildChip');
+const buildOverlay = document.getElementById('build-overlay');
+const buildListEl = document.getElementById('build-list');
+const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta' };
+let buildMenuOpen = false;
+
+function renderBuildMenu() {
+  buildListEl.innerHTML = '';
+  const types = Object.keys(ITEM_FACTORY).filter(t => inventory[ITEM_INV_KEY[t]] > 0);
+  if (types.length === 0) {
+    buildListEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Niente da piazzare — crea prima qualcosa al banco da lavoro</div></div>';
+    setMenuButtons([document.getElementById('build-cancel')]);
+    return;
+  }
+  for (const type of types) {
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `<div class="recipe-info">${ITEM_LABEL_FULL[type]}<div class="recipe-cost">×${inventory[ITEM_INV_KEY[type]]}</div></div>
+      <button class="recipe-btn">piazza</button>`;
+    row.querySelector('.recipe-btn').addEventListener('click', () => {
+      closeBuildMenu();
+      enterPlacementMode(type);
+    });
+    buildListEl.appendChild(row);
+  }
+  setMenuButtons([...buildListEl.querySelectorAll('.recipe-btn'), document.getElementById('build-cancel')]);
 }
-invRecintiChip.addEventListener('click', togglePlacementMode);
-invRecintiChip.addEventListener('touchstart', e => { e.preventDefault(); togglePlacementMode(); }, { passive: false });
+function openBuildMenu() {
+  buildMenuOpen = true;
+  renderBuildMenu();
+  buildOverlay.classList.add('open');
+}
+function closeBuildMenu() {
+  buildMenuOpen = false;
+  buildOverlay.classList.remove('open');
+}
+buildChip.addEventListener('click', openBuildMenu);
+buildChip.addEventListener('touchstart', e => { e.preventDefault(); openBuildMenu(); }, { passive: false });
+document.getElementById('build-cancel').addEventListener('click', closeBuildMenu);
 
 function updatePlacementGhost() {
-  ghostMesh.visible = true;
+  const ghost = activeGhost();
+  const mat = activeGhostMat();
+  ghost.visible = true;
   const yaw = player.userData.yaw;
   const rawX = player.position.x + Math.sin(yaw) * PLACEMENT_DISTANCE;
   const rawZ = player.position.z + Math.cos(yaw) * PLACEMENT_DISTANCE;
   const gx = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
   const gz = Math.round(rawZ / GRID_SIZE) * GRID_SIZE;
   const snappedYaw = Math.round(yaw / (Math.PI / 2)) * (Math.PI / 2);
-  ghostMesh.position.set(gx, terrainHeightAt(gx, gz), gz);
-  ghostMesh.rotation.y = snappedYaw;
+  ghost.position.set(gx, terrainHeightAt(gx, gz), gz);
+  ghost.rotation.y = snappedYaw;
   const valid = isPlacementValid(gx, gz);
-  ghostMat.color.setHex(valid ? 0x7fe08a : 0xe0625a);
-  ghostMesh.userData.valid = valid;
-  ghostMesh.userData.gx = gx;
-  ghostMesh.userData.gz = gz;
-  ghostMesh.userData.yaw = snappedYaw;
+  mat.color.setHex(valid ? 0x7fe08a : 0xe0625a);
+  ghost.userData.valid = valid;
+  ghost.userData.gx = gx;
+  ghost.userData.gz = gz;
+  ghost.userData.yaw = snappedYaw;
 }
 
 function confirmPlacement() {
-  if (!ghostMesh.userData.valid) return;
-  const { gx, gz, yaw } = ghostMesh.userData;
-  const mesh = makeFencePanel(gx, gz, yaw);
-  placedFences.push({ x: gx, z: gz, yaw, mesh });
-  inventory.recinti--;
-  refreshInventoryHud();
-  if (inventory.recinti <= 0) exitPlacementMode();
+  const ghost = activeGhost();
+  if (!ghost.userData.valid) return;
+  const { gx, gz, yaw } = ghost.userData;
+  const mesh = ITEM_FACTORY[placementItemType](gx, gz, yaw);
+  registerPlacedItem({ itemType: placementItemType, x: gx, z: gz, yaw, mesh });
+  if (placementItemType === 'casetta') casettaBuilt = true;
+  if (movingItem) {
+    movingItem = null; // già ripiazzato: uscendo NON va ripristinato altrove
+    exitPlacementMode();
+  } else {
+    const key = ITEM_INV_KEY[placementItemType];
+    inventory[key]--;
+    refreshInventoryHud();
+    if (inventory[key] <= 0) exitPlacementMode();
+  }
 }
 
 /* Pulsante secondario: tastiera [B], gamepad Y/Triangle (indice 3) o D-pad
@@ -1346,7 +1837,7 @@ let prevKeyB = false;
 let prevPadY = false;
 let prevPadDpadLeft = false;
 function updateSecondaryButtonInput() {
-  if (sleepMenuOpen || craftMenuOpen || clock.sleeping) return;
+  if (sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || insideHouse || clock.sleeping) return;
   const keyB = !!keys['KeyB'];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
@@ -1357,7 +1848,7 @@ function updateSecondaryButtonInput() {
   if (pressed && !prevKeyB) {
     if (placementMode) exitPlacementMode();
     else if (fishingState !== 'idle') cancelFishing();
-    else togglePlacementMode();
+    else openBuildMenu();
   }
   prevKeyB = pressed;
 }
@@ -1388,7 +1879,11 @@ function updateMenuGamepadNav(dt) {
   const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
   const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen;
+  // L'inventario è una semplice vista (nessuna lista da navigare): si chiude
+  // col tasto Annulla, gestito qui a parte prima del resto della logica menu
+  if (inventoryMenuOpen && cancelNow && !prevPadCancel) closeInventoryMenu();
+
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen;
   if (!anyMenuOpen || !pad) {
     // Aggiorniamo comunque lo stato "precedente" anche a menu chiuso: se non lo
     // facessimo, un tasto A già tenuto premuto nel momento in cui il menu si
@@ -1421,6 +1916,9 @@ function updateMenuGamepadNav(dt) {
   if (cancelNow && !prevPadCancel) {
     if (sleepMenuOpen) closeSleepMenu();
     if (craftMenuOpen) closeCraftMenu();
+    if (fenceEditMenuOpen) closeFenceEditMenu();
+    if (buildMenuOpen) closeBuildMenu();
+    if (storageMenuOpen) closeStorageMenu();
   }
   prevPadConfirm = confirmNow;
   prevPadCancel = cancelNow;
@@ -1495,20 +1993,135 @@ function closeCraftMenu() {
 }
 document.getElementById('craft-cancel').addEventListener('click', closeCraftMenu);
 
+/* Menu di modifica per un pannello di recinto già piazzato: ruota, sposta
+   (lo "riprende in mano" e rientra in modalità piazzamento), rimuove con
+   un rimborso di almeno metà del materiale usato per crearlo. */
+const fenceEditOverlay = document.getElementById('fence-edit-overlay');
+const RECIPE_BY_ITEM = {
+  recinto: RECIPES.find(r => r.id === 'recinto'),
+  torcia: RECIPES.find(r => r.id === 'torcia'),
+  muro: RECIPES.find(r => r.id === 'muro'),
+  casetta: RECIPES.find(r => r.id === 'casetta'),
+};
+const ITEM_LABEL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta' };
+
+function refundFor(itemType) {
+  const cost = RECIPE_BY_ITEM[itemType].cost;
+  const refund = {};
+  for (const [k, v] of Object.entries(cost)) refund[k] = Math.ceil(v / 2);
+  return refund;
+}
+
+let fenceEditMenuOpen = false;
+let fenceEditTarget = null;
+
+function openFenceEditMenu(entry) {
+  fenceEditMenuOpen = true;
+  fenceEditTarget = entry;
+  document.getElementById('fenceEditTitle').textContent = ITEM_LABEL[entry.itemType];
+  const refund = refundFor(entry.itemType);
+  document.getElementById('fenceRefundLabel').textContent =
+    Object.entries(refund).map(([k, v]) => `+${v} ${k}`).join(', ');
+  fenceEditOverlay.classList.add('open');
+  setMenuButtons([
+    document.getElementById('fenceRotateBtn'),
+    document.getElementById('fenceMoveBtn'),
+    document.getElementById('fenceRemoveBtn'),
+    document.getElementById('fenceEditCancel'),
+  ]);
+}
+function closeFenceEditMenu() {
+  fenceEditMenuOpen = false;
+  fenceEditOverlay.classList.remove('open');
+  fenceEditTarget = null;
+}
+
+document.getElementById('fenceRotateBtn').addEventListener('click', () => {
+  if (!fenceEditTarget) return;
+  fenceEditTarget.yaw += Math.PI / 2;
+  fenceEditTarget.mesh.rotation.y = fenceEditTarget.yaw;
+  closeFenceEditMenu();
+});
+
+document.getElementById('fenceMoveBtn').addEventListener('click', () => {
+  if (!fenceEditTarget) return;
+  const entry = fenceEditTarget;
+  movingItem = { itemType: entry.itemType, x: entry.x, z: entry.z, yaw: entry.yaw };
+  removePlacedItem(entry); // tolto dalla scena: torna a comparire come fantasma di piazzamento
+  closeFenceEditMenu();
+  placementMode = true;
+  placementItemType = entry.itemType;
+  buildChip.classList.add('active');
+});
+
+document.getElementById('fenceRemoveBtn').addEventListener('click', () => {
+  if (!fenceEditTarget) return;
+  const refund = refundFor(fenceEditTarget.itemType);
+  for (const [k, v] of Object.entries(refund)) inventory[k] += v;
+  if (fenceEditTarget.itemType === 'casetta') casettaBuilt = false;
+  removePlacedItem(fenceEditTarget);
+  refreshInventoryHud();
+  closeFenceEditMenu();
+});
+
+document.getElementById('fenceEditCancel').addEventListener('click', closeFenceEditMenu);
+
 const WEATHER_LABELS = { sereno: 'Sereno', nuvoloso: 'Nuvoloso', pioggia: 'Pioggia', neve: 'Neve' };
 
-const inventory = { legna: 0, pietra: 0, frutta: 0, recinti: 0, pesce: 0 };
-const invEls = {
-  legna: document.getElementById('invLegna'), pietra: document.getElementById('invPietra'),
-  frutta: document.getElementById('invFrutta'), recinti: document.getElementById('invRecinti'),
-  pesce: document.getElementById('invPesce'),
+const inventory = { legna: 0, pietra: 0, frutta: 0, recinti: 0, pesce: 0, selce: 0, torce: 0, muri: 0, casette: 0 };
+const INVENTORY_LABELS = {
+  legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'], frutta: ['🍎', 'Frutta'],
+  pesce: ['🐟', 'Pesce'], selce: ['🔥', 'Pietra focaia'],
+  recinti: ['🧱', 'Pannelli di recinto'], torce: ['🕯️', 'Torce'],
+  muri: ['🧱', 'Muri di pietra'], casette: ['🏠', 'Casette (da piazzare)'],
 };
+const inventoryListEl = document.getElementById('inventory-list');
 function refreshInventoryHud() {
-  invEls.legna.textContent = inventory.legna;
-  invEls.pietra.textContent = inventory.pietra;
-  invEls.frutta.textContent = inventory.frutta;
-  invEls.recinti.textContent = inventory.recinti;
-  invEls.pesce.textContent = inventory.pesce;
+  if (!inventoryMenuOpen) return; // niente da aggiornare se il menu non è a schermo
+  inventoryListEl.innerHTML = '';
+  const toolRow = document.createElement('div');
+  toolRow.className = 'inv-row';
+  toolRow.innerHTML = `<span>⚒️ Attrezzo</span><span>${toolTier >= 2 ? 'rinforzato' : 'base'}</span>`;
+  inventoryListEl.appendChild(toolRow);
+  for (const [key, [icon, label]] of Object.entries(INVENTORY_LABELS)) {
+    const row = document.createElement('div');
+    row.className = 'inv-row';
+    row.innerHTML = `<span>${icon} ${label}</span><span>${inventory[key]}</span>`;
+    inventoryListEl.appendChild(row);
+  }
+}
+
+const inventoryOverlay = document.getElementById('inventory-overlay');
+let inventoryMenuOpen = false;
+function openInventoryMenu() {
+  inventoryMenuOpen = true;
+  inventoryOverlay.classList.add('open');
+  refreshInventoryHud();
+}
+function closeInventoryMenu() {
+  inventoryMenuOpen = false;
+  inventoryOverlay.classList.remove('open');
+}
+function toggleInventoryMenu() {
+  if (inventoryMenuOpen) closeInventoryMenu(); else openInventoryMenu();
+}
+const inventoryToggleBtn = document.getElementById('inventoryToggleBtn');
+inventoryToggleBtn.addEventListener('click', toggleInventoryMenu);
+inventoryToggleBtn.addEventListener('touchstart', e => { e.preventDefault(); toggleInventoryMenu(); }, { passive: false });
+document.getElementById('inventory-close').addEventListener('click', closeInventoryMenu);
+
+/* Apertura/chiusura inventario: tastiera [I], gamepad Start (indice 9) */
+let prevKeyI = false;
+let prevPadStart = false;
+function updateInventoryToggleInput() {
+  if (sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || placementMode || insideHouse || clock.sleeping) return;
+  const keyI = !!keys['KeyI'];
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  const startBtn = !!(pad && pad.buttons[9] && pad.buttons[9].pressed);
+  const pressed = keyI || startBtn;
+  if (pressed && !prevKeyI) toggleInventoryMenu();
+  prevKeyI = pressed;
 }
 
 const INTERACT_RANGE = 6;
@@ -1530,6 +2143,12 @@ function handleAction(target) {
     if (!craftMenuOpen) openCraftMenu();
   } else if (target.type === 'fishingSpot') {
     if (fishingState === 'idle') startFishing(target);
+  } else if (target.type === 'placedItem') {
+    if (d.placedEntry.itemType === 'casetta') {
+      enterHouse();
+    } else if (!fenceEditMenuOpen) {
+      openFenceEditMenu(d.placedEntry);
+    }
   } else if (target.type === 'fruitTree') {
     if (!d.harvested) {
       d.harvested = true;
@@ -1544,12 +2163,19 @@ function handleAction(target) {
       d.shakeTimer = 0.2;
       if (d.hits >= d.maxHits) {
         d.felled = true;
-        d.respawnTimer = RESPAWN_TIME;
-        target.obj.visible = false;
-        if (target.type === 'woodTree') inventory.legna += 3; else inventory.pietra += 3;
+        d.seasonsSinceFelled = 0;
+        if (target.type === 'woodTree') {
+          d.grownGroup.visible = false;
+          d.saplingGroup.visible = true;
+          inventory.legna += 3;
+        } else {
+          target.obj.visible = false;
+          inventory.pietra += 3;
+        }
       } else {
         if (target.type === 'woodTree') inventory.legna += 1; else inventory.pietra += 1;
       }
+      if (target.type === 'rock' && Math.random() < 0.2) inventory.selce++;
       refreshInventoryHud();
     }
   }
@@ -1559,10 +2185,20 @@ const INTERACT_HINTS = {
   tent: 'Vicino alla tenda — [E] per dormire',
   workbench: 'Banco da lavoro — [E] per creare oggetti',
   fishingSpot: 'Punto di pesca — [E] per lanciare l\'amo',
+  placedItem: 'Oggetto piazzato — [E] per modificare',
   fruitTree: 'Albero da frutta — [E] per raccogliere',
   woodTree: 'Albero da legna — [E] per colpire',
   rock: 'Roccia — [E] per colpire',
 };
+
+function updateClockHud() {
+  const debugEl = document.getElementById('debug');
+  const h = String(clock.hour).padStart(2, '0');
+  const m = String(clock.minuteOfHour).padStart(2, '0');
+  debugEl.textContent =
+    `${h}:${m} — giorno ${clock.dayInSeason + 1}/${clock.season.lengthDays} di ${clock.season.name}\n` +
+    `meteo: ${WEATHER_LABELS[currentWeather]}${clock.sleeping ? ' — sto dormendo...' : ''}`;
+}
 
 function checkInteractions() {
   const debugEl = document.getElementById('debug');
@@ -1570,10 +2206,11 @@ function checkInteractions() {
   if (placementMode) {
     updatePlacementGhost();
     if (input.actionJustPressed) confirmPlacement();
-    debugEl.textContent =
-      `Piazzamento recinto — ${ghostMesh.userData.valid ? 'posizione valida' : 'posizione non valida'}\n` +
+    updateClockHud();
+    debugEl.textContent += `\n` +
+      `Piazzamento ${ITEM_LABEL_FULL[placementItemType]} — ${activeGhost().userData.valid ? 'posizione valida' : 'posizione non valida'}\n` +
       `[E] conferma — [B] / Y / D-pad sinistro per uscire\n` +
-      `pannelli rimasti: ${inventory.recinti}`;
+      `rimasti: ${inventory[ITEM_INV_KEY[placementItemType]]}`;
     return;
   }
 
@@ -1582,7 +2219,8 @@ function checkInteractions() {
     if (fishingState === 'waiting') msg = 'Amo in acqua... aspetta (B per annullare)';
     else if (fishingState === 'bite') msg = 'Abbocca! [E] per agganciare!';
     else msg = fishingResultText;
-    debugEl.textContent = msg;
+    updateClockHud();
+    debugEl.textContent += `\n` + msg;
     return;
   }
 
@@ -1592,19 +2230,300 @@ function checkInteractions() {
     const d = target.obj.userData;
     const depleted = (target.type === 'fruitTree' && d.harvested) || ((target.type === 'woodTree' || target.type === 'rock') && d.felled);
     if (!depleted) {
-      hint = INTERACT_HINTS[target.type];
-      if (input.actionJustPressed && !sleepMenuOpen && !craftMenuOpen) handleAction(target);
+      hint = target.type === 'placedItem'
+        ? (d.placedEntry.itemType === 'casetta' ? 'Casetta — [E] per entrare' : `${ITEM_LABEL_FULL[d.placedEntry.itemType]} — [E] per modificare`)
+        : INTERACT_HINTS[target.type];
+      if (input.actionJustPressed && !sleepMenuOpen && !craftMenuOpen && !fenceEditMenuOpen && !inventoryMenuOpen && !buildMenuOpen) handleAction(target);
     }
   }
-  const h = String(clock.hour).padStart(2, '0');
-  const m = String(clock.minuteOfHour).padStart(2, '0');
-  debugEl.textContent =
-    `${h}:${m} — giorno ${clock.dayInSeason + 1}/${clock.season.lengthDays} di ${clock.season.name}\n` +
-    `meteo: ${WEATHER_LABELS[currentWeather]}${clock.sleeping ? ' — sto dormendo...' : ''}\n` +
-    `attrezzo: ${toolTier >= 2 ? 'rinforzato' : 'base'}\n` +
-    `pos: ${player.position.x.toFixed(1)}, ${player.position.z.toFixed(1)}\n` +
-    (hint ? hint : '');
+  updateClockHud();
+  if (hint) debugEl.textContent += `\n` + hint;
 }
+
+/* =========================================================================
+   INTERNO DELLA CASETTA
+   Uno "scenario dedicato" separato dall'isola: una scena Three.js a sé,
+   con luce fissa (nessun ciclo giorno/notte qui dentro, anche se il tempo
+   di gioco continua a scorrere normalmente). Niente personaggio visibile:
+   si interagisce toccando/cliccando direttamente gli arredi (o
+   selezionandoli con tastiera/gamepad), non spostandosi a piedi.
+   ========================================================================= */
+const interiorScene = new THREE.Scene();
+interiorScene.background = new THREE.Color(0x2b2118);
+
+const interiorCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+interiorCamera.position.set(0, 3.2, 6.8);
+interiorCamera.lookAt(0, 1.6, -1);
+
+interiorScene.add(new THREE.AmbientLight(0xfff0d8, 0.85));
+const interiorLamp = new THREE.PointLight(0xffdca8, 1.1, 20, 2);
+interiorLamp.position.set(0, 4, 1);
+interiorScene.add(interiorLamp);
+
+// Pavimento
+const interiorFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshLambertMaterial({ color: 0x8a6339 }));
+interiorFloor.rotation.x = -Math.PI / 2;
+interiorScene.add(interiorFloor);
+
+// Tre pareti: fondo + due laterali, il lato verso la camera resta aperto
+const interiorWallMat = new THREE.MeshLambertMaterial({ color: 0xd8c7a8 });
+const backWall = new THREE.Mesh(new THREE.BoxGeometry(8, 4.5, 0.3), interiorWallMat);
+backWall.position.set(0, 2.25, -4);
+interiorScene.add(backWall);
+const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 8), interiorWallMat);
+leftWall.position.set(-4, 2.25, 0);
+interiorScene.add(leftWall);
+const rightWall = leftWall.clone();
+rightWall.position.set(4, 2.25, 0);
+interiorScene.add(rightWall);
+
+// Letto (base + materasso + cuscino + coperta ripiegata)
+const bedGroup = new THREE.Group();
+const bedBase = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 3), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+bedBase.position.y = 0.25;
+bedGroup.add(bedBase);
+const mattress = new THREE.Mesh(new THREE.BoxGeometry(2, 0.35, 2.8), new THREE.MeshLambertMaterial({ color: 0xe8e0d0 }));
+mattress.position.y = 0.67;
+bedGroup.add(mattress);
+const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 0.6), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+pillow.position.set(0, 0.87, -1.1);
+bedGroup.add(pillow);
+const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.22, 1.2), new THREE.MeshLambertMaterial({ color: 0x7a3f3f }));
+blanket.position.set(0, 0.86, 0.6);
+bedGroup.add(blanket);
+bedGroup.position.set(-2.8, 0, -2.6);
+interiorScene.add(bedGroup);
+
+// Cassa (base + coperchio leggermente sollevato + chiusura)
+const chestGroup = new THREE.Group();
+const chestBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.8), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
+chestBase.position.y = 0.3;
+chestGroup.add(chestBase);
+const chestLid = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.18, 0.84), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+chestLid.position.y = 0.68;
+chestGroup.add(chestLid);
+const chestClasp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.06), new THREE.MeshLambertMaterial({ color: 0xc9a24a }));
+chestClasp.position.set(0, 0.55, 0.43);
+chestGroup.add(chestClasp);
+chestGroup.position.set(2.3, 0, -3.2);
+interiorScene.add(chestGroup);
+
+// Frigorifero (corpo + linea della porta + maniglia)
+const fridgeGroup = new THREE.Group();
+const fridgeBody = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.9, 0.9), new THREE.MeshLambertMaterial({ color: 0xdfe6e8 }));
+fridgeBody.position.y = 0.95;
+fridgeGroup.add(fridgeBody);
+const fridgeDoorLine = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.03, 0.92), new THREE.MeshLambertMaterial({ color: 0xaab4b6 }));
+fridgeDoorLine.position.y = 1.15;
+fridgeGroup.add(fridgeDoorLine);
+const fridgeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.07), new THREE.MeshLambertMaterial({ color: 0x555b5c }));
+fridgeHandle.position.set(0.48, 0.75, 0.46);
+fridgeGroup.add(fridgeHandle);
+fridgeGroup.position.set(3.4, 0, -1.3);
+interiorScene.add(fridgeGroup);
+
+// Spazi riservati per il futuro: riquadri sul pavimento, non interagibili.
+// Fornello e caminetto in zona cucina/focolare, la scala in un angolo libero.
+function makeReservedSpot(x, z, color) {
+  const marker = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.1, 1.1),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+  );
+  marker.rotation.x = -Math.PI / 2;
+  marker.position.set(x, 0.02, z);
+  interiorScene.add(marker);
+}
+makeReservedSpot(1.0, -3.4, 0xff8a4a);   // futuro: fornellino
+makeReservedSpot(0, -3.6, 0xff5a4a);     // futuro: caminetto (parete di fondo, centrale)
+makeReservedSpot(-3.4, 1.6, 0x8ab0ff);   // futuro: scala per il piano inferiore
+
+let insideHouse = false;
+let savedPlayerPos = null;
+let savedPlayerYaw = 0;
+
+/* Arredi davvero interagibili: ognuno ha una mesh (per il tocco/click) e
+   un'azione. Aggiungere un mobile craftabile in futuro (es. il fornello)
+   significa solo aggiungere una voce qui. */
+const HOUSE_FURNITURE = [
+  { mesh: bedGroup, label: 'Letto', action: () => openSleepMenu() },
+  { mesh: chestGroup, label: 'Cassa', action: () => openStorageMenu('cassa') },
+  { mesh: fridgeGroup, label: 'Frigorifero', action: () => openStorageMenu('frigorifero') },
+];
+let houseSelectedIndex = 0;
+
+// Piccolo indicatore che fluttua sopra il mobile selezionato (per chi usa
+// tastiera/gamepad, che non hanno un puntatore diretto come il tocco/mouse)
+const houseSelector = new THREE.Mesh(
+  new THREE.ConeGeometry(0.18, 0.32, 4),
+  new THREE.MeshBasicMaterial({ color: 0xffd166 })
+);
+houseSelector.rotation.x = Math.PI;
+interiorScene.add(houseSelector);
+
+function houseSubMenuOpen() { return sleepMenuOpen || storageMenuOpen; }
+
+function updateHouseSelector() {
+  const label = document.getElementById('houseSelectionLabel');
+  if (houseSubMenuOpen()) { label.classList.remove('show'); return; }
+  const entry = HOUSE_FURNITURE[houseSelectedIndex];
+  const box = new THREE.Box3().setFromObject(entry.mesh);
+  houseSelector.position.set((box.min.x + box.max.x) / 2, box.max.y + 0.35, (box.min.z + box.max.z) / 2);
+  houseSelector.visible = true;
+  label.textContent = `${entry.label} — [E] per usare`;
+  label.classList.add('show');
+}
+
+function activateSelectedFurniture() {
+  if (houseSubMenuOpen()) return;
+  HOUSE_FURNITURE[houseSelectedIndex].action();
+}
+
+function enterHouse() {
+  if (insideHouse) return;
+  insideHouse = true;
+  houseSelectedIndex = 0;
+  document.body.classList.add('inside-house');
+  savedPlayerPos = player.position.clone();
+  savedPlayerYaw = player.userData.yaw;
+  // Evita che il tasto E (o A del gamepad) usato per entrare venga riletto
+  // come "appena premuto" sul primo frame dentro casa, confermando subito
+  // il mobile selezionato di default
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  prevHouseConfirm = !!(keys['KeyE'] || (pad && pad.buttons[0] && pad.buttons[0].pressed));
+  prevHouseExitBtn = !!(keys['KeyB'] || (pad && pad.buttons[1] && pad.buttons[1].pressed));
+  prevHouseCycleLeft = !!(keys['KeyA'] || keys['ArrowLeft'] || (pad && pad.buttons[14] && pad.buttons[14].pressed));
+  prevHouseCycleRight = !!(keys['KeyD'] || keys['ArrowRight'] || (pad && pad.buttons[15] && pad.buttons[15].pressed));
+}
+function exitHouse() {
+  insideHouse = false;
+  document.body.classList.remove('inside-house');
+  document.getElementById('houseSelectionLabel').classList.remove('show');
+  if (savedPlayerPos) player.position.copy(savedPlayerPos);
+  player.userData.yaw = savedPlayerYaw;
+  player.rotation.y = savedPlayerYaw;
+}
+document.getElementById('houseExitBtn').addEventListener('click', exitHouse);
+document.getElementById('houseExitBtn').addEventListener('touchstart', e => { e.preventDefault(); exitHouse(); }, { passive: false });
+
+/* Tocco/click diretto su un mobile: raycast dal punto toccato/cliccato */
+const houseRaycaster = new THREE.Raycaster();
+function handleHouseTapAt(clientX, clientY) {
+  if (!insideHouse || houseSubMenuOpen()) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  houseRaycaster.setFromCamera(ndc, interiorCamera);
+  for (let i = 0; i < HOUSE_FURNITURE.length; i++) {
+    const hits = houseRaycaster.intersectObject(HOUSE_FURNITURE[i].mesh, true);
+    if (hits.length > 0) {
+      houseSelectedIndex = i;
+      HOUSE_FURNITURE[i].action();
+      return;
+    }
+  }
+}
+renderer.domElement.addEventListener('click', e => handleHouseTapAt(e.clientX, e.clientY));
+renderer.domElement.addEventListener('touchstart', e => {
+  if (!insideHouse || e.touches.length === 0) return;
+  handleHouseTapAt(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
+/* Selezione da tastiera/gamepad: sinistra/destra cambiano mobile, [E]/A usa
+   quello selezionato, [B] esce dalla casa (stesso tasto secondario di fuori) */
+let prevHouseCycleLeft = false;
+let prevHouseCycleRight = false;
+function updateHouseInput() {
+  if (houseSubMenuOpen()) {
+    document.getElementById('houseSelectionLabel').classList.remove('show');
+    houseSelector.visible = false;
+    return;
+  }
+  const keyLeft = !!(keys['KeyA'] || keys['ArrowLeft']);
+  const keyRight = !!(keys['KeyD'] || keys['ArrowRight']);
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  const dpadLeftNav = !!(pad && pad.buttons[14] && pad.buttons[14].pressed);
+  const dpadRightNav = !!(pad && pad.buttons[15] && pad.buttons[15].pressed);
+  const left = keyLeft || dpadLeftNav;
+  const right = keyRight || dpadRightNav;
+
+  if (left && !prevHouseCycleLeft) {
+    houseSelectedIndex = (houseSelectedIndex - 1 + HOUSE_FURNITURE.length) % HOUSE_FURNITURE.length;
+  }
+  if (right && !prevHouseCycleRight) {
+    houseSelectedIndex = (houseSelectedIndex + 1) % HOUSE_FURNITURE.length;
+  }
+  prevHouseCycleLeft = left;
+  prevHouseCycleRight = right;
+
+  const confirmNow = !!(keys['KeyE'] || (pad && pad.buttons[0] && pad.buttons[0].pressed));
+  if (confirmNow && !prevHouseConfirm) activateSelectedFurniture();
+  prevHouseConfirm = confirmNow;
+
+  const exitNow = !!(keys['KeyB'] || (pad && pad.buttons[1] && pad.buttons[1].pressed));
+  if (exitNow && !prevHouseExitBtn) exitHouse();
+  prevHouseExitBtn = exitNow;
+
+  updateHouseSelector();
+}
+let prevHouseConfirm = false;
+let prevHouseExitBtn = false;
+
+/* Stoccaggio: cassa (tutte le risorse) e frigorifero (solo frutta e pesce).
+   Un pulsante sposta TUTTA la quantità in un colpo solo, per non dover
+   cliccare più volte per spostare tante unità. */
+const houseChest = { legna: 0, pietra: 0, frutta: 0, pesce: 0, selce: 0, muri: 0, recinti: 0, torce: 0 };
+const houseFridge = { frutta: 0, pesce: 0 };
+const STORAGE_TARGET = { cassa: houseChest, frigorifero: houseFridge };
+const STORAGE_TITLE = { cassa: 'Cassa', frigorifero: 'Frigorifero' };
+let storageMenuOpen = false;
+let storageContext = null;
+
+function renderStorageMenu() {
+  const listEl = document.getElementById('storage-list');
+  listEl.innerHTML = '';
+  const target = STORAGE_TARGET[storageContext];
+  for (const key of Object.keys(target)) {
+    const [icon, label] = INVENTORY_LABELS[key];
+    const row = document.createElement('div');
+    row.className = 'storage-row';
+    row.innerHTML = `<span>${icon} ${label}<br><span style="opacity:0.6">zaino ${inventory[key]} — qui ${target[key]}</span></span>
+      <span><button class="storage-btn" data-dir="in">▶ deposita</button><button class="storage-btn" data-dir="out">◀ preleva</button></span>`;
+    row.querySelector('[data-dir="in"]').disabled = inventory[key] <= 0;
+    row.querySelector('[data-dir="out"]').disabled = target[key] <= 0;
+    row.querySelector('[data-dir="in"]').addEventListener('click', () => {
+      if (inventory[key] <= 0) return;
+      target[key] += inventory[key];
+      inventory[key] = 0;
+      renderStorageMenu();
+      refreshInventoryHud();
+    });
+    row.querySelector('[data-dir="out"]').addEventListener('click', () => {
+      if (target[key] <= 0) return;
+      inventory[key] += target[key];
+      target[key] = 0;
+      renderStorageMenu();
+      refreshInventoryHud();
+    });
+    listEl.appendChild(row);
+  }
+  setMenuButtons([...listEl.querySelectorAll('.storage-btn:not(:disabled)'), document.getElementById('storage-close')]);
+}
+function openStorageMenu(context) {
+  storageMenuOpen = true;
+  storageContext = context;
+  document.getElementById('storageTitle').textContent = STORAGE_TITLE[context];
+  renderStorageMenu();
+  document.getElementById('storage-overlay').classList.add('open');
+}
+function closeStorageMenu() {
+  storageMenuOpen = false;
+  document.getElementById('storage-overlay').classList.remove('open');
+}
+document.getElementById('storage-close').addEventListener('click', closeStorageMenu);
 
 /* =========================================================================
    LOOP DI GIOCO
@@ -1622,31 +2541,45 @@ function animate() {
   updateSky();
   updateWeatherParticles(dt);
   updateFireflies(elapsedTime);
+  updateTorches(elapsedTime);
   updateResources(dt);
   updateFishing(dt, elapsedTime);
+  updateMenuGamepadNav(dt); // serve anche per i menu della casa/stoccaggio
+
+  if (!clock.sleeping) zzzIndicator.classList.remove('show');
+
+  if (insideHouse) {
+    // Il tempo scorre come fuori, ma qui dentro niente giorno/notte visivo,
+    // niente movimento del player: si interagisce toccando i mobili o
+    // selezionandoli da tastiera/gamepad.
+    updateClockHud();
+    updateHouseInput();
+    renderer.render(interiorScene, interiorCamera);
+    return;
+  }
 
   input.actionPressed = false;
   input.photoPressed = false;
   updateInput();
   updateInputEdges();
-  updateMenuGamepadNav(dt);
   updateSecondaryButtonInput();
+  updateInventoryToggleInput();
 
-  const controlsLocked = sleepMenuOpen || craftMenuOpen || clock.sleeping || fishingState !== 'idle';
+  const controlsLocked = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle';
   if (!controlsLocked) {
     updatePlayer(dt);
   }
-  player.position.y = terrainHeightAt(player.position.x, player.position.z);
+  player.position.y = (bridgeBuilt && insideBridge(player.position.x, player.position.z))
+    ? bridgeHeightAt(player.position.x, player.position.z)
+    : terrainHeightAt(player.position.x, player.position.z);
   updateCamera();
   checkInteractions();
-
-  if (!clock.sleeping) zzzIndicator.classList.remove('show');
 
   renderer.render(scene, camera);
 }
 
 // Posiziona la camera subito dietro al player prima del primo frame
-camera.position.set(player.position.x, CAMERA_OFFSET.height, player.position.z + CAMERA_OFFSET.distance);
+camera.position.set(player.position.x, player.position.y + CAMERA_OFFSET.height, player.position.z + CAMERA_OFFSET.distance);
 camera.lookAt(player.position);
 
 animate();
