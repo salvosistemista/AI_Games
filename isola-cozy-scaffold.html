@@ -107,6 +107,15 @@
     background: rgba(5, 10, 25, 0.55); pointer-events: auto;
   }
   #storage-overlay.open { display: flex; }
+  #message-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #message-overlay.open { display: flex; }
+  #message-panel { width: 320px; }
+  #message-text { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 14px; }
+  #message-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 4px 0 2px; }
   #storage-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
 
   /* Menu principale e overlay collegati (conferme, opzioni) */
@@ -168,12 +177,12 @@
   }
   #fence-edit-overlay.open { display: flex; }
   #fenceEditCancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
-  #craft-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel {
+  #craft-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel {
     background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
     font-family: -apple-system, sans-serif;
   }
-  #craft-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 12px; }
+  #craft-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 12px; }
   .recipe-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);
@@ -279,6 +288,14 @@
       <button class="recipe-btn" id="fenceRemoveBtn">rimuovi</button>
     </div>
     <div id="fenceEditCancel">chiudi</div>
+  </div>
+</div>
+
+<div id="message-overlay">
+  <div id="message-panel">
+    <h3>Un messaggio nella bottiglia</h3>
+    <p id="message-text"></p>
+    <div id="message-close">chiudi</div>
   </div>
 </div>
 
@@ -473,10 +490,10 @@ function terrainHeightAt(x, z) {
    Durata stagioni: 7 giorni ciascuna per ora, facilmente estendibile.
    ========================================================================= */
 const SEASONS = [
-  { name: 'Primavera', lengthDays: 7, weatherPool: ['sereno', 'sereno', 'nuvoloso', 'pioggia'], coldness: 0.35 },
-  { name: 'Estate',     lengthDays: 7, weatherPool: ['sereno', 'sereno', 'sereno', 'nuvoloso'],  coldness: 0.05 },
-  { name: 'Autunno',    lengthDays: 7, weatherPool: ['nuvoloso', 'pioggia', 'pioggia', 'sereno'], coldness: 0.55 },
-  { name: 'Inverno',    lengthDays: 7, weatherPool: ['sereno', 'nuvoloso', 'neve', 'neve'],        coldness: 1.0 },
+  { name: 'Primavera', lengthDays: 30, weatherPool: ['sereno', 'sereno', 'nuvoloso', 'pioggia'], coldness: 0.35 },
+  { name: 'Estate',     lengthDays: 30, weatherPool: ['sereno', 'sereno', 'sereno', 'nuvoloso'],  coldness: 0.05 },
+  { name: 'Autunno',    lengthDays: 30, weatherPool: ['nuvoloso', 'pioggia', 'pioggia', 'sereno'], coldness: 0.55 },
+  { name: 'Inverno',    lengthDays: 30, weatherPool: ['sereno', 'nuvoloso', 'neve', 'neve'],        coldness: 1.0 },
 ];
 
 class GameClock {
@@ -543,7 +560,7 @@ class GameClock {
 
 // Velocità tarata per testare rapidamente: 1 giorno di gioco ≈ 2.4 minuti reali.
 // In seguito la rallenteremo per il ritmo definitivo del gioco.
-const clock = new GameClock({ startMinutes: 7 * 60, minutesPerRealSecond: 10, seasons: SEASONS });
+const clock = new GameClock({ startMinutes: 20 * 24 * 60 + 7 * 60, minutesPerRealSecond: 1.2, seasons: SEASONS }); // si parte dal 21° giorno di Primavera, ore 7:00
 
 let currentWeather = 'sereno';
 function pickNewWeather() {
@@ -1000,6 +1017,29 @@ function makeWorkbench() {
 }
 const workbench = makeWorkbench();
 
+// Bottiglietta di vetro col messaggio, vicino alla tenda
+function makeMessageBottle(x, z) {
+  const group = new THREE.Group();
+  const glassMat = new THREE.MeshLambertMaterial({ color: 0x6fae7a, transparent: true, opacity: 0.75 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.5, 8), glassMat);
+  body.position.y = 0.3;
+  group.add(body);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.22, 8), glassMat);
+  neck.position.y = 0.63;
+  group.add(neck);
+  const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.1, 8), new THREE.MeshLambertMaterial({ color: 0xb08a5a }));
+  cork.position.y = 0.78;
+  group.add(cork);
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 6, 12), new THREE.MeshLambertMaterial({ color: 0xd8c090 }));
+  cord.position.y = 0.7;
+  cord.rotation.x = Math.PI / 2;
+  group.add(cord);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  scene.add(group);
+  return group;
+}
+const messageBottle = makeMessageBottle(TENT_POS.x + 4, TENT_POS.z - 3);
+
 // Punto di pesca: piccolo molo di legno, con la posizione del galleggiante nell'acqua
 function makeFishingSpot(x, z, waterX, waterZ) {
   const group = new THREE.Group();
@@ -1051,6 +1091,7 @@ function isWalkable(x, z) {
 const interactables = []; // { obj, type, ...stato specifico }
 interactables.push({ obj: tent, type: 'tent' });
 interactables.push({ obj: workbench, type: 'workbench' });
+interactables.push({ obj: messageBottle, type: 'messageBottle' });
 
 // Punti di pesca: uno al laghetto (acqua dolce), due sulla costa della Cala (mare)
 const lakeSpot = makeFishingSpot(LAKE.cx - LAKE.rx - 2, LAKE.cz, LAKE.cx, LAKE.cz);
@@ -1064,6 +1105,19 @@ interactables.push({ obj: seaSpot1, type: 'fishingSpot' });
 const seaSpot2 = makeFishingSpot(149 * ISLAND_SCALE, 5 * ISLAND_SCALE, 163 * ISLAND_SCALE, -8 * ISLAND_SCALE);
 seaSpot2.userData.zone = 'mare';
 interactables.push({ obj: seaSpot2, type: 'fishingSpot' });
+
+// Punto per avvicinarsi alle lucciole e prenderne 3 in un colpo solo —
+// attivo solo quando le lucciole sono davvero visibili (stagione + sera/notte)
+// Più punti di raccolta lungo tutta la fascia dove compaiono le lucciole
+// (stessa fascia usata per posizionarle visivamente), non un solo punto fisso
+[0.1, 0.22, 0.34, 0.46, 0.58].forEach(t => {
+  const x = ISLAND.riverA.x + (ISLAND.riverB.x - ISLAND.riverA.x) * t;
+  const z = ISLAND.riverA.z + (ISLAND.riverB.z - ISLAND.riverA.z) * t;
+  const marker = new THREE.Group();
+  marker.position.set(x, terrainHeightAt(x, z), z);
+  scene.add(marker);
+  interactables.push({ obj: marker, type: 'fireflySwarm' });
+});
 
 const placedPoints = [];  // per tenere le risorse spaziate tra loro
 
@@ -1083,7 +1137,7 @@ const RECIPES = [
   {
     id: 'attrezzo_rinforzato',
     name: 'Attrezzo rinforzato',
-    cost: { legna: 5, pietra: 5 },
+    cost: { legna: 3, pietra: 3, alluminio: 2 },
     once: true,
     isDone: () => toolTier >= 2,
     craft: () => {
@@ -1107,7 +1161,7 @@ const RECIPES = [
   {
     id: 'torcia',
     name: 'Torcia',
-    cost: { legna: 2, pietra: 1, selce: 1 },
+    cost: { legna: 1, pietra: 1, selce: 1 },
     once: false,
     isDone: () => false,
     craft: () => { inventory.torce++; },
@@ -1127,6 +1181,31 @@ const RECIPES = [
     once: true,
     isDone: () => casettaBuilt,
     craft: () => { inventory.casette = 1; },
+  },
+  {
+    id: 'lampada',
+    name: 'Lampada portatile',
+    cost: { lucciole: 3, bottiglia: 1, alluminio: 1 },
+    once: true,
+    visible: () => fireflyCaughtEver && !portableLampBuilt,
+    isDone: () => portableLampBuilt,
+    craft: () => { portableLampBuilt = true; },
+  },
+  {
+    id: 'zappa',
+    name: 'Zappa',
+    cost: { legna: 2, pietra: 2, alluminio: 2 },
+    once: true,
+    isDone: () => hasHoe,
+    craft: () => { hasHoe = true; },
+  },
+  {
+    id: 'fornellino',
+    name: 'Fornellino',
+    cost: { legna: 2, pietra: 5, alluminio: 5, selce: 1 },
+    once: true,
+    isDone: () => stoveBuilt,
+    craft: () => { stoveBuilt = true; stoveMesh.visible = true; },
   },
 ];
 
@@ -1174,7 +1253,7 @@ function makeFruitTree(x, z) {
   }
   group.add(fruitsGroup);
   group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData = { fruitsGroup, harvested: false, regrowTimer: 0 };
+  group.userData = { fruitsGroup, harvested: false, daysSinceHarvest: 0 };
   scene.add(group);
   interactables.push({ obj: group, type: 'fruitTree' });
 }
@@ -1235,7 +1314,149 @@ scatterPoints(9, ISLAND.valley, 8).forEach(p => makeRock(p.x, p.z));
 scatterPoints(16, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
 scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
 
-const REGROW_TIME = 30;         // secondi reali prima che l'albero da frutta ridia frutti
+/* =========================================================================
+   FRAMMENTI DI STELLA: nelle notti d'estate, ogni tanto una stella cade dal
+   cielo lasciando una scia, e nel punto in cui atterra compare un frammento
+   luminoso raccoglibile — sparisce da solo all'alba se non viene raccolto.
+   ========================================================================= */
+function makeStarFragment(x, z) {
+  const group = new THREE.Group();
+  const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: 0xbfe8ff }));
+  star.position.y = 0.3;
+  group.add(star);
+  const light = new THREE.PointLight(0xbfe8ff, 1.2, 6, 2);
+  light.position.y = 0.3;
+  group.add(light);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.userData.star = star;
+  scene.add(group);
+  interactables.push({ obj: group, type: 'starFragment' });
+  return group;
+}
+
+function clearStarFragments() {
+  for (const it of [...interactables]) {
+    if (it.type !== 'starFragment') continue;
+    scene.remove(it.obj);
+    const idx = interactables.indexOf(it);
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+}
+
+function spawnFallingStar() {
+  let spot = null;
+  for (let attempts = 0; attempts < 20; attempts++) {
+    const x = (Math.random() - 0.5) * 320;
+    const z = (Math.random() - 0.5) * 320;
+    if (isWalkable(x, z)) { spot = { x, z }; break; }
+  }
+  if (!spot) return;
+  const groundY = terrainHeightAt(spot.x, spot.z);
+  const startY = groundY + 60;
+
+  const fallingStar = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), new THREE.MeshBasicMaterial({ color: 0xdff3ff }));
+  fallingStar.position.set(spot.x, startY, spot.z);
+  scene.add(fallingStar);
+
+  const trailGeo = new THREE.BufferGeometry().setFromPoints([fallingStar.position.clone(), fallingStar.position.clone()]);
+  const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.7 }));
+  scene.add(trail);
+
+  const duration = 1.1;
+  let elapsed = 0;
+  function stepFall() {
+    elapsed += 1 / 60;
+    const t = Math.min(elapsed / duration, 1);
+    const prevPos = fallingStar.position.clone();
+    fallingStar.position.set(spot.x, startY + (groundY - startY) * t, spot.z);
+    const pos = trail.geometry.attributes.position;
+    pos.setXYZ(0, prevPos.x, prevPos.y, prevPos.z);
+    pos.setXYZ(1, fallingStar.position.x, fallingStar.position.y, fallingStar.position.z);
+    pos.needsUpdate = true;
+    if (t < 1) {
+      requestAnimationFrame(stepFall);
+    } else {
+      scene.remove(fallingStar);
+      scene.remove(trail);
+      makeStarFragment(spot.x, spot.z);
+    }
+  }
+  stepFall();
+}
+
+// Una possibilità per ogni ora di gioco, solo d'estate e solo di notte
+clock.on('hour', () => {
+  if (clock.season.name === 'Estate' && isNightTime() && Math.random() < 0.35) spawnFallingStar();
+  if (clock.hour === 6) clearStarFragments(); // spariscono con la luce del giorno
+});
+
+/* =========================================================================
+   LATTINE DI ALLUMINIO: ogni mattina ne compaiono 1-3 lungo la spiaggia
+   della Cala, luccicanti; un colpo con l'attrezzo le lavora in alluminio.
+   ========================================================================= */
+function makeCan(x, z) {
+  const group = new THREE.Group();
+  const can = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.32, 10), new THREE.MeshLambertMaterial({ color: 0xc9d2d6 }));
+  can.position.y = 0.16;
+  can.rotation.z = (worldRandom() - 0.5) * 1.2; // un po' rovesciate sulla sabbia
+  can.castShadow = true;
+  group.add(can);
+  const glint = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  glint.position.set(0.1, 0.22, 0.1);
+  group.add(glint);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.userData = { hits: 0, maxHits: 1 };
+  scene.add(group);
+  interactables.push({ obj: group, type: 'can' });
+  return group;
+}
+
+function findBeachSpot() {
+  for (let attempts = 0; attempts < 30; attempts++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.86 + Math.random() * 0.11; // fascia di spiaggia, vicino al bordo della Cala
+    const x = ISLAND.cala.cx + Math.cos(a) * ISLAND.cala.rx * r;
+    const z = ISLAND.cala.cz + Math.sin(a) * ISLAND.cala.rz * r;
+    if (!isWalkable(x, z)) continue;
+    if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < 15) continue;
+    return { x, z };
+  }
+  return null;
+}
+
+function clearCans() {
+  for (const it of [...interactables]) {
+    if (it.type !== 'can') continue;
+    scene.remove(it.obj);
+    const idx = interactables.indexOf(it);
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+}
+
+function spawnDailyCans() {
+  clearCans();
+  const count = 1 + Math.floor(Math.random() * 3); // 1-3
+  for (let i = 0; i < count; i++) {
+    const spot = findBeachSpot();
+    if (spot) makeCan(spot.x, spot.z);
+  }
+}
+clock.on('day', spawnDailyCans);
+clock.on('day', () => {
+  for (const it of interactables) {
+    if (it.type !== 'fruitTree' || !it.obj.userData.harvested) continue;
+    const d = it.obj.userData;
+    d.daysSinceHarvest++;
+    if (d.daysSinceHarvest >= FRUIT_REGROW_DAYS) {
+      d.harvested = false;
+      d.daysSinceHarvest = 0;
+      d.fruitsGroup.visible = true;
+    }
+  }
+});
+spawnDailyCans(); // già qualcuna pronta al primo avvio
+
+const FRUIT_REGROW_DAYS = 7;    // giorni di gioco prima che l'albero da frutta ridia frutti
 const TREE_REGROW_SEASONS = 4;  // stagioni prima che la piantina ridiventi albero
 const ROCK_RESPAWN_SEASONS = 6; // stagioni prima che la roccia ricompaia (se il posto è libero)
 
@@ -1247,12 +1468,7 @@ function isSpotBuiltOver(x, z) {
 function updateResources(dt) {
   for (const it of interactables) {
     const d = it.obj.userData;
-    if (it.type === 'fruitTree') {
-      if (d.harvested) {
-        d.regrowTimer -= dt;
-        if (d.regrowTimer <= 0) { d.harvested = false; d.fruitsGroup.visible = true; }
-      }
-    } else if (it.type === 'woodTree' || it.type === 'rock') {
+    if (it.type === 'woodTree' || it.type === 'rock') {
       if (d.shakeTimer > 0) {
         d.shakeTimer -= dt;
         const s = Math.sin(d.shakeTimer * 60) * 0.06;
@@ -1525,7 +1741,7 @@ function updatePlayer(dt) {
   // Movimento: sempre lungo la direzione in cui il player è attualmente orientato
   if (throttle !== 0) {
     const yaw = player.userData.yaw;
-    const speed = PLAYER_SPEED * (throttle > 0 ? 1 : 0.55); // retromarcia più lenta
+    const speed = PLAYER_SPEED * HEALTH_SPEED_MULT[healthIndex] * (throttle > 0 ? 1 : 0.55); // retromarcia più lenta
     const dx = Math.sin(yaw) * speed * throttle * dt;
     const dz = Math.cos(yaw) * speed * throttle * dt;
 
@@ -1576,7 +1792,12 @@ let fishingZone = null;
 let fishingSpotObj = null;
 let fishingResultText = '';
 
+function isLakeFrozen() {
+  return clock.season.name === 'Inverno';
+}
+
 function startFishing(target) {
+  if (target.obj.userData.zone === 'laghetto' && isLakeFrozen()) return;
   fishingState = 'waiting';
   fishingTimer = 3 + Math.random() * 4; // 3-7 secondi di attesa, la parte rilassante
   fishingZone = target.obj.userData.zone;
@@ -1613,7 +1834,7 @@ function updateFishing(dt, elapsedTime) {
     if (input.actionJustPressed) {
       const pool = FISH_POOLS[fishingZone] || ['pesce'];
       const catchName = pool[Math.floor(Math.random() * pool.length)];
-      inventory.pesce++;
+      addFoodItem('pesce');
       refreshInventoryHud();
       fishingResultText = `Hai pescato: ${catchName}!`;
       fishingState = 'result'; fishingTimer = 1.6;
@@ -1706,6 +1927,10 @@ function makeWall(x, z, yaw) {
 }
 
 let casettaBuilt = false;
+let hasHoe = false;
+let stoveBuilt = false;
+let fireflyCaughtEver = false;
+let portableLampBuilt = false;
 function makeCasetta(x, z, yaw) {
   const group = new THREE.Group();
   const wallMat = new THREE.MeshLambertMaterial({ color: 0xb08a5a });
@@ -1731,6 +1956,17 @@ function makeCasetta(x, z, yaw) {
 function isNightTime() {
   return clock.hour >= 19 || clock.hour < 6;
 }
+
+// Lampada portatile: stessa luce di una torcia, ma segue sempre il player
+// invece di stare ferma — attiva solo dopo averla costruita, solo di notte.
+const portableLampLight = new THREE.PointLight(0xffb166, 0, 15, 2);
+scene.add(portableLampLight);
+function updatePortableLamp(elapsedTime) {
+  if (!portableLampBuilt) return;
+  portableLampLight.position.set(player.position.x, player.position.y + 2, player.position.z);
+  portableLampLight.intensity = isNightTime() ? 1.5 + Math.sin(elapsedTime * 9) * 0.25 : 0;
+}
+
 function updateTorches(elapsedTime) {
   const lit = isNightTime();
   for (const it of placedItems) {
@@ -1963,11 +2199,7 @@ function updateMenuGamepadNav(dt) {
   const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
   const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
-  // L'inventario è una semplice vista (nessuna lista da navigare): si chiude
-  // col tasto Annulla, gestito qui a parte prima del resto della logica menu
-  if (inventoryMenuOpen && cancelNow && !prevPadCancel) closeInventoryMenu();
-
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen ||
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen ||
     mainMenuOverlay.classList.contains('open') || optionsOverlay.classList.contains('open') ||
     newGameConfirmOverlay.classList.contains('open') || returnMenuConfirmOverlay.classList.contains('open');
   if (!anyMenuOpen || !pad) {
@@ -2005,6 +2237,8 @@ function updateMenuGamepadNav(dt) {
     if (fenceEditMenuOpen) closeFenceEditMenu();
     if (buildMenuOpen) closeBuildMenu();
     if (storageMenuOpen) closeStorageMenu();
+    if (messageOverlayOpen) closeMessageOverlay();
+    if (inventoryMenuOpen) closeInventoryMenu();
   }
   prevPadConfirm = confirmNow;
   prevPadCancel = cancelNow;
@@ -2032,7 +2266,7 @@ document.querySelectorAll('.hour-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const hours = parseInt(btn.dataset.hours, 10);
     closeSleepMenu();
-    clock.startSleep(hours, 6);
+    clock.startSleep(hours, hours); // 1 ora di gioco = 1 secondo reale
     zzzIndicator.classList.add('show');
     saveGame();
   });
@@ -2046,6 +2280,7 @@ let craftMenuOpen = false;
 function renderRecipes() {
   recipeListEl.innerHTML = '';
   for (const r of RECIPES) {
+    if (r.visible && !r.visible()) continue; // ricetta non ancora sbloccata
     const done = r.once && r.isDone();
     const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k}`).join(', ');
     const affordable = Object.entries(r.cost).every(([k, v]) => inventory[k] >= v);
@@ -2155,12 +2390,111 @@ document.getElementById('fenceEditCancel').addEventListener('click', closeFenceE
 
 const WEATHER_LABELS = { sereno: 'Sereno', nuvoloso: 'Nuvoloso', pioggia: 'Pioggia', neve: 'Neve' };
 
-const inventory = { legna: 0, pietra: 0, frutta: 0, recinti: 0, pesce: 0, selce: 0, torce: 0, muri: 0, casette: 0 };
+/* =========================================================================
+   CIBO DEPERIBILE: ogni frutto/pesce raccolto è un oggetto a sé con una sua
+   "età" in minuti di gioco, non solo un numero. Scaduto il tempo limite,
+   sparisce e genera al più 1 unità di spazzatura (per zaino o frigorifero).
+   In frigorifero l'invecchiamento rallenta a un quarto (1 ora lì = 15 min
+   di deperimento).
+   ========================================================================= */
+const SEASON_FRUITS = {
+  Primavera: ['ciliegie', 'nespole'],
+  Estate: ['pesche', 'fichi'],
+  Autunno: ['mele', 'castagne'],
+  Inverno: ['arance', 'mandarini'],
+};
+const FRUIT_TYPES = ['ciliegie', 'nespole', 'pesche', 'fichi', 'mele', 'castagne', 'arance', 'mandarini'];
+const FOOD_TYPES = [...FRUIT_TYPES, 'pesce'];
+function expiryMinutesFor(type) { return type === 'pesce' ? 48 * 60 : 72 * 60; }
+
+let foodItems = []; // { type, location: 'inventory'|'fridge', ageMinutes }
+
+/* =========================================================================
+   SALUTE: 4 stati, dal peggiore (indice 0) al migliore (indice 3). Mangiare
+   un frutto dallo zaino sale di uno stato; senza mangiare, si scende di uno
+   stato ogni tot ore di gioco (dipende dalla stagione) — mai sotto "Sufficiente".
+   ========================================================================= */
+const HEALTH_STATES = ['Sufficiente', 'Discreto', 'Buono', 'Ottimo'];
+const HEALTH_SPEED_MULT = [0.45, 0.65, 0.85, 1.0];
+let healthIndex = 3; // si parte in salute Ottima
+let minutesSinceMeal = 0;
+
+function healthDecayThresholdMinutes() {
+  const s = clock.season.name;
+  return (s === 'Estate' || s === 'Inverno') ? 12 * 60 : 24 * 60;
+}
+
+function updateHealth(deltaGameMinutes) {
+  if (deltaGameMinutes <= 0) return;
+  minutesSinceMeal += deltaGameMinutes;
+  const threshold = healthDecayThresholdMinutes();
+  while (minutesSinceMeal >= threshold && healthIndex > 0) {
+    minutesSinceMeal -= threshold;
+    healthIndex--;
+  }
+  if (healthIndex === 0) minutesSinceMeal = Math.min(minutesSinceMeal, threshold);
+}
+
+function eatFruit(type) {
+  if (!FRUIT_TYPES.includes(type) || inventory[type] <= 0) return;
+  const item = foodItems.find(f => f.type === type && f.location === 'inventory');
+  if (!item) return;
+  foodItems.splice(foodItems.indexOf(item), 1);
+  syncFoodCounts();
+  minutesSinceMeal = 0;
+  if (healthIndex < HEALTH_STATES.length - 1) healthIndex++;
+  refreshInventoryHud();
+}
+
+function addFoodItem(type) {
+  foodItems.push({ type, location: 'inventory', ageMinutes: 0 });
+  syncFoodCounts();
+}
+
+function updateFoodDecay(deltaGameMinutes) {
+  if (deltaGameMinutes <= 0) return;
+  let changed = false;
+  for (let i = foodItems.length - 1; i >= 0; i--) {
+    const item = foodItems[i];
+    const rate = item.location === 'fridge' ? 0.25 : 1;
+    item.ageMinutes += deltaGameMinutes * rate;
+    if (item.ageMinutes >= expiryMinutesFor(item.type)) {
+      foodItems.splice(i, 1);
+      changed = true;
+      if (item.location === 'fridge') {
+        if (!houseFridge.spazzatura) houseFridge.spazzatura = 1;
+      } else {
+        if (!inventory.spazzatura) inventory.spazzatura = 1;
+      }
+    }
+  }
+  if (changed) syncFoodCounts();
+}
+
+// Ricalcola i contatori "in zaino"/"in frigo" a partire dagli oggetti veri,
+// così l'inventario e il menu di stoccaggio restano sempre coerenti.
+function syncFoodCounts() {
+  for (const type of FOOD_TYPES) {
+    inventory[type] = foodItems.filter(f => f.type === type && f.location === 'inventory').length;
+    houseFridge[type] = foodItems.filter(f => f.type === type && f.location === 'fridge').length;
+  }
+  refreshInventoryHud();
+}
+
+const inventory = {
+  legna: 0, pietra: 0, recinti: 0, selce: 0, torce: 0, muri: 0, casette: 0,
+  alluminio: 0, bottiglia: 0, lucciole: 0, frammenti: 0, spazzatura: 0,
+  ciliegie: 0, nespole: 0, pesche: 0, fichi: 0, mele: 0, castagne: 0, arance: 0, mandarini: 0, pesce: 0,
+};
 const INVENTORY_LABELS = {
-  legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'], frutta: ['🍎', 'Frutta'],
-  pesce: ['🐟', 'Pesce'], selce: ['🔥', 'Pietra focaia'],
+  legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
+  ciliegie: ['🍒', 'Ciliegie'], nespole: ['🟠', 'Nespole'], pesche: ['🍑', 'Pesche'], fichi: ['🟣', 'Fichi'],
+  mele: ['🍎', 'Mele'], castagne: ['🌰', 'Castagne'], arance: ['🍊', 'Arance'], mandarini: ['🟡', 'Mandarini'],
+  pesce: ['🐟', 'Pesce'], selce: ['🔥', 'Pietra focaia'], alluminio: ['🥫', 'Alluminio'],
+  frammenti: ['⭐', 'Frammenti di stella'], spazzatura: ['🗑️', 'Spazzatura'],
   recinti: ['🧱', 'Pannelli di recinto'], torce: ['🕯️', 'Torce'],
   muri: ['🧱', 'Muri di pietra'], casette: ['🏠', 'Casette (da piazzare)'],
+  bottiglia: ['🍾', 'Bottiglietta col messaggio'], lucciole: ['✨', 'Lucciole'],
 };
 const inventoryListEl = document.getElementById('inventory-list');
 function refreshInventoryHud() {
@@ -2170,12 +2504,22 @@ function refreshInventoryHud() {
   toolRow.className = 'inv-row';
   toolRow.innerHTML = `<span>⚒️ Attrezzo</span><span>${toolTier >= 2 ? 'rinforzato' : 'base'}</span>`;
   inventoryListEl.appendChild(toolRow);
+  const healthRow = document.createElement('div');
+  healthRow.className = 'inv-row';
+  healthRow.innerHTML = `<span>❤️ Salute</span><span>${HEALTH_STATES[healthIndex]}</span>`;
+  inventoryListEl.appendChild(healthRow);
   for (const [key, [icon, label]] of Object.entries(INVENTORY_LABELS)) {
+    if (!inventory[key]) continue; // niente voci a zero
     const row = document.createElement('div');
     row.className = 'inv-row';
-    row.innerHTML = `<span>${icon} ${label}</span><span>${inventory[key]}</span>`;
+    const showEat = FRUIT_TYPES.includes(key) && healthIndex < HEALTH_STATES.length - 1;
+    row.innerHTML = `<span>${icon} ${label}</span><span>${inventory[key]}${showEat ? ' <button class="storage-btn" style="margin-left:6px;">mangia</button>' : ''}</span>`;
+    if (showEat) {
+      row.querySelector('.storage-btn').addEventListener('click', () => eatFruit(key));
+    }
     inventoryListEl.appendChild(row);
   }
+  setMenuButtons([...inventoryListEl.querySelectorAll('.storage-btn'), document.getElementById('inventory-close')]);
 }
 
 const inventoryOverlay = document.getElementById('inventory-overlay');
@@ -2216,6 +2560,7 @@ const INTERACT_RANGE = 6;
 function findNearestInteractable() {
   let best = null, bestDist = Infinity;
   for (const it of interactables) {
+    if (it.type === 'fireflySwarm' && !(fireflySeasonActive() && (clock.hour >= 20 || clock.hour < 5))) continue;
     const d = Math.hypot(player.position.x - it.obj.position.x, player.position.z - it.obj.position.z);
     if (d < INTERACT_RANGE && d < bestDist) { best = it; bestDist = d; }
   }
@@ -2228,6 +2573,26 @@ function handleAction(target) {
     if (!clock.sleeping && !sleepMenuOpen) openSleepMenu();
   } else if (target.type === 'workbench') {
     if (!craftMenuOpen) openCraftMenu();
+  } else if (target.type === 'messageBottle') {
+    collectMessageBottle(target);
+  } else if (target.type === 'can') {
+    scene.remove(target.obj);
+    const idx = interactables.indexOf(target);
+    if (idx !== -1) interactables.splice(idx, 1);
+    inventory.alluminio++;
+    refreshInventoryHud();
+  } else if (target.type === 'fireflySwarm') {
+    if (fireflySeasonActive() && (clock.hour >= 20 || clock.hour < 5)) {
+      inventory.lucciole += 3;
+      fireflyCaughtEver = true;
+      refreshInventoryHud();
+    }
+  } else if (target.type === 'starFragment') {
+    scene.remove(target.obj);
+    const idx = interactables.indexOf(target);
+    if (idx !== -1) interactables.splice(idx, 1);
+    inventory.frammenti++;
+    refreshInventoryHud();
   } else if (target.type === 'fishingSpot') {
     if (fishingState === 'idle') startFishing(target);
   } else if (target.type === 'placedItem') {
@@ -2240,9 +2605,9 @@ function handleAction(target) {
     if (!d.harvested) {
       d.harvested = true;
       d.fruitsGroup.visible = false;
-      d.regrowTimer = REGROW_TIME;
-      inventory.frutta++;
-      refreshInventoryHud();
+      d.daysSinceHarvest = 0;
+      const pool = SEASON_FRUITS[clock.season.name] || SEASON_FRUITS.Primavera;
+      addFoodItem(pool[Math.floor(Math.random() * pool.length)]);
     }
   } else if (target.type === 'woodTree' || target.type === 'rock') {
     if (!d.felled) {
@@ -2271,12 +2636,41 @@ function handleAction(target) {
 const INTERACT_HINTS = {
   tent: 'Vicino alla tenda — [E] per dormire',
   workbench: 'Banco da lavoro — [E] per creare oggetti',
+  messageBottle: 'Una bottiglietta di vetro — [E] per raccoglierla',
+  can: 'Una lattina luccicante — [E] per lavorarla',
+  fireflySwarm: 'Le lucciole! — [E] per raccoglierne 3',
+  starFragment: 'Un frammento di stella — [E] per raccoglierlo',
   fishingSpot: 'Punto di pesca — [E] per lanciare l\'amo',
   placedItem: 'Oggetto piazzato — [E] per modificare',
   fruitTree: 'Albero da frutta — [E] per raccogliere',
   woodTree: 'Albero da legna — [E] per colpire',
   rock: 'Roccia — [E] per colpire',
 };
+
+const MESSAGE_TEXT = "A chiunque legga questo messaggio: quest'isola ora è tua. Divertiti ma tienila pulita. PS: attento alle lucciole... con qualcosa che luccica possono illuminarti la via!";
+let messageOverlayOpen = false;
+function openMessageOverlay() {
+  messageOverlayOpen = true;
+  document.getElementById('message-text').textContent = MESSAGE_TEXT;
+  document.getElementById('message-overlay').classList.add('open');
+  setMenuButtons([document.getElementById('message-close')]);
+}
+function closeMessageOverlay() {
+  messageOverlayOpen = false;
+  document.getElementById('message-overlay').classList.remove('open');
+}
+document.getElementById('message-close').addEventListener('click', closeMessageOverlay);
+
+let messageBottleCollected = false;
+function collectMessageBottle(target) {
+  scene.remove(target.obj);
+  const idx = interactables.indexOf(target);
+  if (idx !== -1) interactables.splice(idx, 1);
+  inventory.bottiglia = 1;
+  messageBottleCollected = true;
+  refreshInventoryHud();
+  openMessageOverlay();
+}
 
 function updateClockHud() {
   const debugEl = document.getElementById('debug');
@@ -2319,8 +2713,10 @@ function checkInteractions() {
     if (!depleted) {
       hint = target.type === 'placedItem'
         ? (d.placedEntry.itemType === 'casetta' ? 'Casetta — [E] per entrare' : `${ITEM_LABEL_FULL[d.placedEntry.itemType]} — [E] per modificare`)
+        : (target.type === 'fishingSpot' && d.zone === 'laghetto' && isLakeFrozen())
+        ? 'Il laghetto è gelato — niente pesca fino a primavera'
         : INTERACT_HINTS[target.type];
-      if (input.actionJustPressed && !sleepMenuOpen && !craftMenuOpen && !fenceEditMenuOpen && !inventoryMenuOpen && !buildMenuOpen) handleAction(target);
+      if (input.actionJustPressed && !isAnyOverlayOpen()) handleAction(target);
     }
   }
   updateClockHud();
@@ -2420,7 +2816,24 @@ function makeReservedSpot(x, z, color) {
   marker.position.set(x, 0.02, z);
   interiorScene.add(marker);
 }
-makeReservedSpot(1.0, -3.4, 0xff8a4a);   // futuro: fornellino
+// Fornellino: costruito al banco da lavoro, compare qui automaticamente
+function makeStove(x, z) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.7), new THREE.MeshLambertMaterial({ color: 0x555b5c }));
+  body.position.y = 0.35;
+  group.add(body);
+  const plateMat = new THREE.MeshLambertMaterial({ color: 0x2c2c2a });
+  [[-0.22, -0.15], [0.22, -0.15], [-0.22, 0.15], [0.22, 0.15]].forEach(([px, pz]) => {
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 10), plateMat);
+    plate.position.set(px, 0.72, pz);
+    group.add(plate);
+  });
+  group.position.set(x, 0, z);
+  group.visible = false;
+  interiorScene.add(group);
+  return group;
+}
+const stoveMesh = makeStove(1.0, -3.4);
 makeReservedSpot(0, -3.6, 0xff5a4a);     // futuro: caminetto (parete di fondo, centrale)
 makeReservedSpot(-3.4, 1.6, 0x8ab0ff);   // futuro: scala per il piano inferiore
 
@@ -2562,12 +2975,25 @@ let prevHouseExitBtn = false;
 /* Stoccaggio: cassa (tutte le risorse) e frigorifero (solo frutta e pesce).
    Un pulsante sposta TUTTA la quantità in un colpo solo, per non dover
    cliccare più volte per spostare tante unità. */
-const houseChest = { legna: 0, pietra: 0, frutta: 0, pesce: 0, selce: 0, muri: 0, recinti: 0, torce: 0 };
-const houseFridge = { frutta: 0, pesce: 0 };
+const houseChest = { legna: 0, pietra: 0, selce: 0, alluminio: 0, muri: 0, recinti: 0, torce: 0, spazzatura: 0 };
+const houseFridge = {
+  ciliegie: 0, nespole: 0, pesche: 0, fichi: 0, mele: 0, castagne: 0, arance: 0, mandarini: 0, pesce: 0,
+  spazzatura: 0,
+};
 const STORAGE_TARGET = { cassa: houseChest, frigorifero: houseFridge };
 const STORAGE_TITLE = { cassa: 'Cassa', frigorifero: 'Frigorifero' };
 let storageMenuOpen = false;
 let storageContext = null;
+
+// Sceglie l'oggetto giusto da spostare per un dato tipo di cibo, rispettando
+// la priorità: verso il frigo va prima chi ha meno vita rimasta (rischia di
+// più), dal frigo verso lo zaino esce prima chi ha più vita rimasta.
+function pickFoodItem(location, type, leastLifeFirst) {
+  const candidates = foodItems.filter(f => f.location === location && f.type === type);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => leastLifeFirst ? b.ageMinutes - a.ageMinutes : a.ageMinutes - b.ageMinutes);
+  return candidates[0];
+}
 
 function renderStorageMenu() {
   const listEl = document.getElementById('storage-list');
@@ -2575,23 +3001,36 @@ function renderStorageMenu() {
   const target = STORAGE_TARGET[storageContext];
   for (const key of Object.keys(target)) {
     const [icon, label] = INVENTORY_LABELS[key];
+    const isFood = FOOD_TYPES.includes(key);
     const row = document.createElement('div');
     row.className = 'storage-row';
     row.innerHTML = `<span>${icon} ${label}<br><span style="opacity:0.6">zaino ${inventory[key]} — qui ${target[key]}</span></span>
-      <span><button class="storage-btn" data-dir="in">▶ deposita</button><button class="storage-btn" data-dir="out">◀ preleva</button></span>`;
+      <span><button class="storage-btn" data-dir="in">${isFood ? '▶ +1' : '▶ deposita'}</button><button class="storage-btn" data-dir="out">${isFood ? '◀ +1' : '◀ preleva'}</button></span>`;
     row.querySelector('[data-dir="in"]').disabled = inventory[key] <= 0;
     row.querySelector('[data-dir="out"]').disabled = target[key] <= 0;
     row.querySelector('[data-dir="in"]').addEventListener('click', () => {
       if (inventory[key] <= 0) return;
-      target[key] += inventory[key];
-      inventory[key] = 0;
+      if (isFood) {
+        const item = pickFoodItem('inventory', key, true); // meno vita rimasta = priorità
+        if (item) item.location = 'fridge';
+        syncFoodCounts();
+      } else {
+        target[key] += inventory[key];
+        inventory[key] = 0;
+      }
       renderStorageMenu();
       refreshInventoryHud();
     });
     row.querySelector('[data-dir="out"]').addEventListener('click', () => {
       if (target[key] <= 0) return;
-      inventory[key] += target[key];
-      target[key] = 0;
+      if (isFood) {
+        const item = pickFoodItem('fridge', key, false); // più vita rimasta = priorità
+        if (item) item.location = 'inventory';
+        syncFoodCounts();
+      } else {
+        inventory[key] += target[key];
+        target[key] = 0;
+      }
       renderStorageMenu();
       refreshInventoryHud();
     });
@@ -2633,11 +3072,19 @@ function serializeGame() {
     toolTier,
     bridgeBuilt,
     casettaBuilt,
+    fireflyCaughtEver,
+    portableLampBuilt,
+    messageBottleCollected,
+    hasHoe,
+    stoveBuilt,
     inventory: { ...inventory },
     houseChest: { ...houseChest },
     houseFridge: { ...houseFridge },
     placedItems: placedItems.map(it => ({ itemType: it.itemType, x: it.x, z: it.z, yaw: it.yaw })),
-    fruitTrees: fruitTrees.map(it => ({ harvested: it.obj.userData.harvested, regrowTimer: it.obj.userData.regrowTimer })),
+    fruitTrees: fruitTrees.map(it => ({ harvested: it.obj.userData.harvested, daysSinceHarvest: it.obj.userData.daysSinceHarvest })),
+    foodItems: foodItems,
+    healthIndex,
+    minutesSinceMeal,
     woodTrees: woodTrees.map(it => ({
       felled: it.obj.userData.felled, hits: it.obj.userData.hits,
       seasonsSinceFelled: it.obj.userData.seasonsSinceFelled, maxHits: it.obj.userData.maxHits,
@@ -2677,6 +3124,20 @@ function loadGame() {
   toolTier = data.toolTier || 1;
   if (data.bridgeBuilt) buildRealBridge();
   casettaBuilt = !!data.casettaBuilt;
+  fireflyCaughtEver = !!data.fireflyCaughtEver;
+  portableLampBuilt = !!data.portableLampBuilt;
+  hasHoe = !!data.hasHoe;
+  stoveBuilt = !!data.stoveBuilt;
+  stoveMesh.visible = stoveBuilt;
+  if (data.messageBottleCollected) {
+    messageBottleCollected = true;
+    const bottleEntry = interactables.find(it => it.type === 'messageBottle');
+    if (bottleEntry) {
+      scene.remove(bottleEntry.obj);
+      const bi = interactables.indexOf(bottleEntry);
+      if (bi !== -1) interactables.splice(bi, 1);
+    }
+  }
 
   Object.assign(inventory, data.inventory || {});
   Object.assign(houseChest, data.houseChest || {});
@@ -2693,7 +3154,7 @@ function loadGame() {
     if (!fruitTrees[i]) return;
     const d = fruitTrees[i].obj.userData;
     d.harvested = s.harvested;
-    d.regrowTimer = s.regrowTimer;
+    d.daysSinceHarvest = s.daysSinceHarvest || 0;
     d.fruitsGroup.visible = !s.harvested;
   });
   const woodTrees = interactables.filter(it => it.type === 'woodTree');
@@ -2712,6 +3173,11 @@ function loadGame() {
     rocks[i].obj.visible = !s.felled;
   });
 
+  foodItems = data.foodItems || [];
+  healthIndex = data.healthIndex !== undefined ? data.healthIndex : 3;
+  minutesSinceMeal = data.minutesSinceMeal || 0;
+  syncFoodCounts();
+
   refreshInventoryHud();
   return true;
 }
@@ -2728,7 +3194,11 @@ function animate() {
   lastTime = now;
   elapsedTime += dt;
 
+  const minutesBefore = clock.totalMinutes;
   clock.update(dt);
+  const gameMinutesElapsed = clock.totalMinutes - minutesBefore;
+  updateFoodDecay(gameMinutesElapsed);
+  updateHealth(gameMinutesElapsed);
   updateSky();
   updateWeatherParticles(dt);
   updateFireflies(elapsedTime);
@@ -2767,6 +3237,7 @@ function animate() {
     : terrainHeightAt(player.position.x, player.position.z);
   updateCamera();
   checkInteractions();
+  updatePortableLamp(elapsedTime);
 
   renderer.render(scene, camera);
 }
@@ -2852,7 +3323,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnT
 document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
 
 function isAnyOverlayOpen() {
-  return sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen ||
+  return sleepMenuOpen || craftMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen ||
     optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
     returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
 }
