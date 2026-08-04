@@ -1171,7 +1171,7 @@
   document.getElementById('btn-ship-panel-back').addEventListener('click', function () { showScreen('playing'); });
 
   document.getElementById('ship-panel-hatch-btn').addEventListener('click', function () {
-    if (hullState.integrity < 90) { showScreen('repair-minigame'); }
+    if (hullState.integrity <= 99) { showScreen('repair-minigame'); }
   });
   document.getElementById('btn-repair-minigame-close').addEventListener('click', function () {
     repairCanvasPointerUp(null);
@@ -1494,6 +1494,20 @@
   const PASSIVE_REPAIR_INTERVAL_MS = 60000;
   let passiveRepairLastCheckMs = null;
 
+  // Raccolta carburante in volo: viaggiando tra i 10.000 e i 50.000 km/h si
+  // raccolgono sostanze nello spazio, generando +1% di carburante ogni minuto
+  // reale — stesso approccio a orologio delle altre meccaniche a tempo.
+  const FUEL_GATHER_MIN_KMH = 10000;
+  const FUEL_GATHER_MAX_KMH = 50000;
+  const FUEL_GATHER_PERCENT_PER_MIN = 1;
+  const FUEL_GATHER_INTERVAL_MS = 60000;
+  let fuelGatherLastCheckMs = null;
+
+  // Automatismo offline: se il carburante scende sotto il 6% durante un calcolo
+  // di percorso offline, la navicella si ferma lì invece di continuare a consumare
+  // fino a zero — solo per il calcolo offline, non per il volo in tempo reale.
+  const OFFLINE_LOW_FUEL_STOP_PERCENT = 6;
+
   // Riparazione manuale rapida (pannello Navicella): un piccolo incremento immediato,
   // utilizzabile solo da fermi e con un tempo di recupero tra un uso e l'altro —
   // un intervento mirato che affianca (senza sostituire) la riparazione passiva lenta.
@@ -1531,6 +1545,15 @@
     return WARP_DAMAGE_BASE_PERCENT;
   }
   let warpDamageLastCheckMs = null;
+
+  // Danno casuale generale: attivo sempre, in warp o no. Ogni 2 minuti reali,
+  // possibilità di danno = (102 - integrità%) * 1,5, in percentuale (clampata 0-100).
+  // Riusa gli stessi scaglioni 1/2/3% dello stress warp per l'entità del danno.
+  const GENERAL_DAMAGE_CHECK_INTERVAL_MS = 120000;
+  function generalDamageChancePercent(hullPct) {
+    return clamp((102 - hullPct) * 1.5, 0, 100);
+  }
+  let generalDamageLastCheckMs = null;
 
   const hullState = { integrity: HULL_MAX };
   let wasCollidedLastFrame = false;
@@ -1632,7 +1655,10 @@
   const MISSION_REWARD_BASE = 100;
   const MISSION_REWARD_MAX = 1000;
   const CARGO_DAMAGE_CHANCE = 0.2; // 1 su 5, ad ogni evento di danno scafo mentre si trasporta merce
-  const CARGO_DAMAGE_PERCENT = 5;
+  const CARGO_DAMAGE_WARP_PERCENT = 5; // fisso, in warp
+  const CARGO_DAMAGE_SUBLIGHT_MIN_KMH = 250000;
+  const CARGO_DAMAGE_SUBLIGHT_MIN_PERCENT = 1;
+  const CARGO_DAMAGE_SUBLIGHT_MAX_PERCENT = 4;
   const CARGO_MIN_INTEGRITY_FOR_PAYOUT = 50;
 
   function calculateMissionReward(originId, destId) {
@@ -1641,14 +1667,25 @@
     return Math.round(MISSION_REWARD_BASE + (MISSION_REWARD_MAX - MISSION_REWARD_BASE) * normalized);
   }
 
-  // Chiamata ad ogni evento di danno scafo distinto (non per ogni frame di contatto
-  // prolungato): se si sta trasportando merce, 1 possibilità su 5 che si danneggi del 5%.
+  // Chiamata ad ogni evento di danno scafo distinto (collisione, stress warp base,
+  // rischio severo — non per ogni frame di contatto prolungato). Le regole
+  // dipendono da modalità/velocità corrente al momento dell'evento:
+  // - in warp: 1 su 5 di danneggiarsi di un 5% fisso.
+  // - in sub-luce sotto i 250.000 km/h: nessun danno.
+  // - in sub-luce tra 250.000 e 500.000 km/h: 1 su 5 di un danno casuale 1-4%.
   function maybeDamageCargo() {
-    if (currentMission && currentMission.phase === 'DELIVERY' && currentMission.cargoIntegrity > 0) {
+    if (!(currentMission && currentMission.phase === 'DELIVERY' && currentMission.cargoIntegrity > 0)) return;
+    if (flightState.mode === 'warp') {
       if (Math.random() < CARGO_DAMAGE_CHANCE) {
-        currentMission.cargoIntegrity = Math.max(0, currentMission.cargoIntegrity - CARGO_DAMAGE_PERCENT);
+        currentMission.cargoIntegrity = Math.max(0, currentMission.cargoIntegrity - CARGO_DAMAGE_WARP_PERCENT);
+      }
+    } else if (flightState.throttleKmh >= CARGO_DAMAGE_SUBLIGHT_MIN_KMH) {
+      if (Math.random() < CARGO_DAMAGE_CHANCE) {
+        const dmg = CARGO_DAMAGE_SUBLIGHT_MIN_PERCENT + Math.random() * (CARGO_DAMAGE_SUBLIGHT_MAX_PERCENT - CARGO_DAMAGE_SUBLIGHT_MIN_PERCENT);
+        currentMission.cargoIntegrity = Math.max(0, currentMission.cargoIntegrity - dmg);
       }
     }
+    // sotto i 250.000 km/h in sub-luce: nessun danno merce
   }
 
   function generateMission(preferredOriginId) {
@@ -2086,7 +2123,8 @@
       // minuto, perché lo spegnimento automatico al 75% può avvenire a metà periodo
       // (prima ancora che finisca il carburante o il tempo offline stesso).
       const consumptionRate = realKmPerSec * consumingMultiplier;
-      const secondsToEmptyFuel = consumptionRate > 0 ? flightState.fuelKm / consumptionRate : Infinity;
+      const offlineLowFuelKm = FLIGHT.FUEL_CAPACITY_KM * (OFFLINE_LOW_FUEL_STOP_PERCENT / 100);
+      const secondsToEmptyFuel = consumptionRate > 0 ? Math.max(0, flightState.fuelKm - offlineLowFuelKm) / consumptionRate : Infinity;
       const maxSeconds = Math.min(elapsedSeconds, secondsToEmptyFuel);
       const minuteSec = WARP_DAMAGE_CHECK_INTERVAL_MS / 1000;
       const fullMinutes = Math.floor(maxSeconds / minuteSec);
@@ -2117,7 +2155,7 @@
       realKmTraveled = realKmPerSec * movingSeconds;
 
       if (movingSeconds >= secondsToEmptyFuel) {
-        flightState.fuelKm = 0;
+        flightState.fuelKm = Math.min(flightState.fuelKm, offlineLowFuelKm);
         flightState.mode = 'sublight';
         flightState.throttleKmh = 0;
         ranOutOfFuel = true;
@@ -2129,15 +2167,16 @@
       }
     } else if (displayedKmh > 0 && isConsuming) {
       const consumptionRate = realKmPerSec; // sub-luce: moltiplicatore 1
-      const secondsToEmpty = consumptionRate > 0 ? flightState.fuelKm / consumptionRate : Infinity;
+      const offlineLowFuelKmSublight = FLIGHT.FUEL_CAPACITY_KM * (OFFLINE_LOW_FUEL_STOP_PERCENT / 100);
+      const secondsToEmpty = consumptionRate > 0 ? Math.max(0, flightState.fuelKm - offlineLowFuelKmSublight) / consumptionRate : Infinity;
 
       if (elapsedSeconds > secondsToEmpty) {
-        // Il carburante si esaurisce a metà periodo: viaggia fino a quel momento,
-        // poi resta ferma per il resto — stessa regola del volo live.
+        // Il carburante scende sotto il 6% a metà periodo: viaggia fino a quel
+        // momento, poi resta ferma per il resto.
         movingSeconds = Math.max(0, secondsToEmpty);
         stoppedSeconds = elapsedSeconds - movingSeconds;
-        fuelUsed = flightState.fuelKm;
-        flightState.fuelKm = 0;
+        fuelUsed = Math.max(0, flightState.fuelKm - offlineLowFuelKmSublight);
+        flightState.fuelKm = Math.min(flightState.fuelKm, offlineLowFuelKmSublight);
         flightState.throttleKmh = 0;
         ranOutOfFuel = true;
       } else {
@@ -2148,6 +2187,10 @@
     } else if (displayedKmh > 0) {
       // Sotto la soglia di rigenerazione: si muove gratis
       realKmTraveled = realKmPerSec * elapsedSeconds;
+      if (!wasWarp && flightState.throttleKmh >= FUEL_GATHER_MIN_KMH && flightState.throttleKmh <= FUEL_GATHER_MAX_KMH) {
+        const gatherMinutes = Math.floor(elapsedSeconds / (FUEL_GATHER_INTERVAL_MS / 1000));
+        flightState.fuelKm = Math.min(FLIGHT.FUEL_CAPACITY_KM, flightState.fuelKm + gatherMinutes * FLIGHT.FUEL_CAPACITY_KM * (FUEL_GATHER_PERCENT_PER_MIN / 100));
+      }
     } else {
       stoppedSeconds = elapsedSeconds;
     }
@@ -2163,6 +2206,16 @@
       const sceneDistance = realKmTraveled / KM_PER_UNIT;
       const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(ship.quaternion).multiplyScalar(sceneDistance);
       ship.position.add(forward);
+    }
+
+    // Danno casuale generale: sempre attivo, applicato sull'intero periodo offline
+    // trascorso (in warp o no), un controllo ogni 2 minuti.
+    const generalCheckMinutes = Math.floor(elapsedSeconds / (GENERAL_DAMAGE_CHECK_INTERVAL_MS / 1000));
+    for (let i = 0; i < generalCheckMinutes; i++) {
+      const chance = generalDamageChancePercent(hullState.integrity) / 100;
+      if (Math.random() < chance) {
+        hullState.integrity = Math.max(0, hullState.integrity - warpDamagePercentForCurrentHull());
+      }
     }
 
     checkMissionCompletionOffline();
@@ -2200,7 +2253,7 @@
       el.innerHTML = 'Sei stato via <b>' + formatElapsedDuration(summary.elapsedSeconds) + '</b>.<br>' +
         'La navicella ha percorso circa <b>' + Math.round(summary.realKmTraveled).toLocaleString('it-IT') + ' km</b> lungo la rotta impostata' +
         (summary.fuelUsed > 0 ? ', consumando circa ' + Math.round(summary.fuelUsed).toLocaleString('it-IT') + ' km di carburante.' : '.') +
-        (summary.ranOutOfFuel ? '<br>Il serbatoio si è esaurito durante il viaggio — la navicella si è fermata ad aspettarti.' : '') +
+        (summary.ranOutOfFuel ? '<br>Il serbatoio è sceso sotto il 6% durante il viaggio — la navicella si è fermata ad aspettarti.' : '') +
         (summary.warpShutOffByHull ? '<br>Il warp si è disattivato da solo al 75% di integrità scafo.' : '') +
         (summary.hullDamageFromWarpStress > 0 ? '<br>Lo stress del warp ha danneggiato lo scafo di circa ' + Math.round(summary.hullDamageFromWarpStress) + '%.' : '');
     }
@@ -2376,6 +2429,31 @@
     // Sotto la soglia il carburante non si consuma, ma non si rigenera più da solo:
     // ora si può solo comprare presso una stazione.
 
+    // Raccolta sostanze nello spazio: tra 10.000 e 50.000 km/h, +1% carburante/minuto reale
+    if (flightState.mode === 'sublight' && flightState.throttleKmh >= FUEL_GATHER_MIN_KMH && flightState.throttleKmh <= FUEL_GATHER_MAX_KMH) {
+      const nowMsGather = Date.now();
+      if (fuelGatherLastCheckMs === null) fuelGatherLastCheckMs = nowMsGather;
+      while (nowMsGather - fuelGatherLastCheckMs >= FUEL_GATHER_INTERVAL_MS) {
+        fuelGatherLastCheckMs += FUEL_GATHER_INTERVAL_MS;
+        flightState.fuelKm = Math.min(FLIGHT.FUEL_CAPACITY_KM, flightState.fuelKm + FLIGHT.FUEL_CAPACITY_KM * (FUEL_GATHER_PERCENT_PER_MIN / 100));
+      }
+    } else {
+      fuelGatherLastCheckMs = null;
+    }
+
+    // Danno casuale generale: sempre attivo, in warp o no, ogni 2 minuti reali
+    {
+      const nowMsGeneral = Date.now();
+      if (generalDamageLastCheckMs === null) generalDamageLastCheckMs = nowMsGeneral;
+      while (nowMsGeneral - generalDamageLastCheckMs >= GENERAL_DAMAGE_CHECK_INTERVAL_MS) {
+        generalDamageLastCheckMs += GENERAL_DAMAGE_CHECK_INTERVAL_MS;
+        const chance = generalDamageChancePercent(hullState.integrity) / 100;
+        if (Math.random() < chance) {
+          hullState.integrity = Math.max(0, hullState.integrity - warpDamagePercentForCurrentHull());
+        }
+      }
+    }
+
     let collided = false;
     const prevPos = ship.position.clone();
     const movement = new THREE.Vector3(0, 0, -1).applyQuaternion(ship.quaternion).multiplyScalar(sceneDistanceThisFrame);
@@ -2528,7 +2606,7 @@
     }
 
     const hatchBtn = document.getElementById('ship-panel-hatch-btn');
-    hatchBtn.classList.toggle('disabled', hullState.integrity >= 90);
+    hatchBtn.classList.toggle('disabled', hullState.integrity > 99);
   }
 
   /* ============================================================
@@ -2745,6 +2823,10 @@
   }
 
   function isSimulating() { return screen === 'playing' || screen === 'map'; }
+
+
+
+
 
 
 
