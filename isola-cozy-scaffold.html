@@ -27,6 +27,9 @@
   .battery-cell { width: 7px; height: 8px; background: rgba(255,255,255,0.15); border-radius: 1px; }
   .battery-cell.filled { background: #7fe08a; }
   #battery-nub { width: 3px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 0 2px 2px 0; margin-left: 1px; }
+  #sick-indicator { font-size: 13px; display: none; }
+  #sick-indicator.show { display: inline; animation: sickPulse 1.6s ease-in-out infinite; }
+  @keyframes sickPulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 
   /* Messaggi d'interazione: in basso al centro */
   #hint-line {
@@ -237,21 +240,35 @@
   }
   #fence-edit-overlay.open { display: flex; }
   #fenceEditCancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
-  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel {
+  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel {
     background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
     font-family: -apple-system, sans-serif;
     max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column;
   }
-  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3 {
+  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3 {
     font-weight: 500; font-size: 16px; margin-bottom: 12px; flex-shrink: 0;
   }
-  #recipe-list, #cook-list, #build-list, #storage-list, #inventory-list {
+  #recipe-list, #cook-list, #build-list, #storage-list, #inventory-list, #ferry-list {
     overflow-y: auto; flex: 1 1 auto; min-height: 0;
   }
-  #craft-cancel, #cook-cancel, #build-cancel, #storage-close, #inventory-close, #fenceEditCancel, #message-close {
+  #craft-cancel, #cook-cancel, #build-cancel, #storage-close, #inventory-close, #fenceEditCancel, #message-close, #ferry-cancel {
     flex-shrink: 0;
   }
+  #ferry-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #ferry-overlay.open { display: flex; }
+  #ferry-tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0; }
+  .ferry-tab-btn {
+    flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); font-size: 12px;
+  }
+  .ferry-tab-btn.active { background: rgba(255,209,102,0.3); color: #fff; border-color: rgba(255,209,102,0.6); }
+  #ferry-coins { font-size: 12px; color: #ffd166; margin-bottom: 8px; flex-shrink: 0; }
+  #ferry-cancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
   .recipe-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);
@@ -283,6 +300,7 @@
         <div class="battery-cell"></div><div class="battery-cell"></div>
         <div id="battery-nub"></div>
       </div>
+      <span id="sick-indicator" title="Malato — serve uno sciroppo">🤒</span>
     </div>
     <div id="weather-line"></div>
   </div>
@@ -353,6 +371,19 @@
     <h3>Fornellino</h3>
     <div id="cook-list"></div>
     <div id="cook-cancel">chiudi</div>
+  </div>
+</div>
+
+<div id="ferry-overlay">
+  <div id="ferry-panel">
+    <h3>Traghetto postale</h3>
+    <div id="ferry-tabs">
+      <button id="ferryTabBuy" class="ferry-tab-btn">Acquisti</button>
+      <button id="ferryTabSell" class="ferry-tab-btn">Vendite</button>
+    </div>
+    <div id="ferry-coins"></div>
+    <div id="ferry-list"></div>
+    <div id="ferry-cancel">chiudi</div>
   </div>
 </div>
 
@@ -1446,24 +1477,6 @@ const RECIPES = [
     visible: () => grainHarvestedEver,
     craft: () => { inventory.farina += 2; farinaEverCrafted = true; },
   },
-  {
-    id: 'tisana',
-    name: 'Tisana',
-    cost: { fiori: 2, acqua: 2 },
-    once: false,
-    isDone: () => false,
-    visible: () => flowerHarvestedEver,
-    craft: () => { inventory.tisana++; },
-  },
-  {
-    id: 'sciroppo',
-    name: 'Sciroppo',
-    cost: { fiori: 3, acqua: 1, semiGrano: 1 },
-    once: false,
-    isDone: () => false,
-    visible: () => flowerHarvestedEver,
-    craft: () => { inventory.sciroppo++; },
-  },
 ];
 
 function scatterPoints(count, zoneCfg, minSpacing) {
@@ -1712,6 +1725,101 @@ clock.on('day', () => {
   }
 });
 spawnDailyCans(); // già qualcuna pronta al primo avvio
+
+/* =========================================================================
+   TRAGHETTO POSTALE: attracca ogni pomeriggio verso le 14:00 su un tratto
+   di spiaggia scelto a caso (Cala), resta 3 ore, poi riparte. Mentre è
+   presente si può commerciare (compra/vendi) con lui.
+   ========================================================================= */
+function makeFerryBoat() {
+  const group = new THREE.Group();
+  const hullMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.0, 5.5), hullMat);
+  hull.position.y = 0.5;
+  hull.castShadow = true;
+  group.add(hull);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 5.2), new THREE.MeshLambertMaterial({ color: 0x9a7a52 }));
+  deck.position.y = 1.05;
+  group.add(deck);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.3, 1.8), new THREE.MeshLambertMaterial({ color: 0xe6e2d6 }));
+  cabin.position.set(0, 1.75, -0.8);
+  cabin.castShadow = true;
+  group.add(cabin);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.15, 2.0), new THREE.MeshLambertMaterial({ color: 0x8a3a3a }));
+  roof.position.set(0, 2.48, -0.8);
+  group.add(roof);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6), hullMat);
+  mast.position.set(0, 3.2, -0.8);
+  group.add(mast);
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4), new THREE.MeshBasicMaterial({ color: 0xd94f4f, side: THREE.DoubleSide }));
+  flag.position.set(0.32, 4.2, -0.8);
+  group.add(flag);
+  // Piccolo molo di legno accanto alla fiancata, per poterci salire
+  const plankMat = new THREE.MeshLambertMaterial({ color: 0x7a5a38 });
+  for (let i = 0; i < 5; i++) {
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 3.0), plankMat);
+    plank.position.set(1.6 + i * 0.5, 0.3, 0);
+    plank.castShadow = true;
+    group.add(plank);
+  }
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+const ferryBoat = makeFerryBoat();
+
+let ferryPresent = false;
+let ferryLastArrivalDay = -1;
+let ferryBudget = 0; // monete che il traghetto ha per comprare dal giocatore
+let ferryPurchasedToday = new Set(); // id degli articoli già comprati oggi dal giocatore
+const FISH_DISH_TYPES = ['pesceImpanato', 'tartarePesce'];
+const CAKE_TYPES = [
+  'crostataCiliegie', 'tartellettaNespole', 'tortaPesche', 'tortaFichi',
+  'tortaMele', 'tortaCastagne', 'plumcakeArance', 'tortaMandarino',
+];
+let ferryOfferFishDish = null; // quale piatto di pesce casuale offre oggi in acquisto
+let ferryOfferCake = null;     // quale torta casuale offre oggi in acquisto
+
+function positionAndShowFerry() {
+  const spot = findBeachSpot();
+  if (!spot) return false;
+  const dx = spot.x - ISLAND.cala.cx, dz = spot.z - ISLAND.cala.cz;
+  ferryBoat.position.set(spot.x, terrainHeightAt(spot.x, spot.z), spot.z);
+  ferryBoat.rotation.y = Math.atan2(dx, dz);
+  ferryBoat.visible = true;
+  ferryPresent = true;
+  interactables.push({ obj: ferryBoat, type: 'ferryDock' });
+  return true;
+}
+
+function arriveFerry() {
+  if (!positionAndShowFerry()) return;
+  ferryBudget = 250;
+  ferryPurchasedToday = new Set();
+  ferryOfferFishDish = FISH_DISH_TYPES[Math.floor(Math.random() * FISH_DISH_TYPES.length)];
+  ferryOfferCake = CAKE_TYPES[Math.floor(Math.random() * CAKE_TYPES.length)];
+  showToast('⛴️ Il traghetto postale è attraccato!');
+}
+
+function departFerry() {
+  ferryPresent = false;
+  ferryBoat.visible = false;
+  const idx = interactables.findIndex(it => it.type === 'ferryDock');
+  if (idx !== -1) interactables.splice(idx, 1);
+  if (ferryMenuOpen) closeFerryMenu();
+}
+
+function updateFerry() {
+  const hour = clock.hour;
+  const day = clock.dayIndex;
+  if (hour === 14 && ferryLastArrivalDay !== day) {
+    ferryLastArrivalDay = day;
+    arriveFerry();
+  }
+  if (ferryPresent && hour >= 17) {
+    departFerry();
+  }
+}
 
 /* --- Semi portati dagli uccelli: appena compare la fontana (e quindi gli
    uccelli), cadono subito 1 seme di grano + 1 seme di fiore in 2 punti
@@ -2752,7 +2860,7 @@ let prevKeyB = false;
 let prevPadY = false;
 let prevPadDpadLeft = false;
 function updateSecondaryButtonInput() {
-  if (sleepMenuOpen || craftMenuOpen || cookMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
+  if (sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
   const keyB = !!keys['KeyB'];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
@@ -2802,7 +2910,7 @@ function updateMenuGamepadNav(dt) {
   const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
   const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen ||
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen ||
     mainMenuOverlay.classList.contains('open') || optionsOverlay.classList.contains('open') ||
     newGameConfirmOverlay.classList.contains('open') || returnMenuConfirmOverlay.classList.contains('open');
   if (!anyMenuOpen || !pad) {
@@ -2838,6 +2946,7 @@ function updateMenuGamepadNav(dt) {
     if (sleepMenuOpen) closeSleepMenu();
     if (craftMenuOpen) closeCraftMenu();
     if (cookMenuOpen) closeCookMenu();
+    if (ferryMenuOpen) closeFerryMenu();
     if (fenceEditMenuOpen) closeFenceEditMenu();
     if (buildMenuOpen) closeBuildMenu();
     if (storageMenuOpen) closeStorageMenu();
@@ -2944,6 +3053,8 @@ const COOK_RECIPES = [
   { id: 'grande_frittata', name: 'Grande frittata', cost: { uova: 2 }, visible: () => stoveBuilt, craft: () => { inventory.grandeFrittata++; } },
   { id: 'mela_cotta', name: 'Mela cotta', cost: { mele: 2 }, visible: () => stoveBuilt, craft: () => { inventory.melaCotta++; } },
   { id: 'cotto_ciliegie', name: 'Cotto di ciliegie', cost: { ciliegie: 2, acqua: 1 }, visible: () => stoveBuilt, craft: () => { inventory.cottoCiliegie++; } },
+  { id: 'tisana', name: 'Tisana', cost: { fiori: 2, acqua: 2 }, visible: () => stoveBuilt && flowerHarvestedEver, craft: () => { inventory.tisana++; } },
+  { id: 'sciroppo', name: 'Sciroppo', cost: { fiori: 3, acqua: 1, semiGrano: 1 }, visible: () => stoveBuilt && flowerHarvestedEver, craft: () => { inventory.sciroppo++; } },
   { id: 'crostata_ciliegie', name: 'Crostata alle ciliegie', cost: { ciliegie: 2, farina: 1, uova: 2 }, visible: () => stoveBuilt && farinaEverCrafted, craft: () => { inventory.crostataCiliegie++; } },
   { id: 'tartelletta_nespole', name: 'Tartelletta alle nespole', cost: { nespole: 2, farina: 1, uova: 2 }, visible: () => stoveBuilt && farinaEverCrafted, craft: () => { inventory.tartellettaNespole++; } },
   { id: 'torta_pesche', name: 'Torta soffice alle pesche', cost: { pesche: 2, farina: 1, uova: 2 }, visible: () => stoveBuilt && farinaEverCrafted, craft: () => { inventory.tortaPesche++; } },
@@ -3012,6 +3123,150 @@ function closeCookMenu() {
   cookOverlay.classList.remove('open');
 }
 document.getElementById('cook-cancel').addEventListener('click', closeCookMenu);
+
+/* =========================================================================
+   NEGOZIO DEL TRAGHETTO POSTALE: 2 tab, Acquisti (il giocatore compra,
+   limitato dalle sue monete e da un acquisto per articolo al giorno) e
+   Vendite (il giocatore vende, limitato dal budget giornaliero del
+   traghetto). Nessuno degli articoli qui coinvolge foodItems (frutta/pesce
+   crudi): sono tutte risorse semplici o piatti già cucinati, quindi basta
+   scalare/aggiungere direttamente su inventory.
+   ========================================================================= */
+const FERRY_SELL_BUNDLES = [
+  { key: 'legna', amount: 10, payout: 5, label: 'Legna' },
+  { key: 'pietra', amount: 10, payout: 10, label: 'Pietra' },
+  { key: 'alluminio', amount: 10, payout: 5, label: 'Alluminio' },
+  { key: 'spazzatura', amount: 1, payout: 0, label: 'Spazzatura' },
+  { key: 'lucciole', amount: 3, payout: 1, label: 'Lucciole' },
+  { key: 'frammenti', amount: 1, payout: 20, label: 'Frammento di stella' },
+  { key: 'fiori', amount: 3, payout: 10, label: 'Fiori' },
+];
+
+const FERRY_BUY_ITEMS = [
+  { id: 'buy_legna', label: 'Legna x10', cost: 10, give: () => { inventory.legna += 10; } },
+  { id: 'buy_pietra', label: 'Pietra x10', cost: 20, give: () => { inventory.pietra += 10; } },
+  { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, give: () => { inventory.alluminio += 10; } },
+  { id: 'buy_fish', label: () => `${INVENTORY_LABELS[ferryOfferFishDish][1]} x1`, cost: 18, give: () => { inventory[ferryOfferFishDish]++; } },
+  { id: 'buy_cake', label: () => `${INVENTORY_LABELS[ferryOfferCake][1]} x1`, cost: 15, give: () => { inventory[ferryOfferCake]++; } },
+  { id: 'buy_selce', label: 'Pietra focaia x5', cost: 10, give: () => { inventory.selce += 5; } },
+  { id: 'buy_semi_grano', label: 'Semi di grano x5', cost: 10, give: () => { inventory.semiGrano += 5; } },
+  { id: 'buy_semi_fiori', label: 'Semi di fiore x5', cost: 10, give: () => { inventory.semiFiori += 5; } },
+  { id: 'buy_sciroppo', label: 'Sciroppo x1', cost: 10, give: () => { inventory.sciroppo += 1; } },
+  { id: 'buy_uova', label: 'Uova x5', cost: 3, give: () => { inventory.uova += 5; } },
+  { id: 'buy_farina', label: 'Farina x5', cost: 3, give: () => { inventory.farina += 5; } },
+  { id: 'buy_grano', label: 'Grano x5', cost: 10, give: () => { inventory.grano += 5; } },
+];
+
+const ferryOverlay = document.getElementById('ferry-overlay');
+const ferryListEl = document.getElementById('ferry-list');
+let ferryMenuOpen = false;
+let ferryActiveTab = 'buy';
+
+function renderFerryMenu() {
+  document.getElementById('ferryTabBuy').classList.toggle('active', ferryActiveTab === 'buy');
+  document.getElementById('ferryTabSell').classList.toggle('active', ferryActiveTab === 'sell');
+  document.getElementById('ferry-coins').textContent = ferryActiveTab === 'buy'
+    ? `🪙 Le tue monete: ${inventory.moneta}`
+    : `🪙 Budget del traghetto: ${ferryBudget}`;
+  ferryListEl.innerHTML = '';
+
+  if (ferryActiveTab === 'buy') {
+    for (const item of FERRY_BUY_ITEMS) {
+      const label = typeof item.label === 'function' ? item.label() : item.label;
+      const already = ferryPurchasedToday.has(item.id);
+      const affordable = inventory.moneta >= item.cost;
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      row.innerHTML = `
+        <div class="recipe-info">${label}<div class="recipe-cost">${already ? 'già comprato oggi' : `${item.cost} 🪙`}</div></div>
+        <button class="recipe-btn" ${(already || !affordable) ? 'disabled' : ''}>${already ? '✓' : 'compra'}</button>
+      `;
+      if (!already) {
+        row.querySelector('.recipe-btn').addEventListener('click', () => {
+          if (ferryPurchasedToday.has(item.id) || inventory.moneta < item.cost) return;
+          inventory.moneta -= item.cost;
+          item.give();
+          ferryPurchasedToday.add(item.id);
+          showToast(`✅ ${label}`);
+          refreshInventoryHud();
+          renderFerryMenu();
+        });
+      }
+      ferryListEl.appendChild(row);
+    }
+  } else {
+    // Vendite: pacchetti di risorse semplici...
+    for (const b of FERRY_SELL_BUNDLES) {
+      const have = inventory[b.key] || 0;
+      if (have < b.amount) continue;
+      const affordableForFerry = ferryBudget >= b.payout;
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      row.innerHTML = `
+        <div class="recipe-info">${b.amount > 1 ? `${b.amount} ` : ''}${b.label}<div class="recipe-cost">+${b.payout} 🪙</div></div>
+        <button class="recipe-btn" ${affordableForFerry ? '' : 'disabled'}>vendi</button>
+      `;
+      row.querySelector('.recipe-btn').addEventListener('click', () => {
+        if (ferryBudget < b.payout || (inventory[b.key] || 0) < b.amount) return;
+        inventory[b.key] -= b.amount;
+        inventory.moneta += b.payout;
+        ferryBudget -= b.payout;
+        showToast(`💰 +${b.payout} monete`);
+        refreshInventoryHud();
+        renderFerryMenu();
+      });
+      ferryListEl.appendChild(row);
+    }
+    // ...e piatti di pesce / torte, disponibili solo se il giocatore ne ha
+    const dynamicSellGroups = [
+      { types: FISH_DISH_TYPES, payout: 12 },
+      { types: CAKE_TYPES, payout: 10 },
+    ];
+    for (const group of dynamicSellGroups) {
+      for (const type of group.types) {
+        if (!inventory[type]) continue;
+        const affordableForFerry = ferryBudget >= group.payout;
+        const row = document.createElement('div');
+        row.className = 'recipe-row';
+        row.innerHTML = `
+          <div class="recipe-info">${INVENTORY_LABELS[type][1]}<div class="recipe-cost">+${group.payout} 🪙</div></div>
+          <button class="recipe-btn" ${affordableForFerry ? '' : 'disabled'}>vendi</button>
+        `;
+        row.querySelector('.recipe-btn').addEventListener('click', () => {
+          if (ferryBudget < group.payout || !inventory[type]) return;
+          inventory[type]--;
+          inventory.moneta += group.payout;
+          ferryBudget -= group.payout;
+          showToast(`💰 +${group.payout} monete`);
+          refreshInventoryHud();
+          renderFerryMenu();
+        });
+        ferryListEl.appendChild(row);
+      }
+    }
+    if (ferryListEl.children.length === 0) {
+      ferryListEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Non hai nulla da vendere al momento</div></div>';
+    }
+  }
+  setMenuButtons([
+    document.getElementById('ferryTabBuy'), document.getElementById('ferryTabSell'),
+    ...ferryListEl.querySelectorAll('.recipe-btn'), document.getElementById('ferry-cancel'),
+  ]);
+}
+
+function openFerryMenu() {
+  ferryMenuOpen = true;
+  ferryActiveTab = 'buy';
+  renderFerryMenu();
+  ferryOverlay.classList.add('open');
+}
+function closeFerryMenu() {
+  ferryMenuOpen = false;
+  ferryOverlay.classList.remove('open');
+}
+document.getElementById('ferryTabBuy').addEventListener('click', () => { ferryActiveTab = 'buy'; renderFerryMenu(); });
+document.getElementById('ferryTabSell').addEventListener('click', () => { ferryActiveTab = 'sell'; renderFerryMenu(); });
+document.getElementById('ferry-cancel').addEventListener('click', closeFerryMenu);
 
 /* Menu di modifica per un pannello di recinto già piazzato: ruota, sposta
    (lo "riprende in mano" e rientra in modalità piazzamento), rimuove con
@@ -3120,6 +3375,36 @@ const HEALTH_STATES = ['Sufficiente', 'Discreto', 'Buono', 'Ottimo'];
 const HEALTH_SPEED_MULT = [0.45, 0.65, 0.85, 1.0];
 let healthIndex = 3; // si parte in salute Ottima
 let minutesSinceMeal = 0;
+let daysAtMinHealth = 0; // giorni consecutivi passati a salute "Sufficiente"
+let isSick = false;
+
+// Attivo solo se la ricetta Sciroppo è raggiungibile (fornellino costruito
+// e almeno un raccolto di fiori). Sotto questa condizione, restare a salute
+// "Sufficiente" per 3 giorni di fila fa ammalare.
+function syrupRecipeUnlocked() { return stoveBuilt && flowerHarvestedEver; }
+
+function updateSicknessDaily() {
+  if (!syrupRecipeUnlocked()) { daysAtMinHealth = 0; return; }
+  if (healthIndex === 0) {
+    daysAtMinHealth++;
+    if (daysAtMinHealth >= 3 && !isSick) {
+      isSick = true;
+      showToast('🤒 Ti sei ammalato! Serve uno sciroppo per guarire');
+    }
+  } else {
+    daysAtMinHealth = 0;
+  }
+}
+clock.on('day', updateSicknessDaily);
+
+function drinkSyrup() {
+  if (inventory.sciroppo <= 0) return;
+  inventory.sciroppo--;
+  isSick = false;
+  daysAtMinHealth = 0;
+  showToast('🍯 Sciroppo bevuto — sei guarito!');
+  refreshInventoryHud();
+}
 
 function healthDecayThresholdMinutes() {
   const s = clock.season.name;
@@ -3143,6 +3428,11 @@ function eatFruit(type) {
   if (!item) return;
   foodItems.splice(foodItems.indexOf(item), 1);
   syncFoodCounts();
+  if (isSick) {
+    showToast('🤒 Sei ammalato: la frutta non ha effetto, serve uno sciroppo');
+    refreshInventoryHud();
+    return;
+  }
   minutesSinceMeal = 0;
   if (healthIndex < HEALTH_STATES.length - 1) healthIndex++;
   refreshInventoryHud();
@@ -3158,6 +3448,11 @@ const COOKED_FOOD_TYPES = [
 function eatCookedFood(type) {
   if (!COOKED_FOOD_TYPES.includes(type) || inventory[type] <= 0) return;
   inventory[type]--;
+  if (isSick) {
+    showToast('🤒 Sei ammalato: il cibo non ha effetto, serve uno sciroppo');
+    refreshInventoryHud();
+    return;
+  }
   minutesSinceMeal = 0;
   healthIndex = HEALTH_STATES.length - 1;
   showToast(`${INVENTORY_LABELS[type][0]} Salute ripristinata al massimo`);
@@ -3210,6 +3505,7 @@ const inventory = {
   uova: 0, pesceImpanato: 0, tartarePesce: 0, frittata: 0, grandeFrittata: 0, melaCotta: 0, cottoCiliegie: 0,
   crostataCiliegie: 0, tartellettaNespole: 0, tortaPesche: 0, tortaFichi: 0, tortaMele: 0, tortaCastagne: 0,
   plumcakeArance: 0, tortaMandarino: 0,
+  moneta: 0,
 };
 const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
@@ -3232,6 +3528,7 @@ const INVENTORY_LABELS = {
   tortaFichi: ['🥮', 'Torta rustica ai fichi'], tortaMele: ['🥧', 'Torta di mele'],
   tortaCastagne: ['🍂', 'Torta autunnale'], plumcakeArance: ['🍊', 'Plumcake glassato alle arance'],
   tortaMandarino: ['🍋', 'Torta meringata al mandarino'],
+  moneta: ['🪙', 'Monete'],
 };
 const inventoryListEl = document.getElementById('inventory-list');
 function refreshInventoryHud() {
@@ -3243,7 +3540,7 @@ function refreshInventoryHud() {
   inventoryListEl.appendChild(toolRow);
   const healthRow = document.createElement('div');
   healthRow.className = 'inv-row';
-  healthRow.innerHTML = `<span>❤️ Salute</span><span>${HEALTH_STATES[healthIndex]}</span>`;
+  healthRow.innerHTML = `<span>❤️ Salute</span><span>${HEALTH_STATES[healthIndex]}${isSick ? ' 🤒 Malato' : ''}</span>`;
   inventoryListEl.appendChild(healthRow);
   for (const [key, [icon, label]] of Object.entries(INVENTORY_LABELS)) {
     if (!inventory[key]) continue; // niente voci a zero
@@ -3251,10 +3548,17 @@ function refreshInventoryHud() {
     row.className = 'inv-row';
     const isFruit = FRUIT_TYPES.includes(key);
     const isCooked = COOKED_FOOD_TYPES.includes(key);
-    const showEat = (isFruit || isCooked) && healthIndex < HEALTH_STATES.length - 1;
-    row.innerHTML = `<span>${icon} ${label}</span><span>${inventory[key]}${showEat ? ' <button class="storage-btn" style="margin-left:6px;">mangia</button>' : ''}</span>`;
-    if (showEat) {
-      row.querySelector('.storage-btn').addEventListener('click', () => isFruit ? eatFruit(key) : eatCookedFood(key));
+    const isSyrupCure = key === 'sciroppo' && isSick;
+    const showEat = (isFruit || isCooked) && healthIndex < HEALTH_STATES.length - 1 && !isSyrupCure;
+    const showBtn = showEat || isSyrupCure;
+    const btnLabel = isSyrupCure ? 'cura' : 'mangia';
+    row.innerHTML = `<span>${icon} ${label}</span><span>${inventory[key]}${showBtn ? ` <button class="storage-btn" style="margin-left:6px;">${btnLabel}</button>` : ''}</span>`;
+    if (showBtn) {
+      row.querySelector('.storage-btn').addEventListener('click', () => {
+        if (isSyrupCure) drinkSyrup();
+        else if (isFruit) eatFruit(key);
+        else eatCookedFood(key);
+      });
     }
     inventoryListEl.appendChild(row);
   }
@@ -3284,7 +3588,7 @@ document.getElementById('inventory-close').addEventListener('click', closeInvent
 let prevKeyI = false;
 let prevPadStart = false;
 function updateInventoryToggleInput() {
-  if (sleepMenuOpen || craftMenuOpen || cookMenuOpen || fenceEditMenuOpen || buildMenuOpen || placementMode || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
+  if (sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || buildMenuOpen || placementMode || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
   const keyI = !!keys['KeyI'];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
@@ -3338,6 +3642,8 @@ function handleAction(target) {
     refreshInventoryHud();
   } else if (target.type === 'fishingSpot') {
     if (fishingState === 'idle') startFishing(target);
+  } else if (target.type === 'ferryDock') {
+    if (!ferryMenuOpen) openFerryMenu();
   } else if (target.type === 'placedItem') {
     if (d.placedEntry.itemType === 'casetta') {
       enterHouse();
@@ -3425,6 +3731,7 @@ const INTERACT_HINTS = {
   fireflySwarm: 'Le lucciole! — [E] per raccoglierne 3',
   starFragment: 'Un frammento di stella — [E] per raccoglierlo',
   fishingSpot: 'Punto di pesca — [E] per lanciare l\'amo',
+  ferryDock: 'Traghetto postale — [E] per commerciare',
   placedItem: 'Oggetto piazzato — [E] per modificare',
   fruitTree: 'Albero da frutta — [E] per raccogliere',
   woodTree: 'Albero da legna — [E] per colpire',
@@ -3478,6 +3785,7 @@ function updateClockHud() {
     `${WEATHER_LABELS[currentWeather]}${clock.sleeping ? ' — sto dormendo...' : ''}`;
   document.getElementById('health-face').textContent = HEALTH_FACES[healthIndex];
   batteryCells.forEach((cell, i) => cell.classList.toggle('filled', i <= healthIndex));
+  document.getElementById('sick-indicator').classList.toggle('show', isSick);
 }
 
 function fieldHintText(d) {
@@ -3916,6 +4224,12 @@ function serializeGame() {
     grainHarvestedEver,
     flowerHarvestedEver,
     farinaEverCrafted,
+    ferryLastArrivalDay,
+    ferryPresent,
+    ferryBudget,
+    ferryPurchasedToday: [...ferryPurchasedToday],
+    ferryOfferFishDish,
+    ferryOfferCake,
     groundSeeds: interactables
       .filter(it => it.type === 'semeGrano' || it.type === 'semeFiore')
       .map(it => ({ type: it.type, x: it.obj.position.x, z: it.obj.position.z })),
@@ -3936,6 +4250,8 @@ function serializeGame() {
     foodItems: foodItems,
     healthIndex,
     minutesSinceMeal,
+    daysAtMinHealth,
+    isSick,
     woodTrees: woodTrees.map(it => ({
       felled: it.obj.userData.felled, hits: it.obj.userData.hits,
       daysSinceFelled: it.obj.userData.daysSinceFelled, maxHits: it.obj.userData.maxHits,
@@ -3990,6 +4306,18 @@ function loadGame() {
   grainHarvestedEver = !!data.grainHarvestedEver;
   flowerHarvestedEver = !!data.flowerHarvestedEver;
   farinaEverCrafted = !!data.farinaEverCrafted;
+  ferryLastArrivalDay = data.ferryLastArrivalDay !== undefined ? data.ferryLastArrivalDay : -1;
+  ferryBudget = data.ferryBudget || 0;
+  ferryPurchasedToday = new Set(data.ferryPurchasedToday || []);
+  ferryOfferFishDish = data.ferryOfferFishDish || null;
+  ferryOfferCake = data.ferryOfferCake || null;
+  {
+    const idx = interactables.findIndex(it => it.type === 'ferryDock');
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+  ferryBoat.visible = false;
+  ferryPresent = false;
+  if (data.ferryPresent) positionAndShowFerry();
   for (const it of [...interactables]) {
     if (it.type !== 'semeGrano' && it.type !== 'semeFiore') continue;
     scene.remove(it.obj);
@@ -4054,6 +4382,8 @@ function loadGame() {
   foodItems = data.foodItems || [];
   healthIndex = data.healthIndex !== undefined ? data.healthIndex : 3;
   minutesSinceMeal = data.minutesSinceMeal || 0;
+  daysAtMinHealth = data.daysAtMinHealth || 0;
+  isSick = !!data.isSick;
   syncFoodCounts();
 
   refreshInventoryHud();
@@ -4087,6 +4417,7 @@ function animate() {
   updateTorches(elapsedTime);
   updateResources(dt);
   updateFishing(dt, elapsedTime);
+  updateFerry();
   updateMenuGamepadNav(dt); // serve anche per i menu della casa/stoccaggio
   updatePauseInput();
   updateAutosave(dt);
@@ -4113,7 +4444,7 @@ function animate() {
   updateSecondaryButtonInput();
   updateInventoryToggleInput();
 
-  const controlsLocked = sleepMenuOpen || craftMenuOpen || cookMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle' || isAnyOverlayOpen();
+  const controlsLocked = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle' || isAnyOverlayOpen();
   if (!controlsLocked) {
     updatePlayer(dt);
   }
@@ -4218,7 +4549,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnT
 document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
 
 function isAnyOverlayOpen() {
-  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen ||
+  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen ||
     optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
     returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
 }
