@@ -148,8 +148,8 @@
   #house-hud { position: fixed; inset: 0; z-index: 25; display: none; pointer-events: none; }
   body.inside-house #house-hud { display: block; }
   #houseExitBtn {
-    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.45); color: #fff;
-    font-size: 13px; border-radius: 8px; padding: 7px 12px;
+    position: absolute; top: 38px; right: 8px; background: rgba(0,0,0,0.45); color: #fff;
+    font-size: 12px; border-radius: 8px; padding: 6px 10px;
   }
   #houseSelectionLabel {
     position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%);
@@ -320,7 +320,7 @@
 
   <div id="hud-top-right">
     <div class="inv-item" id="buildChip" style="pointer-events:auto;"><span>🏗️</span><span>costruisci</span></div>
-    <div class="inv-item" id="inventoryToggleBtn" style="pointer-events:auto;"><span>🎒</span></div>
+    <div class="inv-item" id="inventoryToggleBtn" style="pointer-events:auto;"><span>🎒</span><span>inv</span></div>
   </div>
 </div>
 
@@ -502,7 +502,7 @@ const worldRandom = makeSeededRandom(20260804);
 const ISLAND = {
   valley:  { cx: 0, cz: 0, rx: 75 * ISLAND_SCALE, rz: 95 * ISLAND_SCALE },
   cala:    { cx: 115 * ISLAND_SCALE, cz: 65 * ISLAND_SCALE, rx: 75 * ISLAND_SCALE, rz: 75 * ISLAND_SCALE },
-  bridge:  { cx: 0, cz: 0, halfWidth: 9 * ISLAND_SCALE, halfLength: 16 * ISLAND_SCALE, rotY: 0 },
+  bridge:  { cx: 0, cz: 0, halfWidth: 6 * ISLAND_SCALE, halfLength: 16 * ISLAND_SCALE, rotY: 0 },
   riverHalfWidth: 11 * ISLAND_SCALE,
   riverA: { x: 40 * ISLAND_SCALE, z: -90 * ISLAND_SCALE },
   // Il fiume deve uscire DAVVERO dalla Cala verso il mare aperto, non fermarsi
@@ -516,7 +516,7 @@ const ISLAND = {
 // Il ponte sorge SEMPRE su un punto reale del percorso del fiume (non più una
 // coordinata scelta a mano, che poteva finire fuori dal fiume) e con l'angolo
 // perpendicolare alla direzione reale del fiume in quel punto
-const BRIDGE_T = 0.4; // punto lungo il fiume (0 = sorgente, 1 = foce estesa) dove sorge il ponte
+const BRIDGE_T = 0.41; // punto lungo il fiume (0 = sorgente, 1 = foce estesa) dove sorge il ponte
 ISLAND.bridge.cx = ISLAND.riverA.x + (ISLAND.riverB.x - ISLAND.riverA.x) * BRIDGE_T;
 ISLAND.bridge.cz = ISLAND.riverA.z + (ISLAND.riverB.z - ISLAND.riverA.z) * BRIDGE_T;
 ISLAND.bridge.rotY = Math.atan2(
@@ -915,32 +915,53 @@ function updateFireflies(elapsedTime) {
 
 /* --- Uccelli: attirati dalla fontana, girano di giorno su entrambe le
    isole (max 3), spariscono col brutto tempo o di notte --- */
-const BIRD_COUNT = 3;
+const BIRD_COUNT = 5;
 const birdGroups = [];
-const BIRD_COLORS = [0x6b6b6b, 0x8a6a4a, 0x4a4a55];
+const BIRD_COLORS = [0xffffff, 0x7eb6e8, 0xfca311];
+
 for (let i = 0; i < BIRD_COUNT; i++) {
   const group = new THREE.Group();
   const bodyMat = new THREE.MeshLambertMaterial({ color: BIRD_COLORS[i % BIRD_COLORS.length] });
-  const body = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 6), bodyMat);
+
+  // Corpo: cilindro/fuso più affusolato
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.6, 5), bodyMat);
   body.rotation.x = Math.PI / 2;
   group.add(body);
-  const wingGeo = new THREE.ConeGeometry(0.28, 0.05, 4);
+
+  // Becco
+  const beak = new THREE.Mesh(
+    new THREE.ConeGeometry(0.05, 0.2, 4),
+    new THREE.MeshLambertMaterial({ color: 0xffa500 })
+  );
+  beak.rotation.x = -Math.PI / 2;
+  beak.position.set(0, 0, 0.35);
+  group.add(beak);
+
+  // Geometria Ala: rettangolo/piano sottile invece del cono
+  const wingGeo = new THREE.BoxGeometry(0.4, 0.02, 0.2);
+
+  // Ala Sinistra (ancorata al corpo per ruotare bene)
+  const wingLGroup = new THREE.Group();
   const wingL = new THREE.Mesh(wingGeo, bodyMat);
-  wingL.position.set(0.16, 0, 0);
-  wingL.rotation.z = Math.PI / 2;
-  group.add(wingL);
+  wingL.position.set(0.2, 0, 0); // sposta il perno sul bordo
+  wingLGroup.add(wingL);
+  group.add(wingLGroup);
+
+  // Ala Destra
+  const wingRGroup = new THREE.Group();
   const wingR = new THREE.Mesh(wingGeo, bodyMat);
-  wingR.position.set(-0.16, 0, 0);
-  wingR.rotation.z = -Math.PI / 2;
-  group.add(wingR);
+  wingR.position.set(-0.2, 0, 0);
+  wingRGroup.add(wingR);
+  group.add(wingRGroup);
+
   group.userData = {
-    wingL, wingR,
+    wingLGroup, wingRGroup,
     zone: (i % 2 === 0) ? ISLAND.valley : ISLAND.cala,
     radiusX: 25 + Math.random() * 25,
     radiusZ: 25 + Math.random() * 25,
     speed: 0.12 + Math.random() * 0.08,
     phase: Math.random() * Math.PI * 2,
-    heightBase: 8 + Math.random() * 4,
+    heightBase: 12 + Math.random() * 4,
   };
   group.visible = false;
   scene.add(group);
@@ -963,9 +984,9 @@ function updateBirds(elapsedTime) {
     group.position.set(x, d.heightBase + Math.sin(t * 2.2) * 0.6, z);
     const dx = -Math.sin(t) * d.radiusX, dz = Math.cos(t) * d.radiusZ;
     group.rotation.y = Math.atan2(dx, dz);
-    const flap = Math.sin(elapsedTime * 14 + d.phase) * 0.6;
-    d.wingL.rotation.x = flap;
-    d.wingR.rotation.x = -flap;
+    const flap = Math.sin(elapsedTime * 10 + d.phase) * 0.4;
+	d.wingLGroup.rotation.z = flap;   // Sale e scende
+	d.wingRGroup.rotation.z = -flap;
   }
 }
 
@@ -1082,7 +1103,8 @@ buildRiverRidge();
    ========================================================================= */
 function computeBridgeProfile() {
   const b = ISLAND.bridge;
-  const N = 10;
+  const N = 20;
+
   const samples = [];
   for (let i = 0; i <= N; i++) {
     const t = i / N;
@@ -1091,16 +1113,21 @@ function computeBridgeProfile() {
     const z = b.cz + Math.cos(b.rotY) * off;
     samples.push(terrainHeightAt(x, z));
   }
-  const baseStart = samples[0] + 0.45;
-  const baseEnd = samples[N] + 0.45;
-  const midMin = Math.min(...samples.slice(2, N - 1));
-  const archPeak = Math.max(baseStart, baseEnd, midMin + 3.4);
-  const archBoost = archPeak - Math.max(baseStart, baseEnd);
+  const baseStart = samples[0] + 0.15;
+  const baseEnd = samples[N] + 0.15;
+
+  // --- MODIFICA QUI ---
+  // Definisci quanto deve salire l'arco rispetto alle due sponde (es. 2.5 unità)
+  const archHeight = 2.5; 
 
   function deckY(t) {
+    // Calcola l'inclinazione base tra inizio e fine ponte
     const linear = baseStart + (baseEnd - baseStart) * t;
-    return linear + Math.max(0, archBoost) * Math.sin(Math.PI * t);
+    
+    // Aggiunge la gobba dell'arco (massima al centro, 0 agli estremi)
+    return linear + archHeight * Math.sin(Math.PI * t);
   }
+  
   return { deckY, segments: N };
 }
 
@@ -1149,7 +1176,7 @@ function makeBridge() {
 
   // Parapetti su entrambi i lati: montanti verticali + corrimano continuo,
   // stessa curva dell'impalcato
-  const railHeight = 0.9;
+  const railHeight = 2.0;
   [-1, 1].forEach(side => {
     for (let i = 0; i <= N; i++) {
       const t = i / N;
@@ -3198,10 +3225,17 @@ function renderFerryMenu() {
       const label = typeof item.label === 'function' ? item.label() : item.label;
       const already = ferryPurchasedToday.has(item.id);
       const affordable = inventory.moneta >= item.cost;
+      
+      // Quantità in inventario per la scheda ACQUISTI
+      const ownedQty = inventory[item.id] || 0;
+
       const row = document.createElement('div');
       row.className = 'recipe-row';
       row.innerHTML = `
-        <div class="recipe-info">${label}<div class="recipe-cost">${already ? 'già comprato oggi' : `${item.cost} 🪙`}</div></div>
+        <div class="recipe-info">
+          ${label} <span style="font-size:0.85em; opacity:0.8;">[In inv: ${ownedQty}]</span>
+          <div class="recipe-cost">${already ? 'già comprato oggi' : `${item.cost} 🪙`}</div>
+        </div>
         <button class="recipe-btn" ${(already || !affordable) ? 'disabled' : ''}>${already ? '✓' : 'compra'}</button>
       `;
       if (!already) {
@@ -3226,7 +3260,10 @@ function renderFerryMenu() {
       const row = document.createElement('div');
       row.className = 'recipe-row';
       row.innerHTML = `
-        <div class="recipe-info">${b.amount > 1 ? `${b.amount} ` : ''}${b.label}<div class="recipe-cost">+${b.payout} 🪙</div></div>
+        <div class="recipe-info">
+          ${b.amount > 1 ? `${b.amount} ` : ''}${b.label} <span style="font-size:0.85em; opacity:0.8;">[In inv: ${have}]</span>
+          <div class="recipe-cost">+${b.payout} 🪙</div>
+        </div>
         <button class="recipe-btn" ${affordableForFerry ? '' : 'disabled'}>vendi</button>
       `;
       row.querySelector('.recipe-btn').addEventListener('click', () => {
@@ -3247,12 +3284,16 @@ function renderFerryMenu() {
     ];
     for (const group of dynamicSellGroups) {
       for (const type of group.types) {
-        if (!inventory[type]) continue;
+        const have = inventory[type] || 0;
+        if (!have) continue;
         const affordableForFerry = ferryBudget >= group.payout;
         const row = document.createElement('div');
         row.className = 'recipe-row';
         row.innerHTML = `
-          <div class="recipe-info">${INVENTORY_LABELS[type][1]}<div class="recipe-cost">+${group.payout} 🪙</div></div>
+          <div class="recipe-info">
+            ${INVENTORY_LABELS[type][1]} <span style="font-size:0.85em; opacity:0.8;">[In inv: ${have}]</span>
+            <div class="recipe-cost">+${group.payout} 🪙</div>
+          </div>
           <button class="recipe-btn" ${affordableForFerry ? '' : 'disabled'}>vendi</button>
         `;
         row.querySelector('.recipe-btn').addEventListener('click', () => {
@@ -3729,6 +3770,12 @@ function handleAction(target) {
           d.saplingGroup.visible = true;
           inventory.legna += 3;
           showToast('🪵 Legna +3');
+		  if (fontanaPlacedEver && Math.random() < 1 / 3) {
+			const eggs = 1 + Math.floor(Math.random() * 3);
+			inventory.uova += eggs;
+			showToast(`🥚 Uova +${eggs}`);
+			refreshInventoryHud();
+		  }
         } else {
           target.obj.visible = false;
           inventory.pietra += 3;
