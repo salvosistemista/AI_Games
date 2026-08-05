@@ -3193,18 +3193,18 @@ const FERRY_SELL_BUNDLES = [
 ];
 
 const FERRY_BUY_ITEMS = [
-  { id: 'buy_legna', label: 'Legna x10', cost: 10, give: () => { inventory.legna += 10; } },
-  { id: 'buy_pietra', label: 'Pietra x10', cost: 20, give: () => { inventory.pietra += 10; } },
-  { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, give: () => { inventory.alluminio += 10; } },
-  { id: 'buy_fish', label: () => `${INVENTORY_LABELS[ferryOfferFishDish][1]} x1`, cost: 18, give: () => { inventory[ferryOfferFishDish]++; } },
-  { id: 'buy_cake', label: () => `${INVENTORY_LABELS[ferryOfferCake][1]} x1`, cost: 15, give: () => { inventory[ferryOfferCake]++; } },
-  { id: 'buy_selce', label: 'Pietra focaia x5', cost: 10, give: () => { inventory.selce += 5; } },
-  { id: 'buy_semi_grano', label: 'Semi di grano x5', cost: 10, give: () => { inventory.semiGrano += 5; } },
-  { id: 'buy_semi_fiori', label: 'Semi di fiore x5', cost: 10, give: () => { inventory.semiFiori += 5; } },
-  { id: 'buy_sciroppo', label: 'Sciroppo x1', cost: 10, give: () => { inventory.sciroppo += 1; } },
-  { id: 'buy_uova', label: 'Uova x5', cost: 3, give: () => { inventory.uova += 5; } },
-  { id: 'buy_farina', label: 'Farina x5', cost: 3, give: () => { inventory.farina += 5; } },
-  { id: 'buy_grano', label: 'Grano x5', cost: 10, give: () => { inventory.grano += 5; } },
+  { id: 'buy_legna', label: 'Legna x10', cost: 10, key: 'legna', give: () => { inventory.legna += 10; } },
+  { id: 'buy_pietra', label: 'Pietra x10', cost: 20, key: 'pietra', give: () => { inventory.pietra += 10; } },
+  { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, key: 'alluminio', give: () => { inventory.alluminio += 10; } },
+  { id: 'buy_fish', label: () => `${INVENTORY_LABELS[ferryOfferFishDish][1]} x1`, cost: 18, key: () => ferryOfferFishDish, give: () => { inventory[ferryOfferFishDish]++; } },
+  { id: 'buy_cake', label: () => `${INVENTORY_LABELS[ferryOfferCake][1]} x1`, cost: 15, key: () => ferryOfferCake, give: () => { inventory[ferryOfferCake]++; } },
+  { id: 'buy_selce', label: 'Pietra focaia x5', cost: 10, key: 'selce', give: () => { inventory.selce += 5; } },
+  { id: 'buy_semi_grano', label: 'Semi di grano x5', cost: 10, key: 'semiGrano', give: () => { inventory.semiGrano += 5; } },
+  { id: 'buy_semi_fiori', label: 'Semi di fiore x5', cost: 10, key: 'semiFiori', give: () => { inventory.semiFiori += 5; } },
+  { id: 'buy_sciroppo', label: 'Sciroppo x1', cost: 10, key: 'sciroppo', give: () => { inventory.sciroppo += 1; } },
+  { id: 'buy_uova', label: 'Uova x5', cost: 3, key: 'uova', give: () => { inventory.uova += 5; } },
+  { id: 'buy_farina', label: 'Farina x5', cost: 3, key: 'farina', give: () => { inventory.farina += 5; } },
+  { id: 'buy_grano', label: 'Grano x5', cost: 10, key: 'grano', give: () => { inventory.grano += 5; } },
 ];
 
 const ferryOverlay = document.getElementById('ferry-overlay');
@@ -3227,7 +3227,8 @@ function renderFerryMenu() {
       const affordable = inventory.moneta >= item.cost;
       
       // Quantità in inventario per la scheda ACQUISTI
-      const ownedQty = inventory[item.id] || 0;
+      const key = typeof item.key === 'function' ? item.key() : item.key;
+      const ownedQty = inventory[key] || 0;
 
       const row = document.createElement('div');
       row.className = 'recipe-row';
