@@ -1933,7 +1933,6 @@ clock.on('day', () => {
   }
 });
 spawnDailyCans(); // già qualcuna pronta al primo avvio
-spawnInitialTrash(); // 50 pezzi di spazzatura sparsi su entrambe le isole a inizio partita
 
 /* =========================================================================
    TRAGHETTO POSTALE: attracca ogni pomeriggio verso le 14:00 su un tratto
@@ -2813,6 +2812,7 @@ const PLACEMENT_DISTANCE = 3.6;
 const ITEM_PLACEMENT_DISTANCE = { casetta: 6.5 }; // oggetti grandi: il fantasma va piazzato più lontano
 function placementDistanceFor(itemType) { return ITEM_PLACEMENT_DISTANCE[itemType] || PLACEMENT_DISTANCE; }
 const placedItems = []; // { itemType: 'recinto'|'torcia', x, z, yaw, mesh }
+spawnInitialTrash(); // 50 pezzi di spazzatura sparsi su entrambe le isole a inizio partita (va dopo placedItems: isSpotBuiltOver ne ha bisogno)
 
 function registerPlacedItem(entry) {
   entry.mesh.userData.placedEntry = entry;
