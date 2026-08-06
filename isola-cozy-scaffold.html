@@ -1064,8 +1064,28 @@ function makeButterflyMesh() {
 // Chiamata quando si pianta un nuovo fiore (o lo si ripiazza spostandolo):
 // sceglie a caso ape o farfalla (o usa forcedKind, es. al caricamento) e la
 // aggancia al fiore.
+const MAX_BUTTERFLIES = 15;
+const MAX_BEES = 10;
 function attachCreatureToFlower(flowerMesh, forcedKind) {
-  const kind = forcedKind || (Math.random() < 0.5 ? 'ape' : 'farfalla');
+  let kind;
+  if (forcedKind !== undefined) {
+    // Caricamento da salvataggio: rispetta esattamente cosa c'era prima,
+    // senza applicare probabilità o tetti (quella creatura esisteva già).
+    kind = forcedKind === 'none' ? null : forcedKind;
+  } else {
+    // Nuova piantumazione: 25% farfalla, 25% ape, 50% nulla — rispettando
+    // i tetti massimi complessivi sull'isola.
+    const roll = Math.random();
+    if (roll < 0.25) kind = 'farfalla';
+    else if (roll < 0.5) kind = 'ape';
+    else kind = null;
+    if (kind === 'farfalla' && flowerCreatures.filter(c => c.kind === 'farfalla').length >= MAX_BUTTERFLIES) kind = null;
+    if (kind === 'ape' && flowerCreatures.filter(c => c.kind === 'ape').length >= MAX_BEES) kind = null;
+  }
+  if (!kind) {
+    flowerMesh.userData.attachedCreature = null;
+    return null;
+  }
   const mesh = kind === 'ape' ? makeBeeMesh() : makeButterflyMesh();
   const creature = {
     kind, mesh, flowerMesh,
@@ -1073,7 +1093,8 @@ function attachCreatureToFlower(flowerMesh, forcedKind) {
     speed: kind === 'ape' ? 6 : 0,
     phase: Math.random() * Math.PI * 2,
     resting: false,
-    stateMinutesLeft: kind === 'farfalla' ? (10 + Math.random() * 20) : 0,
+    // Volano più a lungo prima di posarsi (si posano più di rado)
+    stateMinutesLeft: kind === 'farfalla' ? (45 + Math.random() * 75) : 0,
     flyRadius: 4,
   };
   flowerMesh.userData.attachedCreature = creature;
@@ -1105,12 +1126,13 @@ function updateFlowerCreatures(dt, elapsedTime, deltaGameMinutes) {
   const winterButterflies = clock.season.name === 'Inverno';
   for (const c of flowerCreatures) {
     if (c.kind === 'farfalla') {
-      c.mesh.visible = !winterButterflies;
-      if (winterButterflies) continue;
+      const butterflyHidden = winterButterflies || isNightTime();
+      c.mesh.visible = !butterflyHidden;
+      if (butterflyHidden) continue;
       c.stateMinutesLeft -= deltaGameMinutes;
       if (c.stateMinutesLeft <= 0) {
         c.resting = !c.resting;
-        c.stateMinutesLeft = c.resting ? 30 : (10 + Math.random() * 20);
+        c.stateMinutesLeft = c.resting ? 30 : (45 + Math.random() * 75);
       }
       if (c.resting) {
         const bh = c.flowerMesh.userData.bloomHeight || 0.75;
@@ -1911,6 +1933,7 @@ clock.on('day', () => {
   }
 });
 spawnDailyCans(); // già qualcuna pronta al primo avvio
+spawnInitialTrash(); // 50 pezzi di spazzatura sparsi su entrambe le isole a inizio partita
 
 /* =========================================================================
    TRAGHETTO POSTALE: attracca ogni pomeriggio verso le 14:00 su un tratto
@@ -2023,8 +2046,13 @@ function updateFerry() {
   const hour = clock.hour;
   const day = clock.dayIndex;
   if (hour === 14 && ferryLastArrivalDay !== day) {
-    ferryLastArrivalDay = day;
-    arriveFerry();
+    if (countTrash() <= 3) {
+      ferryLastArrivalDay = day;
+      arriveFerry();
+    }
+    // altrimenti troppa spazzatura in giro: il traghetto salta oggi e
+    // ritenta al prossimo giro (il giorno dopo, o appena si scende sotto
+    // i 3 pezzi entro la stessa ora)
   }
   if (ferryPresent && hour >= 17) {
     departFerry();
@@ -2046,6 +2074,176 @@ let flowerSeedsSpawnedTotal = 0;
 let seedSpawnTimerMinutes = 0;
 let grainSeedEverCollected = false;
 let flowerSeedEverCollected = false;
+
+/* =========================================================================
+   SPAZZATURA: oggetti ingombranti sparsi sulle isole fin dall'inizio
+   partita, da raccogliere a colpi (come alberi/rocce) per smaltirli in
+   inventario come "spazzatura". Se ce n'è troppa in giro (>3 pezzi), il
+   traghetto postale non si presenta — vedi countTrash() in updateFerry().
+   ========================================================================= */
+const TRASH_TYPES = [
+  { id: 'palloneSgonfio', label: 'Pallone sgonfio', hits: 1 },
+  { id: 'tricicloRotto', label: 'Triciclo rotto', hits: 2 },
+  { id: 'lettoRotto', label: 'Letto rotto', hits: 3 },
+  { id: 'cestinoRotto', label: 'Cestino rotto', hits: 3 },
+  { id: 'bottigliette', label: 'Mucchietto di bottigliette di vetro', hits: 3 },
+  { id: 'cassaPolistirolo', label: 'Cassa di polistirolo rotta', hits: 2 },
+  { id: 'gommaAuto', label: 'Gomma auto rotta', hits: 3 },
+  { id: 'assePlastica', label: 'Asse di plastica rotta', hits: 3 },
+  { id: 'bicchierePlastica', label: 'Bicchiere di plastica rotto', hits: 2 },
+  { id: 'rifiutiVari', label: 'Mucchietto di rifiuti vari', hits: 3 },
+];
+const TRASH_BY_ID = Object.fromEntries(TRASH_TYPES.map(t => [t.id, t]));
+
+function findTrashSpot(zone) {
+  for (let attempts = 0; attempts < 25; attempts++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * 0.9;
+    const x = zone.cx + Math.cos(a) * zone.rx * r;
+    const z = zone.cz + Math.sin(a) * zone.rz * r;
+    if (!isWalkable(x, z)) continue;
+    if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < 12) continue;
+    if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 6) continue;
+    if (isSpotBuiltOver(x, z)) continue;
+    return { x, z };
+  }
+  return null;
+}
+
+function makeTrashMesh(typeId, x, z) {
+  const group = new THREE.Group();
+  const y = terrainHeightAt(x, z);
+  switch (typeId) {
+    case 'palloneSgonfio': {
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), new THREE.MeshLambertMaterial({ color: 0xd94f4f }));
+      ball.scale.set(1, 0.35, 1);
+      ball.position.y = 0.1;
+      group.add(ball);
+      break;
+    }
+    case 'tricicloRotto': {
+      const frameMat = new THREE.MeshLambertMaterial({ color: 0xd94f4f });
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.2), frameMat);
+      frame.position.set(0, 0.22, 0);
+      frame.rotation.z = 0.3;
+      group.add(frame);
+      [[-0.3, 0], [0.3, 0.1]].forEach(([wx, wz]) => {
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.04, 6, 10), new THREE.MeshLambertMaterial({ color: 0x2a2a2a }));
+        wheel.position.set(wx, 0.16, wz);
+        wheel.rotation.x = Math.PI / 2 + 0.4;
+        group.add(wheel);
+      });
+      break;
+    }
+    case 'lettoRotto': {
+      const woodMat = new THREE.MeshLambertMaterial({ color: 0x7a5a38 });
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.8), woodMat);
+      frame.position.y = 0.3;
+      frame.rotation.z = 0.25;
+      frame.rotation.x = -0.1;
+      group.add(frame);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), woodMat);
+      leg.position.set(-0.6, 0.25, 0.3);
+      group.add(leg);
+      break;
+    }
+    case 'cestinoRotto': {
+      const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.5, 8, 1, true), new THREE.MeshLambertMaterial({ color: 0x556655, side: THREE.DoubleSide }));
+      bin.position.y = 0.25;
+      bin.rotation.z = 0.9;
+      group.add(bin);
+      break;
+    }
+    case 'bottigliette': {
+      const glassMat = new THREE.MeshLambertMaterial({ color: 0x4a8a5a, transparent: true, opacity: 0.75 });
+      for (let i = 0; i < 4; i++) {
+        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.28, 6), glassMat);
+        bottle.position.set((Math.random() - 0.5) * 0.3, 0.1, (Math.random() - 0.5) * 0.3);
+        bottle.rotation.set((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5);
+        group.add(bottle);
+      }
+      break;
+    }
+    case 'cassaPolistirolo': {
+      const foamMat = new THREE.MeshLambertMaterial({ color: 0xe8e8e0 });
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.5), foamMat);
+      box.position.y = 0.18;
+      box.rotation.y = 0.4;
+      box.rotation.x = -0.15;
+      group.add(box);
+      const chip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.15), foamMat);
+      chip.position.set(0.3, 0.06, 0.1);
+      group.add(chip);
+      break;
+    }
+    case 'gommaAuto': {
+      const tire = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.11, 8, 14), new THREE.MeshLambertMaterial({ color: 0x1e1e1e }));
+      tire.rotation.x = Math.PI / 2;
+      tire.position.y = 0.12;
+      group.add(tire);
+      break;
+    }
+    case 'assePlastica': {
+      const plankMat = new THREE.MeshLambertMaterial({ color: 0xb0a06a });
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.25), plankMat);
+      plank.position.y = 0.1;
+      plank.rotation.z = 0.15;
+      plank.rotation.y = 0.5;
+      group.add(plank);
+      break;
+    }
+    case 'bicchierePlastica': {
+      const cupMat = new THREE.MeshLambertMaterial({ color: 0xe8d8b0, transparent: true, opacity: 0.8 });
+      for (let i = 0; i < 3; i++) {
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.12, 8), cupMat);
+        cup.position.set((Math.random() - 0.5) * 0.25, 0.06, (Math.random() - 0.5) * 0.25);
+        cup.rotation.set((Math.random() - 0.5) * 1.2, 0, (Math.random() - 0.5) * 1.2);
+        group.add(cup);
+      }
+      break;
+    }
+    default: { // rifiutiVari
+      const colors = [0x8a6a4a, 0x556655, 0x9a958a, 0x6b4a2c];
+      for (let i = 0; i < 5; i++) {
+        const chunk = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.16), new THREE.MeshLambertMaterial({ color: colors[i % colors.length] }));
+        chunk.position.set((Math.random() - 0.5) * 0.4, 0.06 + Math.random() * 0.1, (Math.random() - 0.5) * 0.4);
+        chunk.rotation.y = Math.random() * Math.PI;
+        group.add(chunk);
+      }
+    }
+  }
+  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  group.position.set(x, y, z);
+  group.userData = { typeId, hits: 0, maxHits: TRASH_BY_ID[typeId].hits };
+  scene.add(group);
+  interactables.push({ obj: group, type: 'trash' });
+  return group;
+}
+
+function spawnTrashItem(zone) {
+  const spot = findTrashSpot(zone);
+  if (!spot) return null;
+  const typeId = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)].id;
+  return makeTrashMesh(typeId, spot.x, spot.z);
+}
+
+function countTrash() { return interactables.filter(it => it.type === 'trash').length; }
+
+// 50 oggetti spazzatura sparsi su entrambe le isole all'avvio di una nuova
+// partita (chiamata più sotto, subito dopo la generazione del mondo).
+function spawnInitialTrash() {
+  for (let i = 0; i < 50; i++) {
+    spawnTrashItem(Math.random() < 0.5 ? ISLAND.valley : ISLAND.cala);
+  }
+}
+
+// Ogni mattina, solo sulla Cala (l'isola di sabbia), possono ricomparire da
+// 0 a 3 pezzi di spazzatura nuovi.
+function spawnDailyCalaTrash() {
+  const n = Math.floor(Math.random() * 4); // 0..3
+  for (let i = 0; i < n; i++) spawnTrashItem(ISLAND.cala);
+}
+clock.on('day', spawnDailyCalaTrash);
 
 function findGroundSpotForSeed(avoid) {
   const zone = Math.random() < 0.5 ? ISLAND.valley : ISLAND.cala;
@@ -4143,6 +4341,16 @@ function handleAction(target) {
       }
       refreshInventoryHud();
     }
+  } else if (target.type === 'trash') {
+    d.hits++;
+    inventory.spazzatura++;
+    showToast('🗑️ Spazzatura +1');
+    if (d.hits >= d.maxHits) {
+      scene.remove(target.obj);
+      const idx = interactables.indexOf(target);
+      if (idx !== -1) interactables.splice(idx, 1);
+    }
+    refreshInventoryHud();
   }
 }
 
@@ -4259,6 +4467,8 @@ function checkInteractions() {
         ? 'Il laghetto è gelato — niente pesca fino a primavera'
         : (target.type === 'fireflySwarm' && firefliesCaughtTonight)
         ? 'Le lucciole! — già raccolte stanotte, torna domani'
+        : target.type === 'trash'
+        ? `${TRASH_BY_ID[d.typeId].label} — [E] per raccogliere (${d.hits}/${d.maxHits})`
         : INTERACT_HINTS[target.type];
       if (input.actionJustPressed && !isAnyOverlayOpen()) handleAction(target);
     }
@@ -4658,6 +4868,9 @@ function serializeGame() {
     groundSeeds: interactables
       .filter(it => it.type === 'semeGrano' || it.type === 'semeFiore')
       .map(it => ({ type: it.type, x: it.obj.position.x, z: it.obj.position.z })),
+    trash: interactables
+      .filter(it => it.type === 'trash')
+      .map(it => ({ typeId: it.obj.userData.typeId, hits: it.obj.userData.hits, x: it.obj.position.x, z: it.obj.position.z })),
     inventory: { ...inventory },
     houseChest: { ...houseChest },
     houseFridge: { ...houseFridge },
@@ -4669,8 +4882,8 @@ function serializeGame() {
         base.ready = d.ready;
         base.growthDaysElapsed = d.growthDaysElapsed;
       }
-      if (it.itemType === 'fiorePiantato' && it.mesh.userData.attachedCreature) {
-        base.creatureKind = it.mesh.userData.attachedCreature.kind;
+      if (it.itemType === 'fiorePiantato') {
+        base.creatureKind = it.mesh.userData.attachedCreature ? it.mesh.userData.attachedCreature.kind : 'none';
       }
       return base;
     }),
@@ -4757,6 +4970,16 @@ function loadGame() {
   for (const seed of data.groundSeeds || []) {
     makeSeedMarker(seed.x, seed.z, seed.type);
   }
+  for (const it of [...interactables]) {
+    if (it.type !== 'trash') continue;
+    scene.remove(it.obj);
+    const idx = interactables.indexOf(it);
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+  for (const t of data.trash || []) {
+    const mesh = makeTrashMesh(t.typeId, t.x, t.z);
+    mesh.userData.hits = t.hits || 0;
+  }
   if (data.messageBottleCollected) {
     messageBottleCollected = true;
     const bottleEntry = interactables.find(it => it.type === 'messageBottle');
@@ -4784,7 +5007,7 @@ function loadGame() {
       d.readyGroup.visible = d.ready;
     }
     if (saved.itemType === 'fiorePiantato') {
-      attachCreatureToFlower(mesh, saved.creatureKind);
+      attachCreatureToFlower(mesh, saved.creatureKind || 'none');
     }
   }
 
