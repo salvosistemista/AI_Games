@@ -240,21 +240,30 @@
   }
   #fence-edit-overlay.open { display: flex; }
   #fenceEditCancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
-  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel {
+  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel, #photo-album-panel {
     background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
     font-family: -apple-system, sans-serif;
     max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column;
   }
-  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3 {
+  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3, #photo-album-panel h3 {
     font-weight: 500; font-size: 16px; margin-bottom: 12px; flex-shrink: 0;
   }
-  #recipe-list, #cook-list, #build-list, #storage-list, #inventory-list, #ferry-list {
+  #recipe-list, #cook-list, #build-list, #storage-list, #inventory-list, #ferry-list, #photo-album-list {
     overflow-y: auto; flex: 1 1 auto; min-height: 0;
   }
-  #craft-cancel, #cook-cancel, #build-cancel, #storage-close, #inventory-close, #fenceEditCancel, #message-close, #ferry-cancel {
+  #craft-cancel, #cook-cancel, #build-cancel, #storage-close, #inventory-close, #fenceEditCancel, #message-close, #ferry-cancel, #photo-album-close {
     flex-shrink: 0;
   }
+  #photo-album-overlay {
+    position: fixed; inset: 0; z-index: 31; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #photo-album-overlay.open { display: flex; }
+  #photo-album-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+  #inventory-album-btn { color: #ffd166; font-size: 13px; margin-top: 6px; flex-shrink: 0; }
+  .gamepad-style-btn.active-style { background: rgba(255,209,102,0.3); border-color: rgba(255,209,102,0.6); color: #fff; }
   #ferry-overlay {
     position: fixed; inset: 0; z-index: 30; display: none;
     align-items: center; justify-content: center;
@@ -336,9 +345,19 @@
   <div id="inventory-panel">
     <h3>Inventario</h3>
     <div id="inventory-list"></div>
+    <div id="inventory-album-btn" class="recipe-row" style="cursor:pointer; justify-content:center;">📷 Album Foto</div>
     <div id="inventory-close">chiudi</div>
   </div>
 </div>
+
+<div id="photo-album-overlay">
+  <div id="photo-album-panel">
+    <h3>Album Foto</h3>
+    <div id="photo-album-list"></div>
+    <div id="photo-album-close">chiudi</div>
+  </div>
+</div>
+
 
 <div id="sleep-overlay">
   <div id="sleep-panel">
@@ -453,6 +472,13 @@
     <div class="recipe-row">
       <div class="recipe-info">Schermo intero</div>
       <button class="recipe-btn" id="fullscreenToggleBtn">attiva</button>
+    </div>
+    <div class="recipe-row">
+      <div class="recipe-info">Icone gamepad</div>
+      <div>
+        <button class="recipe-btn gamepad-style-btn" id="gamepadStyleXboxBtn">Xbox</button>
+        <button class="recipe-btn gamepad-style-btn" id="gamepadStylePsBtn">PS</button>
+      </div>
     </div>
     <div id="options-close">chiudi</div>
   </div>
@@ -987,6 +1013,139 @@ function updateBirds(elapsedTime) {
     const flap = Math.sin(elapsedTime * 10 + d.phase) * 0.4;
 	d.wingLGroup.rotation.z = flap;   // Sale e scende
 	d.wingRGroup.rotation.z = -flap;
+  }
+}
+
+/* =========================================================================
+   API E FARFALLE: ogni fiore piantato dal giocatore attira, a caso, un'ape
+   o una farfalla. L'ape gira libera per tutta l'isola verde; la farfalla
+   resta vicina al proprio fiore e ogni tanto si posa e sta ferma per mezz'ora
+   di gioco (occasione per fotografarla). In inverno le farfalle spariscono,
+   tornano in primavera. Se rimuovo il fiore, la creatura agganciata sparisce.
+   ========================================================================= */
+const flowerCreatures = []; // { kind: 'ape'|'farfalla', mesh, flowerMesh, ... }
+
+function makeBeeMesh() {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xf2c94c });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), bodyMat);
+  body.scale.set(1, 0.8, 1.3);
+  group.add(body);
+  const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.02, 6, 10), new THREE.MeshLambertMaterial({ color: 0x2a2a2a }));
+  stripe.rotation.y = Math.PI / 2;
+  group.add(stripe);
+  const wingMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  const wingGeo = new THREE.PlaneGeometry(0.1, 0.16);
+  const wingL = new THREE.Mesh(wingGeo, wingMat); wingL.position.set(0.05, 0.07, 0.02); group.add(wingL);
+  const wingR = new THREE.Mesh(wingGeo, wingMat); wingR.position.set(-0.05, 0.07, 0.02); group.add(wingR);
+  group.userData.wingL = wingL; group.userData.wingR = wingR;
+  group.userData.kind = 'ape';
+  scene.add(group);
+  return group;
+}
+
+const BUTTERFLY_COLORS = [0xe0508a, 0xf2a33c, 0x7fb0e0, 0xb07fe0, 0xf2e04c];
+function makeButterflyMesh() {
+  const group = new THREE.Group();
+  const color = BUTTERFLY_COLORS[Math.floor(Math.random() * BUTTERFLY_COLORS.length)];
+  const wingMat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
+  const wingGeo = new THREE.CircleGeometry(0.13, 8);
+  const wingL = new THREE.Mesh(wingGeo, wingMat); wingL.position.set(0.05, 0, 0); group.add(wingL);
+  const wingR = new THREE.Mesh(wingGeo, wingMat); wingR.position.set(-0.05, 0, 0); group.add(wingR);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.16, 5), new THREE.MeshLambertMaterial({ color: 0x2a2a2a }));
+  body.rotation.z = Math.PI / 2;
+  group.add(body);
+  group.userData.wingL = wingL; group.userData.wingR = wingR;
+  group.userData.kind = 'farfalla';
+  scene.add(group);
+  return group;
+}
+
+// Chiamata quando si pianta un nuovo fiore (o lo si ripiazza spostandolo):
+// sceglie a caso ape o farfalla (o usa forcedKind, es. al caricamento) e la
+// aggancia al fiore.
+function attachCreatureToFlower(flowerMesh, forcedKind) {
+  const kind = forcedKind || (Math.random() < 0.5 ? 'ape' : 'farfalla');
+  const mesh = kind === 'ape' ? makeBeeMesh() : makeButterflyMesh();
+  const creature = {
+    kind, mesh, flowerMesh,
+    target: { x: flowerMesh.position.x, z: flowerMesh.position.z },
+    speed: kind === 'ape' ? 6 : 0,
+    phase: Math.random() * Math.PI * 2,
+    resting: false,
+    stateMinutesLeft: kind === 'farfalla' ? (10 + Math.random() * 20) : 0,
+    flyRadius: 4,
+  };
+  flowerMesh.userData.attachedCreature = creature;
+  flowerCreatures.push(creature);
+  return creature;
+}
+
+function removeFlowerCreature(creature) {
+  if (!creature) return;
+  scene.remove(creature.mesh);
+  const idx = flowerCreatures.indexOf(creature);
+  if (idx !== -1) flowerCreatures.splice(idx, 1);
+}
+
+function anyBeeActive() { return flowerCreatures.some(c => c.kind === 'ape'); }
+
+// Un'ape o una farfalla nei paraggi rende possibile trovare un po' di miele
+// abbattendo alberi o raccogliendo frutta.
+function maybeGiveHoney() {
+  if (!anyBeeActive() || Math.random() >= 1 / 3) return;
+  const amount = 1 + Math.floor(Math.random() * 3);
+  inventory.miele += amount;
+  mieleEverCollected = true;
+  showToast(`🍯 Miele +${amount}`);
+  refreshInventoryHud();
+}
+
+function updateFlowerCreatures(dt, elapsedTime, deltaGameMinutes) {
+  const winterButterflies = clock.season.name === 'Inverno';
+  for (const c of flowerCreatures) {
+    if (c.kind === 'farfalla') {
+      c.mesh.visible = !winterButterflies;
+      if (winterButterflies) continue;
+      c.stateMinutesLeft -= deltaGameMinutes;
+      if (c.stateMinutesLeft <= 0) {
+        c.resting = !c.resting;
+        c.stateMinutesLeft = c.resting ? 30 : (10 + Math.random() * 20);
+      }
+      if (c.resting) {
+        const bh = c.flowerMesh.userData.bloomHeight || 0.75;
+        c.mesh.position.set(c.flowerMesh.position.x, c.flowerMesh.position.y + bh, c.flowerMesh.position.z);
+      } else {
+        const t = elapsedTime * 0.6 + c.phase;
+        const x = c.flowerMesh.position.x + Math.cos(t) * c.flyRadius;
+        const z = c.flowerMesh.position.z + Math.sin(t) * c.flyRadius;
+        const y = c.flowerMesh.position.y + 1.0 + Math.sin(t * 2.5) * 0.3;
+        c.mesh.position.set(x, y, z);
+        const dx = -Math.sin(t), dz = Math.cos(t);
+        c.mesh.rotation.y = Math.atan2(dx, dz);
+      }
+      const flap = Math.sin(elapsedTime * (c.resting ? 4 : 16)) * (c.resting ? 0.15 : 0.9);
+      c.mesh.userData.wingL.rotation.y = flap;
+      c.mesh.userData.wingR.rotation.y = -flap;
+    } else {
+      // Ape: vaga liberamente per tutta l'isola verde
+      const dx0 = c.target.x - c.mesh.position.x, dz0 = c.target.z - c.mesh.position.z;
+      if (Math.hypot(dx0, dz0) < 1.5) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random());
+        c.target = { x: ISLAND.valley.cx + Math.cos(a) * ISLAND.valley.rx * 0.85 * r, z: ISLAND.valley.cz + Math.sin(a) * ISLAND.valley.rz * 0.85 * r };
+      }
+      const dx = c.target.x - c.mesh.position.x, dz = c.target.z - c.mesh.position.z;
+      const dist = Math.hypot(dx, dz) || 1;
+      const step = c.speed * dt;
+      c.mesh.position.x += (dx / dist) * step;
+      c.mesh.position.z += (dz / dist) * step;
+      c.mesh.position.y = terrainHeightAt(c.mesh.position.x, c.mesh.position.z) + 1.0 + Math.sin(elapsedTime * 3 + c.phase) * 0.15;
+      c.mesh.rotation.y = Math.atan2(dx, dz);
+      const flap = Math.sin(elapsedTime * 30 + c.phase) * 0.5;
+      c.mesh.userData.wingL.rotation.z = flap;
+      c.mesh.userData.wingR.rotation.z = -flap;
+    }
   }
 }
 
@@ -1857,6 +2016,7 @@ function departFerry() {
   const idx = interactables.findIndex(it => it.type === 'ferryDock');
   if (idx !== -1) interactables.splice(idx, 1);
   if (ferryMenuOpen) closeFerryMenu();
+  if (photoAlbumOpen) closePhotoAlbum();
 }
 
 function updateFerry() {
@@ -2098,6 +2258,47 @@ const input = {
   photoPressed: false,
 };
 
+/* =========================================================================
+   DISPOSITIVO DI INPUT ATTIVO: tiene traccia dell'ultimo dispositivo usato
+   (tastiera/mouse, gamepad, touch) per mostrare negli hint il tasto giusto.
+   Il gamepad non genera eventi nativi sui pulsanti, quindi va rilevato per
+   polling una volta al frame (vedi updateActiveInputMethod più sotto).
+   ========================================================================= */
+let lastInputMethod = 'keyboard';
+window.addEventListener('keydown', () => { lastInputMethod = 'keyboard'; });
+window.addEventListener('mousedown', () => { lastInputMethod = 'keyboard'; });
+window.addEventListener('touchstart', () => { lastInputMethod = 'touch'; }, { passive: true });
+
+function updateActiveInputMethod() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  if (!pad) return;
+  for (const b of pad.buttons) { if (b.pressed) { lastInputMethod = 'gamepad'; return; } }
+  for (const ax of pad.axes) { if (Math.abs(ax) > 0.35) { lastInputMethod = 'gamepad'; return; } }
+}
+
+const GAMEPAD_GLYPHS = {
+  xbox: { primary: 'A', secondary: 'Y' },
+  ps: { primary: '✕', secondary: '△' },
+};
+function primaryActionToken() {
+  if (lastInputMethod === 'gamepad') return `[${GAMEPAD_GLYPHS[gamepadIconStyle].primary}]`;
+  if (lastInputMethod === 'touch') return '[tocca]';
+  return '[E]';
+}
+function secondaryActionToken() {
+  if (lastInputMethod === 'gamepad') return `[${GAMEPAD_GLYPHS[gamepadIconStyle].secondary}]`;
+  if (lastInputMethod === 'touch') return '[tocca]';
+  return '[B]';
+}
+// Sostituisce nei testi degli hint i token letterali "[E]"/"[B]" con quelli
+// del dispositivo attivo: così tutte le stringhe di INTERACT_HINTS restano
+// scritte in modo semplice, e la traduzione avviene solo qui, in un posto.
+function localizeHint(str) {
+  if (!str) return str;
+  return str.split('[E]').join(primaryActionToken()).split('[B]').join(secondaryActionToken());
+}
+
 /* --- Driver tastiera --- */
 const keys = {};
 window.addEventListener('keydown', e => { keys[e.code] = true; });
@@ -2237,6 +2438,28 @@ function updateInputEdges() {
   input.photoJustPressed = input.photoPressed && !prevPhotoPressed;
   prevActionPressed = input.actionPressed;
   prevPhotoPressed = input.photoPressed;
+}
+
+const PHOTO_RANGE = 8;
+function updatePhotoCapture() {
+  if (!input.photoJustPressed) return;
+  if (!hasCamera) { showToast('📷 Non hai ancora una macchina fotografica'); return; }
+  if (inventory.pellicola <= 0) { showToast('🎞️ Rullino esaurito — comprane uno dal traghetto'); return; }
+  if (insideHouse || placementMode || fishingState !== 'idle' || isAnyOverlayOpen()) return;
+  let target = null, bestDist = Infinity;
+  for (const c of flowerCreatures) {
+    if (c.kind !== 'farfalla' || !c.resting || !c.mesh.visible) continue;
+    const d = Math.hypot(player.position.x - c.mesh.position.x, player.position.z - c.mesh.position.z);
+    if (d < PHOTO_RANGE && d < bestDist) { target = c; bestDist = d; }
+  }
+  if (!target) {
+    showToast('📷 Nessuna farfalla da fotografare qui vicino');
+    return;
+  }
+  inventory.pellicola--;
+  inventory.fotoFarfalla++;
+  showToast('📸 Foto di farfalla scattata!');
+  refreshInventoryHud();
 }
 
 /* =========================================================================
@@ -2400,6 +2623,9 @@ function registerPlacedItem(entry) {
 }
 
 function removePlacedItem(entry) {
+  if (entry.itemType === 'fiorePiantato' && entry.mesh.userData.attachedCreature) {
+    removeFlowerCreature(entry.mesh.userData.attachedCreature);
+  }
   scene.remove(entry.mesh);
   const fi = placedItems.indexOf(entry);
   if (fi !== -1) placedItems.splice(fi, 1);
@@ -2605,9 +2831,52 @@ function makeAiuolaFiori(x, z, yaw) {
   return group;
 }
 
+// Fiore decorativo stile margherita, ma con petali colorati (colore casuale
+// per esemplare). Piantabile in un punto qualsiasi camplabile dell'ISOLA
+// VERDE consumando 1 "fiori" già raccolto — vedi isPlacementValid. Ogni
+// fiore attira un'ape o una farfalla (vedi attachCreatureToFlower).
+const FLOWER_PETAL_COLORS = [0xe0508a, 0xf2a33c, 0x7fb0e0, 0xb07fe0, 0xe05050, 0xf2e04c];
+function makeFioreDecorativo(x, z, yaw) {
+  const group = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.7, 6), new THREE.MeshLambertMaterial({ color: 0x4a7a3a }));
+  stem.position.y = 0.35;
+  stem.castShadow = true;
+  group.add(stem);
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 6), new THREE.MeshLambertMaterial({ color: 0x4a7a3a }));
+  leaf.scale.set(1, 0.25, 2.2);
+  leaf.position.set(0.12, 0.25, 0);
+  leaf.rotation.y = 0.5;
+  group.add(leaf);
+  const petalColor = FLOWER_PETAL_COLORS[Math.floor(Math.random() * FLOWER_PETAL_COLORS.length)];
+  const petalMat = new THREE.MeshLambertMaterial({ color: petalColor });
+  const petalCount = 8;
+  for (let i = 0; i < petalCount; i++) {
+    const a = (i / petalCount) * Math.PI * 2;
+    const petal = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), petalMat);
+    petal.scale.set(1, 0.35, 1.9);
+    petal.position.set(Math.cos(a) * 0.17, 0.72, Math.sin(a) * 0.17);
+    petal.rotation.y = a;
+    petal.castShadow = true;
+    group.add(petal);
+  }
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), new THREE.MeshLambertMaterial({ color: 0xf2c94c }));
+  disc.position.y = 0.72;
+  group.add(disc);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.rotation.y = yaw;
+  group.userData = { bloomHeight: 0.75, attachedCreature: null };
+  scene.add(group);
+  return group;
+}
+// Non è craftabile al banco da lavoro (si pianta direttamente dal menu
+// Costruisci consumando 1 "fiori" raccolto): niente voce in RECIPES, ma
+// serve comunque un costo per il rimborso quando lo si rimuove.
+const FIORE_DECORATIVO_RECIPE = { cost: { fiori: 1 } };
+
 // Lampada portatile: stessa luce di una torcia, ma segue sempre il player
 // invece di stare ferma — attiva solo dopo averla costruita, solo di notte.
 const portableLampLight = new THREE.PointLight(0xffb166, 0, 20, 1); // decadimento morbido, come le torce
+
 scene.add(portableLampLight);
 function updatePortableLamp(elapsedTime) {
   if (!portableLampBuilt) return;
@@ -2633,10 +2902,10 @@ function updateTorches(elapsedTime) {
 // Fabbrica mesh, chiave inventario e "ingombro" (spaziatura minima) per ogni
 // tipo di oggetto piazzabile — aggiungere un tipo nuovo in futuro (es. una
 // futura fontana) significa solo aggiungere una riga in ciascuna di queste.
-const ITEM_FACTORY = { recinto: makeFencePanel, torcia: makeTorch, muro: makeWall, casetta: makeCasetta, fontana: makeFontana, campoGrano: makeCampoGrano, aiuolaFiori: makeAiuolaFiori };
-const ITEM_INV_KEY = { recinto: 'recinti', torcia: 'torce', muro: 'muri', casetta: 'casette', fontana: 'fontane', campoGrano: 'campiGrano', aiuolaFiori: 'aiuoleFiori' };
-const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2, fontana: GRID_SIZE * 1.3, campoGrano: GRID_SIZE * 1.2, aiuolaFiori: GRID_SIZE * 1.1 };
-const ITEM_SOLID = { recinto: true, torcia: false, muro: true, casetta: true, fontana: true, campoGrano: false, aiuolaFiori: false }; // blocca il movimento?
+const ITEM_FACTORY = { recinto: makeFencePanel, torcia: makeTorch, muro: makeWall, casetta: makeCasetta, fontana: makeFontana, campoGrano: makeCampoGrano, aiuolaFiori: makeAiuolaFiori, fiorePiantato: makeFioreDecorativo };
+const ITEM_INV_KEY = { recinto: 'recinti', torcia: 'torce', muro: 'muri', casetta: 'casette', fontana: 'fontane', campoGrano: 'campiGrano', aiuolaFiori: 'aiuoleFiori', fiorePiantato: 'fiori' };
+const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2, fontana: GRID_SIZE * 1.3, campoGrano: GRID_SIZE * 1.2, aiuolaFiori: GRID_SIZE * 1.1, fiorePiantato: GRID_SIZE * 0.5 };
+const ITEM_SOLID = { recinto: true, torcia: false, muro: true, casetta: true, fontana: true, campoGrano: false, aiuolaFiori: false, fiorePiantato: false }; // blocca il movimento?
 
 const ghostMats = {};
 const ghostMeshes = {};
@@ -2665,6 +2934,8 @@ const EDIT_VIA_SECONDARY = new Set(['fontana', 'campoGrano', 'aiuolaFiori']);
    ========================================================================= */
 let grainHarvestedEver = false;
 let farinaEverCrafted = false;
+let hasCamera = false;
+let mieleEverCollected = false;
 let flowerHarvestedEver = false;
 
 function fieldGrowthDaysRequired(kind) {
@@ -2744,10 +3015,17 @@ function updateFieldGrowthDaily() {
 clock.on('day', updateFieldGrowthDaily);
 
 
+function isInValleyOnly(x, z) {
+  const dv = Math.hypot((x - ISLAND.valley.cx) / ISLAND.valley.rx, (z - ISLAND.valley.cz) / ISLAND.valley.rz);
+  const dc = Math.hypot((x - ISLAND.cala.cx) / ISLAND.cala.rx, (z - ISLAND.cala.cz) / ISLAND.cala.rz);
+  return dv <= 1.0 && dc > 1.0;
+}
+
 function isPlacementValid(x, z) {
   if (!isWalkable(x, z)) return false;
   if (insideBridge(x, z)) return false;
   if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 5) return false;
+  if (placementItemType === 'fiorePiantato' && !isInValleyOnly(x, z)) return false;
   const myFootprint = ITEM_FOOTPRINT[placementItemType] || GRID_SIZE * 0.9;
   for (const it of placedItems) {
     const spacing = Math.max(myFootprint, ITEM_FOOTPRINT[it.itemType] || GRID_SIZE * 0.9);
@@ -2822,7 +3100,7 @@ function exitPlacementMode() {
 const buildChip = document.getElementById('buildChip');
 const buildOverlay = document.getElementById('build-overlay');
 const buildListEl = document.getElementById('build-list');
-const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori' };
+const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore' };
 let buildMenuOpen = false;
 
 function renderBuildMenu() {
@@ -2891,6 +3169,7 @@ function confirmPlacement() {
     fontanaPlacedEver = true;
     spawnInitialBirdSeeds();
   }
+  if (placementItemType === 'fiorePiantato') attachCreatureToFlower(mesh);
   if (movingItem) {
     movingItem = null; // già ripiazzato: uscendo NON va ripristinato altrove
     exitPlacementMode();
@@ -2997,6 +3276,7 @@ function updateMenuGamepadNav(dt) {
     if (craftMenuOpen) closeCraftMenu();
     if (cookMenuOpen) closeCookMenu();
     if (ferryMenuOpen) closeFerryMenu();
+  if (photoAlbumOpen) closePhotoAlbum();
     if (fenceEditMenuOpen) closeFenceEditMenu();
     if (buildMenuOpen) closeBuildMenu();
     if (storageMenuOpen) closeStorageMenu();
@@ -3113,6 +3393,10 @@ const COOK_RECIPES = [
   { id: 'torta_castagne', name: 'Torta autunnale', cost: { castagne: 2, farina: 1, uova: 2 }, visible: () => stoveBuilt && farinaEverCrafted, craft: () => { inventory.tortaCastagne++; } },
   { id: 'plumcake_arance', name: 'Plumcake glassato alle arance', cost: { arance: 2, farina: 1, uova: 2 }, visible: () => stoveBuilt && farinaEverCrafted, craft: () => { inventory.plumcakeArance++; } },
   { id: 'torta_mandarino', name: 'Torta meringata al mandarino', cost: { mandarini: 2, farina: 1, uova: 2 }, visible: () => stoveBuilt && farinaEverCrafted, craft: () => { inventory.tortaMandarino++; } },
+  { id: 'miele_ciliegie', name: 'Miele alle ciliegie', cost: { miele: 2, ciliegie: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleCiliegie++; } },
+  { id: 'miele_castagne', name: 'Miele di castagne', cost: { miele: 2, castagne: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleCastagne++; } },
+  { id: 'miele_mandarino', name: 'Miele al mandarino', cost: { miele: 2, mandarini: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleMandarino++; } },
+  { id: 'miele_fichi', name: 'Miele cotto di fichi', cost: { miele: 2, fichi: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleFichi++; } },
 ];
 
 // Rimuove `count` unità di una risorsa dal costo di una ricetta di cottura:
@@ -3190,6 +3474,8 @@ const FERRY_SELL_BUNDLES = [
   { key: 'lucciole', amount: 3, payout: 1, label: 'Lucciole' },
   { key: 'frammenti', amount: 1, payout: 20, label: 'Frammento di stella' },
   { key: 'fiori', amount: 3, payout: 10, label: 'Fiori' },
+  { key: 'grano', amount: 10, payout: 10, label: 'Grano' },
+  { key: 'fotoFarfalla', amount: 1, payout: 50, label: 'Foto di farfalla' },
 ];
 
 const FERRY_BUY_ITEMS = [
@@ -3205,6 +3491,7 @@ const FERRY_BUY_ITEMS = [
   { id: 'buy_uova', label: 'Uova x5', cost: 3, key: 'uova', give: () => { inventory.uova += 5; } },
   { id: 'buy_farina', label: 'Farina x5', cost: 3, key: 'farina', give: () => { inventory.farina += 5; } },
   { id: 'buy_grano', label: 'Grano x5', cost: 10, key: 'grano', give: () => { inventory.grano += 5; } },
+  { id: 'buy_rullino', label: 'Rullino fotografico (20 foto)', cost: 10, key: 'pellicola', visible: () => hasCamera, give: () => { inventory.pellicola += 20; } },
 ];
 
 const ferryOverlay = document.getElementById('ferry-overlay');
@@ -3221,7 +3508,28 @@ function renderFerryMenu() {
   ferryListEl.innerHTML = '';
 
   if (ferryActiveTab === 'buy') {
+    // Macchina fotografica: acquisto una tantum, non fa parte del giro
+    // giornaliero di offerte e resta comprata per sempre.
+    if (!hasCamera) {
+      const cameraAffordable = inventory.moneta >= 100;
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      row.innerHTML = `
+        <div class="recipe-info">📷 Macchina fotografica<div class="recipe-cost">100 🪙 — una tantum</div></div>
+        <button class="recipe-btn" ${cameraAffordable ? '' : 'disabled'}>compra</button>
+      `;
+      row.querySelector('.recipe-btn').addEventListener('click', () => {
+        if (hasCamera || inventory.moneta < 100) return;
+        inventory.moneta -= 100;
+        hasCamera = true;
+        showToast('📷 Macchina fotografica acquistata!');
+        refreshInventoryHud();
+        renderFerryMenu();
+      });
+      ferryListEl.appendChild(row);
+    }
     for (const item of FERRY_BUY_ITEMS) {
+      if (item.visible && !item.visible()) continue;
       const label = typeof item.label === 'function' ? item.label() : item.label;
       const already = ferryPurchasedToday.has(item.id);
       const affordable = inventory.moneta >= item.cost;
@@ -3345,8 +3653,9 @@ const RECIPE_BY_ITEM = {
   fontana: RECIPES.find(r => r.id === 'fontana'),
   campoGrano: RECIPES.find(r => r.id === 'campo_grano'),
   aiuolaFiori: RECIPES.find(r => r.id === 'aiuola_fiori'),
+  fiorePiantato: FIORE_DECORATIVO_RECIPE,
 };
-const ITEM_LABEL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori' };
+const ITEM_LABEL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore' };
 
 function refundFor(itemType) {
   const cost = RECIPE_BY_ITEM[itemType].cost;
@@ -3508,7 +3817,7 @@ function eatFruit(type) {
 const COOKED_FOOD_TYPES = [
   'pesceImpanato', 'tartarePesce', 'frittata', 'grandeFrittata', 'melaCotta', 'cottoCiliegie',
   'crostataCiliegie', 'tartellettaNespole', 'tortaPesche', 'tortaFichi', 'tortaMele', 'tortaCastagne',
-  'plumcakeArance', 'tortaMandarino',
+  'plumcakeArance', 'tortaMandarino', 'mieleCiliegie', 'mieleCastagne', 'mieleMandarino', 'mieleFichi',
 ];
 function eatCookedFood(type) {
   if (!COOKED_FOOD_TYPES.includes(type) || inventory[type] <= 0) return;
@@ -3571,6 +3880,9 @@ const inventory = {
   crostataCiliegie: 0, tartellettaNespole: 0, tortaPesche: 0, tortaFichi: 0, tortaMele: 0, tortaCastagne: 0,
   plumcakeArance: 0, tortaMandarino: 0,
   moneta: 0,
+  pellicola: 0, fotoFarfalla: 0, miele: 0,
+  mieleCiliegie: 0, mieleCastagne: 0, mieleMandarino: 0, mieleFichi: 0,
+  fioriDecorativi: 0,
 };
 const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
@@ -3594,6 +3906,10 @@ const INVENTORY_LABELS = {
   tortaCastagne: ['🍂', 'Torta autunnale'], plumcakeArance: ['🍊', 'Plumcake glassato alle arance'],
   tortaMandarino: ['🍋', 'Torta meringata al mandarino'],
   moneta: ['🪙', 'Monete'],
+  pellicola: ['🎞️', 'Pellicola (foto rimaste)'], fotoFarfalla: ['🦋', 'Foto di farfalla'], miele: ['🍯', 'Miele'],
+  mieleCiliegie: ['🍒', 'Miele alle ciliegie'], mieleCastagne: ['🌰', 'Miele di castagne'],
+  mieleMandarino: ['🍊', 'Miele al mandarino'], mieleFichi: ['🥮', 'Miele cotto di fichi'],
+  fioriDecorativi: ['🌼', 'Fiori da piantare'],
 };
 const inventoryListEl = document.getElementById('inventory-list');
 function refreshInventoryHud() {
@@ -3648,6 +3964,38 @@ const inventoryToggleBtn = document.getElementById('inventoryToggleBtn');
 inventoryToggleBtn.addEventListener('click', toggleInventoryMenu);
 inventoryToggleBtn.addEventListener('touchstart', e => { e.preventDefault(); toggleInventoryMenu(); }, { passive: false });
 document.getElementById('inventory-close').addEventListener('click', closeInventoryMenu);
+
+/* Album Foto: raggiungibile da un tasto nel menu Inventario. Per ora
+   contiene solo le foto di farfalle (le uniche catturabili), mostrate come
+   voce contata — da qui si può vendere una foto direttamente al traghetto
+   se è presente, oppure basta ricordarsi di farlo dal suo menu Vendite. */
+const photoAlbumOverlay = document.getElementById('photo-album-overlay');
+const photoAlbumListEl = document.getElementById('photo-album-list');
+let photoAlbumOpen = false;
+function renderPhotoAlbum() {
+  photoAlbumListEl.innerHTML = '';
+  if (inventory.fotoFarfalla > 0) {
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `<div class="recipe-info">🦋 Foto di farfalla<div class="recipe-cost">Vendibile al traghetto per 50 🪙</div></div><div>${inventory.fotoFarfalla}</div>`;
+    photoAlbumListEl.appendChild(row);
+  } else {
+    photoAlbumListEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Nessuna foto ancora scattata. Serve la macchina fotografica (dal traghetto) e una farfalla posata su un fiore.</div></div>';
+  }
+  setMenuButtons([document.getElementById('photo-album-close')]);
+}
+function openPhotoAlbum() {
+  photoAlbumOpen = true;
+  renderPhotoAlbum();
+  photoAlbumOverlay.classList.add('open');
+}
+function closePhotoAlbum() {
+  photoAlbumOpen = false;
+  photoAlbumOverlay.classList.remove('open');
+}
+document.getElementById('inventory-album-btn').addEventListener('click', openPhotoAlbum);
+document.getElementById('photo-album-close').addEventListener('click', closePhotoAlbum);
+
 
 /* Apertura/chiusura inventario: tastiera [I], gamepad Start (indice 9) */
 let prevKeyI = false;
@@ -3758,6 +4106,7 @@ function handleAction(target) {
         showToast(`🥚 Uova +${eggs}`);
         refreshInventoryHud();
       }
+      maybeGiveHoney();
     }
   } else if (target.type === 'woodTree' || target.type === 'rock') {
     if (!d.felled) {
@@ -3777,6 +4126,7 @@ function handleAction(target) {
 			showToast(`🥚 Uova +${eggs}`);
 			refreshInventoryHud();
 		  }
+          maybeGiveHoney();
         } else {
           target.obj.visible = false;
           inventory.pietra += 3;
@@ -3876,19 +4226,19 @@ function checkInteractions() {
   if (placementMode) {
     updatePlacementGhost();
     if (input.actionJustPressed) confirmPlacement();
-    hintEl.textContent =
+    hintEl.textContent = localizeHint(
       `Piazzamento ${ITEM_LABEL_FULL[placementItemType]} — ${activeGhost().userData.valid ? 'posizione valida' : 'posizione non valida'}\n` +
-      `[E] conferma — [B] / Y / D-pad sinistro per uscire — rimasti: ${inventory[ITEM_INV_KEY[placementItemType]]}`;
+      `[E] conferma — [B] per uscire — rimasti: ${inventory[ITEM_INV_KEY[placementItemType]]}`);
     hintEl.classList.add('show');
     return;
   }
 
   if (fishingState !== 'idle') {
     let msg;
-    if (fishingState === 'waiting') msg = 'Amo in acqua... aspetta (B per annullare)';
+    if (fishingState === 'waiting') msg = '[B] Amo in acqua... aspetta per annullare';
     else if (fishingState === 'bite') msg = 'Abbocca! [E] per agganciare!';
     else msg = fishingResultText;
-    hintEl.textContent = msg;
+    hintEl.textContent = localizeHint(msg);
     hintEl.classList.add('show');
     return;
   }
@@ -3914,7 +4264,7 @@ function checkInteractions() {
     }
   }
   if (hint) {
-    hintEl.textContent = hint;
+    hintEl.textContent = localizeHint(hint);
     hintEl.classList.add('show');
   } else {
     hintEl.classList.remove('show');
@@ -4073,7 +4423,7 @@ function updateHouseSelector() {
   const box = new THREE.Box3().setFromObject(entry.mesh);
   houseSelector.position.set((box.min.x + box.max.x) / 2, box.max.y + 0.35, (box.min.z + box.max.z) / 2);
   houseSelector.visible = true;
-  label.textContent = `${entry.label} — [E] per usare`;
+  label.textContent = localizeHint(`${entry.label} — [E] per usare`);
   label.classList.add('show');
 }
 
@@ -4297,6 +4647,8 @@ function serializeGame() {
     grainHarvestedEver,
     flowerHarvestedEver,
     farinaEverCrafted,
+    hasCamera,
+    mieleEverCollected,
     ferryLastArrivalDay,
     ferryPresent,
     ferryBudget,
@@ -4316,6 +4668,9 @@ function serializeGame() {
         base.planted = d.planted;
         base.ready = d.ready;
         base.growthDaysElapsed = d.growthDaysElapsed;
+      }
+      if (it.itemType === 'fiorePiantato' && it.mesh.userData.attachedCreature) {
+        base.creatureKind = it.mesh.userData.attachedCreature.kind;
       }
       return base;
     }),
@@ -4379,6 +4734,8 @@ function loadGame() {
   grainHarvestedEver = !!data.grainHarvestedEver;
   flowerHarvestedEver = !!data.flowerHarvestedEver;
   farinaEverCrafted = !!data.farinaEverCrafted;
+  hasCamera = !!data.hasCamera;
+  mieleEverCollected = !!data.mieleEverCollected;
   ferryLastArrivalDay = data.ferryLastArrivalDay !== undefined ? data.ferryLastArrivalDay : -1;
   ferryBudget = data.ferryBudget || 0;
   ferryPurchasedToday = new Set(data.ferryPurchasedToday || []);
@@ -4425,6 +4782,9 @@ function loadGame() {
       d.growthDaysElapsed = saved.growthDaysElapsed || 0;
       d.sproutGroup.visible = d.planted && !d.ready;
       d.readyGroup.visible = d.ready;
+    }
+    if (saved.itemType === 'fiorePiantato') {
+      attachCreatureToFlower(mesh, saved.creatureKind);
     }
   }
 
@@ -4487,6 +4847,7 @@ function animate() {
   updateFireflies(elapsedTime);
   updateBirds(elapsedTime);
   updateSeedMarkers(elapsedTime);
+  updateFlowerCreatures(dt, elapsedTime, gameMinutesElapsed);
   updateTorches(elapsedTime);
   updateResources(dt);
   updateFishing(dt, elapsedTime);
@@ -4513,7 +4874,9 @@ function animate() {
   input.actionPressed = false;
   input.photoPressed = false;
   updateInput();
+  updateActiveInputMethod();
   updateInputEdges();
+  updatePhotoCapture();
   updateSecondaryButtonInput();
   updateInventoryToggleInput();
 
@@ -4586,7 +4949,12 @@ document.getElementById('cancelNewGameBtn').addEventListener('click', () => {
 
 mainMenuOptionsBtn.addEventListener('click', () => {
   optionsOverlay.classList.add('open');
-  setMenuButtons([document.getElementById('fullscreenToggleBtn'), document.getElementById('options-close')]);
+  setMenuButtons([
+    document.getElementById('fullscreenToggleBtn'),
+    document.getElementById('gamepadStyleXboxBtn'),
+    document.getElementById('gamepadStylePsBtn'),
+    document.getElementById('options-close'),
+  ]);
 });
 document.getElementById('options-close').addEventListener('click', () => {
   optionsOverlay.classList.remove('open');
@@ -4602,6 +4970,27 @@ fullscreenToggleBtn.addEventListener('click', () => {
   else document.documentElement.requestFullscreen().catch(() => {});
 });
 document.addEventListener('fullscreenchange', updateFullscreenLabel);
+
+/* Icone gamepad Xbox/PS: è una preferenza di interfaccia, non di partita,
+   quindi la teniamo in localStorage invece che nel salvataggio di gioco. */
+let gamepadIconStyle = localStorage.getItem('gamepadIconStyle') || 'xbox';
+const gamepadStyleXboxBtn = document.getElementById('gamepadStyleXboxBtn');
+const gamepadStylePsBtn = document.getElementById('gamepadStylePsBtn');
+function updateGamepadStyleButtons() {
+  gamepadStyleXboxBtn.classList.toggle('active-style', gamepadIconStyle === 'xbox');
+  gamepadStylePsBtn.classList.toggle('active-style', gamepadIconStyle === 'ps');
+}
+gamepadStyleXboxBtn.addEventListener('click', () => {
+  gamepadIconStyle = 'xbox';
+  localStorage.setItem('gamepadIconStyle', 'xbox');
+  updateGamepadStyleButtons();
+});
+gamepadStylePsBtn.addEventListener('click', () => {
+  gamepadIconStyle = 'ps';
+  localStorage.setItem('gamepadIconStyle', 'ps');
+  updateGamepadStyleButtons();
+});
+updateGamepadStyleButtons();
 
 /* Ritorno al menu principale: salva e ricarica la pagina. Ricaricare è il
    modo più affidabile per rimettere tutto in ordine (mondo pristino e
@@ -4622,7 +5011,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnT
 document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
 
 function isAnyOverlayOpen() {
-  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen ||
+  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen ||
     optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
     returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
 }
