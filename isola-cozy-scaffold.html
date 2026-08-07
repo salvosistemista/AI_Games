@@ -278,6 +278,75 @@
   .ferry-tab-btn.active { background: rgba(255,209,102,0.3); color: #fff; border-color: rgba(255,209,102,0.6); }
   #ferry-coins { font-size: 12px; color: #ffd166; margin-bottom: 8px; flex-shrink: 0; }
   #ferry-cancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+
+  /* --- Minigioco di pesca --- */
+  #fishing-mini-overlay {
+    position: fixed; inset: 0; z-index: 28; display: none;
+    align-items: center; justify-content: center; pointer-events: none;
+  }
+  #fishing-mini-overlay.open { display: flex; }
+  #fishing-mini-panel {
+    pointer-events: auto; width: min(340px, 86vw); background: rgba(10, 20, 35, 0.92);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 14px;
+    font-family: -apple-system, sans-serif; color: #fff; position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  #fishing-mini-close {
+    position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 15px;
+    color: rgba(255,255,255,0.7); width: 26px; height: 26px; line-height: 26px;
+    text-align: center; border-radius: 50%; background: rgba(255,255,255,0.08);
+  }
+  #fishing-progress-wrap { position: relative; width: 74px; height: 74px; }
+  #fishing-progress-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .fishing-ring-bg { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 8; }
+  .fishing-ring-fg { fill: none; stroke: #ffd166; stroke-width: 8; stroke-linecap: round; }
+  #fishing-progress-label {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  #fishing-water-view {
+    width: 100%; height: 90px; border-radius: 10px; position: relative; overflow: hidden;
+    background: #4fa3d1; /* mare di default, sovrascritto in JS */
+  }
+  .fishing-fish-shadow { position: absolute; top: 40%; left: -10%; font-size: 20px; opacity: 0; filter: brightness(0.4) saturate(0.6); }
+  #fishing-water-message {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 13px; padding: 0 10px; background: rgba(0,0,0,0.25);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #fishing-water-message.show { opacity: 1; }
+  #fishing-rod-bar { display: flex; gap: 3px; width: 100%; padding: 2px 4px; }
+  #fishing-rod-bar .rod-seg { flex: 1; height: 7px; border-radius: 2px; background: rgba(255,255,255,0.15); }
+  #fishing-rod-bar .rod-seg.filled { background: #7fe08a; }
+  #fishing-touch-strip { width: 100%; height: 28px; margin-top: -4px; touch-action: none; }
+  #fishing-arc-svg { width: 100%; height: auto; margin-top: -10px; touch-action: none; }
+  #fishing-arc-bg { fill: none; stroke: rgba(255,255,255,0.3); stroke-width: 13; stroke-linecap: round; }
+  #fishing-arc-zone { fill: none; stroke: #2fe86a; stroke-width: 19; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(47,232,106,0.9)); }
+  #fishing-hook { fill: #ffd166; stroke: #7a5a1a; stroke-width: 2; }
+
+  /* --- Vista da seduti sulla sedia a dondolo --- */
+  #sit-overlay {
+    position: fixed; inset: 0; z-index: 26; display: none;
+    flex-direction: column; align-items: center; justify-content: flex-end;
+    pointer-events: none;
+  }
+  #sit-overlay.open { display: flex; }
+  #sit-hint {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.75); font-family: -apple-system, sans-serif;
+    font-size: 12px; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px;
+  }
+  #sit-buttons {
+    display: flex; gap: 10px; margin-bottom: 22px; pointer-events: auto;
+    flex-wrap: wrap; justify-content: center; padding: 0 12px;
+  }
+  .sit-btn {
+    padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(20,24,38,0.82); color: #fff; font-size: 13px; font-family: -apple-system, sans-serif;
+  }
+  .sit-btn.active { background: rgba(127,224,138,0.35); border-color: rgba(127,224,138,0.7); }
+  .sit-btn.gamepad-focus { outline: 2px solid #ffd166; outline-offset: 2px; }
+  body.sitting #joystick-zone, body.sitting #action-buttons { display: none; }
   .recipe-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);
@@ -403,6 +472,41 @@
     <div id="ferry-coins"></div>
     <div id="ferry-list"></div>
     <div id="ferry-cancel">chiudi</div>
+  </div>
+</div>
+
+<div id="fishing-mini-overlay">
+  <div id="fishing-mini-panel">
+    <div id="fishing-mini-close">✕</div>
+    <div id="fishing-progress-wrap">
+      <svg viewBox="0 0 100 100" id="fishing-progress-svg">
+        <circle class="fishing-ring-bg" cx="50" cy="50" r="42"></circle>
+        <circle id="fishing-progress-ring" class="fishing-ring-fg" cx="50" cy="50" r="42" pathLength="100" stroke-dasharray="0 100"></circle>
+      </svg>
+      <div id="fishing-progress-label"></div>
+    </div>
+    <div id="fishing-water-view">
+      <div id="fishing-fish-1" class="fishing-fish-shadow">🐟</div>
+      <div id="fishing-fish-2" class="fishing-fish-shadow">🐟</div>
+      <div id="fishing-water-message"></div>
+    </div>
+    <div id="fishing-rod-bar"></div>
+    <div id="fishing-touch-strip"></div>
+    <svg id="fishing-arc-svg" viewBox="0 0 300 150">
+      <path id="fishing-arc-bg" d="M 25 140 A 125 125 0 0 1 275 140" pathLength="100"></path>
+      <path id="fishing-arc-zone" d="M 25 140 A 125 125 0 0 1 275 140" pathLength="100" stroke-dasharray="0 100"></path>
+      <circle id="fishing-hook" r="10"></circle>
+    </svg>
+  </div>
+</div>
+
+<div id="sit-overlay">
+  <div id="sit-hint">Trascina/muovi lo sguardo per guardarti intorno</div>
+  <div id="sit-buttons">
+    <button id="sitPhotoBtn" class="sit-btn">📷 Fotografa</button>
+    <button id="sitThinkBtn" class="sit-btn">💭 Pensa</button>
+    <button id="sitRockBtn" class="sit-btn">🪑 Dondola</button>
+    <button id="sitStandBtn" class="sit-btn">🚶 Alzati</button>
   </div>
 </div>
 
@@ -907,6 +1011,126 @@ const fireflyMat = new THREE.PointsMaterial({ color: 0xd9ff8a, size: 0.9, transp
 const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
 fireflies.visible = false;
 scene.add(fireflies);
+
+/* --- Cielo stellato: tante stelle col sereno, poche col nuvoloso, nessuna
+   con pioggia/neve; solo di notte. Stelle cadenti solo d'estate col sereno.
+   Il "duomo" di stelle è enorme e fisso al centro dell'isola: visibile da
+   ovunque sulla mappa, niente bisogno di seguire il giocatore. --- */
+function makeStarField(count, size, opacity) {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const az = Math.random() * Math.PI * 2;
+    const el = (10 + Math.random() * 80) * Math.PI / 180; // 10°-90° sopra l'orizzonte
+    const r = 350;
+    positions[i * 3 + 0] = Math.cos(el) * Math.cos(az) * r;
+    positions[i * 3 + 1] = Math.sin(el) * r;
+    positions[i * 3 + 2] = Math.cos(el) * Math.sin(az) * r;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xffffff, size, transparent: true, opacity, depthWrite: false });
+  const points = new THREE.Points(geo, mat);
+  points.visible = false;
+  scene.add(points);
+  return points;
+}
+const starsBase = makeStarField(50, 1.6, 0.85);   // presenti col sereno E col nuvoloso ("poche stelle")
+const starsExtra = makeStarField(260, 1.2, 0.7);  // solo col sereno, dà la densità "tante stelle"
+
+function updateStars() {
+  const night = isNightTime();
+  const clear = currentWeather === 'sereno';
+  const cloudy = currentWeather === 'nuvoloso';
+  starsBase.visible = night && (clear || cloudy);
+  starsExtra.visible = night && clear;
+}
+
+let shootingStarTimer = 5 + Math.random() * 10;
+let activeShootingStars = [];
+function trySpawnShootingStar(dt) {
+  const active = isNightTime() && currentWeather === 'sereno' && clock.season.name === 'Estate';
+  if (!active) { shootingStarTimer = 5 + Math.random() * 10; return; }
+  shootingStarTimer -= dt;
+  if (shootingStarTimer > 0) return;
+  shootingStarTimer = 6 + Math.random() * 14;
+  const az = Math.random() * Math.PI * 2;
+  const el = (30 + Math.random() * 40) * Math.PI / 180;
+  const r = 300;
+  const startX = player.position.x + Math.cos(el) * Math.cos(az) * r;
+  const startY = Math.sin(el) * r;
+  const startZ = player.position.z + Math.cos(el) * Math.sin(az) * r;
+  const dirAz = az + Math.PI * 0.15;
+  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(-9, -3, 0)]);
+  const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+  const line = new THREE.Line(geo, mat);
+  line.position.set(startX, startY, startZ);
+  line.rotation.y = dirAz;
+  scene.add(line);
+  activeShootingStars.push({
+    mesh: line, life: 0, duration: 0.8,
+    vx: Math.cos(dirAz) * 60, vy: -20, vz: Math.sin(dirAz) * 60,
+  });
+}
+function updateShootingStars(dt) {
+  for (let i = activeShootingStars.length - 1; i >= 0; i--) {
+    const s = activeShootingStars[i];
+    s.life += dt;
+    s.mesh.position.x += s.vx * dt;
+    s.mesh.position.y += s.vy * dt;
+    s.mesh.position.z += s.vz * dt;
+    s.mesh.material.opacity = Math.max(0, 1 - s.life / s.duration);
+    if (s.life >= s.duration) {
+      scene.remove(s.mesh);
+      activeShootingStars.splice(i, 1);
+    }
+  }
+}
+
+/* --- Luna: visibile solo di notte, col cielo sereno o nuvoloso (mai con
+   pioggia o neve). Attraversa il cielo dal tramonto all'alba, esattamente
+   come il sole di giorno ma sul percorso notturno. Cambia fase ogni notte,
+   in un ciclo di 8 che poi ricomincia. La "fase" è disegnata sovrapponendo
+   un disco chiaro e uno scuro leggermente sfalsato: più lo sfalsamento è
+   ampio, più luna è illuminata. --- */
+const MOON_PHASE_NAMES = ['nuova', 'crescente', 'primo quarto', 'gibbosa crescente', 'piena', 'gibbosa calante', 'ultimo quarto', 'calante'];
+const MOON_RADIUS = 9;
+const MOON_PHASE_OFFSETS = [0, 0.5, 1, 1.5, 2.3, -1.5, -1, -0.5].map(f => f * MOON_RADIUS);
+
+const moonGroup = new THREE.Group();
+const moonLightMat = new THREE.MeshBasicMaterial({ color: 0xf2f0e6, transparent: true });
+const moonLight = new THREE.Mesh(new THREE.CircleGeometry(MOON_RADIUS, 28), moonLightMat);
+moonGroup.add(moonLight);
+const moonDarkMat = new THREE.MeshBasicMaterial({ color: 0x0a1730, transparent: true });
+const moonDark = new THREE.Mesh(new THREE.CircleGeometry(MOON_RADIUS * 1.03, 28), moonDarkMat);
+moonDark.position.z = 0.05; // leggermente davanti, così copre la parte in ombra
+moonGroup.add(moonDark);
+moonGroup.visible = false;
+scene.add(moonGroup);
+
+function currentMoonPhaseIndex() { return clock.dayIndex % 8; }
+
+function updateMoon() {
+  const visible = isNightTime() && (currentWeather === 'sereno' || currentWeather === 'nuvoloso');
+  moonGroup.visible = visible;
+  if (!visible) return;
+
+  const h = clock.hour + clock.minuteOfHour / 60;
+  const { sunrise, sunset } = getSunTimes();
+  // Percorso notturno: dal tramonto di oggi all'alba di domani, avvolgendo
+  // la mezzanotte.
+  const nightLen = (24 - sunset) + sunrise;
+  const progress = h >= sunset ? (h - sunset) / nightLen : (h + 24 - sunset) / nightLen;
+  const moonAngle = progress * Math.PI;
+  const moonHeight = Math.max(Math.sin(moonAngle), 0.05) * 110 + 20;
+  const moonSide = Math.cos(moonAngle) * 130;
+  moonGroup.position.set(moonSide, moonHeight, -60); // lato opposto al sole, non si sovrappongono mai
+  moonGroup.lookAt(camera.position);
+
+  moonDark.position.x = MOON_PHASE_OFFSETS[currentMoonPhaseIndex()];
+  const dim = currentWeather === 'nuvoloso' ? 0.65 : 1;
+  moonLightMat.opacity = dim;
+  moonDarkMat.opacity = dim;
+}
 
 function fireflySeasonActive() {
   // "tarda primavera" = seconda metà della Primavera, poi tutta l'Estate
@@ -1643,6 +1867,30 @@ const RECIPES = [
     craft: () => { hasHoe = true; },
   },
   {
+    id: 'canna_pesca',
+    name: 'Canna da Pesca',
+    cost: { legna: 5 },
+    once: false,
+    isDone: () => false,
+    // Ripetibile solo se non se ne possiede già una (non è un contatore in
+    // inventario ma un oggetto a parte con la sua integrità, apposta per
+    // non poter essere spostato nella cassa).
+    visible: () => !fishingRod,
+    craft: () => {
+      const integrity = 6 + Math.floor(Math.random() * 5); // 6-10 inclusi
+      fishingRod = { integrity, maxIntegrity: integrity, professional: false };
+      showToast(`🎣 Canna da Pesca (integrità ${integrity})`);
+    },
+  },
+  {
+    id: 'sedia_dondolo',
+    name: 'Sedia a dondolo',
+    cost: { legna: 10, alluminio: 3, pietra: 1 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.sedieDondolo++; },
+  },
+  {
     id: 'fornellino',
     name: 'Fornellino',
     cost: { legna: 2, pietra: 5, alluminio: 5, selce: 1 },
@@ -1925,7 +2173,7 @@ clock.on('day', () => {
     if (it.type !== 'fruitTree' || !it.obj.userData.harvested) continue;
     const d = it.obj.userData;
     d.daysSinceHarvest++;
-    if (d.daysSinceHarvest >= FRUIT_REGROW_DAYS) {
+    if (d.daysSinceHarvest >= fruitRegrowDays) {
       d.harvested = false;
       d.daysSinceHarvest = 0;
       d.fruitsGroup.visible = true;
@@ -2213,6 +2461,10 @@ function makeTrashMesh(typeId, x, z) {
   }
   group.traverse(o => { if (o.isMesh) o.castShadow = true; });
   group.position.set(x, y, z);
+  
+  // Scala l'intero gruppo del 150% (aumento del 50%)
+  group.scale.set(1.5, 1.5, 1.5);
+  
   group.userData = { typeId, hits: 0, maxHits: TRASH_BY_ID[typeId].hits };
   scene.add(group);
   interactables.push({ obj: group, type: 'trash' });
@@ -2243,6 +2495,118 @@ function spawnDailyCalaTrash() {
   for (let i = 0; i < n; i++) spawnTrashItem(ISLAND.cala);
 }
 clock.on('day', spawnDailyCalaTrash);
+
+/* =========================================================================
+   ANIMALETTI DI MARE: ogni giorno il 40% di possibilità che 0-2 elementi
+   (stella marina, medusa, conchiglia) compaiano sulla spiaggia della Cala.
+   Si raccolgono con [E], si vendono al traghetto, oppure si possono
+   rigettare in mare vicino a un punto di pesca marino ([B]): il giorno
+   dopo, nello stesso posto, compare una bottiglia di ringraziamento.
+   ========================================================================= */
+const SEA_ITEM_TYPES = ['stellaMarina', 'medusa', 'conchiglia'];
+
+function makeSeaItemMesh(typeId, x, z) {
+  const group = new THREE.Group();
+  if (typeId === 'stellaMarina') {
+    const mat = new THREE.MeshLambertMaterial({ color: 0xe8935a });
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const arm = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), mat);
+      arm.scale.set(1, 0.4, 2.2);
+      arm.position.set(Math.cos(a) * 0.14, 0.08, Math.sin(a) * 0.14);
+      arm.rotation.y = a;
+      group.add(arm);
+    }
+  } else if (typeId === 'medusa') {
+    const domeMat = new THREE.MeshLambertMaterial({ color: 0xb0d8f0, transparent: true, opacity: 0.65 });
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+    dome.position.y = 0.16;
+    group.add(dome);
+    for (let i = 0; i < 4; i++) {
+      const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.2, 4), domeMat);
+      tentacle.position.set((Math.random() - 0.5) * 0.15, 0.06, (Math.random() - 0.5) * 0.15);
+      group.add(tentacle);
+    }
+  } else { // conchiglia
+    const mat = new THREE.MeshLambertMaterial({ color: 0xf0d8c0 });
+    const shell = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.14, 8, 1, true), mat);
+    shell.rotation.x = Math.PI;
+    shell.position.y = 0.07;
+    group.add(shell);
+  }
+  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  group.scale.set(3, 3, 3); // 2x + ulteriore 50% richiesto
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.userData = { typeId };
+  scene.add(group);
+  interactables.push({ obj: group, type: 'seaItem' });
+  return group;
+}
+
+function spawnDailySeaItems() {
+  if (Math.random() >= 0.4) return;
+  const n = Math.floor(Math.random() * 3); // 0..2
+  for (let i = 0; i < n; i++) {
+    const spot = findTrashSpot(ISLAND.cala);
+    if (!spot) continue;
+    const typeId = SEA_ITEM_TYPES[Math.floor(Math.random() * SEA_ITEM_TYPES.length)];
+    makeSeaItemMesh(typeId, spot.x, spot.z);
+  }
+}
+clock.on('day', spawnDailySeaItems);
+
+// Riduzione permanente casuale, il "regalo" del messaggio nella bottiglia.
+function grantMysteryDayReduction() {
+  const options = ['tree', 'rock', 'fruit', 'grain', 'flower'];
+  const pick = options[Math.floor(Math.random() * options.length)];
+  if (pick === 'tree') { treeRegrowDays = Math.max(1, treeRegrowDays - 1); return 'la ricrescita degli alberi da legna'; }
+  if (pick === 'rock') { rockRespawnDays = Math.max(1, rockRespawnDays - 1); return 'la rigenerazione dei sassi'; }
+  if (pick === 'fruit') { fruitRegrowDays = Math.max(1, fruitRegrowDays - 1); return 'la rigenerazione degli alberi da frutto'; }
+  if (pick === 'grain') { grainGrowthBonusDays++; return 'la coltivazione del grano'; }
+  flowerGrowthBonusDays++; return 'la coltivazione dei fiori';
+}
+
+// Rilasci in attesa: { x, z, dayIndex, reward } — "reward" è già deciso al
+// momento del rilascio, così resta coerente anche salvando/caricando.
+let pendingGratefulBottles = [];
+
+function releaseSeaItemsNear(x, z) {
+  let released = 0;
+  for (const t of SEA_ITEM_TYPES) { released += inventory[t] || 0; inventory[t] = 0; }
+  if (released === 0) { showToast('Non hai animaletti di mare da rigettare'); return; }
+  showToast('🌊 Li hai rigettati in mare, nel loro ambiente naturale');
+  refreshInventoryHud();
+  // Il regalo si decide e si applica solo quando la bottiglia viene APERTA
+  // (vedi collectGratefulBottle), non adesso: altrimenti l'effetto sarebbe
+  // già avvenuto un giorno prima che il giocatore ne sappia nulla.
+  pendingGratefulBottles.push({ x, z, dayIndex: clock.dayIndex + 1 });
+}
+
+function spawnPendingGratefulBottles() {
+  pendingGratefulBottles = pendingGratefulBottles.filter(b => {
+    // >= invece di === : se per qualsiasi motivo il giorno giusto viene
+    // "perso" (es. subito dopo un caricamento), la bottiglia compare
+    // comunque appena possibile, invece di restare in attesa per sempre.
+    if (b.dayIndex > clock.dayIndex) return true;
+    const mesh = makeMessageBottle(b.x + 1.4, b.z); // scostata dal cartello, ben visibile
+    mesh.scale.set(2, 2, 2);
+    interactables.push({ obj: mesh, type: 'gratefulBottle' });
+    return false;
+  });
+}
+clock.on('day', spawnPendingGratefulBottles);
+
+function collectGratefulBottle(target) {
+  scene.remove(target.obj);
+  const idx = interactables.indexOf(target);
+  if (idx !== -1) interactables.splice(idx, 1);
+  // Il regalo si decide e si applica ESATTAMENTE ora, all'apertura.
+  const reward = Math.random() < 0.7 ? grantMysteryDayReduction() : null;
+  const text = reward
+    ? `Grazie per aver rimesso in mare quegli animaletti: sei un vero Amico del Mare! Come ringraziamento, ti regaliamo un giorno in meno per ${reward}.`
+    : 'Grazie per aver rimesso in mare quegli animaletti: sei un vero Amico del Mare!';
+  openMessageOverlay(text);
+}
 
 function findGroundSpotForSeed(avoid) {
   const zone = Math.random() < 0.5 ? ISLAND.valley : ISLAND.cala;
@@ -2332,9 +2696,11 @@ function updateSeedMarkers(elapsedTime) {
   }
 }
 
-const FRUIT_REGROW_DAYS = 7;    // giorni di gioco prima che l'albero da frutta ridia frutti
-const TREE_REGROW_DAYS = 30;  // giorni prima che la piantina ridiventi albero
-const ROCK_RESPAWN_DAYS = 30; // giorni prima che la roccia ricompaia (se il posto è libero)
+let fruitRegrowDays = 7;    // giorni di gioco prima che l'albero da frutta ridia frutti
+let treeRegrowDays = 30;  // giorni prima che la piantina ridiventi albero
+let rockRespawnDays = 30; // giorni prima che la roccia ricompaia (se il posto è libero)
+let grainGrowthBonusDays = 0;  // riduzione permanente accumulata (regali "Amico del Mare")
+let flowerGrowthBonusDays = 0;
 
 function isSpotBuiltOver(x, z) {
   for (const it of placedItems) if (Math.hypot(x - it.x, z - it.z) < 2.4) return true;
@@ -2362,14 +2728,14 @@ clock.on('day', () => {
     const d = it.obj.userData;
     if (it.type === 'woodTree' && d.felled) {
       d.daysSinceFelled++;
-      if (d.daysSinceFelled >= TREE_REGROW_DAYS) {
+      if (d.daysSinceFelled >= treeRegrowDays) {
         d.felled = false; d.hits = 0; d.daysSinceFelled = 0;
         d.saplingGroup.visible = false;
         d.grownGroup.visible = true;
       }
     } else if (it.type === 'rock' && d.felled) {
       d.daysSinceFelled++;
-      if (d.daysSinceFelled >= ROCK_RESPAWN_DAYS) {
+      if (d.daysSinceFelled >= rockRespawnDays) {
         if (!isSpotBuiltOver(it.obj.position.x, it.obj.position.z)) {
           d.felled = false; d.hits = 0; d.daysSinceFelled = 0;
           it.obj.visible = true;
@@ -2511,9 +2877,42 @@ window.addEventListener('keydown', e => {
     devDebugPanel.style.display = devDebugOpen ? 'block' : 'none';
   }
 });
+// Quanti giorni mancano al più "vecchio" elemento di una lista che aspetta
+// di rigenerarsi (quello fermo da più tempo, quindi il prossimo a tornare).
+function daysUntilOldestPending(items, isPending, daysSinceFn, totalDays) {
+  if (totalDays == null) return 'in pausa'; // es. grano d'inverno: non cresce
+  let maxDays = -1;
+  for (const it of items) {
+    if (!isPending(it)) continue;
+    const ds = daysSinceFn(it);
+    if (ds > maxDays) maxDays = ds;
+  }
+  if (maxDays < 0) return '—';
+  return `${Math.max(0, totalDays - maxDays)}`;
+}
+
 function updateDevDebugPanel() {
   if (!devDebugOpen) return;
-  devDebugPanel.textContent = `x: ${player.position.x.toFixed(2)}   y: ${player.position.z.toFixed(2)}`;
+  const trees = interactables.filter(it => it.type === 'woodTree');
+  const fruitTrees2 = interactables.filter(it => it.type === 'fruitTree');
+  const rocks = interactables.filter(it => it.type === 'rock');
+  const grainFields = placedItems.filter(it => it.itemType === 'campoGrano');
+  const flowerFields = placedItems.filter(it => it.itemType === 'aiuolaFiori');
+
+  const lines = [
+    `x: ${player.position.x.toFixed(2)}   z: ${player.position.z.toFixed(2)}`,
+    `Spazzatura non raccolta: ${countTrash()}`,
+    `Animaletti di mare non raccolti: ${interactables.filter(it => it.type === 'seaItem').length}`,
+    `Lattine di alluminio non raccolte: ${interactables.filter(it => it.type === 'can').length}`,
+    `Semi non raccolti: ${interactables.filter(it => it.type === 'semeGrano' || it.type === 'semeFiore').length}`,
+    `Frammenti di stella non raccolti: ${interactables.filter(it => it.type === 'starFragment').length}`,
+    `Giorni al più vecchio albero da legna: ${daysUntilOldestPending(trees, it => it.obj.userData.felled, it => it.obj.userData.daysSinceFelled, treeRegrowDays)}`,
+    `Giorni al più vecchio albero da frutta: ${daysUntilOldestPending(fruitTrees2, it => it.obj.userData.harvested, it => it.obj.userData.daysSinceHarvest, fruitRegrowDays)}`,
+    `Giorni al più vecchio sasso: ${daysUntilOldestPending(rocks, it => it.obj.userData.felled, it => it.obj.userData.daysSinceFelled, rockRespawnDays)}`,
+    `Giorni al più vecchio campo di grano: ${daysUntilOldestPending(grainFields, it => it.mesh.userData.planted && !it.mesh.userData.ready, it => it.mesh.userData.growthDaysElapsed, fieldGrowthDaysRequired('grano'))}`,
+    `Giorni al più vecchio campo di fiori: ${daysUntilOldestPending(flowerFields, it => it.mesh.userData.planted && !it.mesh.userData.ready, it => it.mesh.userData.growthDaysElapsed, fieldGrowthDaysRequired('fiori'))}`,
+  ];
+  devDebugPanel.textContent = lines.join('\n');
 }
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -2676,6 +3075,168 @@ function updateCamera() {
 }
 
 /* =========================================================================
+   SEDIA A DONDOLO: vista in prima persona da seduti. Il mondo di gioco
+   continua a evolversi normalmente (clock, piante, animali...); cambia
+   solo la telecamera e il modo in cui l'input viene letto (guarda invece
+   di muoversi).
+   ========================================================================= */
+let sittingChair = null; // il placedItem su cui si è seduti, o null
+let sitYaw = 0, sitPitch = 0; // gradi, relativi alla direzione della sedia
+let sitRocking = false;
+let sitTimeBoost = false; // "Pensa": tempo a 3x
+let sitMouseT = { x: 0.5, y: 0.5 };
+let sitTouchActive = false;
+let sitTouchStart = null;
+let sitTouchYawStart = 0, sitTouchPitchStart = 0;
+
+const SIT_YAW_MAX = 50, SIT_PITCH_MAX = 45;
+const SIT_EYE_HEIGHT = 1.35;
+
+const sitOverlay = document.getElementById('sit-overlay');
+const sitThinkBtn = document.getElementById('sitThinkBtn');
+const sitRockBtn = document.getElementById('sitRockBtn');
+
+const sitButtonsList = [
+  document.getElementById('sitPhotoBtn'),
+  document.getElementById('sitThinkBtn'),
+  document.getElementById('sitRockBtn'),
+  document.getElementById('sitStandBtn'),
+];
+let sitButtonIndex = 0;
+function updateSitButtonHighlight() {
+  sitButtonsList.forEach((b, i) => b.classList.toggle('gamepad-focus', i === sitButtonIndex));
+}
+
+function enterSitMode(entry) {
+  sittingChair = entry;
+  sitYaw = 0; sitPitch = 0;
+  sitRocking = false;
+  sitTimeBoost = false;
+  sitThinkBtn.classList.remove('active');
+  sitRockBtn.classList.remove('active');
+  sitButtonIndex = 0;
+  updateSitButtonHighlight();
+  sitOverlay.classList.add('open');
+  document.body.classList.add('sitting');
+  document.getElementById('hint-line').classList.remove('show'); // niente hint residui (es. "[E] per sedersi") mentre si è già seduti
+}
+function exitSitMode() {
+  sittingChair = null;
+  sitOverlay.classList.remove('open');
+  document.body.classList.remove('sitting');
+}
+document.getElementById('sitStandBtn').addEventListener('click', exitSitMode);
+sitThinkBtn.addEventListener('click', () => {
+  sitTimeBoost = !sitTimeBoost;
+  sitThinkBtn.classList.toggle('active', sitTimeBoost);
+});
+sitRockBtn.addEventListener('click', () => {
+  sitRocking = !sitRocking;
+  sitRockBtn.classList.toggle('active', sitRocking);
+});
+document.getElementById('sitPhotoBtn').addEventListener('click', takeSitPhoto);
+
+let prevSitStickLeft = false, prevSitStickRight = false, prevSitConfirm = false;
+function updateSitButtonNav() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  if (!pad) return;
+  const stickX = pad.axes ? pad.axes[0] : 0; // levetta sinistra orizzontale
+  const dpadLeft = !!(pad.buttons[14] && pad.buttons[14].pressed);
+  const dpadRight = !!(pad.buttons[15] && pad.buttons[15].pressed);
+  const left = stickX < -0.5 || dpadLeft;
+  const right = stickX > 0.5 || dpadRight;
+  if (left && !prevSitStickLeft) {
+    sitButtonIndex = (sitButtonIndex - 1 + sitButtonsList.length) % sitButtonsList.length;
+    updateSitButtonHighlight();
+  }
+  if (right && !prevSitStickRight) {
+    sitButtonIndex = (sitButtonIndex + 1) % sitButtonsList.length;
+    updateSitButtonHighlight();
+  }
+  prevSitStickLeft = left; prevSitStickRight = right;
+  const confirm = !!((pad.buttons[0] && pad.buttons[0].pressed) || (pad.buttons[2] && pad.buttons[2].pressed)); // A o X
+  if (confirm && !prevSitConfirm) sitButtonsList[sitButtonIndex].click();
+  prevSitConfirm = confirm;
+}
+
+function takeSitPhoto() {
+  if (!sittingChair) return;
+  if (!hasCamera) { showToast('📷 Non hai una macchina fotografica'); return; }
+  if (inventory.pellicola <= 0) { showToast('🎞️ Rullino esaurito — comprane uno dal traghetto'); return; }
+  inventory.pellicola--;
+  // Se una farfalla posata è nei paraggi la cattura come sempre, altrimenti
+  // scatta comunque un panorama: da seduti si fotografa "quello che si vede".
+  let target = null, bestDist = Infinity;
+  for (const c of flowerCreatures) {
+    if (c.kind !== 'farfalla' || !c.resting || !c.mesh.visible) continue;
+    const d = Math.hypot(sittingChair.mesh.position.x - c.mesh.position.x, sittingChair.mesh.position.z - c.mesh.position.z);
+    if (d < PHOTO_RANGE && d < bestDist) { target = c; bestDist = d; }
+  }
+  if (target) {
+    inventory.fotoFarfalla++;
+    showToast('📸 Foto di farfalla scattata!');
+  } else {
+    inventory.fotoPaesaggio++;
+    showToast('📸 Foto del paesaggio scattata!');
+  }
+  refreshInventoryHud();
+}
+
+window.addEventListener('mousemove', e => {
+  sitMouseT.x = e.clientX / window.innerWidth;
+  sitMouseT.y = e.clientY / window.innerHeight;
+});
+window.addEventListener('touchstart', e => {
+  if (!sittingChair) return;
+  if (e.target.closest && e.target.closest('.sit-btn')) return;
+  sitTouchActive = true;
+  const t = e.touches[0];
+  sitTouchStart = { x: t.clientX, y: t.clientY };
+  sitTouchYawStart = sitYaw; sitTouchPitchStart = sitPitch;
+}, { passive: true });
+window.addEventListener('touchmove', e => {
+  if (!sittingChair || !sitTouchActive) return;
+  const t = e.touches[0];
+  const dx = t.clientX - sitTouchStart.x, dy = t.clientY - sitTouchStart.y;
+  sitYaw = Math.max(-SIT_YAW_MAX, Math.min(SIT_YAW_MAX, sitTouchYawStart - dx * 0.2));
+  sitPitch = Math.max(-SIT_PITCH_MAX, Math.min(SIT_PITCH_MAX, sitTouchPitchStart - dy * 0.2));
+}, { passive: true });
+window.addEventListener('touchend', () => { sitTouchActive = false; });
+
+function updateSitLookInput(dt) {
+  if (!sittingChair || sitTouchActive) return; // il tocco è già gestito nei listener sopra
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  const stickX = pad && pad.axes ? pad.axes[2] : 0;
+  const stickY = pad && pad.axes ? pad.axes[3] : 0;
+  if (pad && (Math.abs(stickX) > 0.15 || Math.abs(stickY) > 0.15)) {
+    sitYaw = Math.max(-SIT_YAW_MAX, Math.min(SIT_YAW_MAX, sitYaw - stickX * 45 * dt));
+    sitPitch = Math.max(-SIT_PITCH_MAX, Math.min(SIT_PITCH_MAX, sitPitch - stickY * 45 * dt));
+  } else {
+    const targetYaw = (0.5 - sitMouseT.x) * 2 * SIT_YAW_MAX;
+    const targetPitch = (0.5 - sitMouseT.y) * 2 * SIT_PITCH_MAX;
+    sitYaw += (targetYaw - sitYaw) * 0.08;
+    sitPitch += (targetPitch - sitPitch) * 0.08;
+  }
+}
+
+function updateSitCamera(elapsedTime) {
+  if (!sittingChair) return;
+  const chairMesh = sittingChair.mesh;
+  const totalYaw = chairMesh.rotation.y + (sitYaw * Math.PI / 180);
+  const pitchRad = sitPitch * Math.PI / 180;
+  const rockOffset = sitRocking ? Math.sin(elapsedTime * 2.2) * 0.12 : 0;
+  const eyeY = chairMesh.position.y + SIT_EYE_HEIGHT + rockOffset;
+  camera.position.set(chairMesh.position.x, eyeY, chairMesh.position.z);
+  const lookDist = 10;
+  const lx = chairMesh.position.x + Math.sin(totalYaw) * Math.cos(pitchRad) * lookDist;
+  const ly = eyeY + Math.sin(pitchRad) * lookDist;
+  const lz = chairMesh.position.z + Math.cos(totalYaw) * Math.cos(pitchRad) * lookDist;
+  camera.lookAt(lx, ly, lz);
+}
+
+/* =========================================================================
    MOVIMENTO PLAYER
    Il movimento è relativo alla camera: "avanti" per il giocatore è la
    direzione in cui la camera sta guardando, così i controlli sono intuitivi
@@ -2739,33 +3300,81 @@ const FISH_POOLS = {
   laghetto: ['persico', 'carpa', 'trota'],
   mare: ['sgombro', 'orata', 'granchio'],
 };
-const BITE_WINDOW = 1.4;
+const FISHING_ZONE_HALF = { normal: 0.10, pro: 0.125 }; // metà larghezza: 20% della barra normale, 25% con l'upgrade
+const FISH_TIRE_SECONDS = 8; // secondi cumulativi dentro la zona per stancare il pesce
+const BITE_CHECK_INTERVAL = 15; // secondi tra un tiro di abboccata e il successivo (50% di riuscita)
+const PENALTY_CHECK_INTERVAL = 0.5; // ogni quanto, se fuori zona, si tirano i dadi delle penalità
 
-let fishingState = 'idle'; // idle | waiting | bite | result
-let fishingTimer = 0;
+let fishingState = 'idle'; // idle | waiting | biting | caught
 let fishingZone = null;
 let fishingSpotObj = null;
-let fishingResultText = '';
+let fishingWaitTimer = 0;
+let fishingProgress = 0; // 0..1, riempimento del cerchio mentre "biting"
+let fishingZoneCenter = 0.5; // 0..1, centro della "zona di comfort" lungo la barra ad arco
+let fishingZoneDriftDir = 1;
+let fishingOutsideTimer = 0;
+let fishingCaughtTimer = 0;
+let fishingCaughtName = '';
+let fishingHookT = 0.5; // 0..1, posizione dell'amo lungo la barra ad arco (valore effettivo usato)
+let fishingMouseT = 0.5;
+let fishingTouchActive = false;
+let fishingTouchT = 0.5;
 
 function isLakeFrozen() {
   return clock.season.name === 'Inverno';
 }
 
 function startFishing(target) {
+  if (!fishingRod) { showToast('🎣 Serve la Canna da Pesca'); return; }
   if (target.obj.userData.zone === 'laghetto' && isLakeFrozen()) return;
-  fishingState = 'waiting';
-  fishingTimer = 3 + Math.random() * 4; // 3-7 secondi di attesa, la parte rilassante
   fishingZone = target.obj.userData.zone;
   fishingSpotObj = target.obj;
   bobberGroup.position.copy(target.obj.userData.bobberPos);
   bobberGroup.visible = true;
   fishingLine.visible = true;
+  fishingState = 'waiting';
+  fishingWaitTimer = BITE_CHECK_INTERVAL;
+  fishingHookT = fishingMouseT = fishingTouchT = 0.5;
+  openFishingMini();
 }
 
 function cancelFishing() {
   fishingState = 'idle';
   bobberGroup.visible = false;
   fishingLine.visible = false;
+  closeFishingMini();
+}
+
+function startBite() {
+  fishingState = 'biting';
+  fishingProgress = 0;
+  fishingZoneCenter = 0.3 + Math.random() * 0.4;
+  fishingZoneDriftDir = Math.random() < 0.5 ? 1 : -1;
+  fishingOutsideTimer = 0;
+  renderFishingBiteStart();
+}
+
+function catchFish() {
+  const pool = FISH_POOLS[fishingZone] || ['pesce'];
+  const catchName = pool[Math.floor(Math.random() * pool.length)];
+  addFoodItem('pesce');
+  refreshInventoryHud();
+  fishingCaughtName = catchName;
+  fishingCaughtTimer = 2;
+  fishingState = 'caught';
+  renderFishingCaught();
+}
+
+function fishEscaped() {
+  fishingState = 'waiting';
+  fishingWaitTimer = BITE_CHECK_INTERVAL;
+  renderFishingWaterMessage('Il pesce è scappato...', 1.4);
+}
+
+function breakRod() {
+  showToast('🎣 La canna da pesca si è rotta!');
+  fishingRod = null;
+  cancelFishing();
 }
 
 function updateFishing(dt, elapsedTime) {
@@ -2777,30 +3386,216 @@ function updateFishing(dt, elapsedTime) {
     linePts.setXYZ(0, rodTip.x, rodTip.y, rodTip.z);
     linePts.setXYZ(1, bobberGroup.position.x, bobberGroup.position.y, bobberGroup.position.z);
     linePts.needsUpdate = true;
+    bobberGroup.position.y = 0.15 + Math.sin(elapsedTime * (fishingState === 'biting' ? 12 : 2)) * (fishingState === 'biting' ? 0.08 : 0.04);
   }
 
-  fishingTimer -= dt;
+  updateFishingHookInput(dt);
+  renderFishingHookPosition();
+  updateFishingFishShadows(dt);
 
   if (fishingState === 'waiting') {
-    bobberGroup.position.y = 0.15 + Math.sin(elapsedTime * 2) * 0.04; // ondeggia piano
-    if (fishingTimer <= 0) { fishingState = 'bite'; fishingTimer = BITE_WINDOW; }
-  } else if (fishingState === 'bite') {
-    bobberGroup.position.y = 0.05 + Math.sin(elapsedTime * 14) * 0.08; // scatti nervosi: sta abboccando
-    if (input.actionJustPressed) {
-      const pool = FISH_POOLS[fishingZone] || ['pesce'];
-      const catchName = pool[Math.floor(Math.random() * pool.length)];
-      addFoodItem('pesce');
-      refreshInventoryHud();
-      fishingResultText = `Hai pescato: ${catchName}!`;
-      fishingState = 'result'; fishingTimer = 1.6;
-    } else if (fishingTimer <= 0) {
-      fishingResultText = 'Il pesce è scappato...';
-      fishingState = 'result'; fishingTimer = 1.6;
+    fishingWaitTimer -= dt;
+    if (fishingWaitTimer <= 0) {
+      fishingWaitTimer = BITE_CHECK_INTERVAL;
+      if (Math.random() < 0.5) startBite();
     }
-  } else if (fishingState === 'result') {
-    if (fishingTimer <= 0) cancelFishing();
+  } else if (fishingState === 'biting') {
+    // Il pesce tira: la zona di comfort deriva lungo la barra, cambiando
+    // ogni tanto direzione — "più il pesce si muove, più la zona si sposta".
+    fishingZoneCenter += fishingZoneDriftDir * (0.15 + Math.random() * 0.25) * dt;
+    if (fishingZoneCenter > 0.88) { fishingZoneCenter = 0.88; fishingZoneDriftDir = -1; }
+    if (fishingZoneCenter < 0.12) { fishingZoneCenter = 0.12; fishingZoneDriftDir = 1; }
+    if (Math.random() < dt * 0.4) fishingZoneDriftDir *= -1;
+
+    const half = fishingRod.professional ? FISHING_ZONE_HALF.pro : FISHING_ZONE_HALF.normal;
+    const inside = Math.abs(fishingHookT - fishingZoneCenter) <= half;
+    if (inside) {
+      fishingOutsideTimer = 0;
+      fishingProgress = Math.min(1, fishingProgress + dt / FISH_TIRE_SECONDS);
+      if (fishingProgress >= 1) { catchFish(); return; }
+    } else {
+      fishingOutsideTimer += dt;
+      if (fishingOutsideTimer >= PENALTY_CHECK_INTERVAL) {
+        fishingOutsideTimer = 0;
+        if (Math.random() < 0.5) {
+          fishingRod.integrity--;
+          if (fishingRod.integrity <= 0) { breakRod(); return; }
+        }
+        if (Math.random() < 0.2) { fishEscaped(); return; }
+      }
+    }
+    renderFishingBitingFrame(half, inside);
+  } else if (fishingState === 'caught') {
+    fishingCaughtTimer -= dt;
+    if (fishingCaughtTimer <= 0) {
+      fishingState = 'waiting';
+      fishingWaitTimer = BITE_CHECK_INTERVAL;
+      renderFishingWaterIdle();
+    }
+  }
+
+  renderFishingRodBar();
+}
+
+/* --- Input dell'amo nel minigioco: priorità tocco > gamepad > mouse, così
+   non si accavallano fra loro sui diversi dispositivi. --- */
+function fishingRectToT(clientX, rectEl) {
+  const rect = rectEl.getBoundingClientRect();
+  const t = (clientX - rect.left) / rect.width;
+  return Math.max(0, Math.min(1, t));
+}
+let fishingMouseMoved = false; // true solo appena il mouse si è davvero mosso
+function updateFishingHookInput(dt) {
+  if (fishingTouchActive) {
+    fishingHookT = fishingTouchT;
+    return;
+  }
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  const stickX = pad && pad.axes ? pad.axes[2] : 0; // levetta destra, asse orizzontale
+  if (pad && Math.abs(stickX) > 0.2) {
+    fishingHookT = Math.max(0, Math.min(1, fishingHookT + stickX * 0.9 * dt));
+    return;
+  }
+  if (fishingMouseMoved) {
+    fishingHookT = fishingMouseT;
+    fishingMouseMoved = false; // consumato: l'amo resta lì finché il mouse non si muove di nuovo davvero
+    return;
+  }
+  // Nessun input attivo in questo frame: l'amo resta esattamente dov'era,
+  // non torna mai di scatto al centro né altrove.
+}
+
+/* --- Ombre di pesce che attraversano ogni tanto lo specchio d'acqua --- */
+let fishShadowState = [
+  { el: null, active: false, timer: 2 + Math.random() * 4 },
+  { el: null, active: false, timer: 5 + Math.random() * 6 },
+];
+function updateFishingFishShadows(dt) {
+  if (!fishShadowState[0].el) {
+    fishShadowState[0].el = document.getElementById('fishing-fish-1');
+    fishShadowState[1].el = document.getElementById('fishing-fish-2');
+  }
+  for (const s of fishShadowState) {
+    s.timer -= dt;
+    if (!s.active && s.timer <= 0) {
+      s.active = true;
+      s.progress = 0;
+      s.duration = 2.5 + Math.random() * 2;
+      s.el.style.top = `${20 + Math.random() * 55}%`;
+      s.el.style.opacity = '0.55';
+    }
+    if (s.active) {
+      s.progress += dt / s.duration;
+      s.el.style.transform = `translateX(${s.progress * 380 - 20}%) scaleX(-1)`;
+      if (s.progress >= 1) {
+        s.active = false;
+        s.el.style.opacity = '0';
+        s.timer = 4 + Math.random() * 8;
+      }
+    }
   }
 }
+
+/* --- Finestra del minigioco: elementi DOM, rendering, input mouse/touch --- */
+const fishingMiniOverlay = document.getElementById('fishing-mini-overlay');
+const fishingWaterView = document.getElementById('fishing-water-view');
+const fishingWaterMessageEl = document.getElementById('fishing-water-message');
+const fishingProgressRing = document.getElementById('fishing-progress-ring');
+const fishingProgressLabel = document.getElementById('fishing-progress-label');
+const fishingProgressWrap = document.getElementById('fishing-progress-wrap');
+const fishingRodBarEl = document.getElementById('fishing-rod-bar');
+const fishingArcSvg = document.getElementById('fishing-arc-svg');
+const fishingArcZone = document.getElementById('fishing-arc-zone');
+const fishingHookEl = document.getElementById('fishing-hook');
+const fishingTouchStrip = document.getElementById('fishing-touch-strip');
+
+function openFishingMini() {
+  fishingMiniOverlay.classList.add('open');
+  fishingWaterView.style.background = fishingZone === 'laghetto' ? '#7ec8e3' : '#2a6fb0';
+  renderFishingWaterIdle();
+  renderFishingHookPosition();
+  renderFishingRodBar();
+}
+function closeFishingMini() {
+  fishingMiniOverlay.classList.remove('open');
+}
+document.getElementById('fishing-mini-close').addEventListener('click', () => {
+  if (fishingState !== 'idle') cancelFishing();
+});
+
+function renderFishingWaterIdle() {
+  fishingWaterMessageEl.classList.remove('show');
+  fishingArcZone.setAttribute('stroke-dasharray', '0 100'); // zona nascosta finché non abbocca
+  fishingProgressRing.setAttribute('stroke-dasharray', '0 100');
+  fishingProgressLabel.textContent = '';
+  fishingProgressWrap.style.visibility = 'hidden'; // il cerchio compare solo quando il pesce abbocca
+}
+function renderFishingWaterMessage(text, duration) {
+  fishingWaterMessageEl.textContent = text;
+  fishingWaterMessageEl.classList.add('show');
+  fishingArcZone.setAttribute('stroke-dasharray', '0 100');
+  fishingProgressRing.setAttribute('stroke-dasharray', '0 100');
+  fishingProgressWrap.style.visibility = 'hidden';
+  setTimeout(() => { if (fishingState === 'waiting') fishingWaterMessageEl.classList.remove('show'); }, duration * 1000);
+}
+function renderFishingBiteStart() {
+  fishingWaterMessageEl.classList.remove('show');
+  fishingProgressWrap.style.visibility = 'visible';
+}
+function renderFishingHookPosition() {
+  const angle = Math.PI * (1 - fishingHookT); // da 180° (sinistra) a 0° (destra), passando per l'alto
+  const cx = 150, cy = 140, r = 125;
+  fishingHookEl.setAttribute('cx', cx + r * Math.cos(angle));
+  fishingHookEl.setAttribute('cy', cy - r * Math.sin(angle));
+}
+function renderFishingBitingFrame(half, inside) {
+  renderFishingHookPosition();
+  const zoneLen = Math.min(100, half * 2 * 100);
+  const zoneStart = Math.max(0, (fishingZoneCenter - half) * 100);
+  fishingArcZone.setAttribute('stroke-dasharray', `${zoneLen} ${100 - zoneLen}`);
+  fishingArcZone.setAttribute('stroke-dashoffset', `${-zoneStart}`);
+  // La fascia resta sempre verde acceso e ben visibile: è l'amo a cambiare
+  // colore per dire se sei dentro o fuori, non la zona stessa.
+  fishingHookEl.setAttribute('fill', inside ? '#2fe86a' : '#e05a5a');
+  const pct = fishingProgress * 100;
+  fishingProgressRing.setAttribute('stroke-dasharray', `${pct} ${100 - pct}`);
+  fishingProgressLabel.textContent = `${Math.round(pct)}%`;
+}
+function renderFishingCaught() {
+  fishingWaterMessageEl.textContent = `Hai pescato: ${fishingCaughtName}!`;
+  fishingWaterMessageEl.classList.add('show');
+  fishingArcZone.setAttribute('stroke-dasharray', '0 100');
+  fishingProgressRing.setAttribute('stroke-dasharray', '100 0');
+  fishingProgressLabel.textContent = '🎣';
+}
+function renderFishingRodBar() {
+  if (!fishingRod) { fishingRodBarEl.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 0; i < fishingRod.maxIntegrity; i++) {
+    html += `<div class="rod-seg${i < fishingRod.integrity ? ' filled' : ''}"></div>`;
+  }
+  fishingRodBarEl.innerHTML = html;
+}
+
+// Mouse: la posizione sopra la barra ad arco muove l'amo
+fishingArcSvg.addEventListener('mousemove', e => {
+  fishingMouseT = fishingRectToT(e.clientX, fishingArcSvg);
+  fishingMouseMoved = true;
+});
+// Touch: si trascina su una striscia dedicata SOPRA l'arco, apposta perché
+// il dito non copra la zona di comfort che si muove sull'arco stesso.
+fishingTouchStrip.addEventListener('touchstart', e => {
+  e.preventDefault();
+  fishingTouchActive = true;
+  fishingTouchT = fishingRectToT(e.touches[0].clientX, fishingTouchStrip);
+}, { passive: false });
+fishingTouchStrip.addEventListener('touchmove', e => {
+  e.preventDefault();
+  fishingTouchT = fishingRectToT(e.touches[0].clientX, fishingTouchStrip);
+}, { passive: false });
+fishingTouchStrip.addEventListener('touchend', () => { fishingTouchActive = false; });
+fishingTouchStrip.addEventListener('touchcancel', () => { fishingTouchActive = false; });
 
 /* =========================================================================
    PIAZZAMENTO OGGETTI: pannelli di recinto e torce. Un "fantasma" semitra-
@@ -2889,6 +3684,7 @@ function makeWall(x, z, yaw) {
 
 let casettaBuilt = false;
 let hasHoe = false;
+let fishingRod = null; // { integrity, maxIntegrity, professional } oppure null se non posseduta
 let stoveBuilt = false;
 let fireflyCaughtEver = false;
 let portableLampBuilt = false;
@@ -3071,6 +3867,41 @@ function makeFioreDecorativo(x, z, yaw) {
 // serve comunque un costo per il rimborso quando lo si rimuove.
 const FIORE_DECORATIVO_RECIPE = { cost: { fiori: 1 } };
 
+// Sedia a dondolo: piazzabile ovunque sia camplabile e libero. Sedersi
+// (vedi enterSitMode) passa a una vista in prima persona con controlli
+// dedicati, mentre il mondo di gioco continua a evolversi normalmente.
+function makeSediaDondolo(x, z, yaw) {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.9), woodMat);
+  seat.position.y = 0.75;
+  group.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.1), woodMat);
+  back.position.set(0, 1.2, -0.4);
+  group.add(back);
+  [-0.42, 0.42].forEach(ax => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.8), woodMat);
+    arm.position.set(ax, 0.95, 0);
+    group.add(arm);
+    const armLeg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 0.08), woodMat);
+    armLeg.position.set(ax, 0.8, -0.35);
+    group.add(armLeg);
+  });
+  // Pattini curvi a dondolo, semplificati con archi di toro
+  [-0.4, 0.4].forEach(rx => {
+    const rocker = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 6, 16, Math.PI * 0.9), woodMat);
+    rocker.position.set(rx, 0.25, 0.05);
+    rocker.rotation.z = Math.PI / 2;
+    rocker.rotation.y = Math.PI / 2;
+    group.add(rocker);
+  });
+  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
 // Lampada portatile: stessa luce di una torcia, ma segue sempre il player
 // invece di stare ferma — attiva solo dopo averla costruita, solo di notte.
 const portableLampLight = new THREE.PointLight(0xffb166, 0, 20, 1); // decadimento morbido, come le torce
@@ -3100,10 +3931,10 @@ function updateTorches(elapsedTime) {
 // Fabbrica mesh, chiave inventario e "ingombro" (spaziatura minima) per ogni
 // tipo di oggetto piazzabile — aggiungere un tipo nuovo in futuro (es. una
 // futura fontana) significa solo aggiungere una riga in ciascuna di queste.
-const ITEM_FACTORY = { recinto: makeFencePanel, torcia: makeTorch, muro: makeWall, casetta: makeCasetta, fontana: makeFontana, campoGrano: makeCampoGrano, aiuolaFiori: makeAiuolaFiori, fiorePiantato: makeFioreDecorativo };
-const ITEM_INV_KEY = { recinto: 'recinti', torcia: 'torce', muro: 'muri', casetta: 'casette', fontana: 'fontane', campoGrano: 'campiGrano', aiuolaFiori: 'aiuoleFiori', fiorePiantato: 'fiori' };
-const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2, fontana: GRID_SIZE * 1.3, campoGrano: GRID_SIZE * 1.2, aiuolaFiori: GRID_SIZE * 1.1, fiorePiantato: GRID_SIZE * 0.5 };
-const ITEM_SOLID = { recinto: true, torcia: false, muro: true, casetta: true, fontana: true, campoGrano: false, aiuolaFiori: false, fiorePiantato: false }; // blocca il movimento?
+const ITEM_FACTORY = { recinto: makeFencePanel, torcia: makeTorch, muro: makeWall, casetta: makeCasetta, fontana: makeFontana, campoGrano: makeCampoGrano, aiuolaFiori: makeAiuolaFiori, fiorePiantato: makeFioreDecorativo, sediaDondolo: makeSediaDondolo };
+const ITEM_INV_KEY = { recinto: 'recinti', torcia: 'torce', muro: 'muri', casetta: 'casette', fontana: 'fontane', campoGrano: 'campiGrano', aiuolaFiori: 'aiuoleFiori', fiorePiantato: 'fiori', sediaDondolo: 'sedieDondolo' };
+const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2, fontana: GRID_SIZE * 1.3, campoGrano: GRID_SIZE * 1.2, aiuolaFiori: GRID_SIZE * 1.1, fiorePiantato: GRID_SIZE * 0.5, sediaDondolo: GRID_SIZE * 0.9 };
+const ITEM_SOLID = { recinto: true, torcia: false, muro: true, casetta: true, fontana: true, campoGrano: false, aiuolaFiori: false, fiorePiantato: false, sediaDondolo: true }; // blocca il movimento?
 
 const ghostMats = {};
 const ghostMeshes = {};
@@ -3123,7 +3954,7 @@ function activeGhostMat() { return ghostMats[placementItemType]; }
 // Oggetti piazzati la cui azione primaria [E] non è "modifica" (fontana =
 // raccogli acqua, campi/aiuole = semina o raccogli): per questi, ruota/
 // sposta/rimuovi passano al tasto secondario [B].
-const EDIT_VIA_SECONDARY = new Set(['fontana', 'campoGrano', 'aiuolaFiori']);
+const EDIT_VIA_SECONDARY = new Set(['fontana', 'campoGrano', 'aiuolaFiori', 'sediaDondolo']);
 
 /* =========================================================================
    CAMPI COLTIVABILI E AIUOLE DI FIORI: crescita per stagione, coltivazione
@@ -3139,13 +3970,13 @@ let flowerHarvestedEver = false;
 function fieldGrowthDaysRequired(kind) {
   const s = clock.season.name;
   if (kind === 'grano') {
-    if (s === 'Estate') return 4;
     if (s === 'Inverno') return null; // il grano non cresce d'inverno
-    return 7; // Primavera, Autunno
+    const base = s === 'Estate' ? 4 : 7; // Primavera, Autunno
+    return Math.max(1, base - grainGrowthBonusDays);
   }
   // fiori
-  if (s === 'Primavera' || s === 'Autunno') return 4;
-  return 7; // Estate, Inverno
+  const base = (s === 'Primavera' || s === 'Autunno') ? 4 : 7; // Estate, Inverno
+  return Math.max(1, base - flowerGrowthBonusDays);
 }
 
 function plantField(entry) {
@@ -3298,7 +4129,7 @@ function exitPlacementMode() {
 const buildChip = document.getElementById('buildChip');
 const buildOverlay = document.getElementById('build-overlay');
 const buildListEl = document.getElementById('build-list');
-const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore' };
+const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore', sediaDondolo: 'Sedia a dondolo' };
 let buildMenuOpen = false;
 
 function renderBuildMenu() {
@@ -3401,7 +4232,10 @@ function updateSecondaryButtonInput() {
     else {
       const near = findNearestInteractable();
       const editViaB = near && near.type === 'placedItem' && EDIT_VIA_SECONDARY.has(near.obj.userData.placedEntry.itemType);
-      if (editViaB && !fenceEditMenuOpen) {
+      const hasSeaItems = SEA_ITEM_TYPES.some(t => inventory[t] > 0);
+      if (near && near.type === 'fishingSpot' && near.obj.userData.zone === 'mare' && hasSeaItems) {
+        releaseSeaItemsNear(near.obj.position.x, near.obj.position.z);
+      } else if (editViaB && !fenceEditMenuOpen) {
         openFenceEditMenu(near.obj.userData.placedEntry);
       } else {
         openBuildMenu();
@@ -3603,13 +4437,16 @@ const COOK_RECIPES = [
 // annullerebbe la spesa ricalcolando i contatori dagli oggetti rimasti.
 function spendCookIngredient(key, count) {
   if (FOOD_TYPES.includes(key)) {
-    let left = count;
-    for (let i = foodItems.length - 1; i >= 0 && left > 0; i--) {
-      if (foodItems[i].type === key && foodItems[i].location === 'inventory') {
-        foodItems.splice(i, 1);
-        left--;
-      }
+    // Pesca dal mucchio combinato zaino+frigo, sempre il più vecchio prima
+    // (quello che scadrebbe per primo), indipendentemente da dove si trova.
+    const candidates = [];
+    for (let i = 0; i < foodItems.length; i++) {
+      const f = foodItems[i];
+      if (f.type === key && (f.location === 'inventory' || f.location === 'fridge')) candidates.push(i);
     }
+    candidates.sort((a, b) => foodItems[b].ageMinutes - foodItems[a].ageMinutes);
+    const toRemove = candidates.slice(0, count).sort((a, b) => b - a); // indici decrescenti per splice sicuro
+    for (const i of toRemove) foodItems.splice(i, 1);
     syncFoodCounts();
   } else {
     inventory[key] -= count;
@@ -3620,12 +4457,20 @@ const cookOverlay = document.getElementById('cook-overlay');
 const cookListEl = document.getElementById('cook-list');
 let cookMenuOpen = false;
 
+// Quanto di un ingrediente è davvero disponibile per cucinare: per la
+// frutta/pesce conta zaino + frigorifero (mai la cassa); per il resto
+// (farina, uova, acqua, grano, fiori, semi...) solo l'inventario, dato che
+// quegli oggetti non possono comunque stare né in cassa né in frigo.
+function availableForCooking(key) {
+  return FOOD_TYPES.includes(key) ? (inventory[key] || 0) + (houseFridge[key] || 0) : (inventory[key] || 0);
+}
+
 function renderCookMenu() {
   cookListEl.innerHTML = '';
   for (const r of COOK_RECIPES) {
     if (r.visible && !r.visible()) continue;
-    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k}`).join(', ');
-    const affordable = Object.entries(r.cost).every(([k, v]) => inventory[k] >= v);
+    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k} (hai ${availableForCooking(k)})`).join(', ');
+    const affordable = Object.entries(r.cost).every(([k, v]) => availableForCooking(k) >= v);
     const row = document.createElement('div');
     row.className = 'recipe-row';
     row.innerHTML = `
@@ -3633,7 +4478,7 @@ function renderCookMenu() {
       <button class="recipe-btn" ${affordable ? '' : 'disabled'}>cucina</button>
     `;
     row.querySelector('.recipe-btn').addEventListener('click', () => {
-      if (!Object.entries(r.cost).every(([k, v]) => inventory[k] >= v)) return;
+      if (!Object.entries(r.cost).every(([k, v]) => availableForCooking(k) >= v)) return;
       for (const [k, v] of Object.entries(r.cost)) spendCookIngredient(k, v);
       r.craft();
       showToast(`✅ ${r.name}`);
@@ -3674,12 +4519,21 @@ const FERRY_SELL_BUNDLES = [
   { key: 'fiori', amount: 3, payout: 10, label: 'Fiori' },
   { key: 'grano', amount: 10, payout: 10, label: 'Grano' },
   { key: 'fotoFarfalla', amount: 1, payout: 50, label: 'Foto di farfalla' },
+  { key: 'stellaMarina', amount: 1, payout: 10, label: 'Stella marina' },
+  { key: 'medusa', amount: 1, payout: 10, label: 'Medusa' },
+  { key: 'conchiglia', amount: 1, payout: 10, label: 'Conchiglia' },
 ];
 
 const FERRY_BUY_ITEMS = [
   { id: 'buy_legna', label: 'Legna x10', cost: 10, key: 'legna', give: () => { inventory.legna += 10; } },
   { id: 'buy_pietra', label: 'Pietra x10', cost: 20, key: 'pietra', give: () => { inventory.pietra += 10; } },
   { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, key: 'alluminio', give: () => { inventory.alluminio += 10; } },
+  {
+    id: 'buy_rod_upgrade', label: 'Upgrade Canna da Pesca', cost: 50,
+    visible: () => fishingRod && !fishingRod.professional,
+    subtitle: () => `[integrità attuale: ${fishingRod ? fishingRod.integrity : 0}/${fishingRod ? fishingRod.maxIntegrity : 0}]`,
+    give: () => { fishingRod.professional = true; fishingRod.integrity = 15; fishingRod.maxIntegrity = 15; showToast('🎣 Canna da Pesca professionale!'); },
+  },
   { id: 'buy_fish', label: () => `${INVENTORY_LABELS[ferryOfferFishDish][1]} x1`, cost: 18, key: () => ferryOfferFishDish, give: () => { inventory[ferryOfferFishDish]++; } },
   { id: 'buy_cake', label: () => `${INVENTORY_LABELS[ferryOfferCake][1]} x1`, cost: 15, key: () => ferryOfferCake, give: () => { inventory[ferryOfferCake]++; } },
   { id: 'buy_selce', label: 'Pietra focaia x5', cost: 10, key: 'selce', give: () => { inventory.selce += 5; } },
@@ -3731,16 +4585,20 @@ function renderFerryMenu() {
       const label = typeof item.label === 'function' ? item.label() : item.label;
       const already = ferryPurchasedToday.has(item.id);
       const affordable = inventory.moneta >= item.cost;
-      
-      // Quantità in inventario per la scheda ACQUISTI
-      const key = typeof item.key === 'function' ? item.key() : item.key;
-      const ownedQty = inventory[key] || 0;
+
+      // Quantità in inventario per la scheda ACQUISTI — alcuni articoli
+      // (es. l'upgrade della canna) hanno una sottoetichetta personalizzata
+      // invece del semplice conteggio in inventario.
+      const subtitle = item.subtitle ? item.subtitle() : (() => {
+        const key = typeof item.key === 'function' ? item.key() : item.key;
+        return `[In inv: ${inventory[key] || 0}]`;
+      })();
 
       const row = document.createElement('div');
       row.className = 'recipe-row';
       row.innerHTML = `
         <div class="recipe-info">
-          ${label} <span style="font-size:0.85em; opacity:0.8;">[In inv: ${ownedQty}]</span>
+          ${label} <span style="font-size:0.85em; opacity:0.8;">${subtitle}</span>
           <div class="recipe-cost">${already ? 'già comprato oggi' : `${item.cost} 🪙`}</div>
         </div>
         <button class="recipe-btn" ${(already || !affordable) ? 'disabled' : ''}>${already ? '✓' : 'compra'}</button>
@@ -3852,8 +4710,9 @@ const RECIPE_BY_ITEM = {
   campoGrano: RECIPES.find(r => r.id === 'campo_grano'),
   aiuolaFiori: RECIPES.find(r => r.id === 'aiuola_fiori'),
   fiorePiantato: FIORE_DECORATIVO_RECIPE,
+  sediaDondolo: RECIPES.find(r => r.id === 'sedia_dondolo'),
 };
-const ITEM_LABEL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore' };
+const ITEM_LABEL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore', sediaDondolo: 'Sedia a dondolo' };
 
 function refundFor(itemType) {
   const cost = RECIPE_BY_ITEM[itemType].cost;
@@ -4079,6 +4938,8 @@ const inventory = {
   plumcakeArance: 0, tortaMandarino: 0,
   moneta: 0,
   pellicola: 0, fotoFarfalla: 0, miele: 0,
+  stellaMarina: 0, medusa: 0, conchiglia: 0,
+  sedieDondolo: 0, fotoPaesaggio: 0,
   mieleCiliegie: 0, mieleCastagne: 0, mieleMandarino: 0, mieleFichi: 0,
   fioriDecorativi: 0,
 };
@@ -4105,6 +4966,8 @@ const INVENTORY_LABELS = {
   tortaMandarino: ['🍋', 'Torta meringata al mandarino'],
   moneta: ['🪙', 'Monete'],
   pellicola: ['🎞️', 'Pellicola (foto rimaste)'], fotoFarfalla: ['🦋', 'Foto di farfalla'], miele: ['🍯', 'Miele'],
+  stellaMarina: ['🌟', 'Stella marina'], medusa: ['🪼', 'Medusa'], conchiglia: ['🐚', 'Conchiglia'],
+  sedieDondolo: ['🪑', 'Sedie a dondolo (da piazzare)'], fotoPaesaggio: ['🏞️', 'Foto del paesaggio'],
   mieleCiliegie: ['🍒', 'Miele alle ciliegie'], mieleCastagne: ['🌰', 'Miele di castagne'],
   mieleMandarino: ['🍊', 'Miele al mandarino'], mieleFichi: ['🥮', 'Miele cotto di fichi'],
   fioriDecorativi: ['🌼', 'Fiori da piantare'],
@@ -4231,6 +5094,16 @@ function handleAction(target) {
     if (!craftMenuOpen) openCraftMenu();
   } else if (target.type === 'messageBottle') {
     collectMessageBottle(target);
+  } else if (target.type === 'gratefulBottle') {
+    collectGratefulBottle(target);
+  } else if (target.type === 'seaItem') {
+    const typeId = d.typeId;
+    scene.remove(target.obj);
+    const idx = interactables.indexOf(target);
+    if (idx !== -1) interactables.splice(idx, 1);
+    inventory[typeId]++;
+    showToast(`${INVENTORY_LABELS[typeId][0]} ${INVENTORY_LABELS[typeId][1]} +1`);
+    refreshInventoryHud();
   } else if (target.type === 'can') {
     scene.remove(target.obj);
     const idx = interactables.indexOf(target);
@@ -4272,6 +5145,8 @@ function handleAction(target) {
         else showToast('Serve la Zappa per coltivare');
       }
       // se è già piantato ma non ancora pronto: niente da fare, si aspetta
+    } else if (d.placedEntry.itemType === 'sediaDondolo') {
+      if (!sittingChair) enterSitMode(d.placedEntry);
     } else if (!fenceEditMenuOpen) {
       openFenceEditMenu(d.placedEntry);
     }
@@ -4358,6 +5233,8 @@ const INTERACT_HINTS = {
   tent: 'Vicino alla tenda — [E] per dormire',
   workbench: 'Banco da lavoro — [E] per creare oggetti',
   messageBottle: 'Una bottiglietta di vetro — [E] per raccoglierla',
+  gratefulBottle: 'Una bottiglietta di vetro — [E] per raccoglierla',
+  seaItem: 'Un animaletto di mare — [E] per raccoglierlo',
   can: 'Una lattina luccicante — [E] per lavorarla',
   fireflySwarm: 'Le lucciole! — [E] per raccoglierne 3',
   starFragment: 'Un frammento di stella — [E] per raccoglierlo',
@@ -4373,9 +5250,9 @@ const INTERACT_HINTS = {
 
 const MESSAGE_TEXT = "A chiunque legga questo messaggio: quest'isola ora è tua. Divertiti ma tienila pulita. PS: attento alle lucciole... con qualcosa che luccica possono illuminarti la via!";
 let messageOverlayOpen = false;
-function openMessageOverlay() {
+function openMessageOverlay(text) {
   messageOverlayOpen = true;
-  document.getElementById('message-text').textContent = MESSAGE_TEXT;
+  document.getElementById('message-text').textContent = text || MESSAGE_TEXT;
   document.getElementById('message-overlay').classList.add('open');
   setMenuButtons([document.getElementById('message-close')]);
 }
@@ -4442,12 +5319,9 @@ function checkInteractions() {
   }
 
   if (fishingState !== 'idle') {
-    let msg;
-    if (fishingState === 'waiting') msg = '[B] Amo in acqua... aspetta per annullare';
-    else if (fishingState === 'bite') msg = 'Abbocca! [E] per agganciare!';
-    else msg = fishingResultText;
-    hintEl.textContent = localizeHint(msg);
-    hintEl.classList.add('show');
+    // Il minigioco di pesca ha la sua finestra dedicata: qui basta
+    // nascondere l'hint normale, non serve più duplicare i messaggi.
+    hintEl.classList.remove('show');
     return;
   }
 
@@ -4462,9 +5336,14 @@ function checkInteractions() {
           : d.placedEntry.itemType === 'fontana' ? 'Fontana — [E] per raccogliere acqua — [B] per modificare'
           : (d.placedEntry.itemType === 'campoGrano' || d.placedEntry.itemType === 'aiuolaFiori')
           ? fieldHintText(d) + ' — [B] per modificare'
+          : d.placedEntry.itemType === 'sediaDondolo' ? 'Sedia a dondolo — [E] per sedersi — [B] per modificare'
           : `${ITEM_LABEL_FULL[d.placedEntry.itemType]} — [E] per modificare`)
         : (target.type === 'fishingSpot' && d.zone === 'laghetto' && isLakeFrozen())
         ? 'Il laghetto è gelato — niente pesca fino a primavera'
+        : (target.type === 'fishingSpot' && !fishingRod)
+        ? 'Punto di pesca — serve la Canna da Pesca'
+        : (target.type === 'fishingSpot' && d.zone === 'mare' && SEA_ITEM_TYPES.some(t => inventory[t] > 0))
+        ? 'Punto di pesca — [E] per pescare — [B] per rigettare in mare gli animaletti'
         : (target.type === 'fireflySwarm' && firefliesCaughtTonight)
         ? 'Le lucciole! — già raccolte stanotte, torna domani'
         : target.type === 'trash'
@@ -4858,6 +5737,7 @@ function serializeGame() {
     flowerHarvestedEver,
     farinaEverCrafted,
     hasCamera,
+    fishingRod,
     mieleEverCollected,
     ferryLastArrivalDay,
     ferryPresent,
@@ -4871,6 +5751,18 @@ function serializeGame() {
     trash: interactables
       .filter(it => it.type === 'trash')
       .map(it => ({ typeId: it.obj.userData.typeId, hits: it.obj.userData.hits, x: it.obj.position.x, z: it.obj.position.z })),
+    seaItems: interactables
+      .filter(it => it.type === 'seaItem')
+      .map(it => ({ typeId: it.obj.userData.typeId, x: it.obj.position.x, z: it.obj.position.z })),
+    gratefulBottles: interactables
+      .filter(it => it.type === 'gratefulBottle')
+      .map(it => ({ x: it.obj.position.x, z: it.obj.position.z })),
+    pendingGratefulBottles,
+    treeRegrowDays,
+    rockRespawnDays,
+    fruitRegrowDays,
+    grainGrowthBonusDays,
+    flowerGrowthBonusDays,
     inventory: { ...inventory },
     houseChest: { ...houseChest },
     houseFridge: { ...houseFridge },
@@ -4948,6 +5840,7 @@ function loadGame() {
   flowerHarvestedEver = !!data.flowerHarvestedEver;
   farinaEverCrafted = !!data.farinaEverCrafted;
   hasCamera = !!data.hasCamera;
+  fishingRod = data.fishingRod || null;
   mieleEverCollected = !!data.mieleEverCollected;
   ferryLastArrivalDay = data.ferryLastArrivalDay !== undefined ? data.ferryLastArrivalDay : -1;
   ferryBudget = data.ferryBudget || 0;
@@ -4980,6 +5873,27 @@ function loadGame() {
     const mesh = makeTrashMesh(t.typeId, t.x, t.z);
     mesh.userData.hits = t.hits || 0;
   }
+  for (const it of [...interactables]) {
+    if (it.type !== 'seaItem' && it.type !== 'gratefulBottle') continue;
+    scene.remove(it.obj);
+    const idx = interactables.indexOf(it);
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+  for (const s of data.seaItems || []) {
+    makeSeaItemMesh(s.typeId, s.x, s.z);
+  }
+  for (const b of data.gratefulBottles || []) {
+    const mesh = makeMessageBottle(b.x, b.z);
+    mesh.scale.set(2, 2, 2);
+    interactables.push({ obj: mesh, type: 'gratefulBottle' });
+  }
+  pendingGratefulBottles = data.pendingGratefulBottles || [];
+  spawnPendingGratefulBottles(); // recupera subito eventuali bottiglie già "scadute"
+  treeRegrowDays = data.treeRegrowDays || 30;
+  rockRespawnDays = data.rockRespawnDays || 30;
+  fruitRegrowDays = data.fruitRegrowDays || 7;
+  grainGrowthBonusDays = data.grainGrowthBonusDays || 0;
+  flowerGrowthBonusDays = data.flowerGrowthBonusDays || 0;
   if (data.messageBottleCollected) {
     messageBottleCollected = true;
     const bottleEntry = interactables.find(it => it.type === 'messageBottle');
@@ -5054,7 +5968,8 @@ let elapsedTime = 0;
 function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
-  const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp per evitare salti su tab inattivo
+  let dt = Math.min((now - lastTime) / 1000, 0.1); // clamp per evitare salti su tab inattivo
+  if (sittingChair && sitTimeBoost) dt *= 4; // "Pensa": il mondo scorre a 4x mentre si è seduti
   lastTime = now;
   elapsedTime += dt;
 
@@ -5066,6 +5981,9 @@ function animate() {
   updateBirdSeedSpawner(gameMinutesElapsed);
   updateDevDebugPanel();
   updateSky();
+  updateStars();
+  trySpawnShootingStar(dt);
+  updateShootingStars(dt);
   updateWeatherParticles(dt);
   updateFireflies(elapsedTime);
   updateBirds(elapsedTime);
@@ -5099,9 +6017,22 @@ function animate() {
   updateInput();
   updateActiveInputMethod();
   updateInputEdges();
-  updatePhotoCapture();
-  updateSecondaryButtonInput();
+  if (!sittingChair) updateSecondaryButtonInput();
   updateInventoryToggleInput();
+
+  if (sittingChair) {
+    // Seduti: niente movimento, niente interazioni normali, solo lo
+    // sguardo che gira e la piccola UI dedicata (Fotografa/Pensa/Dondola/
+    // Alzati), navigabile anche da gamepad (levetta sinistra + A/X).
+    updateSitLookInput(dt);
+    updateSitButtonNav();
+    updateSitCamera(elapsedTime);
+    updateMoon();
+    updateClockHud();
+    renderer.render(scene, camera);
+    return;
+  }
+  updatePhotoCapture();
 
   const controlsLocked = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle' || isAnyOverlayOpen();
   if (!controlsLocked) {
@@ -5111,6 +6042,7 @@ function animate() {
     ? bridgeHeightAt(player.position.x, player.position.z)
     : terrainHeightAt(player.position.x, player.position.z);
   updateCamera();
+  updateMoon();
   checkInteractions();
   updatePortableLamp(elapsedTime);
 
