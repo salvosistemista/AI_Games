@@ -989,29 +989,101 @@ function updateWeatherParticles(dt) {
   pos.needsUpdate = true;
 }
 
-/* --- Lucciole: solo a tarda primavera/estate, di sera/notte, vicino al fiume --- */
+/* --- Lucciole Avanzate, Grandi e Ben Visibili --- */
 const FIREFLY_COUNT = 60;
 const fireflyGeo = new THREE.BufferGeometry();
 const fireflyBase = [];
 const fireflyPositions = new Float32Array(FIREFLY_COUNT * 3);
+const fireflyPhases = new Float32Array(FIREFLY_COUNT);
+
 for (let i = 0; i < FIREFLY_COUNT; i++) {
-  // sparse lungo il tratto "vissuto" del fiume (non fino al punto esteso in
-  // mare aperto, che serve solo a garantire che non si possa aggirare)
   const t = 0.05 + Math.random() * 0.55;
   const bx = ISLAND.riverA.x + (ISLAND.riverB.x - ISLAND.riverA.x) * t + (Math.random() - 0.5) * 30;
   const bz = ISLAND.riverA.z + (ISLAND.riverB.z - ISLAND.riverA.z) * t + (Math.random() - 0.5) * 30;
-  const by = 1 + Math.random() * 3;
-  fireflyBase.push({ x: bx, y: by, z: bz, phase: Math.random() * Math.PI * 2 });
+  const by = 0.8 + Math.random() * 2.5;
+
+  const phase = Math.random() * Math.PI * 2;
+  fireflyBase.push({ x: bx, y: by, z: bz, phase });
+
   fireflyPositions[i * 3 + 0] = bx;
   fireflyPositions[i * 3 + 1] = by;
   fireflyPositions[i * 3 + 2] = bz;
+  fireflyPhases[i] = phase;
 }
+
 fireflyGeo.setAttribute('position', new THREE.BufferAttribute(fireflyPositions, 3));
-const fireflyMat = new THREE.PointsMaterial({ color: 0xd9ff8a, size: 0.9, transparent: true, opacity: 0.9 });
+fireflyGeo.setAttribute('aPhase', new THREE.BufferAttribute(fireflyPhases, 1));
+
+// Shader con dimensione scalata e bagliore intenso
+const fireflyMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uColor: { value: new THREE.Color(0xd9ff8a) } // Verde/Giallo al neon
+  },
+  vertexShader: `
+    uniform float uTime;
+    attribute float aPhase;
+    varying float vAlpha;
+
+    void main() {
+      // Pulsazione: oscillatione morbida tra 0.3 e 1.0 (mai del tutto invisibile)
+      float pulse = sin(uTime * 2.2 + aPhase) * 0.35 + 0.65;
+      float flicker = sin(uTime * 6.0 + aPhase * 4.0) * 0.1;
+      vAlpha = clamp(pulse + flicker, 0.2, 1.0);
+
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      
+      // AUMENTATO: Da 12.0 a 45.0 per renderle nettamente più grandi e visibili
+      gl_PointSize = (45.0 * vAlpha) / -mvPosition.z;
+      
+      // Dimensione minima di sicurezza a schermo (non diventano mai microscopiche)
+      gl_PointSize = max(gl_PointSize, 8.0);
+      
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 uColor;
+    varying float vAlpha;
+
+    void main() {
+      float dist = length(gl_PointCoord - vec2(0.5));
+      if (dist > 0.5) discard;
+
+      // Core centrale bianco caldo + Alone sfumato verde brillante attorno
+      float core = smoothstep(0.15, 0.0, dist);
+      float glow = smoothstep(0.5, 0.0, dist) * 0.8;
+
+      vec3 finalColor = mix(uColor, vec3(1.0, 1.0, 0.8), core); // Centro tendente al bianco caldo
+      
+      gl_FragColor = vec4(finalColor, (glow + core) * vAlpha);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending
+});
+
 const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
 fireflies.visible = false;
 scene.add(fireflies);
 
+/* --- Funzione di aggiornamento posizione --- */
+function updateFireflies(time) {
+  if (!fireflies.visible) return;
+
+  fireflyMat.uniforms.uTime.value = time;
+
+  const positions = fireflyGeo.attributes.position.array;
+  for (let i = 0; i < FIREFLY_COUNT; i++) {
+    const base = fireflyBase[i];
+    positions[i * 3 + 0] = base.x + Math.sin(time * 0.8 + base.phase) * 1.2;
+    positions[i * 3 + 1] = base.y + Math.sin(time * 1.4 + base.phase * 2.0) * 0.5;
+    positions[i * 3 + 2] = base.z + Math.cos(time * 0.9 + base.phase) * 1.2;
+  }
+  
+  fireflyGeo.attributes.position.needsUpdate = true;
+}
 /* --- Cielo stellato: tante stelle col sereno, poche col nuvoloso, nessuna
    con pioggia/neve; solo di notte. Stelle cadenti solo d'estate col sereno.
    Il "duomo" di stelle è enorme e fisso al centro dell'isola: visibile da
@@ -1092,22 +1164,115 @@ function updateShootingStars(dt) {
    in un ciclo di 8 che poi ricomincia. La "fase" è disegnata sovrapponendo
    un disco chiaro e uno scuro leggermente sfalsato: più lo sfalsamento è
    ampio, più luna è illuminata. --- */
-const MOON_PHASE_NAMES = ['nuova', 'crescente', 'primo quarto', 'gibbosa crescente', 'piena', 'gibbosa calante', 'ultimo quarto', 'calante'];
+/* --- LUNA VETTORIALE NATIVA (ShapeGeometry 100% Trasparente sul cielo) --- */
+const MOON_PHASE_NAMES = ['NUOVA', 'CRESCENTE', 'PRIMO QUARTO', 'GIBBOSA CRESCENTE', 'PIENA', 'GIBBOSA CALANTE', 'ULTIMO QUARTO', 'CALANTE'];
 const MOON_RADIUS = 9;
-const MOON_PHASE_OFFSETS = [0, 0.5, 1, 1.5, 2.3, -1.5, -1, -0.5].map(f => f * MOON_RADIUS);
 
 const moonGroup = new THREE.Group();
-const moonLightMat = new THREE.MeshBasicMaterial({ color: 0xf2f0e6, transparent: true });
-const moonLight = new THREE.Mesh(new THREE.CircleGeometry(MOON_RADIUS, 28), moonLightMat);
-moonGroup.add(moonLight);
-const moonDarkMat = new THREE.MeshBasicMaterial({ color: 0x0a1730, transparent: true });
-const moonDark = new THREE.Mesh(new THREE.CircleGeometry(MOON_RADIUS * 1.03, 28), moonDarkMat);
-moonDark.position.z = 0.05; // leggermente davanti, così copre la parte in ombra
-moonGroup.add(moonDark);
+
+// Materiale della luna (Solo il colore chiaro, niente ombre o luci extra)
+const moonLightMat = new THREE.MeshBasicMaterial({ 
+  color: 0xf2f0e6, 
+  side: THREE.DoubleSide,
+  transparent: true 
+});
+
+let currentMoonMesh = null;
+
+// Targhetta del testo (trasparente)
+const textCanvas = document.createElement('canvas');
+textCanvas.width = 512;
+textCanvas.height = 128;
+const textCtx = textCanvas.getContext('2d');
+const textTexture = new THREE.CanvasTexture(textCanvas);
+
+const textMat = new THREE.MeshBasicMaterial({ 
+  map: textTexture, 
+  transparent: true,
+  depthWrite: false 
+});
+
+const textMesh = new THREE.Mesh(new THREE.PlaneGeometry(MOON_RADIUS * 2.8, MOON_RADIUS * 0.7), textMat);
+textMesh.position.set(0, -MOON_RADIUS - 4, 0.1);
+moonGroup.add(textMesh);
+
 moonGroup.visible = false;
 scene.add(moonGroup);
 
-function currentMoonPhaseIndex() { return clock.dayIndex % 8; }
+// Genera la Geometria Vettoriale Perfetta per la fase
+function createMoonPhaseGeometry(phaseIdx, radius) {
+  if (phaseIdx === 0) return null; // Nuova: nessuna forma
+  
+  if (phaseIdx === 4) {
+    return new THREE.CircleGeometry(radius, 64); // Piena: cerchio perfetto
+  }
+
+  const shape = new THREE.Shape();
+  const segments = 48;
+
+  // CORRETTO: 
+  // Indice 1 (Crescente): +0.6 -> Falce sottile (pancia a destra)
+  // Indice 3 (Gibbosa Cr.): -0.6 -> Forma quasi piena (pancia a destra + bombatura a sinistra)
+  // Indice 5 (Gibbosa Cal.): -0.6 -> Forma quasi piena (pancia a sinistra + bombatura a destra)
+  // Indice 7 (Calante): +0.6 -> Falce sottile (pancia a sinistra)
+  const kValues = [0, 0.6, 0, -0.6, 0, -0.6, 0, 0.6];
+  const k = kValues[phaseIdx];
+  const isWaning = phaseIdx > 4; // True se Calante (fasi 5, 6, 7)
+
+  // 1. Arco esterno (semicerchio circolare perfetto)
+  const outerAngles = isWaning 
+    ? { start: Math.PI / 2, end: -Math.PI / 2 }   // Pancia a sinistra per Calante
+    : { start: -Math.PI / 2, end: Math.PI / 2 };  // Pancia a destra per Crescente
+
+  shape.absarc(0, 0, radius, outerAngles.start, outerAngles.end, false);
+
+  // 2. Curva interna del terminatore (arco ellittico pulito)
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = outerAngles.end + t * Math.PI * (isWaning ? 1 : -1);
+    const y = Math.sin(angle) * radius;
+    const x = Math.cos(angle) * radius * k;
+    shape.lineTo(x, y);
+  }
+
+  return new THREE.ShapeGeometry(shape);
+}
+
+function updateMoonText(phaseIdx) {
+  const ctx = textCtx;
+  const w = 512, h = 128;
+  ctx.clearRect(0, 0, w, h);
+
+  const text = MOON_PHASE_NAMES[phaseIdx];
+
+  ctx.fillStyle = 'rgba(10, 23, 48, 0.75)';
+  ctx.beginPath();
+  ctx.roundRect(32, 24, w - 64, h - 48, 20);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(242, 240, 230, 0.4)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.font = 'bold 36px Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, w / 2, h / 2);
+
+  textTexture.needsUpdate = true;
+}
+
+function currentMoonPhaseIndex() {
+  // Se l'ora è prima delle 12:00, usa ancora la fase del "giorno precedente"
+  // Dalle 12:00 in poi, passa alla fase del giorno nuovo
+  const effectiveDay = clock.hour < 12 ? clock.dayIndex - 1 : clock.dayIndex;
+  
+  // Usiamo la formula del modulo per gestire correttamente anche i numeri negativi
+  return ((effectiveDay % 8) + 8) % 8;
+}
+
+let lastPhaseIdx = -1;
 
 function updateMoon() {
   const visible = isNightTime() && (currentWeather === 'sereno' || currentWeather === 'nuvoloso');
@@ -1116,20 +1281,39 @@ function updateMoon() {
 
   const h = clock.hour + clock.minuteOfHour / 60;
   const { sunrise, sunset } = getSunTimes();
-  // Percorso notturno: dal tramonto di oggi all'alba di domani, avvolgendo
-  // la mezzanotte.
   const nightLen = (24 - sunset) + sunrise;
   const progress = h >= sunset ? (h - sunset) / nightLen : (h + 24 - sunset) / nightLen;
   const moonAngle = progress * Math.PI;
   const moonHeight = Math.max(Math.sin(moonAngle), 0.05) * 110 + 20;
   const moonSide = Math.cos(moonAngle) * 130;
-  moonGroup.position.set(moonSide, moonHeight, -60); // lato opposto al sole, non si sovrappongono mai
+  
+  moonGroup.position.set(moonSide, moonHeight, -60);
   moonGroup.lookAt(camera.position);
 
-  moonDark.position.x = MOON_PHASE_OFFSETS[currentMoonPhaseIndex()];
+  const phaseIdx = currentMoonPhaseIndex();
+
+  if (phaseIdx !== lastPhaseIdx) {
+    // Rimuovi la vecchia geometria se presente
+    if (currentMoonMesh) {
+      moonGroup.remove(currentMoonMesh);
+      currentMoonMesh.geometry.dispose();
+      currentMoonMesh = null;
+    }
+
+    // Crea e aggiungi la nuova forma vettoriale
+    const geo = createMoonPhaseGeometry(phaseIdx, MOON_RADIUS);
+    if (geo) {
+      currentMoonMesh = new THREE.Mesh(geo, moonLightMat);
+      moonGroup.add(currentMoonMesh);
+    }
+
+    // updateMoonText(phaseIdx);
+    lastPhaseIdx = phaseIdx;
+  }
+
   const dim = currentWeather === 'nuvoloso' ? 0.65 : 1;
   moonLightMat.opacity = dim;
-  moonDarkMat.opacity = dim;
+  textMat.opacity = dim;
 }
 
 function fireflySeasonActive() {
@@ -1249,21 +1433,175 @@ function updateBirds(elapsedTime) {
    ========================================================================= */
 const flowerCreatures = []; // { kind: 'ape'|'farfalla', mesh, flowerMesh, ... }
 
+// ==================== 1. APE ====================
 function makeBeeMesh() {
   const group = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xf2c94c });
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), bodyMat);
-  body.scale.set(1, 0.8, 1.3);
+
+  // Materiali
+  const yellowMat = new THREE.MeshStandardMaterial({ color: 0xebaf28, roughness: 0.6 });
+  const blackMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+  const wingMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.6,
+    roughness: 0.1,
+    transmission: 0.8,
+    side: THREE.DoubleSide
+  });
+
+  // 1.1 CORPO ED ADDOME STRISCIATO
+  const bodyGroup = new THREE.Group();
+
+  // Busto/Addome (Ellissoide)
+  const abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), yellowMat);
+  abdomen.scale.set(0.85, 0.85, 1.4);
+  bodyGroup.add(abdomen);
+
+  // Strisce Nere
+  [-0.04, 0.03].forEach(zPos => {
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.018, 8, 16), blackMat);
+    stripe.position.z = zPos;
+    bodyGroup.add(stripe);
+  });
+
+  // Testa e Occhi
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 10), blackMat);
+  head.position.set(0, 0.02, 0.15);
+  bodyGroup.add(head);
+
+  [-0.04, 0.04].forEach(xPos => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), blackMat);
+    eye.position.set(xPos, 0.04, 0.19);
+    bodyGroup.add(eye);
+  });
+
+  // Antenne
+  [-0.025, 0.025].forEach(xPos => {
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.08, 6), blackMat);
+    antenna.position.set(xPos, 0.09, 0.19);
+    antenna.rotation.x = 0.4;
+    bodyGroup.add(antenna);
+  });
+
+  group.add(bodyGroup);
+
+  // 1.2 ALI (Con perno d'incernieramento alla base per l'animazione)
+  const createWing = (isLeft) => {
+    const wingPivot = new THREE.Group();
+    wingPivot.position.set(isLeft ? 0.05 : -0.05, 0.08, 0.02);
+
+    // Geometria dell'ala sagomata
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(0, 0);
+    wingShape.quadraticCurveTo(isLeft ? 0.18 : -0.18, 0.12, isLeft ? 0.12 : -0.12, 0.22);
+    wingShape.quadraticCurveTo(0, 0.2, 0, 0);
+
+    const wingMesh = new THREE.Mesh(new THREE.ShapeGeometry(wingShape), wingMat);
+    wingMesh.rotation.x = -Math.PI / 4;
+    wingPivot.add(wingMesh);
+
+    return wingPivot;
+  };
+
+  const wingL = createWing(true);
+  const wingR = createWing(false);
+
+  group.add(wingL);
+  group.add(wingR);
+
+  // Metadati e riferimenti alle ali per l'animazione in loop
+  group.userData = { 
+    kind: 'ape', 
+    wingL: wingL, 
+    wingR: wingR 
+  };
+
+  scene.add(group);
+  return group;
+}
+
+// ==================== 2. FARFALLA ====================
+function makeButterflyMesh() {
+  const group = new THREE.Group();
+
+  // Materiali
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x221c18, roughness: 0.9 });
+  const wingMat = new THREE.MeshStandardMaterial({ 
+    color: 0xe66738, // Arancione brillante tipo Monarca
+    roughness: 0.5, 
+    side: THREE.DoubleSide 
+  });
+  const detailMat = new THREE.MeshStandardMaterial({ color: 0x111111, side: THREE.DoubleSide });
+
+  // 1. CORPO BUSTO E TESTA (Ingranditi x1.5)
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.0225, 0.42, 8), bodyMat);
+  body.rotation.x = Math.PI / 2;
   group.add(body);
-  const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.02, 6, 10), new THREE.MeshLambertMaterial({ color: 0x2a2a2a }));
-  stripe.rotation.y = Math.PI / 2;
-  group.add(stripe);
-  const wingMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
-  const wingGeo = new THREE.PlaneGeometry(0.1, 0.16);
-  const wingL = new THREE.Mesh(wingGeo, wingMat); wingL.position.set(0.05, 0.07, 0.02); group.add(wingL);
-  const wingR = new THREE.Mesh(wingGeo, wingMat); wingR.position.set(-0.05, 0.07, 0.02); group.add(wingR);
-  group.userData.wingL = wingL; group.userData.wingR = wingR;
-  group.userData.kind = 'ape';
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.0525, 8, 8), bodyMat);
+  head.position.z = 0.21;
+  group.add(head);
+
+  // Antenne sottili (Ingrandite x1.5)
+  [-0.0225, 0.0225].forEach(xPos => {
+    const antennaCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(xPos, 0.015, 0.225),
+      new THREE.Vector3(xPos * 2, 0.075, 0.33),
+      new THREE.Vector3(xPos * 3, 0.12, 0.375)
+    ]);
+    const antenna = new THREE.Mesh(new THREE.TubeGeometry(antennaCurve, 6, 0.0045, 4, false), bodyMat);
+    group.add(antenna);
+  });
+
+  // 2. ALI SAGOMATE (Ingrandite del 50% - Scala 1.5x)
+  const createButterflyWingPair = (isLeft) => {
+    const wingPivot = new THREE.Group();
+    wingPivot.position.set(isLeft ? 0.0225 : -0.0225, 0.015, 0);
+
+    const dir = isLeft ? 1 : -1;
+
+    // Ala Superiore (Dimensioni coordinate x1.5)
+    const topShape = new THREE.Shape();
+    topShape.moveTo(0, 0);
+    topShape.quadraticCurveTo(dir * 0.525, 0.225, dir * 0.45, 0.48);
+    topShape.quadraticCurveTo(dir * 0.15, 0.57, 0, 0.12);
+    topShape.closePath();
+
+    const topWing = new THREE.Mesh(new THREE.ShapeGeometry(topShape), wingMat);
+    wingPivot.add(topWing);
+
+    // Bordo Scuro Ala Superiore
+    const topBorder = new THREE.Mesh(new THREE.ShapeGeometry(topShape), detailMat);
+    topBorder.scale.set(1.08, 1.08, 1);
+    topBorder.position.z = -0.001;
+    wingPivot.add(topBorder);
+
+    // Ala Inferiore (Dimensioni coordinate x1.5)
+    const bottomShape = new THREE.Shape();
+    bottomShape.moveTo(0, 0);
+    bottomShape.quadraticCurveTo(dir * 0.42, -0.12, dir * 0.3, -0.33);
+    bottomShape.quadraticCurveTo(dir * 0.03, -0.3, 0, -0.075);
+    bottomShape.closePath();
+
+    const bottomWing = new THREE.Mesh(new THREE.ShapeGeometry(bottomShape), wingMat);
+    wingPivot.add(bottomWing);
+
+    return wingPivot;
+  };
+
+  const wingL = createButterflyWingPair(true);
+  const wingR = createButterflyWingPair(false);
+
+  group.add(wingL);
+  group.add(wingR);
+
+  // Metadati e riferimenti alle ali per l'animazione
+  group.userData = { 
+    kind: 'farfalla', 
+    wingL: wingL, 
+    wingR: wingR 
+  };
+
   scene.add(group);
   return group;
 }
@@ -1631,61 +1969,295 @@ makeLake();
 // Tenda di partenza (placeholder semplice, verrà sostituita con un modello dedicato)
 function makeTent() {
   const group = new THREE.Group();
-  const mat = new THREE.MeshLambertMaterial({ color: 0xd8622f });
-  const geo = new THREE.ConeGeometry(4.5, 4, 4);
-  geo.rotateY(Math.PI / 4);
-  const tent = new THREE.Mesh(geo, mat);
-  tent.position.y = 2;
-  tent.castShadow = true;
-  group.add(tent);
+
+  // Materiali
+  const fabricMat = new THREE.MeshStandardMaterial({ 
+    color: 0xd8622f, 
+    roughness: 0.85, 
+    side: THREE.DoubleSide 
+  });
+  const innerMat = new THREE.MeshStandardMaterial({ color: 0x3a2d27, roughness: 0.9 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6e4327, roughness: 0.7 });
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0xd4c29d, roughness: 0.9 });
+  const bagMat = new THREE.MeshStandardMaterial({ color: 0x2e6b9e, roughness: 0.6 });
+
+  // 1. TELO DI FONDO (INTERNO)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.08, 4.0), innerMat);
+  floor.position.y = 0.04;
+  floor.receiveShadow = true;
+  group.add(floor);
+
+  // 2. CORPO DELLA TENDA (PRISMA TRIANGOLARE VIA ESTRUSIONE)
+  const tentWidth = 3.6;
+  const tentHeight = 2.4;
+  const tentDepth = 3.8;
+
+  const shape = new THREE.Shape();
+  shape.moveTo(-tentWidth / 2, 0);
+  shape.lineTo(tentWidth / 2, 0);
+  shape.lineTo(0, tentHeight);
+  shape.closePath();
+
+  const extrudeSettings = {
+    depth: tentDepth,
+    bevelEnabled: false
+  };
+
+  const tentGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  // Centriamo la geometria sulla Z
+  tentGeo.center();
+
+  const tentBody = new THREE.Mesh(tentGeo, fabricMat);
+  // Alziamo per appoggiarla a terra (altezza metà prisma)
+  tentBody.position.y = tentHeight / 2;
+  tentBody.castShadow = true;
+  tentBody.receiveShadow = true;
+  group.add(tentBody);
+
+  // 3. TELI APERTI ARROTOLATI ALL'INGRESSO (SUL FRONTALE)
+  [-1.0, 1.0].forEach(sideX => {
+    const flap = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.0, 8), fabricMat);
+    flap.position.set(sideX, 0.9, tentDepth / 2 + 0.05);
+    flap.rotation.x = Math.PI / 2;
+    group.add(flap);
+  });
+
+  // 4. PALI IN LEGNO A "X" (ANTERIORI E POSTERIORI)
+  [-tentDepth / 2 - 0.05, tentDepth / 2 + 0.05].forEach(posZ => {
+    // Palo sinistro
+    const poleL = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.0, 8), woodMat);
+    poleL.position.set(-0.75, 1.3, posZ);
+    poleL.rotation.z = -0.37;
+    poleL.castShadow = true;
+    group.add(poleL);
+
+    // Palo destro
+    const poleR = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.0, 8), woodMat);
+    poleR.position.set(0.75, 1.3, posZ);
+    poleR.rotation.z = 0.37;
+    poleR.castShadow = true;
+    group.add(poleR);
+  });
+
+  // Traversa di colmo in alto
+  const ridgePole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, tentDepth + 0.6, 8), woodMat);
+  ridgePole.position.set(0, tentHeight + 0.05, 0);
+  ridgePole.rotation.x = Math.PI / 2;
+  group.add(ridgePole);
+
+  // 5. TIRANTI E PICCHETTI DI ANCORAGGIO
+  const guylinePositions = [
+    { start: [-1.8, 0.1,  1.8], end: [-2.7, 0,  2.5] },
+    { start: [ 1.8, 0.1,  1.8], end: [ 2.7, 0,  2.5] },
+    { start: [-1.8, 0.1, -1.8], end: [-2.7, 0, -2.5] },
+    { start: [ 1.8, 0.1, -1.8], end: [ 2.7, 0, -2.5] }
+  ];
+
+  guylinePositions.forEach(line => {
+    const ropeCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(...line.start),
+      new THREE.Vector3(...line.end)
+    ]);
+    const rope = new THREE.Mesh(new THREE.TubeGeometry(ropeCurve, 4, 0.012, 6, false), ropeMat);
+    group.add(rope);
+
+    const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.35, 6), woodMat);
+    peg.position.set(...line.end);
+    peg.rotation.z = line.end[0] > 0 ? -0.4 : 0.4;
+    group.add(peg);
+  });
+
+  // 6. DETTAGLIO INTERNO (SACCO A PELO)
+  const sleepingBag = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 1.8, 12), bagMat);
+  sleepingBag.position.set(-0.5, 0.25, 0);
+  sleepingBag.rotation.x = Math.PI / 2;
+  sleepingBag.rotation.z = 0.1;
+  group.add(sleepingBag);
+
+  // Posizionamento nel mondo e metadati
   group.position.set(TENT_POS.x, terrainHeightAt(TENT_POS.x, TENT_POS.z), TENT_POS.z);
   group.userData.interactable = 'tenda';
+
   scene.add(group);
   return group;
 }
 const tent = makeTent();
 
-// Banco da lavoro - placeholder (tavolo + attrezzi appoggiati), vicino alla tenda
 function makeWorkbench() {
   const group = new THREE.Group();
-  const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.35, 1.8), new THREE.MeshLambertMaterial({ color: 0x8a6339 }));
+
+  // Materiali
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6339, roughness: 0.8 });
+  const darkWoodMat = new THREE.MeshStandardMaterial({ color: 0x5f4426, roughness: 0.9 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.8, roughness: 0.3 });
+  const paperMat = new THREE.MeshStandardMaterial({ color: 0xe6dda8, roughness: 0.6 });
+
+  // 1. PIANO PRINCIPALE E MENSSOLA INFERIORE
+  const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.25, 1.8), woodMat);
   top.position.y = 1.1;
   top.castShadow = true;
   top.receiveShadow = true;
   group.add(top);
-  const legMat = new THREE.MeshLambertMaterial({ color: 0x5f4426 });
-  const legGeo = new THREE.BoxGeometry(0.25, 1.1, 0.25);
+
+  // Ripiano inferiore (porta oggetti)
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1.4), darkWoodMat);
+  shelf.position.y = 0.35;
+  shelf.castShadow = true;
+  shelf.receiveShadow = true;
+  group.add(shelf);
+
+  // 2. GAMBE E TRAVERSI
+  const legGeo = new THREE.BoxGeometry(0.2, 1.1, 0.2);
   [[-1.4, -0.75], [1.4, -0.75], [-1.4, 0.75], [1.4, 0.75]].forEach(([lx, lz]) => {
-    const leg = new THREE.Mesh(legGeo, legMat);
+    const leg = new THREE.Mesh(legGeo, darkWoodMat);
     leg.position.set(lx, 0.55, lz);
     leg.castShadow = true;
     group.add(leg);
   });
+
+  // Traversi di rinforzo laterali
+  [-1.4, 1.4].forEach(lx => {
+    const brace = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 1.3), darkWoodMat);
+    brace.position.set(lx, 0.4, 0);
+    group.add(brace);
+  });
+
+  // 3. MORSA DA BANCO (Montata a sinistra)
+  const viseBase = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.4), metalMat);
+  viseBase.position.set(-1.45, 1.2, 0.6);
+  viseBase.castShadow = true;
+  group.add(viseBase);
+
+  const viseHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8), metalMat);
+  viseHandle.position.set(-1.62, 1.1, 0.6);
+  viseHandle.rotation.x = Math.PI / 2;
+  group.add(viseHandle);
+
+  // 4. ATTREZZI APPOGGIATI (MARTELLO, SEGA, MAPPA)
+  // Martello
+  const hammerGroup = new THREE.Group();
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.5, 8), darkWoodMat);
+  handle.rotation.z = Math.PI / 2;
+  hammerGroup.add(handle);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.08), metalMat);
+  head.position.x = 0.22;
+  hammerGroup.add(head);
+
+  hammerGroup.position.set(0.3, 1.25, 0.2);
+  hammerGroup.rotation.y = 0.4;
+  hammerGroup.castShadow = true;
+  group.add(hammerGroup);
+
+  // Sega a mano
+  const sawGroup = new THREE.Group();
+  const sawBlade = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.005, 0.15), metalMat);
+  sawGroup.add(sawBlade);
+
+  const sawHandle = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.03, 0.18), darkWoodMat);
+  sawHandle.position.x = -0.38;
+  sawGroup.add(sawHandle);
+
+  sawGroup.position.set(-0.5, 1.23, -0.3);
+  sawGroup.rotation.y = -0.6;
+  sawGroup.castShadow = true;
+  group.add(sawGroup);
+
+  // Progetto/Mappa srotolata
+  const mapPaper = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.01, 0.6), paperMat);
+  mapPaper.position.set(0.7, 1.23, -0.2);
+  mapPaper.rotation.y = -0.15;
+  group.add(mapPaper);
+
+  // Posizionamento nel mondo
   const pos = { x: TENT_POS.x + 8, z: TENT_POS.z + 3 };
   group.position.set(pos.x, terrainHeightAt(pos.x, pos.z), pos.z);
+
   scene.add(group);
   return group;
 }
 const workbench = makeWorkbench();
 
 // Bottiglietta di vetro col messaggio, vicino alla tenda
-function makeMessageBottle(x, z) {
+function makeMessageBottle(x, z, yaw = 0) {
   const group = new THREE.Group();
-  const glassMat = new THREE.MeshLambertMaterial({ color: 0x6fae7a, transparent: true, opacity: 0.75 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.5, 8), glassMat);
-  body.position.y = 0.3;
-  group.add(body);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.22, 8), glassMat);
-  neck.position.y = 0.63;
-  group.add(neck);
-  const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.1, 8), new THREE.MeshLambertMaterial({ color: 0xb08a5a }));
-  cork.position.y = 0.78;
-  group.add(cork);
-  const cord = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 6, 12), new THREE.MeshLambertMaterial({ color: 0xd8c090 }));
-  cord.position.y = 0.7;
-  cord.rotation.x = Math.PI / 2;
-  group.add(cord);
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  // Materiali
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2e8b57, // Vetro verde smeraldo
+    transparent: true,
+    opacity: 0.65,
+    roughness: 0.1,
+    transmission: 0.85,
+    ior: 1.5,
+    side: THREE.DoubleSide
+  });
+
+  const corkMat = new THREE.MeshStandardMaterial({ color: 0x9e784f, roughness: 0.9 });
+  const paperMat = new THREE.MeshStandardMaterial({ color: 0xe8dfc8, roughness: 0.7 });
+  const stringMat = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.5 }); // Laccio rosso
+
+  // SCALE FACTOR (1.50)
+  const S = 1.50;
+
+  // 1. CORPO E COLLO DELLA BOTTIGLIA (Inclinata e appoggiata)
+  const bottleGroup = new THREE.Group();
+
+  // Corpo principale
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * S, 0.18 * S, 0.6 * S, 16), glassMat);
+  body.position.y = 0.3 * S;
+  bottleGroup.add(body);
+
+  // Spalla inclinata
+  const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * S, 0.18 * S, 0.18 * S, 16), glassMat);
+  shoulder.position.y = 0.69 * S;
+  bottleGroup.add(shoulder);
+
+  // Collo
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * S, 0.08 * S, 0.25 * S, 16), glassMat);
+  neck.position.y = 0.905 * S;
+  bottleGroup.add(neck);
+
+  // Anello del bordo superiore
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(0.075 * S, 0.015 * S, 8, 16), glassMat);
+  lip.position.y = 1.03 * S;
+  lip.rotation.x = Math.PI / 2;
+  bottleGroup.add(lip);
+
+  // Tappo di sughero
+  const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.065 * S, 0.06 * S, 0.12 * S, 12), corkMat);
+  cork.position.y = 1.04 * S;
+  bottleGroup.add(cork);
+
+  // 2. MESSAGGIO ARROTOLATO (All'interno della bottiglia)
+  const scrollGroup = new THREE.Group();
+  
+  // Rotolo di carta
+  const scroll = new THREE.Mesh(new THREE.CylinderGeometry(0.06 * S, 0.06 * S, 0.45 * S, 12, 1, true), paperMat);
+  scroll.position.y = 0.32 * S;
+  scrollGroup.add(scroll);
+
+  // Nastro/Laccio attorno al rotolo
+  const ribbon = new THREE.Mesh(new THREE.TorusGeometry(0.062 * S, 0.008 * S, 6, 12), stringMat);
+  ribbon.position.y = 0.32 * S;
+  ribbon.rotation.x = Math.PI / 2;
+  scrollGroup.add(ribbon);
+
+  // Inclinazione interna del rotolo appoggiato al vetro
+  scrollGroup.rotation.z = 0.15;
+  bottleGroup.add(scrollGroup);
+
+  // 3. ADAGIAMO LA BOTTIGLIA A TERRA (Inclinata di ~80 gradi)
+  bottleGroup.rotation.z = Math.PI / 2.2;
+  bottleGroup.position.y = 0.12 * S; // Sollevamento per non farla compenetrare nel terreno
+  
+  group.add(bottleGroup);
+
+  // Posizionamento nel mondo
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+  group.rotation.y = yaw;
+
   scene.add(group);
   return group;
 }
@@ -1694,16 +2266,57 @@ const messageBottle = makeMessageBottle(TENT_POS.x + 4, TENT_POS.z - 3);
 // Punto di pesca: piccolo molo di legno, con la posizione del galleggiante nell'acqua
 function makeFishingSpot(x, z, waterX, waterZ) {
   const group = new THREE.Group();
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.6, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+
+  // Materiali
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.8 });
+  const signMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.3 });
+  const bobberRedMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.3 });
+  const bobberWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+
+  const terrainY = terrainHeightAt(x, z);
+  const waterY = typeof WATER_SURFACE_Y !== 'undefined' ? WATER_SURFACE_Y : terrainY - 0.5;
+
+  // 1. PALO IN LEGNO E INSEGNA "FISHING SPOT"
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 1.6, 8), woodMat);
   post.position.y = 0.8;
   post.castShadow = true;
+  post.receiveShadow = true;
   group.add(post);
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.08), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
-  sign.position.set(0, 1.5, 0);
+
+  // Cartello principale
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.08), signMat);
+  sign.position.set(0, 1.4, 0);
   sign.castShadow = true;
   group.add(sign);
-  group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData = { bobberPos: new THREE.Vector3(waterX, WATER_SURFACE_Y + 0.15, waterZ) };
+
+  // Chiodi di fissaggio metallici sul cartello
+  [-0.35, 0.35].forEach(xOffset => {
+    const nail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.09, 6), metalMat);
+    nail.position.set(xOffset, 1.4, 0);
+    nail.rotation.x = Math.PI / 2;
+    group.add(nail);
+  });
+
+  // 2. GALLEGGIANTE SUL LIVELLO DELL'ACQUA (BOBBER)
+  const bobberGroup = new THREE.Group();
+  
+  // Calcolo posizione locale del galleggiante rispetto allo spot
+  const bobberWorldPos = new THREE.Vector3(waterX, waterY + 0.1, waterZ);
+  const bobberLocalPos = bobberWorldPos.clone().sub(new THREE.Vector3(x, terrainY, z));
+
+  const bobberTop = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), bobberRedMat);
+  const bobberBottom = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), bobberWhiteMat);
+  
+  bobberGroup.add(bobberTop);
+  bobberGroup.add(bobberBottom);
+  bobberGroup.position.copy(bobberLocalPos);
+  group.add(bobberGroup);
+
+  // Posizionamento nel mondo e salvataggio coordinate
+  group.position.set(x, terrainY, z);
+  group.userData = { bobberPos: bobberWorldPos };
+
   scene.add(group);
   return group;
 }
@@ -1961,77 +2574,323 @@ function scatterPoints(count, zoneCfg, minSpacing) {
 
 function makeFruitTree(x, z) {
   const group = new THREE.Group();
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.65, 3, 8), new THREE.MeshLambertMaterial({ color: 0x7a5230 }));
-  trunk.position.y = 1.5;
-  trunk.castShadow = true;
-  group.add(trunk);
-  const canopy = new THREE.Mesh(new THREE.SphereGeometry(2.6, 8, 7), new THREE.MeshLambertMaterial({ color: 0x6fa84f }));
-  canopy.position.y = 4.3;
-  canopy.castShadow = true;
-  group.add(canopy);
+
+  // Materiali
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.9 });
+  const leavesMat = new THREE.MeshStandardMaterial({ color: 0x488238, roughness: 0.7, flatShading: true });
+  const fruitMat = new THREE.MeshStandardMaterial({ color: 0xe04e2e, roughness: 0.4 }); // Rosso/Arancio
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.8 });
+  const leafDetailMat = new THREE.MeshStandardMaterial({ color: 0x6bb343, roughness: 0.5, side: THREE.DoubleSide });
+
+  // 1. TRONCO E RAMI
+  const trunkGroup = new THREE.Group();
+  
+  // Base del tronco (radici)
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.75, 0.8, 8), trunkMat);
+  base.position.y = 0.4;
+  base.castShadow = true;
+  trunkGroup.add(base);
+
+  // Parte centrale del tronco
+  const mainTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 2.8, 8), trunkMat);
+  mainTrunk.position.y = 2.0;
+  mainTrunk.rotation.z = -0.05; // Piccola inclinazione naturale
+  mainTrunk.castShadow = true;
+  trunkGroup.add(mainTrunk);
+
+  // Rami principali che entrano nella chioma
+  [
+    { rotZ: 0.4, rotY: 0, height: 3.1 },
+    { rotZ: -0.4, rotY: 2.1, height: 3.2 },
+    { rotZ: -0.3, rotY: -2.1, height: 3.0 }
+  ].forEach(b => {
+    const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 1.4, 6), trunkMat);
+    branch.position.set(0, b.height, 0);
+    branch.rotation.z = b.rotZ;
+    branch.rotation.y = b.rotY;
+    branch.castShadow = true;
+    trunkGroup.add(branch);
+  });
+
+  group.add(trunkGroup);
+
+  // 2. CHIOMA MULTI-SFERA (Effetto fogliame denso)
+  const canopyGroup = new THREE.Group();
+  const foliageSpheres = [
+    { pos: [0, 4.5, 0], scale: 2.2 },
+    { pos: [-1.1, 4.2, 0.8], scale: 1.6 },
+    { pos: [1.2, 4.3, -0.6], scale: 1.7 },
+    { pos: [0.6, 4.7, 1.1], scale: 1.5 },
+    { pos: [-0.7, 4.8, -1.0], scale: 1.6 },
+    { pos: [0, 5.5, 0], scale: 1.4 }
+  ];
+
+  foliageSpheres.forEach(f => {
+    const geo = new THREE.IcosahedronGeometry(f.scale, 1);
+    const foliage = new THREE.Mesh(geo, leavesMat);
+    foliage.position.set(...f.pos);
+    foliage.castShadow = true;
+    foliage.receiveShadow = true;
+    canopyGroup.add(foliage);
+  });
+
+  group.add(canopyGroup);
+
+  // 3. FRUTTI DETTAGLIATI CON PICCIOLO
   const fruitsGroup = new THREE.Group();
-  const fruitMat = new THREE.MeshLambertMaterial({ color: 0xe0672e });
-  for (let i = 0; i < 5; i++) {
-    const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 6), fruitMat);
-    const a = (i / 5) * Math.PI * 2;
-    fruit.position.set(Math.cos(a) * 2.1, 4.1 + Math.sin(i) * 0.6, Math.sin(a) * 2.1);
+
+  const createFruitMesh = () => {
+    const singleFruit = new THREE.Group();
+
+    // Corpo del frutto (Mela/Arancia)
+    const fruitBody = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 10), fruitMat);
+    fruitBody.scale.set(1, 0.9, 1);
+    fruitBody.castShadow = true;
+    singleFruit.add(fruitBody);
+
+    // Picciolo/Gambo
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.15, 6), stemMat);
+    stem.position.set(0, 0.2, 0);
+    stem.rotation.z = 0.2;
+    singleFruit.add(stem);
+
+    // Fogliolina attaccata al gambo
+    const leafGeo = new THREE.SphereGeometry(0.08, 6, 6);
+    leafGeo.scale(1.8, 0.2, 0.8);
+    const leaf = new THREE.Mesh(leafGeo, leafDetailMat);
+    leaf.position.set(0.06, 0.22, 0);
+    leaf.rotation.z = -0.3;
+    singleFruit.add(leaf);
+
+    return singleFruit;
+  };
+
+  // Posizionamento naturale di 7 frutti attorno alla chioma
+  const fruitPositions = [
+    [ 1.8, 4.0,  0.8],
+    [-1.7, 3.8,  1.1],
+    [ 0.6, 3.6,  1.9],
+    [-0.8, 4.2, -1.7],
+    [ 1.5, 4.3, -1.2],
+    [-1.9, 4.4, -0.4],
+    [ 0.2, 3.4, -1.8]
+  ];
+
+  fruitPositions.forEach(pos => {
+    const fruit = createFruitMesh();
+    fruit.position.set(...pos);
+    // Variazione casuale di rotazione per naturalezza
+    fruit.rotation.y = Math.random() * Math.PI * 2;
     fruitsGroup.add(fruit);
-  }
+  });
+
   group.add(fruitsGroup);
-  group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData = { fruitsGroup, harvested: false, daysSinceHarvest: 0 };
+
+  // Posizionamento nel mondo e registrazione dati
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+
+  group.userData = { 
+    fruitsGroup: fruitsGroup, 
+    harvested: false, 
+    daysSinceHarvest: 0 
+  };
+
   scene.add(group);
-  interactables.push({ obj: group, type: 'fruitTree' });
+
+  if (typeof interactables !== 'undefined') {
+    interactables.push({ obj: group, type: 'fruitTree' });
+  }
+
+  return group;
 }
 
 function makeWoodTree(x, z) {
   const group = new THREE.Group();
 
+  // Materiali
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x523924, roughness: 0.9 });
+  const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e5c33, roughness: 0.7, flatShading: true });
+  const saplingMat = new THREE.MeshStandardMaterial({ color: 0x6b8f4a, roughness: 0.8 });
+  const tuftMat = new THREE.MeshStandardMaterial({ color: 0x5fa843, roughness: 0.6 });
+
+  // 1. ALBERO ADULTO (GROUPE GROWN)
   const grown = new THREE.Group();
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.75, 4.5, 8), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
-  trunk.position.y = 2.25;
+
+  // Base del tronco con radici sporgenti
+  const roots = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.85, 0.8, 8), trunkMat);
+  roots.position.y = 0.4;
+  roots.castShadow = true;
+  grown.add(roots);
+
+  // Tronco principale
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.65, 4.2, 8), trunkMat);
+  trunk.position.y = 2.5;
   trunk.castShadow = true;
+  trunk.receiveShadow = true;
   grown.add(trunk);
-  const canopy = new THREE.Mesh(new THREE.ConeGeometry(2.4, 5.5, 8), new THREE.MeshLambertMaterial({ color: 0x3f7a44 }));
-  canopy.position.y = 6.5;
-  canopy.castShadow = true;
-  grown.add(canopy);
+
+  // Chioma a conifera a 3 livelli (Pino/Abete stratificato)
+  const canopyLevels = [
+    { radius: 2.5, height: 2.2, y: 4.8 },
+    { radius: 2.0, height: 2.0, y: 6.0 },
+    { radius: 1.4, height: 1.8, y: 7.2 }
+  ];
+
+  canopyLevels.forEach(level => {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(level.radius, level.height, 7), leavesMat);
+    cone.position.y = level.y;
+    cone.castShadow = true;
+    cone.receiveShadow = true;
+    grown.add(cone);
+  });
+
   group.add(grown);
 
-  // Piantina: resta al posto dell'albero abbattuto finché non è ricresciuto
+  // 2. PIANTINA DA RICRESCITA (GROUPE SAPLING)
   const sapling = new THREE.Group();
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.55, 6), new THREE.MeshLambertMaterial({ color: 0x6b8f4a }));
-  stem.position.y = 0.28;
+
+  // Piccolo ceppo residuo del taglio
+  const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.2, 8), trunkMat);
+  stump.position.y = 0.1;
+  stump.castShadow = true;
+  sapling.add(stump);
+
+  // Stelo del germoglio
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.07, 0.6, 6), saplingMat);
+  stem.position.set(0.1, 0.4, 0);
+  stem.rotation.z = -0.15; // Piccola curvatura
   sapling.add(stem);
-  const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6), new THREE.MeshLambertMaterial({ color: 0x7fbf5a }));
-  tuft.position.y = 0.58;
+
+  // Foglioline del germoglio (Icosaedro morbido)
+  const tuft = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 1), tuftMat);
+  tuft.position.set(0.15, 0.75, 0);
+  tuft.castShadow = true;
   sapling.add(tuft);
+
   sapling.visible = false;
   group.add(sapling);
 
-  group.position.set(x, terrainHeightAt(x, z), z);
+  // Posizionamento nel mondo e metadati per l'interazione/abbattimento
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+
   group.userData = {
-    hits: 0, maxHits: 3, felled: false, shakeTimer: 0,
-    daysSinceFelled: 0, grownGroup: grown, saplingGroup: sapling,
+    hits: 0, 
+    maxHits: 3, 
+    felled: false, 
+    shakeTimer: 0,
+    daysSinceFelled: 0, 
+    grownGroup: grown, 
+    saplingGroup: sapling
   };
+
   scene.add(group);
-  interactables.push({ obj: group, type: 'woodTree' });
+
+  if (typeof interactables !== 'undefined') {
+    interactables.push({ obj: group, type: 'woodTree' });
+  }
+
+  return group;
 }
 
 function makeRock(x, z) {
   const group = new THREE.Group();
-  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.3, 0), new THREE.MeshLambertMaterial({ color: 0x8a8578 }));
-  rock.position.y = 0.9;
-  rock.rotation.set(Math.random(), Math.random(), Math.random());
-  rock.castShadow = true;
-  group.add(rock);
-  const mineral = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), new THREE.MeshLambertMaterial({ color: 0x6fa8c9 }));
-  mineral.position.set(0.5, 1.3, 0.3);
-  group.add(mineral);
-  group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData = { hits: 0, maxHits: 3, felled: false, shakeTimer: 0, daysSinceFelled: 0 };
+
+  // Materiali
+  const rockMat = new THREE.MeshStandardMaterial({ 
+    color: 0x7a756b, 
+    roughness: 0.9, 
+    metalness: 0.1,
+    flatShading: true 
+  });
+
+  const mineralMat = new THREE.MeshStandardMaterial({ 
+    color: 0x4aa3cc, 
+    roughness: 0.2, 
+    metalness: 0.6,
+    transparent: true,
+    opacity: 0.9,
+    flatShading: true 
+  });
+
+  // 1. MASSO PRINCIPALE COMPOSTO
+  const rockGroup = new THREE.Group();
+
+  // Blocco grande centrale
+  const mainGeo = new THREE.DodecahedronGeometry(1.1, 1);
+  const mainRock = new THREE.Mesh(mainGeo, rockMat);
+  mainRock.position.y = 0.85;
+  mainRock.rotation.set(0.2, 0.5, -0.1);
+  mainRock.scale.set(1.2, 0.9, 1.1);
+  mainRock.castShadow = true;
+  mainRock.receiveShadow = true;
+  rockGroup.add(mainRock);
+
+  // Blocco secondario laterale per rompere la simmetria
+  const subRock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.7, 0), rockMat);
+  subRock.position.set(-0.5, 0.6, 0.3);
+  subRock.rotation.set(0.4, -0.3, 0.8);
+  subRock.castShadow = true;
+  rockGroup.add(subRock);
+
+  // Piccoli sassi alla base per effetto detriti
+  const pebbleCoords = [[0.8, 0.15, -0.5], [-0.7, 0.1, -0.6], [0.3, 0.12, 0.9]];
+  pebbleCoords.forEach(([px, py, pz]) => {
+    const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25, 0), rockMat);
+    pebble.position.set(px, py, pz);
+    pebble.rotation.set(Math.random(), Math.random(), Math.random());
+    rockGroup.add(pebble);
+  });
+
+  group.add(rockGroup);
+
+  // 2. CLUSTER DI MINERALE LUMINOSO (INCASTONATO)
+  const mineralGroup = new THREE.Group();
+  mineralGroup.position.set(0.4, 1.1, 0.2);
+
+  // Cristallo principale
+  const mainCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), mineralMat);
+  mainCrystal.scale.set(0.7, 1.4, 0.7);
+  mainCrystal.rotation.set(0.3, 0.2, -0.4);
+  mainCrystal.castShadow = true;
+  mineralGroup.add(mainCrystal);
+
+  // Cristalli minori di contorno
+  const crystalOffs = [
+    { pos: [-0.15, -0.1, 0.1], scale: 0.5, rot: [-0.2, 0.5, 0.3] },
+    { pos: [0.15, -0.12, -0.1], scale: 0.4, rot: [0.4, -0.3, -0.2] }
+  ];
+
+  crystalOffs.forEach(c => {
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), mineralMat);
+    gem.position.set(...c.pos);
+    gem.scale.set(c.scale, c.scale * 1.5, c.scale);
+    gem.rotation.set(...c.rot);
+    mineralGroup.add(gem);
+  });
+
+  group.add(mineralGroup);
+
+  // Posizionamento nel mondo e metadati
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+
+  group.userData = { 
+    hits: 0, 
+    maxHits: 3, 
+    felled: false, 
+    shakeTimer: 0, 
+    daysSinceFelled: 0 
+  };
+
   scene.add(group);
-  interactables.push({ obj: group, type: 'rock' });
+
+  if (typeof interactables !== 'undefined') {
+    interactables.push({ obj: group, type: 'rock' });
+  }
+
+  return group;
 }
 
 scatterPoints(16, ISLAND.valley, 9).forEach(p => makeFruitTree(p.x, p.z));
@@ -2047,16 +2906,74 @@ scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
    ========================================================================= */
 function makeStarFragment(x, z) {
   const group = new THREE.Group();
-  const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: 0xbfe8ff }));
-  star.position.y = 0.3;
-  group.add(star);
-  const light = new THREE.PointLight(0xbfe8ff, 1.2, 6, 2);
-  light.position.y = 0.3;
+
+  // Materiali magici brillante
+  const starCoreMat = new THREE.MeshStandardMaterial({
+    color: 0xe0f4ff,
+    emissive: 0x9be0ff,
+    emissiveIntensity: 1.2,
+    roughness: 0.1,
+    metalness: 0.2,
+    flatShading: true
+  });
+
+  const auraMat = new THREE.MeshPhysicalMaterial({
+    color: 0xbfe8ff,
+    transparent: true,
+    opacity: 0.45,
+    roughness: 0.1,
+    transmission: 0.8,
+    ior: 1.4,
+    side: THREE.DoubleSide
+  });
+
+  // 1. NUCLEO STELLARE (Geometria stellata/diamante)
+  const starGroup = new THREE.Group();
+
+  // Cristallo centrale primario
+  const coreMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), starCoreMat);
+  coreMesh.scale.set(0.7, 1.4, 0.7);
+  starGroup.add(coreMesh);
+
+  // Spunte laterali incrociate per dare la classica forma a stella 3D
+  const spike1 = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), starCoreMat);
+  spike1.rotation.z = Math.PI / 2;
+  spike1.scale.set(0.6, 1.3, 0.6);
+  starGroup.add(spike1);
+
+  const spike2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), starCoreMat);
+  spike2.rotation.x = Math.PI / 2;
+  spike2.scale.set(0.6, 1.3, 0.6);
+  starGroup.add(spike2);
+
+  // 2. ALONE ESTERNO TRASLUCIDO (Aura)
+  const auraMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 1), auraMat);
+  starGroup.add(auraMesh);
+
+  // Posizionamento del nucleo fluttuante/appoggiato
+  starGroup.position.y = 0.35;
+  starGroup.rotation.set(0.3, 0.4, 0.2);
+  starGroup.castShadow = true;
+  group.add(starGroup);
+
+  // 3. ILLUMINAZIONE D'AMBIENTE
+  const light = new THREE.PointLight(0x9be0ff, 1.8, 6, 2);
+  light.position.y = 0.35;
   group.add(light);
-  group.position.set(x, terrainHeightAt(x, z), z);
-  group.userData.star = star;
+
+  // Posizionamento nel mondo
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+
+  // Mantiene il riferimento userData.star originario per eventuali rotazioni/animazioni
+  group.userData = { star: starGroup };
+
   scene.add(group);
-  interactables.push({ obj: group, type: 'starFragment' });
+
+  if (typeof interactables !== 'undefined') {
+    interactables.push({ obj: group, type: 'starFragment' });
+  }
+
   return group;
 }
 
@@ -2122,14 +3039,25 @@ clock.on('hour', () => {
    ========================================================================= */
 function makeCan(x, z) {
   const group = new THREE.Group();
-  const can = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.32, 10), new THREE.MeshLambertMaterial({ color: 0xc9d2d6 }));
-  can.position.y = 0.16;
+  
+  // Cilindro ingrandito del 60%: Raggio 0.256, Altezza 0.512
+  const can = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.256, 0.256, 0.512, 10), 
+    new THREE.MeshLambertMaterial({ color: 0xc9d2d6 })
+  );
+  can.position.y = 0.256; // Metà altezza per poggiare correttamente a terra
   can.rotation.z = (worldRandom() - 0.5) * 1.2; // un po' rovesciate sulla sabbia
   can.castShadow = true;
   group.add(can);
-  const glint = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  glint.position.set(0.1, 0.22, 0.1);
+
+  // Bagliore/Riflesso scalato del 60%
+  const glint = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 6, 6), 
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  glint.position.set(0.16, 0.352, 0.16);
   group.add(glint);
+
   group.position.set(x, terrainHeightAt(x, z), z);
   group.userData = { hits: 0, maxHits: 1 };
   scene.add(group);
@@ -2189,35 +3117,149 @@ spawnDailyCans(); // già qualcuna pronta al primo avvio
    ========================================================================= */
 function makeFerryBoat() {
   const group = new THREE.Group();
-  const hullMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
-  const hull = new THREE.Mesh(new THREE.BoxGeometry(7.2, 3.0, 16.5), hullMat);
-  hull.position.y = 1.5;
-  hull.castShadow = true;
-  group.add(hull);
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.45, 15.6), new THREE.MeshLambertMaterial({ color: 0x9a7a52 }));
-  deck.position.y = 3.15;
+
+  // Materiali
+  const hullMat = new THREE.MeshStandardMaterial({ color: 0x2b4c7e, roughness: 0.5 }); // Blu navale
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xc83e3e, roughness: 0.6 }); // Linea rossa galleggiamento
+  const deckMat = new THREE.MeshStandardMaterial({ color: 0xb59263, roughness: 0.8 }); // Legno teak
+  const cabinMat = new THREE.MeshStandardMaterial({ color: 0xf0efe9, roughness: 0.4 }); // Bianco nautico
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 });
+  const windowMat = new THREE.MeshPhysicalMaterial({ color: 0x112233, roughness: 0.1, transmission: 0.8 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.9 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.3 });
+  const flagMat = new THREE.MeshStandardMaterial({ color: 0xd94f4f, roughness: 0.6, side: THREE.DoubleSide });
+  const buoyMat = new THREE.MeshStandardMaterial({ color: 0xe65c00, roughness: 0.4 });
+
+  // 1. SCAFO SAGOMATO (Con prua affusolata)
+  const hullGroup = new THREE.Group();
+
+  // Parte centrale scafo
+  const mainHull = new THREE.Mesh(new THREE.BoxGeometry(6.5, 2.5, 12), hullMat);
+  mainHull.position.set(0, 1.25, -1);
+  mainHull.castShadow = true;
+  hullGroup.add(mainHull);
+
+  // Prua a V (PIRAMIDE/PRISMA ANTERIORE)
+  const bowShape = new THREE.Shape();
+  bowShape.moveTo(-3.25, 0);
+  bowShape.lineTo(3.25, 0);
+  bowShape.lineTo(0, 4.5);
+  bowShape.closePath();
+
+  const bowGeo = new THREE.ExtrudeGeometry(bowShape, { depth: 2.5, bevelEnabled: false });
+  bowGeo.rotateX(Math.PI / 2);
+  const bow = new THREE.Mesh(bowGeo, hullMat);
+  bow.position.set(0, 2.5, 5);
+  bow.castShadow = true;
+  hullGroup.add(bow);
+
+  // Striscia rossa galleggiamento
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.4, 12.1), stripeMat);
+  stripe.position.set(0, 0.4, -1);
+  hullGroup.add(stripe);
+
+  group.add(hullGroup);
+
+  // 2. PONTE DI COPERTA E PARAPETTI
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.3, 16), deckMat);
+  deck.position.set(0, 2.65, 0.5);
+  deck.receiveShadow = true;
   group.add(deck);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(4.8, 3.9, 5.4), new THREE.MeshLambertMaterial({ color: 0xe6e2d6 }));
-  cabin.position.set(0, 5.25, -2.4);
-  cabin.castShadow = true;
-  group.add(cabin);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.45, 6.0), new THREE.MeshLambertMaterial({ color: 0x8a3a3a }));
-  roof.position.set(0, 7.44, -2.4);
-  group.add(roof);
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 7.2, 6), hullMat);
-  mast.position.set(0, 9.6, -2.4);
+
+  // Parapetti perimetrali
+  [-3.1, 3.1].forEach(x => {
+    const railing = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 15.8), metalMat);
+    railing.position.set(x, 3.2, 0.5);
+    group.add(railing);
+  });
+
+  // Salvagente di emergenza appesi
+  [-3.2, 3.2].forEach(x => {
+    const buoy = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.12, 8, 16), buoyMat);
+    buoy.position.set(x, 3.1, 0);
+    buoy.rotation.y = Math.PI / 2;
+    group.add(buoy);
+  });
+
+  // 3. CABINA DI COMANDO A DUE LIVELLI
+  const cabinGroup = new THREE.Group();
+
+  // Struttura cabina
+  const mainCabin = new THREE.Mesh(new THREE.BoxGeometry(4.8, 2.8, 6.0), cabinMat);
+  mainCabin.position.set(0, 4.2, -1.5);
+  mainCabin.castShadow = true;
+  cabinGroup.add(mainCabin);
+
+  // Plancia superiore (Ponte di pilotaggio)
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.8, 3.2), cabinMat);
+  bridge.position.set(0, 6.2, -0.5);
+  bridge.castShadow = true;
+  cabinGroup.add(bridge);
+
+  // Tetto cabina
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.25, 3.6), roofMat);
+  roof.position.set(0, 7.125, -0.5);
+  cabinGroup.add(roof);
+
+  // Finestre plancia
+  const windowFront = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.9, 0.1), windowMat);
+  windowFront.position.set(0, 6.4, 1.11);
+  cabinGroup.add(windowFront);
+
+  group.add(cabinGroup);
+
+  // 4. FUMAIOLO, ALBERO E BANDIERA
+  const funnel = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 2.2, 12), stripeMat);
+  funnel.position.set(0, 6.8, -3.2);
+  funnel.castShadow = true;
+  group.add(funnel);
+
+  const funnelTop = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.3, 12), roofMat);
+  funnelTop.position.set(0, 7.9, -3.2);
+  group.add(funnelTop);
+
+  // Albero con pennone
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.0, 8), metalMat);
+  mast.position.set(0, 8.8, 0.8);
   group.add(mast);
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.2), new THREE.MeshBasicMaterial({ color: 0xd94f4f, side: THREE.DoubleSide }));
-  flag.position.set(0.96, 12.6, -2.4);
+
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), flagMat);
+  flag.position.set(0.7, 10.2, 0.8);
   group.add(flag);
-  // Piccolo molo di legno accanto alla fiancata, per poterci salire
-  const plankMat = new THREE.MeshLambertMaterial({ color: 0x7a5a38 });
-  for (let i = 0; i < 5; i++) {
-    const plank = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.36, 9.0), plankMat);
-    plank.position.set(4.8 + i * 1.5, 0.9, 0);
-    plank.castShadow = true;
-    group.add(plank);
-  }
+
+  // 5. MOLO DI LEGNO A PALAFITTA (PER L'IMBARCO)
+  const pierGroup = new THREE.Group();
+
+  // Tavolato del molo
+  const pierDeck = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.25, 10.0), woodMat);
+  pierDeck.position.set(5.8, 2.5, 0.5);
+  pierDeck.castShadow = true;
+  pierDeck.receiveShadow = true;
+  pierGroup.add(pierDeck);
+
+  // Pali a palafitta immersi nell'acqua
+  const pierPiles = [
+    [4.0, -3.8], [7.5, -3.8],
+    [4.0,  0.5], [7.5,  0.5],
+    [4.0,  4.8], [7.5,  4.8]
+  ];
+
+  pierPiles.forEach(([px, pz]) => {
+    const pile = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 3.2, 8), woodMat);
+    pile.position.set(px, 1.1, pz);
+    pile.castShadow = true;
+    pierGroup.add(pile);
+
+    // Bitte d'ormeggio sul molo
+    if (px > 6.0) {
+      const bitt = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.4, 8), metalMat);
+      bitt.position.set(px - 0.2, 2.8, pz);
+      pierGroup.add(bitt);
+    }
+  });
+
+  group.add(pierGroup);
+
   group.visible = false;
   scene.add(group);
   return group;
@@ -2359,115 +3401,348 @@ function findTrashSpot(zone) {
 
 function makeTrashMesh(typeId, x, z) {
   const group = new THREE.Group();
-  const y = terrainHeightAt(x, z);
+  const y = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+
+  // Materiali riutilizzabili
+  const plasticRed = new THREE.MeshStandardMaterial({ color: 0xd93838, roughness: 0.6 });
+  const plasticWhite = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.5 });
+  const metalDark = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.4 });
+  const metalRusty = new THREE.MeshStandardMaterial({ color: 0x734a39, metalness: 0.5, roughness: 0.8 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.9 });
+  const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x2e7d32, roughness: 0.1, transmission: 0.7, opacity: 0.85, transparent: true });
+  const foamMat = new THREE.MeshStandardMaterial({ color: 0xdeded8, roughness: 0.9 });
+  const rubberMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+  const clothMat = new THREE.MeshStandardMaterial({ color: 0x7d6b56, roughness: 0.95 });
+
   switch (typeId) {
     case 'palloneSgonfio': {
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), new THREE.MeshLambertMaterial({ color: 0xd94f4f }));
-      ball.scale.set(1, 0.35, 1);
-      ball.position.y = 0.1;
-      group.add(ball);
-      break;
-    }
-    case 'tricicloRotto': {
-      const frameMat = new THREE.MeshLambertMaterial({ color: 0xd94f4f });
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.2), frameMat);
-      frame.position.set(0, 0.22, 0);
-      frame.rotation.z = 0.3;
-      group.add(frame);
-      [[-0.3, 0], [0.3, 0.1]].forEach(([wx, wz]) => {
-        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.04, 6, 10), new THREE.MeshLambertMaterial({ color: 0x2a2a2a }));
-        wheel.position.set(wx, 0.16, wz);
-        wheel.rotation.x = Math.PI / 2 + 0.4;
-        group.add(wheel);
-      });
-      break;
-    }
-    case 'lettoRotto': {
-      const woodMat = new THREE.MeshLambertMaterial({ color: 0x7a5a38 });
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.8), woodMat);
-      frame.position.y = 0.3;
-      frame.rotation.z = 0.25;
-      frame.rotation.x = -0.1;
-      group.add(frame);
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), woodMat);
-      leg.position.set(-0.6, 0.25, 0.3);
-      group.add(leg);
-      break;
-    }
-    case 'cestinoRotto': {
-      const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.5, 8, 1, true), new THREE.MeshLambertMaterial({ color: 0x556655, side: THREE.DoubleSide }));
-      bin.position.y = 0.25;
-      bin.rotation.z = 0.9;
-      group.add(bin);
-      break;
-    }
-    case 'bottigliette': {
-      const glassMat = new THREE.MeshLambertMaterial({ color: 0x4a8a5a, transparent: true, opacity: 0.75 });
+      // Pallone da calcio rovinato e schiacciato a terra
+      const ballGroup = new THREE.Group();
+      
+      const baseBall = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1), plasticWhite);
+      baseBall.scale.set(1.2, 0.35, 1.1);
+      baseBall.rotation.set(0.2, 0.4, -0.3);
+      ballGroup.add(baseBall);
+
+      // Piazze/Macchie rosse del pallone
+      const patchMat = plasticRed;
       for (let i = 0; i < 4; i++) {
-        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.28, 6), glassMat);
-        bottle.position.set((Math.random() - 0.5) * 0.3, 0.1, (Math.random() - 0.5) * 0.3);
-        bottle.rotation.set((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5);
-        group.add(bottle);
+        const patch = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.02, 5), patchMat);
+        const angle = (i / 4) * Math.PI * 2;
+        patch.position.set(Math.cos(angle) * 0.18, 0.08, Math.sin(angle) * 0.18);
+        patch.rotation.set(Math.sin(i) * 0.5, angle, 0.2);
+        ballGroup.add(patch);
       }
+
+      ballGroup.position.y = 0.06;
+      group.add(ballGroup);
       break;
     }
+
+    case 'tricicloRotto': {
+      // Telaio del triciclo piegato
+      const frameGroup = new THREE.Group();
+
+      const mainTube = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8), plasticRed);
+      mainTube.rotation.z = 1.1;
+      mainTube.position.set(-0.1, 0.22, 0);
+      frameGroup.add(mainTube);
+
+      const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 8), metalDark);
+      fork.rotation.z = -0.3;
+      fork.position.set(0.3, 0.28, 0);
+      frameGroup.add(fork);
+
+      // Manubrio storto
+      const handlebar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 8), metalDark);
+      handlebar.rotation.x = Math.PI / 2;
+      handlebar.rotation.y = 0.5;
+      handlebar.position.set(0.38, 0.48, 0);
+      frameGroup.add(handlebar);
+
+      // Ruota anteriore grande distorta
+      const frontWheelGroup = new THREE.Group();
+      const frontTire = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.035, 8, 12), rubberMat);
+      const frontRim = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.02, 8), metalDark);
+      frontWheelGroup.add(frontTire, frontRim);
+      frontWheelGroup.position.set(0.35, 0.18, 0);
+      frontWheelGroup.rotation.set(0.3, 0.2, 0.5);
+      frameGroup.add(frontWheelGroup);
+
+      // Ruota posteriore staccata
+      const backTire = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 8, 12), rubberMat);
+      backTire.position.set(-0.45, 0.08, 0.25);
+      backTire.rotation.set(Math.PI / 2 - 0.2, 0, 0.4);
+      frameGroup.add(backTire);
+
+      group.add(frameGroup);
+      break;
+    }
+
+    case 'lettoRotto': {
+      const bedGroup = new THREE.Group();
+
+      // Telaio in legno spezzato
+      const side1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.1), woodMat);
+      side1.position.set(0, 0.25, 0.4);
+      side1.rotation.set(-0.2, 0.1, 0.15);
+      bedGroup.add(side1);
+
+      const side2 = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.1), woodMat);
+      side2.position.set(0.1, 0.12, -0.4);
+      side2.rotation.set(0.1, -0.1, -0.05);
+      bedGroup.add(side2);
+
+      // Doghe spezzate staccate
+      for (let i = -3; i <= 3; i++) {
+        const slat = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.75), woodMat);
+        slat.position.set(i * 0.2 + (Math.random() - 0.5) * 0.05, 0.18 + Math.sin(i) * 0.04, (Math.random() - 0.5) * 0.1);
+        slat.rotation.set((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.4);
+        bedGroup.add(slat);
+      }
+
+      // Gambe rotte
+      const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.45, 0.1), woodMat);
+      leg1.position.set(-0.7, 0.2, 0.38);
+      leg1.rotation.z = 0.6;
+      bedGroup.add(leg1);
+
+      // Materasso strappato/sgualcito
+      const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.7), clothMat);
+      mattress.position.set(-0.1, 0.22, 0);
+      mattress.rotation.set(0.15, 0.2, -0.1);
+      bedGroup.add(mattress);
+
+      group.add(bedGroup);
+      break;
+    }
+
+    case 'cestinoRotto': {
+      const binGroup = new THREE.Group();
+
+      // Cestino metallico deformato
+      const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.6, 12, 1, true), metalDark);
+      bin.position.set(0, 0.2, 0);
+      bin.rotation.set(0.2, 0.1, 1.35); // Cestino coricato a terra
+      bin.scale.set(1, 1, 0.75); // Deformazione schiacciata
+      binGroup.add(bin);
+
+      // Fondo staccato del cestino
+      const bottom = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.02, 12), metalDark);
+      bottom.position.set(-0.28, 0.08, 0.05);
+      bottom.rotation.z = 1.35;
+      binGroup.add(bottom);
+
+      // Spazzatura rovesciata fuori dal cestino
+      const bag = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18, 1), plasticWhite);
+      bag.position.set(0.3, 0.1, 0.1);
+      bag.scale.set(1.3, 0.7, 1.1);
+      binGroup.add(bag);
+
+      const paperChunk = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), clothMat);
+      paperChunk.position.set(0.45, 0.04, -0.15);
+      paperChunk.rotation.set(0.4, 0.8, 0.2);
+      binGroup.add(paperChunk);
+
+      group.add(binGroup);
+      break;
+    }
+
+    case 'bottigliette': {
+      const bottlesGroup = new THREE.Group();
+      const capMat = plasticRed;
+
+      const offsets = [
+        { x: -0.15, z: -0.1, rot: [1.4, 0.2, -0.5] },
+        { x: 0.1, z: 0.15, rot: [1.3, -0.4, 0.8] },
+        { x: 0.05, z: -0.18, rot: [0.1, 0.3, 0.0] }, // In piedi ma inclinata
+        { x: -0.2, z: 0.12, rot: [1.5, 0.8, -1.1] }
+      ];
+
+      offsets.forEach(o => {
+        const b = new THREE.Group();
+        // Corpo bottiglia
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.22, 8), glassMat);
+        body.position.y = 0.11;
+        b.add(body);
+
+        // Collo
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.045, 0.08, 8), glassMat);
+        neck.position.y = 0.24;
+        b.add(neck);
+
+        // Tappo
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.02, 8), capMat);
+        cap.position.y = 0.29;
+        b.add(cap);
+
+        b.position.set(o.x, 0.03, o.z);
+        b.rotation.set(...o.rot);
+        bottlesGroup.add(b);
+      });
+
+      group.add(bottlesGroup);
+      break;
+    }
+
     case 'cassaPolistirolo': {
-      const foamMat = new THREE.MeshLambertMaterial({ color: 0xe8e8e0 });
-      const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.5), foamMat);
-      box.position.y = 0.18;
-      box.rotation.y = 0.4;
-      box.rotation.x = -0.15;
-      group.add(box);
-      const chip = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.15), foamMat);
-      chip.position.set(0.3, 0.06, 0.1);
-      group.add(chip);
+      const foamGroup = new THREE.Group();
+
+      // Cassa principale con bordo cavo simulated (aperta/rotta)
+      const baseBox = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.32, 0.45), foamMat);
+      baseBox.position.set(0, 0.16, 0);
+      baseBox.rotation.set(-0.1, 0.3, 0.12);
+      foamGroup.add(baseBox);
+
+      // Pezzi/Briciole di polistirolo rotti attorno
+      const chunkCoords = [
+        { s: [0.18, 0.12, 0.15], p: [0.35, 0.06, 0.2], r: [0.3, 0.5, -0.2] },
+        { s: [0.12, 0.08, 0.12], p: [-0.32, 0.04, -0.1], r: [-0.2, 0.2, 0.5] },
+        { s: [0.08, 0.05, 0.08], p: [0.2, 0.03, -0.25], r: [0.1, -0.4, 0.1] }
+      ];
+
+      chunkCoords.forEach(c => {
+        const chunk = new THREE.Mesh(new THREE.BoxGeometry(...c.s), foamMat);
+        chunk.position.set(...c.p);
+        chunk.rotation.set(...c.r);
+        foamGroup.add(chunk);
+      });
+
+      group.add(foamGroup);
       break;
     }
+
     case 'gommaAuto': {
-      const tire = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.11, 8, 14), new THREE.MeshLambertMaterial({ color: 0x1e1e1e }));
-      tire.rotation.x = Math.PI / 2;
+      const tireGroup = new THREE.Group();
+
+      // Pneumatico principale con battistrada
+      const tire = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.12, 10, 16), rubberMat);
+      tire.rotation.x = Math.PI / 2 - 0.15;
+      tire.rotation.y = 0.2;
       tire.position.y = 0.12;
-      group.add(tire);
+      tireGroup.add(tire);
+
+      // Cerchione metallico arrugginito e storto all'interno
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.18, 10), metalRusty);
+      rim.rotation.x = Math.PI / 2 - 0.15;
+      rim.rotation.y = 0.2;
+      rim.position.set(0, 0.12, 0);
+      tireGroup.add(rim);
+
+      group.add(tireGroup);
       break;
     }
+
     case 'assePlastica': {
-      const plankMat = new THREE.MeshLambertMaterial({ color: 0xb0a06a });
-      const plank = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.25), plankMat);
-      plank.position.y = 0.1;
-      plank.rotation.z = 0.15;
-      plank.rotation.y = 0.5;
-      group.add(plank);
+      const plankGroup = new THREE.Group();
+
+      // Asse principale piegata
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.28), plasticWhite);
+      plank.position.set(0, 0.08, 0);
+      plank.rotation.set(0.1, 0.4, 0.18);
+      plankGroup.add(plank);
+
+      // Staffe/Chiodi metallici sporgenti arrugginiti
+      [-0.45, 0.45].forEach(px => {
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.3), metalRusty);
+        bracket.position.set(px, 0.1, 0);
+        bracket.rotation.set(0.1, 0.4, 0.18);
+        plankGroup.add(bracket);
+      });
+
+      group.add(plankGroup);
       break;
     }
+
     case 'bicchierePlastica': {
-      const cupMat = new THREE.MeshLambertMaterial({ color: 0xe8d8b0, transparent: true, opacity: 0.8 });
-      for (let i = 0; i < 3; i++) {
-        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.045, 0.12, 8), cupMat);
-        cup.position.set((Math.random() - 0.5) * 0.25, 0.06, (Math.random() - 0.5) * 0.25);
-        cup.rotation.set((Math.random() - 0.5) * 1.2, 0, (Math.random() - 0.5) * 1.2);
-        group.add(cup);
-      }
+      const cupsGroup = new THREE.Group();
+
+      const cupPositions = [
+        { x: -0.1, z: 0.08, rot: [1.3, 0.2, -0.6], scale: [1.1, 0.7, 0.9] }, // Schiacciato
+        { x: 0.12, z: -0.05, rot: [1.2, -0.5, 0.4], scale: [0.8, 1.1, 1.0] },
+        { x: -0.02, z: -0.12, rot: [0.2, 0.1, 0.3], scale: [1.0, 1.0, 1.0] }
+      ];
+
+      cupPositions.forEach(cp => {
+        const cup = new THREE.Group();
+
+        // Corpo bicchiere monouso
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.05, 0.15, 10, 1, true), plasticWhite);
+        body.position.y = 0.075;
+        cup.add(body);
+
+        // Bordo arrotolato superiore
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.008, 6, 12), plasticWhite);
+        rim.position.y = 0.15;
+        rim.rotation.x = Math.PI / 2;
+        cup.add(rim);
+
+        cup.scale.set(...cp.scale);
+        cup.position.set(cp.x, 0.02, cp.z);
+        cup.rotation.set(...cp.rot);
+        cupsGroup.add(cup);
+      });
+
+      group.add(cupsGroup);
       break;
     }
+
     default: { // rifiutiVari
-      const colors = [0x8a6a4a, 0x556655, 0x9a958a, 0x6b4a2c];
-      for (let i = 0; i < 5; i++) {
-        const chunk = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.16), new THREE.MeshLambertMaterial({ color: colors[i % colors.length] }));
-        chunk.position.set((Math.random() - 0.5) * 0.4, 0.06 + Math.random() * 0.1, (Math.random() - 0.5) * 0.4);
-        chunk.rotation.y = Math.random() * Math.PI;
-        group.add(chunk);
+      const trashHeap = new THREE.Group();
+
+      // Scatola/Cartone schiacciato
+      const cardboard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.25), woodMat);
+      cardboard.position.set(-0.1, 0.05, 0.05);
+      cardboard.rotation.set(0.1, 0.5, -0.1);
+      trashHeap.add(cardboard);
+
+      // Lattina piegata
+      const can = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 8), metalRusty);
+      can.position.set(0.15, 0.06, -0.1);
+      can.rotation.set(1.2, 0.3, -0.8);
+      can.scale.set(1.2, 0.7, 0.8); // Accartocciata
+      trashHeap.add(can);
+
+      // Sacchetto nodoso
+      const bag = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15, 1), plasticWhite);
+      bag.position.set(0.05, 0.12, 0.12);
+      bag.scale.set(1.2, 0.8, 1.0);
+      trashHeap.add(bag);
+
+      // Pezzetti sparsi
+      for (let i = 0; i < 3; i++) {
+        const scrap = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.08), plasticRed);
+        scrap.position.set((Math.random() - 0.5) * 0.35, 0.02, (Math.random() - 0.5) * 0.35);
+        scrap.rotation.set(Math.random(), Math.random(), Math.random());
+        trashHeap.add(scrap);
       }
+
+      group.add(trashHeap);
+      break;
     }
   }
-  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+
+  // Ombre per tutti i componenti del gruppo
+  group.traverse(o => { 
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+
   group.position.set(x, y, z);
-  
-  // Scala l'intero gruppo del 150% (aumento del 50%)
-  group.scale.set(1.5, 1.5, 1.5);
-  
-  group.userData = { typeId, hits: 0, maxHits: TRASH_BY_ID[typeId].hits };
+
+  // Aumento della scala globale esatto del 25% (1.25)
+  group.scale.set(1.25, 1.25, 1.25);
+
+  group.userData = { typeId, hits: 0, maxHits: (typeof TRASH_BY_ID !== 'undefined' && TRASH_BY_ID[typeId]) ? TRASH_BY_ID[typeId].hits : 1 };
+
   scene.add(group);
-  interactables.push({ obj: group, type: 'trash' });
+
+  if (typeof interactables !== 'undefined') {
+    interactables.push({ obj: group, type: 'trash' });
+  }
+
   return group;
 }
 
@@ -2506,40 +3781,138 @@ clock.on('day', spawnDailyCalaTrash);
 const SEA_ITEM_TYPES = ['stellaMarina', 'medusa', 'conchiglia'];
 
 function makeSeaItemMesh(typeId, x, z) {
-  const group = new THREE.Group();
+  let group;
+
   if (typeId === 'stellaMarina') {
-    const mat = new THREE.MeshLambertMaterial({ color: 0xe8935a });
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      const arm = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), mat);
-      arm.scale.set(1, 0.4, 2.2);
-      arm.position.set(Math.cos(a) * 0.14, 0.08, Math.sin(a) * 0.14);
-      arm.rotation.y = a;
-      group.add(arm);
-    }
+    group = createDetailedStarfish();
   } else if (typeId === 'medusa') {
-    const domeMat = new THREE.MeshLambertMaterial({ color: 0xb0d8f0, transparent: true, opacity: 0.65 });
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
-    dome.position.y = 0.16;
-    group.add(dome);
-    for (let i = 0; i < 4; i++) {
-      const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.2, 4), domeMat);
-      tentacle.position.set((Math.random() - 0.5) * 0.15, 0.06, (Math.random() - 0.5) * 0.15);
-      group.add(tentacle);
-    }
+    group = createDetailedJellyfish();
   } else { // conchiglia
-    const mat = new THREE.MeshLambertMaterial({ color: 0xf0d8c0 });
-    const shell = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.14, 8, 1, true), mat);
-    shell.rotation.x = Math.PI;
-    shell.position.y = 0.07;
-    group.add(shell);
+    group = createDetailedShell();
   }
-  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  group.scale.set(3, 3, 3); // 2x + ulteriore 50% richiesto
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  // Abilita ombre e riflessi per tutte le sottomesh
+  group.traverse(o => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+
+  group.scale.set(2.5, 2.5, 2.5);
+  const yPos = terrainHeightAt(x, z);
+  group.position.set(x, yPos, z);
   group.userData = { typeId };
+
+  // Inclinazione naturale sul terreno (la medusa fluttua leggermente sopra)
+  if (typeId !== 'medusa') {
+    group.rotation.x = (Math.random() - 0.5) * 0.2;
+    group.rotation.z = (Math.random() - 0.5) * 0.2;
+    group.rotation.y = Math.random() * Math.PI * 2;
+  } else {
+    group.position.y += 0.4;
+  }
+
   scene.add(group);
-  interactables.push({ obj: group, type: 'seaItem' });
+  if (typeof interactables !== 'undefined') {
+    interactables.push({ obj: group, type: 'seaItem' });
+  }
+  return group;
+}
+
+// --- FUNZIONI DI SUPPORTO PER I MODELLI DETTAGLIATI ---
+
+function createDetailedStarfish() {
+  const group = new THREE.Group();
+  const mainMat = new THREE.MeshStandardMaterial({ color: 0xee6c4d, roughness: 0.7 });
+  const detailMat = new THREE.MeshStandardMaterial({ color: 0xffedd8, roughness: 0.5 });
+
+  // Centro
+  const centerMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.12, 0.1, 10), mainMat);
+  centerMesh.position.y = 0.05;
+  group.add(centerMesh);
+
+  // 5 Braccia con dettagli
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2;
+    const armGroup = new THREE.Group();
+    armGroup.rotation.y = angle;
+
+    const seg = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 8), mainMat);
+    seg.rotation.x = Math.PI / 2;
+    seg.scale.set(1, 0.4, 1);
+    seg.position.set(0, 0.05, 0.22);
+    armGroup.add(seg);
+
+    // Dettagli bianchi su ogni braccio
+    for (let j = 1; j <= 4; j++) {
+      const bump = new THREE.Mesh(new THREE.SphereGeometry(0.015 + (4 - j) * 0.003, 6, 6), detailMat);
+      bump.position.set(0, 0.08, 0.08 * j);
+      armGroup.add(bump);
+    }
+    group.add(armGroup);
+  }
+  return group;
+}
+
+function createDetailedJellyfish() {
+  const group = new THREE.Group();
+  const domeMat = new THREE.MeshPhysicalMaterial({
+    color: 0x7209b7,
+    emissive: 0x3a0ca3,
+    emissiveIntensity: 0.3,
+    transmission: 0.8,
+    opacity: 0.85,
+    transparent: true,
+    roughness: 0.1
+  });
+
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.28, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), domeMat);
+  dome.position.y = 0.4;
+  group.add(dome);
+
+  // Nucleo luminoso interno
+  const innerCore = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0xf72585, transparent: true, opacity: 0.7 })
+  );
+  innerCore.position.y = 0.38;
+  group.add(innerCore);
+
+  // Tentacoli esterni curvi
+  const tentacleMat = new THREE.MeshStandardMaterial({ color: 0x4cc9f0, emissive: 0x4895ef, opacity: 0.75, transparent: true });
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(Math.cos(angle)*0.22, 0.35, Math.sin(angle)*0.22),
+      new THREE.Vector3(Math.cos(angle)*0.24, 0.22, Math.sin(angle)*0.24),
+      new THREE.Vector3(Math.cos(angle)*0.18, 0.1,  Math.sin(angle)*0.18),
+      new THREE.Vector3(Math.cos(angle)*0.26, 0.0,  Math.sin(angle)*0.26)
+    ]);
+    const tentacle = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.008, 6, false), tentacleMat);
+    group.add(tentacle);
+  }
+  return group;
+}
+
+function createDetailedShell() {
+  const group = new THREE.Group();
+  const shellMat = new THREE.MeshStandardMaterial({ color: 0xf4a261, roughness: 0.4 });
+  const innerMat = new THREE.MeshStandardMaterial({ color: 0xe76f51, roughness: 0.2 });
+
+  // Spirale conica composta
+  const turns = 35;
+  for (let i = 0; i < turns; i++) {
+    const t = i / turns;
+    const angle = t * Math.PI * 6;
+    const radius = 0.25 * (1 - t * 0.85);
+    const r = 0.1 * (1 - t * 0.75);
+
+    const segment = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), (i < 5) ? innerMat : shellMat);
+    segment.position.set(Math.cos(angle) * radius, t * 0.28 + 0.05, Math.sin(angle) * radius);
+    segment.scale.set(1.2, 1.0, 1.0);
+    group.add(segment);
+  }
   return group;
 }
 
@@ -2748,60 +4121,226 @@ clock.on('day', () => {
 });
 
 /* =========================================================================
-   PLAYER (placeholder capsula, verrà sostituito con un modello vero)
+   PLAYER (Versione Mezza Stagione: Primavera/Autunno - Chibi Low-Poly)
    ========================================================================= */
-const player = new THREE.Group();
-{
-  // Omino chibi a blocchi: testa grande, corpo piccolo, coerente con lo
-  // stile low-poly pixel-art-3D. Tutte primitive box/cilindro, niente mesh
-  // importate, facile da ricolorare in futuro (es. abiti diversi).
-  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x3d5a80 });
-  const shirtMat = new THREE.MeshLambertMaterial({ color: 0xd8622f });
+/* =========================================================================
+   PLAYER GENERATOR (Dinamico in base alla stagione "clock.season.name")
+   ========================================================================= */
+function buildPlayerGroup() {
+  const player = new THREE.Group();
+  const s = clock && clock.season ? clock.season.name : "Primavera";
+
+  // --- MATERIALI COMUNI ---
   const skinMat = new THREE.MeshLambertMaterial({ color: 0xe8b88a });
-  const hairMat = new THREE.MeshLambertMaterial({ color: 0x5a3d2b });
-  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x2c2c2a });
+  const hairMat = new THREE.MeshLambertMaterial({ color: 0x4a3222 });
+  const eyeMat  = new THREE.MeshLambertMaterial({ color: 0x1f1f1f });
 
-  // Gambe
+  // --- PALETTE DINAMICA PER STAGIONE ---
+  let shirtColor, pantsColor, shoeColor, shoeSoleColor, hatColor;
+  
+  if (s === "Estate") {
+    shirtColor    = 0xffb703; // T-Shirt Giallo Solare
+    pantsColor    = 0x0096c7; // Shorts Azzurro Mare
+    shoeColor     = 0xd8622f; // Infradito Arancioni
+    shoeSoleColor = 0x222222; // Cinghie Infradito
+    hatColor      = 0xf4f1de; // Cappello da Spiaggia Crema
+  } else if (s === "Autunno") {
+    shirtColor    = 0xbc6c25; // Felpa Marrone Aranciato / Ruggine
+    pantsColor    = 0x3d5a80; // Jeans Blu Scuro
+    shoeColor     = 0x4a3222; // Scarponcini in Cuoio
+    shoeSoleColor = 0x1f1f1f; // Suola Scura
+    hatColor      = 0x2b4257; // Berretto Blu Notte
+  } else if (s === "Inverno") {
+    shirtColor    = 0x9e2a2b; // Piumone Rosso Scuro / Borgogna
+    pantsColor    = 0x2b2d42; // Pantaloni Invernali Scuri
+    shoeColor     = 0x212529; // Stivali da Neve Neri
+    shoeSoleColor = 0xd8e2dc; // Suola Imbottita Chiara
+    hatColor      = 0xd8e2dc; // Berretto di Lana Bianco/Panna con Pompon
+  } else { 
+    // Primavera (o Default)
+    shirtColor    = 0x588157; // Giacca Verde Salvia
+    pantsColor    = 0xb5835a; // Chino Beige
+    shoeColor     = 0xf4f1de; // Sneakers Panna
+    shoeSoleColor = 0x222222; // Suola Gomma
+    hatColor      = null;     // Nessun cappello, capelli al vento
+  }
+
+  const shirtMat = new THREE.MeshLambertMaterial({ color: shirtColor });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: pantsColor });
+  const shoeMat  = new THREE.MeshLambertMaterial({ color: shoeColor });
+
+  // 1. PIEDI E GAMBE
   [-0.28, 0.28].forEach(lx => {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.7, 0.36), pantsMat);
-    leg.position.set(lx, 0.35, 0);
-    leg.castShadow = true;
-    player.add(leg);
+    if (s === "Estate") {
+      // Infradito
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.08, 0.48), shoeMat);
+      sole.position.set(lx, 0.04, 0.05);
+      sole.castShadow = true;
+      player.add(sole);
+
+      const strapMat = new THREE.MeshLambertMaterial({ color: shoeSoleColor });
+      [-0.06, 0.06].forEach(sx => {
+        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.25), strapMat);
+        strap.position.set(lx + sx, 0.1, 0.05);
+        strap.rotation.y = sx < 0 ? -0.3 : 0.3;
+        player.add(strap);
+      });
+
+      // Gamba Nuda + Shorts
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.32), skinMat);
+      leg.position.set(lx, 0.28, 0);
+      player.add(leg);
+
+      const shorts = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.35, 0.38), pantsMat);
+      shorts.position.set(lx, 0.6, 0);
+      shorts.castShadow = true;
+      player.add(shorts);
+    } else {
+      // Scarpe chiuse (Sneakers / Scarponi)
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.52), new THREE.MeshLambertMaterial({ color: shoeSoleColor }));
+      sole.position.set(lx, 0.05, 0.04);
+      sole.castShadow = true;
+      player.add(sole);
+
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.48), shoeMat);
+      shoe.position.set(lx, 0.18, 0.04);
+      shoe.castShadow = true;
+      player.add(shoe);
+
+      // Pantaloni Lunghi
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.52, 0.36), pantsMat);
+      leg.position.set(lx, 0.52, 0);
+      leg.castShadow = true;
+      player.add(leg);
+    }
   });
 
-  // Busto
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 0.7), shirtMat);
-  torso.position.y = 1.15;
-  torso.castShadow = true;
-  player.add(torso);
+  // Vita dei pantaloni
+  const waist = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.62), pantsMat);
+  waist.position.y = 0.82;
+  player.add(waist);
 
-  // Braccia
-  [-0.82, 0.82].forEach(ax => {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.85, 0.32), shirtMat);
-    arm.position.set(ax, 1.15, 0);
-    arm.castShadow = true;
-    player.add(arm);
+  // 2. BUSTO E ABBIGLIAMENTO SUPERIORE
+  if (s === "Inverno") {
+    // Piumone pesante (più voluminoso)
+    const jacket = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.78, 0.7), shirtMat);
+    jacket.position.y = 1.22;
+    jacket.castShadow = true;
+    player.add(jacket);
+
+    // Sciarpa calda
+    const scarf = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.18, 0.95), new THREE.MeshLambertMaterial({ color: 0xd8e2dc }));
+    scarf.position.y = 1.6;
+    player.add(scarf);
+  } else if (s === "Primavera") {
+    // Giacca aperta con maglietta bianca sotto
+    const tshirt = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.72, 0.58), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+    tshirt.position.set(0, 1.22, 0.02);
+    player.add(tshirt);
+
+    const jLeft = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.74, 0.64), shirtMat);
+    jLeft.position.set(-0.46, 1.22, 0);
+    player.add(jLeft);
+
+    const jRight = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.74, 0.64), shirtMat);
+    jRight.position.set(0.46, 1.22, 0);
+    player.add(jRight);
+
+    const jBack = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.74, 0.2), shirtMat);
+    jBack.position.set(0, 1.22, -0.22);
+    player.add(jBack);
+  } else {
+    // T-Shirt semplice (Estate) o Maglione (Autunno)
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.72, 0.6), shirtMat);
+    torso.position.y = 1.22;
+    torso.castShadow = true;
+    player.add(torso);
+  }
+
+  // 3. BRACCIA E MANI
+  [-0.72, 0.72].forEach(ax => {
+    if (s === "Estate") {
+      // Manica corta + braccio nudo
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.32), shirtMat);
+      sleeve.position.set(ax, 1.42, 0);
+      player.add(sleeve);
+
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.6, 0.28), skinMat);
+      arm.position.set(ax, 0.98, 0);
+      arm.castShadow = true;
+      player.add(arm);
+    } else {
+      // Manica lunga
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.65, 0.32), shirtMat);
+      sleeve.position.set(ax, 1.22, 0);
+      sleeve.castShadow = true;
+      player.add(sleeve);
+
+      // Guanti in Inverno / Mani nude negli altri casi
+      const handMat = (s === "Inverno") ? new THREE.MeshLambertMaterial({ color: 0x2b2d42 }) : skinMat;
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.22, 0.26), handMat);
+      hand.position.set(ax, 0.78, 0);
+      player.add(hand);
+    }
   });
 
-  // Testa (grande, proporzioni chibi)
-  const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.0, 1.0), skinMat);
-  head.position.y = 2.1;
+  // 4. TESTA E VISO
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.9, 0.9), skinMat);
+  head.position.y = 2.05;
   head.castShadow = true;
   player.add(head);
 
-  // Capelli
-  const hair = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.4, 1.06), hairMat);
-  hair.position.y = 2.68;
-  hair.castShadow = true;
-  player.add(hair);
-
-  // Occhi, per leggere subito da che parte guarda
   [-0.22, 0.22].forEach(ex => {
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.06), eyeMat);
-    eye.position.set(ex, 2.12, 0.51);
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.04), eyeMat);
+    eye.position.set(ex, 2.05, 0.46);
     player.add(eye);
   });
+
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.08), skinMat);
+  nose.position.set(0, 1.98, 0.47);
+  player.add(nose);
+
+  // 5. CAPELLI E CAPPELLI STAGIONALI
+  const backHair = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.35, 0.25), hairMat);
+  backHair.position.set(0, 1.88, -0.38);
+  player.add(backHair);
+
+  if (s === "Primavera") {
+    // Nessun cappello: Capelli folti
+    const hairTop = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.4, 1.0), hairMat);
+    hairTop.position.y = 2.42;
+    player.add(hairTop);
+
+    const bangs = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.2, 0.2), hairMat);
+    bangs.position.set(0, 2.38, 0.46);
+    bangs.rotation.x = 0.15;
+    player.add(bangs);
+  } else {
+    // Cappello dedicato
+    const hMat = new THREE.MeshLambertMaterial({ color: hatColor });
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.38, 0.96), hMat);
+    cap.position.y = 2.42;
+    cap.castShadow = true;
+    player.add(cap);
+
+    if (s === "Estate") {
+      // Tesa larga estiva
+      const brim = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 1.4), hMat);
+      brim.position.set(0, 2.38, 0.05);
+      player.add(brim);
+    } else if (s === "Inverno") {
+      // Pompon sulla berretta di lana
+      const pompon = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), hMat);
+      pompon.position.set(0, 2.72, 0);
+      player.add(pompon);
+    }
+  }
+
+  return player;
 }
+
+// Inizializzazione
+const player = buildPlayerGroup();
 player.position.set(TENT_POS.x + 13, terrainHeightAt(TENT_POS.x + 13, TENT_POS.z + 9), TENT_POS.z + 9);
 player.userData.yaw = 0;
 scene.add(player);
@@ -3090,7 +4629,7 @@ let sitTouchStart = null;
 let sitTouchYawStart = 0, sitTouchPitchStart = 0;
 
 const SIT_YAW_MAX = 50, SIT_PITCH_MAX = 45;
-const SIT_EYE_HEIGHT = 1.35;
+const SIT_EYE_HEIGHT = 1.95;
 
 const sitOverlay = document.getElementById('sit-overlay');
 const sitThinkBtn = document.getElementById('sitThinkBtn');
@@ -3628,56 +5167,280 @@ function removePlacedItem(entry) {
 
 function makeFencePanel(x, z, yaw) {
   const group = new THREE.Group();
-  const postMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
-  const railMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
-  [-1, 1].forEach(side => {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.3, 6), postMat);
-    post.position.set(side * 1.05, 0.65, 0);
-    post.castShadow = true;
-    group.add(post);
+
+  // Materiali Migliorati
+  const woodPostMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.8 });
+  const woodRailMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+  const woodPicketMat = new THREE.MeshStandardMaterial({ color: 0x9a6b3c, roughness: 0.6 });
+  const nailMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.3 });
+
+  // 1. PALI VERTICALI LAVORATI (Più larghi alla base, cima smussata)
+  [-1.0, 1.0].forEach(side => {
+    const postGroup = new THREE.Group();
+    postGroup.position.set(side * 1.05, 0.65, 0);
+
+    // Corpo del palo
+    const postBody = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 1.3, 6), woodPostMat);
+    postBody.castShadow = true;
+    postBody.receiveShadow = true;
+    postGroup.add(postBody);
+
+    // Cima smussata del palo
+    const postTop = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.15, 6), woodPostMat);
+    postTop.position.y = 0.65 + 0.075;
+    postTop.rotation.y = Math.PI / 6; // Allinea la base del cono all'esagono del palo
+    postTop.castShadow = true;
+    postGroup.add(postTop);
+
+    group.add(postGroup);
   });
+
+  // 2. TRAVERSE ORIZZONTALI INTAGLIATE (Forma trapezoidale)
   [0.45, 0.95].forEach(h => {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.14, 0.1), railMat);
+    const railShape = new THREE.Shape();
+    railShape.moveTo(-0.05, -0.07);
+    railShape.lineTo(0.05, -0.07);
+    railShape.lineTo(0.04, 0.07);
+    railShape.lineTo(-0.04, 0.07);
+    railShape.closePath();
+
+    const railGeo = new THREE.ExtrudeGeometry(railShape, { depth: 2.1, bevelEnabled: false });
+    railGeo.center(); // Centra lungo X (la lunghezza)
+    const rail = new THREE.Mesh(railGeo, woodRailMat);
     rail.position.set(0, h, 0);
+    rail.rotation.y = Math.PI / 2; // Orienta la sezione trapezoidale correttamente
     rail.castShadow = true;
+    rail.receiveShadow = true;
     group.add(rail);
+
+    // Chiodi di fissaggio traversa-palo
+    [-1.05, 1.05].forEach(side => {
+      const nail = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.1, 6), nailMat);
+      nail.position.set(side, h, 0.04);
+      nail.rotation.x = Math.PI / 2;
+      group.add(nail);
+    });
   });
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  // 3. PICCHETTI VERTICALI APPUNTITI
+  const picketCount = 13;
+  const picketWidth = 0.12;
+  const picketThickness = 0.04;
+  const picketGap = (2.1 - (picketCount * picketWidth)) / (picketCount - 1);
+
+  const picketShape = new THREE.Shape();
+  picketShape.moveTo(-picketWidth / 2, -0.6);
+  picketShape.lineTo(picketWidth / 2, -0.6);
+  picketShape.lineTo(picketWidth / 2, 0.5);
+  picketShape.lineTo(0, 0.6); // Punta smussata
+  picketShape.lineTo(-picketWidth / 2, 0.5);
+  picketShape.closePath();
+
+  for (let i = 0; i < picketCount; i++) {
+    const xPos = -1.05 + (picketWidth / 2) + i * (picketWidth + picketGap);
+    
+    // Non mettere picchetti esattamente dove ci sono i pali
+    if (Math.abs(xPos - 1.05) < 0.15 || Math.abs(xPos + 1.05) < 0.15) continue;
+
+    const picketGeo = new THREE.ExtrudeGeometry(picketShape, { depth: picketThickness, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 });
+    picketGeo.center();
+    const picket = new THREE.Mesh(picketGeo, woodPicketMat);
+    picket.position.set(xPos, 0.6, 0.05 + picketThickness / 2);
+    picket.castShadow = true;
+    picket.receiveShadow = true;
+    group.add(picket);
+
+    // Chiodi di fissaggio picchetto-traversa
+    [0.45, 0.95].forEach(h => {
+      const nail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.08, 6), nailMat);
+      nail.position.set(xPos, h, 0.05 + picketThickness + 0.035);
+      nail.rotation.x = Math.PI / 2;
+      group.add(nail);
+    });
+  }
+
+  // Posizionamento nel mondo e registrazione dati
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
+
   scene.add(group);
   return group;
 }
 
 function makeTorch(x, z, yaw) {
   const group = new THREE.Group();
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 1.6, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
-  pole.position.y = 0.8;
+
+  // Materiali fisici standard per la struttura
+  const woodMat = new THREE.MeshLambertMaterial({ color: 0x5a3d28 });
+  const ironMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.4 });
+  const emberMat = new THREE.MeshLambertMaterial({ color: 0x331100 });
+
+  // USIAMO MeshBasicMaterial per la fiamma per evitare che distorca l'illuminazione e i colori del mondo
+  const innerFlameMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const midFlameMat = new THREE.MeshBasicMaterial({ color: 0xff7b1a, transparent: true, opacity: 0.85 });
+  const outerFlameMat = new THREE.MeshBasicMaterial({ color: 0xffa53d, transparent: true, opacity: 0.4 });
+
+  // 1. PALO E ANELLI DI RINFORZO
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 1.5, 8), woodMat);
+  pole.position.y = 0.75;
   pole.castShadow = true;
   group.add(pole);
-  const flameMat = new THREE.MeshLambertMaterial({ color: 0xffa53d, emissive: 0xff7b1a, emissiveIntensity: 0.5 });
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 6), flameMat);
-  flame.position.y = 1.75;
-  group.add(flame);
-  const light = new THREE.PointLight(0xffb166, 0, 20, 1); // intensità 0 finché non è sera/notte; decadimento morbido (1) perché non spariscano contro il buio
-  light.position.set(0, 1.8, 0);
+
+  [0.3, 0.9, 1.35].forEach(h => {
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 8), ironMat);
+    ring.position.y = h;
+    group.add(ring);
+  });
+
+  // 2. CESTELLO IN FERRO
+  const basketGroup = new THREE.Group();
+  basketGroup.position.y = 1.5;
+
+  const basketBase = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.09, 0.1, 8), ironMat);
+  basketBase.position.y = 0.05;
+  basketGroup.add(basketBase);
+
+  const barCount = 6;
+  for (let i = 0; i < barCount; i++) {
+    const angle = (i / barCount) * Math.PI * 2;
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 6), ironMat);
+    bar.position.set(Math.cos(angle) * 0.18, 0.22, Math.sin(angle) * 0.18);
+    bar.rotation.z = -Math.cos(angle) * 0.15;
+    bar.rotation.x = Math.sin(angle) * 0.15;
+    basketGroup.add(bar);
+  }
+
+  const embers = new THREE.Mesh(new THREE.DodecahedronGeometry(0.14, 1), emberMat);
+  embers.position.y = 0.18;
+  basketGroup.add(embers);
+
+  group.add(basketGroup);
+
+  // 3. FIAMMA MULTI-STRATO (Non influisce sui colori globali)
+  const flameGroup = new THREE.Group();
+  flameGroup.position.y = 1.78;
+
+  const innerCore = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.28, 8), innerFlameMat);
+  innerCore.position.y = 0.12;
+  flameGroup.add(innerCore);
+
+  const midLayer = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.42, 8), midFlameMat);
+  midLayer.position.y = 0.18;
+  flameGroup.add(midLayer);
+
+  const outerLayer = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.52, 8), outerFlameMat);
+  outerLayer.position.y = 0.22;
+  flameGroup.add(outerLayer);
+
+  // Scintille
+  for (let i = 0; i < 4; i++) {
+    const spark = new THREE.Mesh(new THREE.DodecahedronGeometry(0.02, 0), innerFlameMat);
+    spark.position.set(
+      (Math.random() - 0.5) * 0.18,
+      0.45 + Math.random() * 0.25,
+      (Math.random() - 0.5) * 0.18
+    );
+    flameGroup.add(spark);
+  }
+
+  group.add(flameGroup);
+
+  // 4. LUCE PUNTIFORME (Rimossa la proiezione ombre per evitare conflitti di performance/colore)
+  const light = new THREE.PointLight(0xffb166, 0, 20, 1);
+  light.position.set(0, 1.85, 0);
   group.add(light);
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  // Posizionamento nel mondo
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
-  group.userData.light = light;
-  group.userData.flame = flame;
+
+  // Ripristinati i riferimenti esatti per il ciclo giorno/notte
+  group.userData = {
+    light: light,
+    flame: flameGroup
+  };
+
   scene.add(group);
   return group;
 }
 
 function makeWall(x, z, yaw) {
   const group = new THREE.Group();
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 0.4), new THREE.MeshLambertMaterial({ color: 0x9a958a }));
-  wall.position.y = 0.8;
-  wall.castShadow = true;
-  wall.receiveShadow = true;
-  group.add(wall);
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  // Palette di colori per le pietre (variazioni di grigio/beige per naturalezza)
+  const stoneColors = [0x9a958a, 0x8a857a, 0xaa9f90, 0x7a756a];
+  const stoneMaterials = stoneColors.map(color => new THREE.MeshLambertMaterial({ color }));
+  const capMat = new THREE.MeshLambertMaterial({ color: 0xb5b0a2 }); // Pietra più chiara per la cima
+  const mortarMat = new THREE.MeshLambertMaterial({ color: 0x5a554a }); // Malta scura interna
+
+  // 1. ANIMA INTERNA (Evita buchi e simula la malta)
+  const core = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.5, 0.36), mortarMat);
+  core.position.y = 0.75;
+  group.add(core);
+
+  // 2. MATTONI/PIETRE DISPOSTI A STRATI
+  const rows = 5;
+  const cols = 4;
+  const wallWidth = 2.2;
+  const wallHeight = 1.5;
+  const rowHeight = wallHeight / rows;
+  const colWidth = wallWidth / cols;
+
+  for (let r = 0; r < rows; r++) {
+    // Sfalsamento alternato ogni riga (pattern a mattoni)
+    const isOdd = r % 2 !== 0;
+    const numStones = isOdd ? cols + 1 : cols;
+
+    for (let c = 0; c < numStones; c++) {
+      let width = colWidth;
+      let xOffset = -wallWidth / 2 + c * colWidth + colWidth / 2;
+
+      // Gestione dei mattoni ai bordi per le righe sfalsate
+      if (isOdd) {
+        if (c === 0 || c === numStones - 1) {
+          width = colWidth / 2;
+        }
+        xOffset = -wallWidth / 2 + c * colWidth;
+      }
+
+      // Piccole variazioni casuali per ciascuna pietra
+      const depth = 0.4 + (Math.random() - 0.5) * 0.03;
+      const height = rowHeight - 0.02;
+      const mat = stoneMaterials[(r + c) % stoneMaterials.length];
+
+      const stoneGeo = new THREE.BoxGeometry(width - 0.03, height, depth);
+      const stone = new THREE.Mesh(stoneGeo, mat);
+
+      // Posizionamento con micro-scostamento per effetto rovinato/naturale
+      const randomZ = (Math.random() - 0.5) * 0.02;
+      const randomY = (Math.random() - 0.5) * 0.01;
+      
+      stone.position.set(
+        xOffset,
+        r * rowHeight + rowHeight / 2 + 0.02 + randomY,
+        randomZ
+      );
+
+      stone.castShadow = true;
+      stone.receiveShadow = true;
+      group.add(stone);
+    }
+  }
+
+  // 3. COPERTINA SUPERIORE (Capping)
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(2.26, 0.12, 0.46), capMat);
+  cap.position.y = 1.56;
+  cap.castShadow = true;
+  cap.receiveShadow = true;
+  group.add(cap);
+
+  // Posizionamento nel mondo
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
+
   scene.add(group);
   return group;
 }
@@ -3690,53 +5453,268 @@ let fireflyCaughtEver = false;
 let portableLampBuilt = false;
 function makeCasetta(x, z, yaw) {
   const group = new THREE.Group();
-  const wallMat = new THREE.MeshLambertMaterial({ color: 0xb08a5a });
-  const walls = new THREE.Mesh(new THREE.BoxGeometry(7, 4.5, 7), wallMat);
-  walls.position.y = 2.25;
+
+  // Materiali rustici a prevalenza legno
+  const stoneMat = new THREE.MeshLambertMaterial({ color: 0x7a756d }); // Pietra grezza (solo base e camino)
+  const woodWallMat = new THREE.MeshLambertMaterial({ color: 0x9e6c38 }); // Legno caldo per le pareti
+  const woodPlankMat = new THREE.MeshLambertMaterial({ color: 0x8a5b29 }); // Assi di legno per dettagli e scuri
+  const woodDarkMat = new THREE.MeshLambertMaterial({ color: 0x4a2e16 }); // Legno scuro per travi e cornici
+  const roofWoodMat = new THREE.MeshLambertMaterial({ color: 0x5e3818 }); // Tetto in scandole di legno
+  const glassMat = new THREE.MeshLambertMaterial({ color: 0x81d4fa, transparent: true, opacity: 0.75, emissive: 0x1a3344, emissiveIntensity: 0.2 });
+  const ironMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+
+  // 1. PICCOLA BASE IN PIETRA (Bassa e discreta)
+  const base = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.35, 6.6), stoneMat);
+  base.position.y = 0.175;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  group.add(base);
+
+  // 2. CORPO PRINCIPALE IN LEGNO
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(6.0, 3.6, 6.0), woodWallMat);
+  walls.position.y = 2.15;
   walls.castShadow = true;
   walls.receiveShadow = true;
   group.add(walls);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(5.6, 3, 4), new THREE.MeshLambertMaterial({ color: 0x7a4a30 }));
-  roof.position.y = 6;
+
+  // Assi di legno orizzontali in rilievo
+  for (let h = 0.6; h < 3.8; h += 0.4) {
+    const plankFront = new THREE.Mesh(new THREE.BoxGeometry(6.08, 0.08, 0.04), woodPlankMat);
+    plankFront.position.set(0, h, 3.01);
+    group.add(plankFront);
+
+    const plankBack = new THREE.Mesh(new THREE.BoxGeometry(6.08, 0.08, 0.04), woodPlankMat);
+    plankBack.position.set(0, h, -3.01);
+    group.add(plankBack);
+  }
+
+  // Travi d'angolo verticali in legno grezzo (tronchi)
+  const cornerCoords = [[-3.0, -3.0], [3.0, -3.0], [-3.0, 3.0], [3.0, 3.0]];
+  cornerCoords.forEach(([cx, cz]) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 3.7, 8), woodDarkMat);
+    post.position.set(cx, 2.15, cz);
+    post.castShadow = true;
+    group.add(post);
+  });
+
+  // 3. CAMINETTO IN PIETRA LATERALE
+  const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.7, 4.8, 0.7), stoneMat);
+  chimney.position.set(-2.2, 2.4, -2.2);
+  chimney.castShadow = true;
+  group.add(chimney);
+
+  const chimneyCap = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.15, 0.85), stoneMat);
+  chimneyCap.position.set(-2.2, 4.85, -2.2);
+  group.add(chimneyCap);
+
+  // 4. TETTO A CAPANNA IN LEGNO
+  const roofGroup = new THREE.Group();
+  roofGroup.position.y = 3.95;
+
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.5, 4), roofWoodMat);
+  roof.position.y = 1.25;
   roof.rotation.y = Math.PI / 4;
+  roof.scale.set(1.15, 1, 1.15); // Trave e sporgenza grondaia
   roof.castShadow = true;
-  group.add(roof);
-  const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, 0.12), new THREE.MeshLambertMaterial({ color: 0x5a3d24 }));
-  door.position.set(0, 1.3, 3.51);
+  roofGroup.add(roof);
+
+  const ridgeBeam = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 6.8), woodDarkMat);
+  ridgeBeam.position.y = 2.5;
+  // Abbassa la Y (es. da 2.5 a 1.2) così si incastra dentro il tetto
+  ridgeBeam.position.set(0, 0.9, 0);
+  roofGroup.add(ridgeBeam);
+
+  group.add(roofGroup);
+
+  // 5. PORTA E PIANEROTTOLO IN LEGNO
+  const porchDeck = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.2, 1.2), woodDarkMat);
+  porchDeck.position.set(0, 0.25, 3.6);
+  porchDeck.receiveShadow = true;
+  group.add(porchDeck);
+
+  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.4, 0.1), woodDarkMat);
+  doorFrame.position.set(0, 1.55, 3.02);
+  group.add(doorFrame);
+
+  const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), woodPlankMat);
+  door.position.set(0, 1.45, 3.05);
   group.add(door);
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.08), ironMat);
+  handle.position.set(0.45, 1.45, 3.12);
+  group.add(handle);
+
+  // Tettuccio portico in legno
+  const porchRoof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 1.0), roofWoodMat);
+  porchRoof.position.set(0, 2.85, 3.5);
+  porchRoof.rotation.x = 0.15;
+  porchRoof.castShadow = true;
+  group.add(porchRoof);
+
+  [-0.9, 0.9].forEach(px => {
+    const pPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.5, 8), woodDarkMat);
+    pPost.position.set(px, 1.5, 3.9);
+    pPost.castShadow = true;
+    group.add(pPost);
+  });
+
+  // Lanterna d'ingresso
+  const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.18), ironMat);
+  lantern.position.set(0, 2.5, 3.5);
+  group.add(lantern);
+
+  const light = new THREE.PointLight(0xffaa44, 1.0, 7, 1);
+  light.position.set(0, 2.4, 3.5);
+  group.add(light);
+
+  // 6. FINESTRE IN LEGNO CON SCURI APERTI
+  const windowPositions = [
+    { x: -1.8, y: 2.1, z: 3.02, rx: 0 },                  // Frontale Sinistra
+    { x: 1.8,  y: 2.1, z: 3.02, rx: 0 },                  // Frontale Destra
+    { x: -3.02, y: 2.1, z: 0,    rx: Math.PI / 2 },        // Laterale Sinistra
+    { x: 3.02,  y: 2.1, z: 0,    rx: -Math.PI / 2 }        // Laterale Destra
+  ];
+
+  windowPositions.forEach(w => {
+    const winGroup = new THREE.Group();
+    winGroup.position.set(w.x, w.y, w.z);
+    winGroup.rotation.y = w.rx;
+
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.08), woodDarkMat);
+    winGroup.add(frame);
+
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.06), glassMat);
+    glass.position.z = 0.02;
+    winGroup.add(glass);
+
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.05, 0.08), woodDarkMat);
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.0, 0.08), woodDarkMat);
+    winGroup.add(crossH, crossV);
+
+    // Imposte/Scuri in legno
+    const shutterL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.06), woodPlankMat);
+    shutterL.position.set(-0.72, 0, 0.04);
+    shutterL.rotation.y = -0.3;
+    
+    const shutterR = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.06), woodPlankMat);
+    shutterR.position.set(0.72, 0, 0.04);
+    shutterR.rotation.y = 0.3;
+
+    winGroup.add(shutterL, shutterR);
+    group.add(winGroup);
+  });
+
+  // Posizionamento nel mondo
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
+
   scene.add(group);
   return group;
 }
 
 function makeFontana(x, z, yaw) {
   const group = new THREE.Group();
-  const stoneMat = new THREE.MeshLambertMaterial({ color: 0x9a958a });
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.25, 0.5, 12), stoneMat);
-  base.position.y = 0.25;
-  base.castShadow = true;
-  base.receiveShadow = true;
-  group.add(base);
-  const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.0, 0.35, 12), stoneMat);
-  basin.position.y = 0.55;
-  group.add(basin);
-  const waterMat = new THREE.MeshLambertMaterial({ color: 0x5ab4d6, transparent: true, opacity: 0.85 });
-  const water = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.1, 12), waterMat);
-  water.position.y = 0.68;
-  group.add(water);
-  const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.9, 8), stoneMat);
-  pillar.position.y = 1.05;
-  pillar.castShadow = true;
-  group.add(pillar);
-  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.22, 8), stoneMat);
-  spout.position.y = 1.5;
-  group.add(spout);
-  const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 6), waterMat);
-  jet.position.y = 1.75;
-  group.add(jet);
+
+  // Materiali
+  const stoneMat = new THREE.MeshStandardMaterial({
+    color: 0x807a70,
+    roughness: 0.85,
+    metalness: 0.05
+  });
+  
+  const brassMat = new THREE.MeshStandardMaterial({
+    color: 0xc89d36,
+    roughness: 0.35,
+    metalness: 0.8
+  });
+
+  const waterMat = new THREE.MeshPhysicalMaterial({
+    color: 0x4aa3cc,
+    transparent: true,
+    opacity: 0.8,
+    roughness: 0.1,
+    transmission: 0.6,
+    ior: 1.333
+  });
+
+  // 1. VASCA RETTANGOLARE IN PIETRA
+  const basinBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.1, 1.0), stoneMat);
+  basinBase.position.y = 0.05;
+  basinBase.castShadow = true;
+  basinBase.receiveShadow = true;
+  group.add(basinBase);
+
+  // Bordi della vasca
+  const borderFront = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.4, 0.12), stoneMat);
+  borderFront.position.set(0, 0.25, 0.44);
+  borderFront.castShadow = true;
+  group.add(borderFront);
+
+  const borderBack = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.4, 0.12), stoneMat);
+  borderBack.position.set(0, 0.25, -0.44);
+  borderBack.castShadow = true;
+  group.add(borderBack);
+
+  const borderLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.76), stoneMat);
+  borderLeft.position.set(-0.64, 0.25, 0);
+  borderLeft.castShadow = true;
+  group.add(borderLeft);
+
+  const borderRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.76), stoneMat);
+  borderRight.position.set(0.64, 0.25, 0);
+  borderRight.castShadow = true;
+  group.add(borderRight);
+
+  // Acqua nella vasca
+  const waterSurface = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.05, 0.76), waterMat);
+  waterSurface.position.set(0, 0.28, 0);
+  group.add(waterSurface);
+
+  // 2. COLONNA VERTICALE SPARTANA
+  const columnBase = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.15, 0.55), stoneMat);
+  columnBase.position.set(0, 0.525, -0.2);
+  columnBase.castShadow = true;
+  group.add(columnBase);
+
+  const column = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.2, 0.45), stoneMat);
+  column.position.set(0, 1.2, -0.2);
+  column.castShadow = true;
+  group.add(column);
+
+  const columnCap = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), stoneMat);
+  columnCap.position.set(0, 1.85, -0.2);
+  columnCap.castShadow = true;
+  group.add(columnCap);
+
+  // 3. RUBINETTO IN OTTONE
+  const tapPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8), brassMat);
+  tapPipe.position.set(0, 1.35, 0.08);
+  tapPipe.rotation.x = Math.PI / 2;
+  tapPipe.castShadow = true;
+  group.add(tapPipe);
+
+  const tapSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.08, 8), brassMat);
+  tapSpout.position.set(0, 1.31, 0.18);
+  group.add(tapSpout);
+
+  const tapHandle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.03), brassMat);
+  tapHandle.position.set(0, 1.38, 0.12);
+  group.add(tapHandle);
+
+  // 4. GETTO D'ACQUA DAL RUBINETTO
+  const streamCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 1.28, 0.18),
+    new THREE.Vector3(0, 1.0, 0.20),
+    new THREE.Vector3(0, 0.3, 0.22)
+  ]);
+  const waterStream = new THREE.Mesh(new THREE.TubeGeometry(streamCurve, 10, 0.015, 6, false), waterMat);
+  group.add(waterStream);
+
+  // Posizionamento finale
   group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
+
   scene.add(group);
   return group;
 }
@@ -3746,36 +5724,134 @@ function makeFontana(x, z, yaw) {
 // tiene già pronti i campi che serviranno per crescita/raccolto.
 function makeCampoGrano(x, z, yaw) {
   const group = new THREE.Group();
-  const soil = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.14, 2.6), new THREE.MeshLambertMaterial({ color: 0x5a4530 }));
-  soil.position.y = 0.07;
-  soil.receiveShadow = true;
-  group.add(soil);
-  for (let i = -1; i <= 1; i++) {
-    const furrow = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.03, 0.16), new THREE.MeshLambertMaterial({ color: 0x453522 }));
-    furrow.position.set(0, 0.145, i * 0.8);
-    group.add(furrow);
-  }
+
+  // 1. TERRENO E SOLCHI (Invariati)
+// 1. TERRENO COLTIVATO
+const soilMat  = new THREE.MeshLambertMaterial({ color: 0x4a3525 }); // Terra scura
+const moundMat = new THREE.MeshLambertMaterial({ color: 0x5c422e }); // Solchi rialzati
+const woodMat  = new THREE.MeshLambertMaterial({ color: 0x6e472b }); // Bordo in legno
+
+// Base di terra principale
+const mainSoil = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.14, 2.6), soilMat);
+mainSoil.position.y = 0.07;
+mainSoil.receiveShadow = true;
+group.add(mainSoil);
+
+// Bordo contenitivo in legno attorno al campo
+const frameThick = 0.1;
+const frameHeight = 0.18;
+const borderData = [
+  { w: 2.8, d: frameThick, x: 0, z: 1.35 },
+  { w: 2.8, d: frameThick, x: 0, z: -1.35 },
+  { w: frameThick, d: 2.6, x: 1.35, z: 0 },
+  { w: frameThick, d: 2.6, x: -1.35, z: 0 }
+];
+
+borderData.forEach(b => {
+  const plank = new THREE.Mesh(new THREE.BoxGeometry(b.w, frameHeight, b.d), woodMat);
+  plank.position.set(b.x, frameHeight / 2, b.z);
+  plank.castShadow = true;
+  group.add(plank);
+});
+
+// Solchi di terra rialzati dove cresce il grano
+[-0.8, 0, 0.8].forEach(zPos => {
+  const mound = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.06, 0.45), moundMat);
+  mound.position.set(0, 0.16, zPos);
+  mound.receiveShadow = true;
+  group.add(mound);
+});
+
+  // 2. FASE GERMOGLIO (Ingranditi del 50% - Scala 1.5x)
   const sproutMat = new THREE.MeshLambertMaterial({ color: 0x5fae3a });
   const sproutGroup = new THREE.Group();
-  for (let ix = -1; ix <= 1; ix++) for (let iz = -1; iz <= 1; iz++) {
-    const sprout = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.3, 5), sproutMat);
-    sprout.position.set(ix * 0.75, 0.22, iz * 0.75);
-    sproutGroup.add(sprout);
+
+  for (let ix = -1; ix <= 1; ix++) {
+    for (let iz = -1; iz <= 1; iz++) {
+      const singleSprout = new THREE.Group();
+
+      // Fogliolina 1 (x1.5)
+      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(0.0375, 0.375, 4), sproutMat);
+      leaf1.position.set(-0.03, 0.18, 0);
+      leaf1.rotation.z = 0.25;
+      singleSprout.add(leaf1);
+
+      // Fogliolina 2 (x1.5)
+      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.3, 4), sproutMat);
+      leaf2.position.set(0.03, 0.15, 0);
+      leaf2.rotation.z = -0.3;
+      singleSprout.add(leaf2);
+
+      singleSprout.position.set(ix * 0.75, 0.14, iz * 0.75);
+      sproutGroup.add(singleSprout);
+    }
   }
   sproutGroup.visible = false;
   group.add(sproutGroup);
-  const wheatMat = new THREE.MeshLambertMaterial({ color: 0xd9b23c });
+
+  // 3. FASE GRANO MATURO (Ingranditi del 50% - Scala 1.5x, altezza complessiva ~1.65m)
+  const stalkMat = new THREE.MeshLambertMaterial({ color: 0xd2a638 });
+  const earMat = new THREE.MeshLambertMaterial({ color: 0xeac250 });
   const readyGroup = new THREE.Group();
-  for (let ix = -1; ix <= 1; ix++) for (let iz = -1; iz <= 1; iz++) {
-    const stalk = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.55, 5), wheatMat);
-    stalk.position.set(ix * 0.75, 0.35, iz * 0.75);
-    readyGroup.add(stalk);
+
+  for (let ix = -1; ix <= 1; ix++) {
+    for (let iz = -1; iz <= 1; iz++) {
+      const plant = new THREE.Group();
+
+      // Stelo verticale alto (~1.2m)
+      const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.03, 1.2, 6), stalkMat);
+      stalk.position.y = 0.6;
+      plant.add(stalk);
+
+      // Foglie basali secche (x1.5)
+      const leafA = new THREE.Mesh(new THREE.ConeGeometry(0.0225, 0.45, 4), stalkMat);
+      leafA.position.set(0.045, 0.3, 0);
+      leafA.rotation.z = -0.35;
+      plant.add(leafA);
+
+      // Spiga principale in alto (~0.45m)
+      const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.0525, 0.0375, 0.45, 6), earMat);
+      ear.position.y = 1.32;
+      plant.add(ear);
+
+      // Punta della spiga (x1.5)
+      const earTip = new THREE.Mesh(new THREE.ConeGeometry(0.0375, 0.15, 6), earMat);
+      earTip.position.y = 1.62;
+      plant.add(earTip);
+
+      // Dettaglio chicchi/ariste attorno alla spiga (x1.5)
+      for (let k = 0; k < 4; k++) {
+        const grain = new THREE.Mesh(new THREE.ConeGeometry(0.0225, 0.18, 4), earMat);
+        const angle = (k * Math.PI) / 2;
+        grain.position.set(Math.cos(angle) * 0.0375, 1.275 + (k % 2) * 0.075, Math.sin(angle) * 0.0375);
+        grain.rotation.x = Math.sin(angle) * 0.3;
+        grain.rotation.z = -Math.cos(angle) * 0.3;
+        plant.add(grain);
+      }
+
+      // Piccola inclinazione naturale casuale
+      plant.rotation.z = (Math.random() - 0.5) * 0.08;
+      plant.rotation.x = (Math.random() - 0.5) * 0.08;
+
+      plant.position.set(ix * 0.75, 0.14, iz * 0.75);
+      readyGroup.add(plant);
+    }
   }
   readyGroup.visible = false;
   group.add(readyGroup);
+
+  // 4. POSIZIONAMENTO E METADATI (Invariati)
   group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
-  group.userData = { fieldKind: 'grano', planted: false, ready: false, growthDaysElapsed: 0, sproutGroup, readyGroup };
+  group.userData = { 
+    fieldKind: 'grano', 
+    planted: false, 
+    ready: false, 
+    growthDaysElapsed: 0, 
+    sproutGroup, 
+    readyGroup 
+  };
+
   scene.add(group);
   return group;
 }
@@ -3784,43 +5860,149 @@ function makeCampoGrano(x, z, yaw) {
 // un bordo di sassi per distinguerla a colpo d'occhio.
 function makeAiuolaFiori(x, z, yaw) {
   const group = new THREE.Group();
-  const soil = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.14, 2.4), new THREE.MeshLambertMaterial({ color: 0x4a3c2a }));
-  soil.position.y = 0.07;
-  soil.receiveShadow = true;
-  group.add(soil);
-  const stoneMat = new THREE.MeshLambertMaterial({ color: 0x9a958a });
-  const corners = [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]];
-  for (const [cx, cz] of corners) {
-    const stone = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 6), stoneMat);
-    stone.position.set(cx, 0.14, cz);
+
+ // 1. TERRENO E BORDO IN PIETRA PER AIUOLA FIORI
+const soilMat  = new THREE.MeshLambertMaterial({ color: 0x3d2b1f }); // Terra molto scura / terriccio nutriente
+const stoneMat = new THREE.MeshLambertMaterial({ color: 0x8c857b }); // Pietre naturali
+const leafMat  = new THREE.MeshLambertMaterial({ color: 0x588157 }); // Verde foglia per germogli ornamentali
+
+// A. Terreno base dell'aiuola
+const soil = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.14, 2.4), soilMat);
+soil.position.y = 0.07;
+soil.receiveShadow = true;
+group.add(soil);
+
+// B. Bordo perimetrale di pietre (disposte lungo i 4 lati)
+const sideLength = 2.4;
+const stonesPerSide = 6;
+const step = sideLength / (stonesPerSide - 1);
+
+for (let i = 0; i < stonesPerSide; i++) {
+  const offset = -1.2 + i * step;
+  
+  // Posizioni dei 4 lati del perimetro
+  const borderPositions = [
+    [offset, 1.2],  // Lato Nord
+    [offset, -1.2], // Lato Sud
+    [1.2, offset],  // Lato Est
+    [-1.2, offset]  // Lato Ovest
+  ];
+
+  borderPositions.forEach(([px, pz]) => {
+    // Pietre leggermente irregolari per un look naturale
+    const stone = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 5), stoneMat);
+    stone.position.set(px, 0.1, pz);
+    stone.scale.set(1.0, 0.7, 1.0); // appiattite in altezza
+    stone.rotation.y = (i * 0.5);   // rotazione casuale
+    stone.castShadow = true;
     group.add(stone);
-  }
+  });
+}
+
+// C. Dettaglio: Piccoli rialzi di terra interni per i fiori
+[-0.5, 0.5].forEach(rx => {
+  [-0.5, 0.5].forEach(rz => {
+    const mound = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 4), soilMat);
+    mound.position.set(rx, 0.1, rz);
+    mound.scale.set(1.2, 0.25, 1.2);
+    group.add(mound);
+  });
+});
+
+  // 2. FASE GERMOGLIO (Migliorata e Ingrandita x1.5)
   const sproutMat = new THREE.MeshLambertMaterial({ color: 0x5fae3a });
   const sproutGroup = new THREE.Group();
-  for (let ix = -1; ix <= 1; ix++) for (let iz = -1; iz <= 1; iz++) {
-    const sprout = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.28, 5), sproutMat);
-    sprout.position.set(ix * 0.65, 0.2, iz * 0.65);
-    sproutGroup.add(sprout);
+
+  for (let ix = -1; ix <= 1; ix++) {
+    for (let iz = -1; iz <= 1; iz++) {
+      const singleSprout = new THREE.Group();
+
+      // Fogliolina 1 (x1.5)
+      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(0.0375, 0.35, 4), sproutMat);
+      leaf1.position.set(-0.03, 0.175, 0);
+      leaf1.rotation.z = 0.3;
+      singleSprout.add(leaf1);
+
+      // Fogliolina 2 (x1.5)
+      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.28, 4), sproutMat);
+      leaf2.position.set(0.03, 0.14, 0);
+      leaf2.rotation.z = -0.35;
+      singleSprout.add(leaf2);
+
+      singleSprout.position.set(ix * 0.65, 0.14, iz * 0.65);
+      sproutGroup.add(singleSprout);
+    }
   }
   sproutGroup.visible = false;
   group.add(sproutGroup);
+
+  // 3. FASE FIORE MATURO (Migliorata con petali e pistillo, Ingrandita x1.5)
   const petalColors = [0xe07fb0, 0xf2c94c, 0xb07fe0];
+  const centerMat = new THREE.MeshLambertMaterial({ color: 0xf39c12 }); // Pistillo giallo dorato
   const readyGroup = new THREE.Group();
   let ci = 0;
-  for (let ix = -1; ix <= 1; ix++) for (let iz = -1; iz <= 1; iz++) {
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 5), sproutMat);
-    stem.position.set(ix * 0.65, 0.2, iz * 0.65);
-    readyGroup.add(stem);
-    const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), new THREE.MeshLambertMaterial({ color: petalColors[ci % petalColors.length] }));
-    bloom.position.set(ix * 0.65, 0.42, iz * 0.65);
-    readyGroup.add(bloom);
-    ci++;
+
+  for (let ix = -1; ix <= 1; ix++) {
+    for (let iz = -1; iz <= 1; iz++) {
+      const plant = new THREE.Group();
+
+      // Stelo principale (x1.5 -> h: 0.6m)
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.027, 0.6, 6), sproutMat);
+      stem.position.y = 0.3;
+      plant.add(stem);
+
+      // Foglia dello stelo (x1.5)
+      const stemLeaf = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.3, 4), sproutMat);
+      stemLeaf.position.set(0.03, 0.225, 0);
+      stemLeaf.rotation.z = -0.4;
+      plant.add(stemLeaf);
+
+      // Gruppo della corolla del fiore
+      const flowerHead = new THREE.Group();
+      flowerHead.position.y = 0.6;
+
+      // Pistillo centrale (x1.5)
+      const center = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 8), centerMat);
+      flowerHead.add(center);
+
+      // 5 Petali disposti a cerchio (x1.5)
+      const petalMat = new THREE.MeshLambertMaterial({ color: petalColors[ci % petalColors.length] });
+      const petalCount = 5;
+      for (let p = 0; p < petalCount; p++) {
+        const angle = (p * Math.PI * 2) / petalCount;
+        const petal = new THREE.Mesh(new THREE.SphereGeometry(0.0825, 6, 6), petalMat);
+        petal.scale.set(1, 0.35, 1.5); // Appiattisce e allunga la sfera per creare la forma del petalo
+        petal.position.set(Math.sin(angle) * 0.12, 0, Math.cos(angle) * 0.12);
+        petal.rotation.y = angle;
+        flowerHead.add(petal);
+      }
+
+      plant.add(flowerHead);
+
+      // Piccola inclinazione naturale casuale
+      plant.rotation.z = (Math.random() - 0.5) * 0.1;
+      plant.rotation.x = (Math.random() - 0.5) * 0.1;
+
+      plant.position.set(ix * 0.65, 0.14, iz * 0.65);
+      readyGroup.add(plant);
+      ci++;
+    }
   }
   readyGroup.visible = false;
   group.add(readyGroup);
+
+  // 4. POSIZIONAMENTO E METADATI (Invariati)
   group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
-  group.userData = { fieldKind: 'fiori', planted: false, ready: false, growthDaysElapsed: 0, sproutGroup, readyGroup };
+  group.userData = { 
+    fieldKind: 'fiori', 
+    planted: false, 
+    ready: false, 
+    growthDaysElapsed: 0, 
+    sproutGroup, 
+    readyGroup 
+  };
+
   scene.add(group);
   return group;
 }
@@ -3830,35 +6012,93 @@ function makeAiuolaFiori(x, z, yaw) {
 // VERDE consumando 1 "fiori" già raccolto — vedi isPlacementValid. Ogni
 // fiore attira un'ape o una farfalla (vedi attachCreatureToFlower).
 const FLOWER_PETAL_COLORS = [0xe0508a, 0xf2a33c, 0x7fb0e0, 0xb07fe0, 0xe05050, 0xf2e04c];
+
 function makeFioreDecorativo(x, z, yaw) {
   const group = new THREE.Group();
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.7, 6), new THREE.MeshLambertMaterial({ color: 0x4a7a3a }));
-  stem.position.y = 0.35;
-  stem.castShadow = true;
-  group.add(stem);
-  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 6), new THREE.MeshLambertMaterial({ color: 0x4a7a3a }));
-  leaf.scale.set(1, 0.25, 2.2);
-  leaf.position.set(0.12, 0.25, 0);
-  leaf.rotation.y = 0.5;
-  group.add(leaf);
+
+  // Materiali
+  const stemMat = new THREE.MeshLambertMaterial({ color: 0x4a7a3a });
+  const centerMat = new THREE.MeshLambertMaterial({ color: 0xf2c94c });
+  
   const petalColor = FLOWER_PETAL_COLORS[Math.floor(Math.random() * FLOWER_PETAL_COLORS.length)];
   const petalMat = new THREE.MeshLambertMaterial({ color: petalColor });
+
+  // 1. STELO ARTICOLATO (Leggermente curvato per naturalezza)
+  const stemGroup = new THREE.Group();
+  
+  const lowerStem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.4, 6), stemMat);
+  lowerStem.position.y = 0.2;
+  lowerStem.castShadow = true;
+  stemGroup.add(lowerStem);
+
+  const upperStem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.35, 6), stemMat);
+  upperStem.position.set(0.02, 0.52, 0);
+  upperStem.rotation.z = -0.1; // Piccola inclinazione naturale
+  upperStem.castShadow = true;
+  stemGroup.add(upperStem);
+
+  group.add(stemGroup);
+
+  // 2. COPPIA DI FOGLIE SUL GAMBO
+  const leafGeo = new THREE.SphereGeometry(0.1, 6, 6);
+  
+  // Foglia 1 (Bassa, destra)
+  const leaf1 = new THREE.Mesh(leafGeo, stemMat);
+  leaf1.scale.set(1.2, 0.2, 2.0);
+  leaf1.position.set(0.12, 0.22, 0.02);
+  leaf1.rotation.set(0.2, 0.6, -0.3);
+  group.add(leaf1);
+
+  // Foglia 2 (Media, sinistra)
+  const leaf2 = new THREE.Mesh(leafGeo, stemMat);
+  leaf2.scale.set(1.0, 0.18, 1.8);
+  leaf2.position.set(-0.1, 0.35, -0.04);
+  leaf2.rotation.set(-0.2, -0.8, 0.4);
+  group.add(leaf2);
+
+  // 3. COROLLA DI PETALI (Testa del fiore)
+  const flowerHead = new THREE.Group();
+  flowerHead.position.set(0.03, 0.68, 0);
+  flowerHead.rotation.z = -0.1; // Segue la curvatura dello stelo
+
   const petalCount = 8;
+  const petalGeo = new THREE.SphereGeometry(0.09, 6, 6);
+
   for (let i = 0; i < petalCount; i++) {
-    const a = (i / petalCount) * Math.PI * 2;
-    const petal = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), petalMat);
-    petal.scale.set(1, 0.35, 1.9);
-    petal.position.set(Math.cos(a) * 0.17, 0.72, Math.sin(a) * 0.17);
-    petal.rotation.y = a;
+    const angle = (i / petalCount) * Math.PI * 2;
+    const petal = new THREE.Mesh(petalGeo, petalMat);
+    
+    // Modellazione forma petalo
+    petal.scale.set(0.8, 0.25, 1.8);
+    
+    // Posizionamento a raggiera
+    const dist = 0.15;
+    petal.position.set(Math.cos(angle) * dist, 0.02, Math.sin(angle) * dist);
+    
+    // Orientamento: ruota verso l'esterno e si inclina leggermente verso l'alto
+    petal.rotation.y = -angle + Math.PI / 2;
+    petal.rotation.x = 0.25; // Inclinazione a coppa/calice
+
     petal.castShadow = true;
-    group.add(petal);
+    flowerHead.add(petal);
   }
-  const disc = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), new THREE.MeshLambertMaterial({ color: 0xf2c94c }));
-  disc.position.y = 0.72;
-  group.add(disc);
-  group.position.set(x, terrainHeightAt(x, z), z);
+
+  // 4. DISCO CENTRALE / PISTILLO
+  const centerDisc = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 8), centerMat);
+  centerDisc.scale.set(1.1, 0.6, 1.1); // Schiacciato tipo calotta
+  centerDisc.position.y = 0.03;
+  centerDisc.castShadow = true;
+  flowerHead.add(centerDisc);
+
+  group.add(flowerHead);
+
+  // Posizionamento nel mondo e userData
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
+
   group.userData = { bloomHeight: 0.75, attachedCreature: null };
+
   scene.add(group);
   return group;
 }
@@ -3872,30 +6112,116 @@ const FIORE_DECORATIVO_RECIPE = { cost: { fiori: 1 } };
 // dedicati, mentre il mondo di gioco continua a evolversi normalmente.
 function makeSediaDondolo(x, z, yaw) {
   const group = new THREE.Group();
-  const woodMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.9), woodMat);
-  seat.position.y = 0.75;
-  group.add(seat);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.1), woodMat);
-  back.position.set(0, 1.2, -0.4);
-  group.add(back);
-  [-0.42, 0.42].forEach(ax => {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.8), woodMat);
-    arm.position.set(ax, 0.95, 0);
-    group.add(arm);
-    const armLeg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 0.08), woodMat);
-    armLeg.position.set(ax, 0.8, -0.35);
-    group.add(armLeg);
+  
+  // Materiale Legno con finitura satinata
+  const woodMat = new THREE.MeshStandardMaterial({
+    color: 0x6e4327,
+    roughness: 0.4,
+    metalness: 0.05
   });
-  // Pattini curvi a dondolo, semplificati con archi di toro
-  [-0.4, 0.4].forEach(rx => {
-    const rocker = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 6, 16, Math.PI * 0.9), woodMat);
-    rocker.position.set(rx, 0.25, 0.05);
-    rocker.rotation.z = Math.PI / 2;
-    rocker.rotation.y = Math.PI / 2;
-    group.add(rocker);
+
+  // Materiale Cuscino in tessuto
+  const cushionMat = new THREE.MeshStandardMaterial({
+    color: 0xcc5a37,
+    roughness: 0.85
   });
-  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+
+  // OFFSET PER APPOGGIARE I PATTINI ESATTAMENTE A TERRA (Y = 0)
+  // Il punto più basso della curva è y=0.03, meno il raggio del tubo (0.042)
+  const yOffset = -0.012; 
+
+  // 1. SEDILE SAGOMATO E CUSCINO
+  const seatBase = new THREE.Mesh(new THREE.BoxGeometry(1.275, 0.09, 1.2), woodMat);
+  seatBase.position.y = 1.125 - yOffset;
+  group.add(seatBase);
+
+  const cushion = new THREE.Mesh(new THREE.BoxGeometry(1.17, 0.12, 1.08), cushionMat);
+  cushion.position.set(0, 1.215 - yOffset, 0.03);
+  group.add(cushion);
+
+  // 2. SCHIENALE WINDSOR
+  const topArchCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.57, 2.175 - yOffset, -0.57),
+    new THREE.Vector3(0, 2.325 - yOffset, -0.63),
+    new THREE.Vector3(0.57, 2.175 - yOffset, -0.57)
+  ]);
+  const topArch = new THREE.Mesh(new THREE.TubeGeometry(topArchCurve, 16, 0.0525, 8, false), woodMat);
+  group.add(topArch);
+
+  // Stecche verticali dello schienale
+  const spindleCount = 7;
+  for (let i = 0; i < spindleCount; i++) {
+    const t = i / (spindleCount - 1);
+    const xPos = -0.48 + t * 0.96;
+    const curveFactor = Math.cos((t - 0.5) * Math.PI) * 0.075;
+    const topY = 2.205 + curveFactor;
+    
+    const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.027, topY - 1.17, 8), woodMat);
+    spindle.position.set(xPos, (1.17 + topY) / 2 - yOffset, -0.54 - curveFactor * 0.5);
+    spindle.rotation.x = -0.08;
+    group.add(spindle);
+  }
+
+  // Montanti laterali principali schienale
+  [-0.57, 0.57].forEach(sideX => {
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.0375, 0.0375, 1.08, 12), woodMat);
+    pillar.position.set(sideX, 1.68 - yOffset, -0.555);
+    pillar.rotation.x = -0.08;
+    group.add(pillar);
+  });
+
+  // 3. BRACCIOLI SAGOMATI E COLONNINE
+  [-0.6, 0.6].forEach(sideX => {
+    const armCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(sideX * 0.95, 1.68 - yOffset, -0.525),
+      new THREE.Vector3(sideX * 1.05, 1.53 - yOffset, 0.0),
+      new THREE.Vector3(sideX * 0.95, 1.44 - yOffset, 0.57)
+    ]);
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(armCurve, 12, 0.045, 8, false), woodMat));
+
+    const armSupport = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.033, 0.33, 10), woodMat);
+    armSupport.position.set(sideX * 0.95, 1.29 - yOffset, 0.525);
+    group.add(armSupport);
+  });
+
+  // 4. GAMBE CORRETTE (Allungate per congiungersi ai pattini)
+  const legPositions = [
+    { x: -0.48, z: -0.45, angleZ: 0.08, angleX: -0.08 },
+    { x: 0.48, z: -0.45, angleZ: -0.08, angleX: -0.08 },
+    { x: -0.525, z: 0.45, angleZ: 0.08, angleX: 0.08 },
+    { x: 0.525, z: 0.45, angleZ: -0.08, angleX: 0.08 }
+  ];
+
+  legPositions.forEach(p => {
+    // Gambe allungate a 1.05 per raggiungere l'altezza del pattino
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 1.05, 12), woodMat);
+    leg.position.set(p.x, 0.585 - yOffset, p.z);
+    leg.rotation.z = p.angleZ;
+    leg.rotation.x = p.angleX;
+    group.add(leg);
+  });
+
+  // Traversi di rinforzo tra le gambe
+  [-0.495, 0.495].forEach(sideX => {
+    const sideBar = new THREE.Mesh(new THREE.CylinderGeometry(0.0225, 0.0225, 0.87, 8), woodMat);
+    sideBar.position.set(sideX * 1.05, 0.63 - yOffset, 0);
+    sideBar.rotation.x = Math.PI / 2;
+    group.add(sideBar);
+  });
+
+  // 5. PATTINI CURVI A DONDOLO (Posizionati a terra)
+  [-0.57, 0.57].forEach(sideX => {
+    const rockerCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(sideX, 0.33 - yOffset, -0.975),
+      new THREE.Vector3(sideX, 0.06 - yOffset, -0.3),
+      new THREE.Vector3(sideX, 0.03 - yOffset, 0.15),
+      new THREE.Vector3(sideX, 0.075 - yOffset, 0.6),
+      new THREE.Vector3(sideX, 0.3 - yOffset, 0.975)
+    ]);
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(rockerCurve, 24, 0.042, 10, false), woodMat));
+  });
+
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
   scene.add(group);
@@ -5380,70 +7706,139 @@ const interiorLamp = new THREE.PointLight(0xffdca8, 1.1, 20, 2);
 interiorLamp.position.set(0, 4, 1);
 interiorScene.add(interiorLamp);
 
-// Pavimento
-const interiorFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshLambertMaterial({ color: 0x8a6339 }));
-interiorFloor.rotation.x = -Math.PI / 2;
+// Paralume a soffitto
+const lampShade = new THREE.Mesh(
+  new THREE.ConeGeometry(0.35, 0.25, 8, 1, true),
+  new THREE.MeshLambertMaterial({ color: 0xc89868, side: THREE.DoubleSide })
+);
+lampShade.position.set(0, 3.75, 1);
+interiorScene.add(lampShade);
+
+// Pavimento a doghe di legno
+const interiorFloor = new THREE.Group();
+const floorBase = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshLambertMaterial({ color: 0x8a6339 }));
+floorBase.rotation.x = -Math.PI / 2;
+interiorFloor.add(floorBase);
+
+const plankMat1 = new THREE.MeshLambertMaterial({ color: 0x7a5630 });
+const plankMat2 = new THREE.MeshLambertMaterial({ color: 0x6e4c28 });
+for (let i = -3.8; i <= 3.8; i += 0.4) {
+  const plank = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.01, 8), (Math.round(i * 10) % 2 === 0) ? plankMat1 : plankMat2);
+  plank.position.set(i, 0.005, 0);
+  interiorFloor.add(plank);
+}
 interiorScene.add(interiorFloor);
 
-// Tre pareti: fondo + due laterali, il lato verso la camera resta aperto
+// Tre pareti con battiscopa
 const interiorWallMat = new THREE.MeshLambertMaterial({ color: 0xd8c7a8 });
-const backWall = new THREE.Mesh(new THREE.BoxGeometry(8, 4.5, 0.3), interiorWallMat);
-backWall.position.set(0, 2.25, -4);
+const trimMat = new THREE.MeshLambertMaterial({ color: 0x5a3d24 });
+
+// Parete di Fondo
+const backWall = new THREE.Group();
+const backWallMain = new THREE.Mesh(new THREE.BoxGeometry(8, 4.5, 0.3), interiorWallMat);
+backWallMain.position.set(0, 2.25, -4);
+backWall.add(backWallMain);
+const backTrim = new THREE.Mesh(new THREE.BoxGeometry(8, 0.5, 0.35), trimMat);
+backTrim.position.set(0, 0.25, -3.98);
+backWall.add(backTrim);
 interiorScene.add(backWall);
-const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 8), interiorWallMat);
-leftWall.position.set(-4, 2.25, 0);
+
+// Parete Sinistra
+const leftWall = new THREE.Group();
+const leftWallMain = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 8), interiorWallMat);
+leftWallMain.position.set(-4, 2.25, 0);
+leftWall.add(leftWallMain);
+const leftTrim = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.5, 8), trimMat);
+leftTrim.position.set(-3.98, 0.25, 0);
+leftWall.add(leftTrim);
 interiorScene.add(leftWall);
-const rightWall = leftWall.clone();
-rightWall.position.set(4, 2.25, 0);
+
+// Parete Destra
+const rightWall = new THREE.Group();
+const rightWallMain = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.5, 8), interiorWallMat);
+rightWallMain.position.set(4, 2.25, 0);
+rightWall.add(rightWallMain);
+const rightTrim = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.5, 8), trimMat);
+rightTrim.position.set(3.98, 0.25, 0);
+rightWall.add(rightTrim);
 interiorScene.add(rightWall);
 
-// Letto (base + materasso + cuscino + coperta ripiegata)
+// Letto
 const bedGroup = new THREE.Group();
-const bedBase = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 3), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
-bedBase.position.y = 0.25;
+const bedBase = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 3), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+bedBase.position.y = 0.2;
 bedGroup.add(bedBase);
+
+const headboard = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.1, 0.15), new THREE.MeshLambertMaterial({ color: 0x5a3d24 }));
+headboard.position.set(0, 0.75, -1.45);
+bedGroup.add(headboard);
+
 const mattress = new THREE.Mesh(new THREE.BoxGeometry(2, 0.35, 2.8), new THREE.MeshLambertMaterial({ color: 0xe8e0d0 }));
-mattress.position.y = 0.67;
+mattress.position.y = 0.575;
 bedGroup.add(mattress);
-const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 0.6), new THREE.MeshLambertMaterial({ color: 0xffffff }));
-pillow.position.set(0, 0.87, -1.1);
+
+const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.18, 0.6), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+pillow.position.set(0, 0.82, -1.05);
+pillow.rotation.x = 0.08;
 bedGroup.add(pillow);
-const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.22, 1.2), new THREE.MeshLambertMaterial({ color: 0x7a3f3f }));
-blanket.position.set(0, 0.86, 0.6);
+
+const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.22, 1.8), new THREE.MeshLambertMaterial({ color: 0x7a3f3f }));
+blanket.position.set(0, 0.68, 0.48);
 bedGroup.add(blanket);
+
+const blanketFold = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.05, 0.3), new THREE.MeshLambertMaterial({ color: 0x965252 }));
+blanketFold.position.set(0, 0.8, -0.38);
+bedGroup.add(blanketFold);
+
 bedGroup.position.set(-2.8, 0, -2.6);
 interiorScene.add(bedGroup);
 
-// Cassa (base + coperchio leggermente sollevato + chiusura)
+// Cassa
 const chestGroup = new THREE.Group();
-const chestBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.8), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
-chestBase.position.y = 0.3;
+const chestBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.8), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
+chestBase.position.y = 0.25;
 chestGroup.add(chestBase);
+
 const chestLid = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.18, 0.84), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
-chestLid.position.y = 0.68;
+chestLid.position.y = 0.59;
 chestGroup.add(chestLid);
-const chestClasp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.06), new THREE.MeshLambertMaterial({ color: 0xc9a24a }));
-chestClasp.position.set(0, 0.55, 0.43);
+
+[-0.45, 0.45].forEach(xPos => {
+  const band = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.86), new THREE.MeshLambertMaterial({ color: 0x2e2e2e }));
+  band.position.set(xPos, 0.35, 0);
+  chestGroup.add(band);
+});
+
+const chestClasp = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.06), new THREE.MeshLambertMaterial({ color: 0xc9a24a }));
+chestClasp.position.set(0, 0.45, 0.42);
 chestGroup.add(chestClasp);
+
 chestGroup.position.set(2.3, 0, -3.2);
 interiorScene.add(chestGroup);
 
-// Frigorifero (corpo + linea della porta + maniglia)
+// Frigorifero (spostato a x: 3.2, z: -1.0 per evitare compenetrazioni col muro)
 const fridgeGroup = new THREE.Group();
 const fridgeBody = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.9, 0.9), new THREE.MeshLambertMaterial({ color: 0xdfe6e8 }));
 fridgeBody.position.y = 0.95;
 fridgeGroup.add(fridgeBody);
+
 const fridgeDoorLine = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.03, 0.92), new THREE.MeshLambertMaterial({ color: 0xaab4b6 }));
-fridgeDoorLine.position.y = 1.15;
+fridgeDoorLine.position.y = 1.35;
 fridgeGroup.add(fridgeDoorLine);
-const fridgeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.07), new THREE.MeshLambertMaterial({ color: 0x555b5c }));
-fridgeHandle.position.set(0.48, 0.75, 0.46);
+
+const fridgeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.08), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 }));
+fridgeHandle.position.set(0.48, 0.85, 0.46);
 fridgeGroup.add(fridgeHandle);
-fridgeGroup.position.set(3.4, 0, -1.3);
+
+const fridgeHandleTop = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.08), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 }));
+fridgeHandleTop.position.set(0.48, 1.58, 0.46);
+fridgeGroup.add(fridgeHandleTop);
+
+fridgeGroup.position.set(3.2, 0, -1.0);
+fridgeGroup.rotation.y = -Math.PI / 2;
 interiorScene.add(fridgeGroup);
 
-// Spazi riservati per il futuro: riquadri sul pavimento, non interagibili.
-// Fornello e caminetto in zona cucina/focolare, la scala in un angolo libero.
+// Spazi riservati per il futuro
 function makeReservedSpot(x, z, color) {
   const marker = new THREE.Mesh(
     new THREE.PlaneGeometry(1.1, 1.1),
@@ -5453,18 +7848,37 @@ function makeReservedSpot(x, z, color) {
   marker.position.set(x, 0.02, z);
   interiorScene.add(marker);
 }
-// Fornellino: costruito al banco da lavoro, compare qui automaticamente
+
+// Fornellino (+30% altezza)
 function makeStove(x, z) {
   const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.7), new THREE.MeshLambertMaterial({ color: 0x555b5c }));
-  body.position.y = 0.35;
+  
+  // Corpo stufa rialzato (0.91h)
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.91, 0.7), new THREE.MeshLambertMaterial({ color: 0x3d4144 }));
+  body.position.y = 0.455;
   group.add(body);
-  const plateMat = new THREE.MeshLambertMaterial({ color: 0x2c2c2a });
+
+  // Piano superiore
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.04, 0.74), new THREE.MeshLambertMaterial({ color: 0x222426 }));
+  top.position.y = 0.93;
+  group.add(top);
+
+  // Piastre rialzate
+  const plateMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
   [[-0.22, -0.15], [0.22, -0.15], [-0.22, 0.15], [0.22, 0.15]].forEach(([px, pz]) => {
-    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 10), plateMat);
-    plate.position.set(px, 0.72, pz);
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 10), plateMat);
+    plate.position.set(px, 0.96, pz);
     group.add(plate);
   });
+
+  // Manopole rosse frontali
+  [-0.28, -0.09, 0.09, 0.28].forEach(kx => {
+    const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 8), new THREE.MeshLambertMaterial({ color: 0xbf360c }));
+    knob.rotation.x = Math.PI / 2;
+    knob.position.set(kx, 0.75, 0.37);
+    group.add(knob);
+  });
+
   group.position.set(x, 0, z);
   group.visible = false;
   interiorScene.add(group);
