@@ -397,8 +397,8 @@
 
   <div id="action-buttons">
     <div class="action-btn" id="btnPhoto">📷</div>
-    <div class="action-btn" id="btnAlter">👆</div>
-	<div class="action-btn" id="btnAction">🖐️</div>
+    <div class="action-btn" id="btnAlter">👇</div>
+	<div class="action-btn" id="btnAction">👆️</div>
   </div>
 
   <div id="hud-top-right">
@@ -7642,7 +7642,7 @@ function updateClockHud() {
   };
   
   document.getElementById('clock-line').textContent =
-    `🕑 ${h}:${m} 📅 ${clock.dayInSeason + 1}° di ${seasonIcons[clock.season.name] || clock.season.name}`;
+    `🕑 ${h}:${m}  📅 ${clock.dayInSeason + 1}° di ${seasonIcons[clock.season.name] || clock.season.name}`;
   document.getElementById('weather-line').textContent =
     `${WEATHER_LABELS[currentWeather]}${clock.sleeping ? ' — sto dormendo...' : ''}`;
   document.getElementById('health-face').textContent = HEALTH_FACES[healthIndex];
