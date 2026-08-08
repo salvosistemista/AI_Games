@@ -397,8 +397,8 @@
 
   <div id="action-buttons">
     <div class="action-btn" id="btnPhoto">📷</div>
-    <div class="action-btn" id="btnAction">🖐️</div>
-	<div class="action-btn" id="btnAlter">👆</div>
+    <div class="action-btn" id="btnAlter">👆</div>
+	<div class="action-btn" id="btnAction">🖐️</div>
   </div>
 
   <div id="hud-top-right">
@@ -4530,11 +4530,14 @@ function updateTouchInput() {
 }
 
 /* Pulsanti azione touch */
-let touchActionDown = false, touchPhotoDown = false;
+let touchActionDown = false, touchPhotoDown = false, touchAlterDown; 
 const btnAction = document.getElementById('btnAction');
+const btnAlter = document.getElementById('btnAlter');
 const btnPhoto = document.getElementById('btnPhoto');
 btnAction.addEventListener('touchstart', e => { e.preventDefault(); touchActionDown = true; }, { passive: false });
 btnAction.addEventListener('touchend', () => touchActionDown = false);
+btnAlter.addEventListener('touchstart', e => { e.preventDefault(); touchAlterDown = true; }, { passive: false });
+btnAlter.addEventListener('touchend', () => touchAlterDown = false);
 btnPhoto.addEventListener('touchstart', e => { e.preventDefault(); touchPhotoDown = true; }, { passive: false });
 btnPhoto.addEventListener('touchend', () => touchPhotoDown = false);
 
@@ -6549,15 +6552,23 @@ function confirmPlacement() {
 let prevKeyB = false;
 let prevPadY = false;
 let prevPadDpadLeft = false;
+let prevAlter = false;
 function updateSecondaryButtonInput() {
   if (sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || insideHouse || clock.sleeping || isAnyOverlayOpen()) return;
+  
   const keyB = !!keys['KeyB'];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads[0];
   const yBtn = !!(pad && pad.buttons[3] && pad.buttons[3].pressed);
   const dpadLeft = !!(pad && pad.buttons[14] && pad.buttons[14].pressed);
-  const pressed = keyB || yBtn || dpadLeft;
+  
+  // Aggiunto il controllo per la variabile touch
+  const alterTouch = !!touchAlterDown;
+  
+  // Unifica tutti gli input
+  const pressed = keyB || yBtn || dpadLeft || alterTouch;
 
+  // Rileva la singola pressione (front di salita)
   if (pressed && !prevKeyB) {
     if (placementMode) exitPlacementMode();
     else if (fishingState !== 'idle') cancelFishing();
@@ -6565,6 +6576,7 @@ function updateSecondaryButtonInput() {
       const near = findNearestInteractable();
       const editViaB = near && near.type === 'placedItem' && EDIT_VIA_SECONDARY.has(near.obj.userData.placedEntry.itemType);
       const hasSeaItems = SEA_ITEM_TYPES.some(t => inventory[t] > 0);
+      
       if (near && near.type === 'fishingSpot' && near.obj.userData.zone === 'mare' && hasSeaItems) {
         releaseSeaItemsNear(near.obj.position.x, near.obj.position.z);
       } else if (editViaB && !fenceEditMenuOpen) {
@@ -6574,6 +6586,8 @@ function updateSecondaryButtonInput() {
       }
     }
   }
+  
+  // Aggiorna lo stato precedente con il valore cumulativo di 'pressed'
   prevKeyB = pressed;
 }
 
