@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Isola Cozy - Scaffold</title>
+<title>Cozy Island</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1a2a; font-family: -apple-system, sans-serif; touch-action: none; }
@@ -132,10 +132,14 @@
   #hud-top-right {
     position: absolute; top: 8px; right: 8px; display: flex; gap: 8px;
   }
-  .inv-item {
-    background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; border-radius: 8px;
-    padding: 5px 9px; display: flex; align-items: center; gap: 5px;
-  }
+.inv-item {
+  background: rgba(0,0,0,0.4); color: #fff; display: flex; align-items: center;
+  
+  font-size: 26px;        /* da 13px a 26px */
+  border-radius: 16px;    /* da 8px a 16px */
+  padding: 10px 18px;     /* da 5px 9px a 10px 18px */
+  gap: 10px;              /* da 5px a 10px */
+}
   #buildChip.active { background: rgba(255,209,102,0.35); }
 
   /* Overlay del menu Costruisci */
@@ -393,12 +397,13 @@
 
   <div id="action-buttons">
     <div class="action-btn" id="btnPhoto">📷</div>
-    <div class="action-btn" id="btnAction">⚒️</div>
+    <div class="action-btn" id="btnAction">🖐️</div>
+	<div class="action-btn" id="btnAlter">👆</div>
   </div>
 
   <div id="hud-top-right">
-    <div class="inv-item" id="buildChip" style="pointer-events:auto;"><span>🏗️</span><span>costruisci</span></div>
-    <div class="inv-item" id="inventoryToggleBtn" style="pointer-events:auto;"><span>🎒</span><span>inv</span></div>
+    <div class="inv-item" id="buildChip" style="pointer-events:auto;"><span>🛠️</span></div>
+    <div class="inv-item" id="inventoryToggleBtn" style="pointer-events:auto;"><span>🎒</span></div>
   </div>
 </div>
 
@@ -554,7 +559,7 @@
 
 <div id="main-menu-overlay" class="open">
   <div id="main-menu-panel">
-    <h1>🏝️ Isola Cozy</h1>
+    <h1>🏝️ Cozy Island</h1>
     <div class="menu-btn" id="mainMenuContinueBtn">Continua</div>
     <div class="menu-btn" id="mainMenuNewBtn">Nuova avventura</div>
     <div class="menu-btn" id="mainMenuOptionsBtn">Opzioni</div>
@@ -4128,7 +4133,8 @@ clock.on('day', () => {
    ========================================================================= */
 function buildPlayerGroup() {
   const player = new THREE.Group();
-  const s = clock && clock.season ? clock.season.name : "Primavera";
+  const s = clock.season.name;
+
 
   // --- MATERIALI COMUNI ---
   const skinMat = new THREE.MeshLambertMaterial({ color: 0xe8b88a });
@@ -7556,22 +7562,22 @@ function handleAction(target) {
 }
 
 const INTERACT_HINTS = {
-  tent: 'Vicino alla tenda — [E] per dormire',
-  workbench: 'Banco da lavoro — [E] per creare oggetti',
-  messageBottle: 'Una bottiglietta di vetro — [E] per raccoglierla',
-  gratefulBottle: 'Una bottiglietta di vetro — [E] per raccoglierla',
-  seaItem: 'Un animaletto di mare — [E] per raccoglierlo',
-  can: 'Una lattina luccicante — [E] per lavorarla',
-  fireflySwarm: 'Le lucciole! — [E] per raccoglierne 3',
-  starFragment: 'Un frammento di stella — [E] per raccoglierlo',
-  fishingSpot: 'Punto di pesca — [E] per lanciare l\'amo',
-  ferryDock: 'Traghetto postale — [E] per commerciare',
-  placedItem: 'Oggetto piazzato — [E] per modificare',
-  fruitTree: 'Albero da frutta — [E] per raccogliere',
-  woodTree: 'Albero da legna — [E] per colpire',
-  rock: 'Roccia — [E] per colpire',
-  semeGrano: 'Un seme di grano — [E] per raccoglierlo',
-  semeFiore: 'Un seme di fiore — [E] per raccoglierlo',
+  tent: 'Vicino alla tenda\n[E] per dormire',
+  workbench: 'Banco da lavoro\n[E] per creare oggetti',
+  messageBottle: 'Una bottiglietta di vetro\n[E] per raccoglierla',
+  gratefulBottle: 'Una bottiglietta di vetro\n[E] per raccoglierla',
+  seaItem: 'Un animaletto di mare\n[E] per raccoglierlo',
+  can: 'Una lattina luccicante\n[E] per lavorarla',
+  fireflySwarm: 'Le lucciole!\n[E] per raccoglierne 3',
+  starFragment: 'Un frammento di stella\n[E] per raccoglierlo',
+  fishingSpot: 'Punto di pesca\n[E] per lanciare l\'amo',
+  ferryDock: 'Traghetto postale\n[E] per commerciare',
+  placedItem: 'Oggetto piazzato\n[E] per modificare',
+  fruitTree: 'Albero da frutta\n[E] per raccogliere',
+  woodTree: 'Albero da legna\n[E] per colpire',
+  rock: 'Roccia\n[E] per colpire',
+  semeGrano: 'Un seme di grano\n[E] per raccoglierlo',
+  semeFiore: 'Un seme di fiore\n[E] per raccoglierlo',
 };
 
 const MESSAGE_TEXT = "A chiunque legga questo messaggio: quest'isola ora è tua. Divertiti ma tienila pulita. PS: attento alle lucciole... con qualcosa che luccica possono illuminarti la via!";
@@ -7613,8 +7619,16 @@ const batteryCells = document.querySelectorAll('.battery-cell');
 function updateClockHud() {
   const h = String(clock.hour).padStart(2, '0');
   const m = String(clock.minuteOfHour).padStart(2, '0');
+  
+  const seasonIcons = {
+  "Primavera": "🌸",
+  "Estate": "☀️",
+  "Autunno": "🍂",
+  "Inverno": "❄️"
+  };
+  
   document.getElementById('clock-line').textContent =
-    `${h}:${m} - Giorno ${clock.dayInSeason + 1} di ${clock.season.name}`;
+    `🕑 ${h}:${m} 📅 ${clock.dayInSeason + 1}° di ${seasonIcons[clock.season.name] || clock.season.name}`;
   document.getElementById('weather-line').textContent =
     `${WEATHER_LABELS[currentWeather]}${clock.sleeping ? ' — sto dormendo...' : ''}`;
   document.getElementById('health-face').textContent = HEALTH_FACES[healthIndex];
@@ -7624,10 +7638,10 @@ function updateClockHud() {
 
 function fieldHintText(d) {
   const label = d.fieldKind === 'grano' ? 'Campo di grano' : 'Aiuola di fiori';
-  if (d.ready) return `${label} pronto — [E] per raccogliere`;
+  if (d.ready) return `${label} pronto\n[E] per raccogliere`;
   if (d.planted) return `${label} in crescita...`;
-  if (!hasHoe) return `${label} — serve la Zappa per coltivarlo`;
-  return `${label} — [E] per coltivare (2 semi, 3 acqua)`;
+  if (!hasHoe) return `${label}\nserve la Zappa per coltivarlo`;
+  return `${label}\n[E] per coltivare (2 semi, 3 acqua)`;
 }
 
 function checkInteractions() {
@@ -7639,7 +7653,7 @@ function checkInteractions() {
     if (input.actionJustPressed) confirmPlacement();
     hintEl.textContent = localizeHint(
       `Piazzamento ${ITEM_LABEL_FULL[placementItemType]} — ${activeGhost().userData.valid ? 'posizione valida' : 'posizione non valida'}\n` +
-      `[E] conferma — [B] per uscire — rimasti: ${inventory[ITEM_INV_KEY[placementItemType]]}`);
+      `\n[E] conferma — [B] per uscire — rimasti: ${inventory[ITEM_INV_KEY[placementItemType]]}`);
     hintEl.classList.add('show');
     return;
   }
@@ -7658,22 +7672,22 @@ function checkInteractions() {
     const depleted = (target.type === 'fruitTree' && d.harvested) || ((target.type === 'woodTree' || target.type === 'rock') && d.felled);
     if (!depleted) {
       hint = target.type === 'placedItem'
-        ? (d.placedEntry.itemType === 'casetta' ? 'Casetta — [E] per entrare'
-          : d.placedEntry.itemType === 'fontana' ? 'Fontana — [E] per raccogliere acqua — [B] per modificare'
+        ? (d.placedEntry.itemType === 'casetta' ? 'Casetta\n[E] per entrare'
+          : d.placedEntry.itemType === 'fontana' ? 'Fontana\n[E] per raccogliere acqua — [B] per modificare'
           : (d.placedEntry.itemType === 'campoGrano' || d.placedEntry.itemType === 'aiuolaFiori')
-          ? fieldHintText(d) + ' — [B] per modificare'
-          : d.placedEntry.itemType === 'sediaDondolo' ? 'Sedia a dondolo — [E] per sedersi — [B] per modificare'
-          : `${ITEM_LABEL_FULL[d.placedEntry.itemType]} — [E] per modificare`)
+          ? fieldHintText(d) + '\n[B] per modificare'
+          : d.placedEntry.itemType === 'sediaDondolo' ? 'Sedia a dondolo\n[E] per sedersi — [B] per modificare'
+          : `${ITEM_LABEL_FULL[d.placedEntry.itemType]}\n[E] per modificare`)
         : (target.type === 'fishingSpot' && d.zone === 'laghetto' && isLakeFrozen())
         ? 'Il laghetto è gelato — niente pesca fino a primavera'
         : (target.type === 'fishingSpot' && !fishingRod)
         ? 'Punto di pesca — serve la Canna da Pesca'
         : (target.type === 'fishingSpot' && d.zone === 'mare' && SEA_ITEM_TYPES.some(t => inventory[t] > 0))
-        ? 'Punto di pesca — [E] per pescare — [B] per rigettare in mare gli animaletti'
+        ? 'Punto di pesca\n[E] per pescare — [B] per rigettare in mare gli animaletti'
         : (target.type === 'fireflySwarm' && firefliesCaughtTonight)
-        ? 'Le lucciole! — già raccolte stanotte, torna domani'
+        ? 'Le lucciole!\ngià raccolte stanotte, torna domani'
         : target.type === 'trash'
-        ? `${TRASH_BY_ID[d.typeId].label} — [E] per raccogliere (${d.hits}/${d.maxHits})`
+        ? `${TRASH_BY_ID[d.typeId].label}\n[E] per raccogliere (${d.hits}/${d.maxHits})`
         : INTERACT_HINTS[target.type];
       if (input.actionJustPressed && !isAnyOverlayOpen()) handleAction(target);
     }
