@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Cozy Island v1.5</title>
+<title>Cozy Island v1.6</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1a2a; font-family: -apple-system, sans-serif; touch-action: none; }
@@ -155,6 +155,15 @@
     position: absolute; top: 68px; right: 8px; background: rgba(0,0,0,0.45); color: #fff;
     font-size: 12px; border-radius: 8px; padding: 6px 10px;
   }
+  #basementExitBtn {
+    position: absolute; top: 68px; right: 8px; background: rgba(0,0,0,0.45); color: #fff;
+    font-size: 12px; border-radius: 8px; padding: 6px 10px; display: none; pointer-events: none;
+  }
+  /* Nel piano inferiore si vede solo il tasto per risalire, non quello per
+     uscire del tutto dalla casa (evita di uscire "per sbaglio" da sottoterra) */
+  body.inside-basement #houseExitBtn { display: none; }
+  body.inside-basement #basementExitBtn { display: block; pointer-events: auto; }
+  body.inside-basement .house-pan-btn { display: none; }
   #houseSelectionLabel {
     position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%);
     background: rgba(0,0,0,0.5); color: #fff; font-size: 13px; border-radius: 10px;
@@ -547,6 +556,7 @@
 
 <div id="house-hud">
   <div id="houseExitBtn" style="pointer-events:auto;">Esci 🚪</div>
+  <div id="basementExitBtn">Sali 🔼</div>
   <div id="houseSelectionLabel"></div>
   <div id="housePanLeftBtn" class="house-pan-btn" style="left:8px;">‹</div>
   <div id="housePanRightBtn" class="house-pan-btn" style="right:8px;">›</div>
@@ -2622,6 +2632,14 @@ const RECIPES = [
     once: true,
     isDone: () => stoveBuilt,
     craft: () => { stoveBuilt = true; stoveMesh.visible = true; maybeShowTutorial('fornellino'); },
+  },
+  {
+    id: 'scala',
+    name: 'Scala per il piano inferiore',
+    cost: { pietra: 15, legna: 15 },
+    once: true,
+    isDone: () => stairsBuilt,
+    craft: () => { stairsBuilt = true; stairsMesh.visible = true; maybeShowTutorial('scala'); },
   },
   {
     id: 'fontana',
@@ -5587,6 +5605,7 @@ let casettaBuilt = false;
 let hasHoe = false;
 let fishingRod = null; // { integrity, maxIntegrity, professional } oppure null se non posseduta
 let stoveBuilt = false;
+let stairsBuilt = false;
 let fireflyCaughtEver = false;
 let portableLampBuilt = false;
 function makeCasetta(x, z, yaw) {
@@ -8143,6 +8162,11 @@ const TUTORIAL_CONTENT = {
       "Attenzione: senz'acqua per 3 giorni la crescita si ferma, e dopo 6 giorni il campo appassisce e va riseminato da capo. Anche l'Annaffiatoio, dopo 30 giorni, si consuma e va ricreato. 🚿",
     ],
   },
+  scala: {
+    pages: [
+      "Hai costruito la scala per il piano inferiore! Interagisci con lei per scendere: per ora è una stanza vuota, ma un giorno potrebbe diventare qualcosa di speciale. 🪜",
+    ],
+  },
 };
 
 let tutorialSeen = {}; // { idTutorial: true, ... } — salvato con la partita
@@ -8545,8 +8569,99 @@ function makeStove(x, z) {
   return group;
 }
 const stoveMesh = makeStove(1.0, -3.4);
+// Scala per il piano inferiore (sostituisce il marker riservato)
+function makeStairs(x, z) {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2c });
+  const railMat = new THREE.MeshLambertMaterial({ color: 0x4a2e16 });
+
+  // Gradini che scendono verso il basso (verso il "piano inferiore")
+  const STEP_COUNT = 6;
+  for (let i = 0; i < STEP_COUNT; i++) {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.14, 0.32), woodMat);
+    step.position.set(0, -0.14 * i, 0.16 + i * 0.3);
+    step.castShadow = true;
+    group.add(step);
+  }
+
+  // Ringhiere laterali
+  [-0.5, 0.5].forEach(rx => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, STEP_COUNT * 0.3), railMat);
+    rail.position.set(rx, -0.14 * (STEP_COUNT - 1) / 2 + 0.35, 0.16 + (STEP_COUNT * 0.3) / 2 - 0.15);
+    group.add(rail);
+  });
+
+  // Botola/apertura nel pavimento, per far capire visivamente che si scende
+  const hole = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, STEP_COUNT * 0.32), new THREE.MeshBasicMaterial({ color: 0x1a1410 }));
+  hole.position.set(0, -0.02, 0.16 + (STEP_COUNT * 0.32) / 2 - 0.16);
+  group.add(hole);
+
+  group.position.set(x, 0, z);
+  group.visible = false;
+  interiorScene.add(group);
+  return group;
+}
+const stairsMesh = makeStairs(-3.4, 1.6);
 makeReservedSpot(0, -3.6, 0xff5a4a);     // futuro: caminetto (parete di fondo, centrale)
-makeReservedSpot(-3.4, 1.6, 0x8ab0ff);   // futuro: scala per il piano inferiore
+
+/* =========================================================================
+   PIANO INFERIORE: stanza vuota raggiungibile tramite la scala. Per ora
+   non c'è nulla da fare qui dentro — solo un ambiente pronto per il futuro.
+   Scena/camera dedicate, sullo stesso modello dell'interno della casa.
+   ========================================================================= */
+const basementScene = new THREE.Scene();
+basementScene.background = new THREE.Color(0x14100c);
+basementScene.add(new THREE.AmbientLight(0xd8c8b0, 0.7));
+const basementLamp = new THREE.PointLight(0xffe0b0, 0.9, 15, 2);
+basementLamp.position.set(0, 3, 0);
+basementScene.add(basementLamp);
+
+const basementFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(8, 8),
+  new THREE.MeshLambertMaterial({ color: 0x5a4a3a })
+);
+basementFloor.rotation.x = -Math.PI / 2;
+basementScene.add(basementFloor);
+
+const basementWallMat = new THREE.MeshLambertMaterial({ color: 0x8a7a68 });
+[
+  { pos: [0, 1.75, -4], size: [8, 3.5, 0.3] },
+  { pos: [-4, 1.75, 0], size: [0.3, 3.5, 8] },
+  { pos: [4, 1.75, 0], size: [0.3, 3.5, 8] },
+].forEach(({ pos, size }) => {
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(...size), basementWallMat);
+  wall.position.set(...pos);
+  basementScene.add(wall);
+});
+
+const basementCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+basementCamera.position.set(0, 3.2, 6.8);
+basementCamera.lookAt(0, 1.2, -1);
+
+let insideBasement = false;
+let savedHouseSelectedIndex = 0;
+
+function enterBasement() {
+  if (!stairsBuilt || insideBasement) return;
+  insideBasement = true;
+  savedHouseSelectedIndex = houseSelectedIndex;
+  document.body.classList.add('inside-basement');
+  document.getElementById('houseSelectionLabel').classList.remove('show');
+}
+function exitBasement() {
+  insideBasement = false;
+  document.body.classList.remove('inside-basement');
+  houseSelectedIndex = savedHouseSelectedIndex;
+}
+
+let prevBasementExit = false;
+function updateBasementInput() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pad = pads[0];
+  const exitNow = !!(keys['KeyE'] || keys['KeyB'] || (pad && (pad.buttons[0].pressed || pad.buttons[1].pressed)));
+  if (exitNow && !prevBasementExit) exitBasement();
+  prevBasementExit = exitNow;
+}
 
 let insideHouse = false;
 let savedPlayerPos = null;
@@ -8561,6 +8676,7 @@ const HOUSE_FURNITURE_ALL = [
   { mesh: chestGroup, label: 'Cassa', action: () => openStorageMenu('cassa') },
   { mesh: fridgeGroup, label: 'Frigorifero', action: () => openStorageMenu('frigorifero') },
   { mesh: stoveMesh, label: 'Fornellino', visible: () => stoveBuilt, action: () => openCookMenu() },
+  { mesh: stairsMesh, label: 'Scala', visible: () => stairsBuilt, action: () => enterBasement() },
 ];
 function houseFurnitureList() { return HOUSE_FURNITURE_ALL.filter(f => !f.visible || f.visible()); }
 let houseSelectedIndex = 0;
@@ -8630,7 +8746,9 @@ function enterHouse() {
 }
 function exitHouse() {
   insideHouse = false;
+  insideBasement = false; // se si esce direttamente dal piano inferiore, resetta anche quello
   document.body.classList.remove('inside-house');
+  document.body.classList.remove('inside-basement');
   document.getElementById('houseSelectionLabel').classList.remove('show');
   if (savedPlayerPos) player.position.copy(savedPlayerPos);
   player.userData.yaw = savedPlayerYaw;
@@ -8638,11 +8756,13 @@ function exitHouse() {
 }
 document.getElementById('houseExitBtn').addEventListener('click', exitHouse);
 document.getElementById('houseExitBtn').addEventListener('touchstart', e => { e.preventDefault(); exitHouse(); }, { passive: false });
+document.getElementById('basementExitBtn').addEventListener('click', exitBasement);
+document.getElementById('basementExitBtn').addEventListener('touchstart', e => { e.preventDefault(); exitBasement(); }, { passive: false });
 
 /* Tocco/click diretto su un mobile: raycast dal punto toccato/cliccato */
 const houseRaycaster = new THREE.Raycaster();
 function handleHouseTapAt(clientX, clientY) {
-  if (!insideHouse || houseSubMenuOpen()) return;
+  if (!insideHouse || insideBasement || houseSubMenuOpen()) return;
   const rect = renderer.domElement.getBoundingClientRect();
   const ndc = new THREE.Vector2(
     ((clientX - rect.left) / rect.width) * 2 - 1,
@@ -8674,7 +8794,7 @@ const HOUSE_DRAG_TAP_THRESHOLD = 10; // px sotto cui è ancora considerato un ta
 const HOUSE_DRAG_SENSITIVITY = 0.014; // unità mondo per pixel trascinato
 
 renderer.domElement.addEventListener('pointerdown', e => {
-  if (!insideHouse || houseSubMenuOpen()) return;
+  if (!insideHouse || insideBasement || houseSubMenuOpen()) return;
   houseTouchDragging = true;
   houseTouchMoved = false;
   houseTouchStartClientX = e.clientX;
@@ -8857,6 +8977,7 @@ function serializeGame() {
     messageBottleCollected,
     hasHoe,
     stoveBuilt,
+    stairsBuilt,
     fontanaPlacedEver,
     tutorialSeen,
     grainSeedsSpawnedTotal,
@@ -8967,6 +9088,8 @@ function loadGame() {
   hasHoe = !!data.hasHoe;
   stoveBuilt = !!data.stoveBuilt;
   stoveMesh.visible = stoveBuilt;
+  stairsBuilt = !!data.stairsBuilt;
+  stairsMesh.visible = stairsBuilt;
   fontanaPlacedEver = !!data.fontanaPlacedEver;
   tutorialSeen = data.tutorialSeen || {};
   grainSeedsSpawnedTotal = data.grainSeedsSpawnedTotal || 0;
@@ -9153,8 +9276,13 @@ function animate() {
     // niente movimento del player: si interagisce toccando i mobili o
     // selezionandoli da tastiera/gamepad.
     updateClockHud();
-    updateHouseInput(dt);
-    renderer.render(interiorScene, interiorCamera);
+    if (insideBasement) {
+      updateBasementInput();
+      renderer.render(basementScene, basementCamera);
+    } else {
+      updateHouseInput(dt);
+      renderer.render(interiorScene, interiorCamera);
+    }
     return;
   }
 
