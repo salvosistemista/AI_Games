@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Cozy Island v1.6</title>
+<title>Cozy Island v2.0</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1a2a; font-family: -apple-system, sans-serif; touch-action: none; }
@@ -17,8 +17,9 @@
     background: rgba(0,0,0,0.4); padding: 6px 10px; border-radius: 6px; line-height: 1.5;
   }
   #clock-line { margin-bottom: 4px; }
-  #weather-line { margin-top: 4px; opacity: 0.85; }
+  #weather-line { margin-bottom: 4px; opacity: 0.85; }
   #health-row { display: flex; align-items: center; gap: 6px; }
+  #gradimento-line { margin-top: 4px; }
   #health-face { font-size: 14px; }
   #health-battery {
     display: flex; align-items: center; gap: 2px; border: 1.5px solid rgba(255,255,255,0.8);
@@ -142,6 +143,22 @@
 }
   #buildChip.active { background: rgba(255,209,102,0.35); }
 
+  /* Su mobile in portrait, bevi/mangia diventano piccoli, leggeri e quasi
+     trasparenti, spostati in verticale al centro destra, ben sopra il tasto
+     azione (il più a destra dei tre pulsanti touch in basso). Si escono
+     apposta dal flusso di #hud-top-right con position:fixed, così non
+     spingono via l'icona dello zaino. */
+  @media (orientation: portrait) {
+    body:not(.desktop-mode) #drinkBtn,
+    body:not(.desktop-mode) #eatBtn {
+      position: fixed; right: 26px; top: auto;
+      font-size: 14px; padding: 5px 9px; border-radius: 10px; gap: 4px;
+      background: rgba(0,0,0,0.18); opacity: 0.55;
+    }
+    body:not(.desktop-mode) #eatBtn { bottom: 226px; }
+    body:not(.desktop-mode) #drinkBtn { bottom: 168px; }
+  }
+
   /* Overlay del menu Costruisci */
   #build-overlay {
     position: fixed; inset: 0; z-index: 30; display: none;
@@ -164,6 +181,13 @@
   body.inside-basement #houseExitBtn { display: none; }
   body.inside-basement #basementExitBtn { display: block; pointer-events: auto; }
   body.inside-basement .house-pan-btn { display: none; }
+  /* Evidenza permanente delle ore di riscaldamento rimaste, sempre visibile
+     mentre si è in casa (nascosta nel piano inferiore, dove non serve) */
+  #stufettaHud {
+    position: absolute; top: 118px; left: 8px; background: rgba(0,0,0,0.45); color: #fff;
+    font-size: 12px; border-radius: 8px; padding: 6px 10px; display: none;
+  }
+  body.inside-house:not(.inside-basement) #stufettaHud { display: block; }
   #houseSelectionLabel {
     position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%);
     background: rgba(0,0,0,0.5); color: #fff; font-size: 13px; border-radius: 10px;
@@ -412,6 +436,7 @@
 <div id="hud">
   <div id="debug">
     <div id="clock-line"></div>
+    <div id="weather-line"></div>
     <div id="health-row">
       <span id="health-face">🙂</span>
       <div id="health-battery">
@@ -421,7 +446,7 @@
       </div>
       <span id="sick-indicator" title="Malato — serve uno sciroppo">🤒</span>
     </div>
-    <div id="weather-line"></div>
+    <div id="gradimento-line" title="3Vago — indice di gradimento dell'isola">🌟 <span id="gradimento-stelle"></span></div>
   </div>
   <div id="hint-line"></div>
   <div id="toast-container"></div>
@@ -557,6 +582,7 @@
 <div id="house-hud">
   <div id="houseExitBtn" style="pointer-events:auto;">Esci 🚪</div>
   <div id="basementExitBtn">Sali 🔼</div>
+  <div id="stufettaHud"></div>
   <div id="houseSelectionLabel"></div>
   <div id="housePanLeftBtn" class="house-pan-btn" style="left:8px;">‹</div>
   <div id="housePanRightBtn" class="house-pan-btn" style="right:8px;">›</div>
@@ -2496,6 +2522,14 @@ const placedPoints = [];  // per tenere le risorse spaziate tra loro
 let toolTier = 1; // 1 = attrezzo base, 2 = rinforzato (meno colpi per abbattere)
 const RECIPES = [
   {
+    id: 'lavora_lattina',
+    name: 'Lavora Lattina → Alluminio',
+    cost: { lattine: 1 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.alluminio++; },
+  },
+  {
     id: 'ponte',
     name: 'Ponte',
     cost: { legna: 12, pietra: 6 },
@@ -2640,6 +2674,14 @@ const RECIPES = [
     once: true,
     isDone: () => stairsBuilt,
     craft: () => { stairsBuilt = true; stairsMesh.visible = true; maybeShowTutorial('scala'); },
+  },
+  {
+    id: 'stufetta',
+    name: 'Stufetta',
+    cost: { pietra: 5, alluminio: 5, selce: 3 },
+    once: true,
+    isDone: () => stufettaBuilt,
+    craft: () => { stufettaBuilt = true; stufettaMesh.visible = true; maybeShowTutorial('stufetta'); },
   },
   {
     id: 'fontana',
@@ -3473,6 +3515,7 @@ function updateFerry() {
     // ritenta al prossimo giro (il giorno dopo, o appena si scende sotto
     // i 3 pezzi entro la stessa ora)
   }
+  if (hour === 14) checkGradimento1400(); // stessa "istantanea" oraria del traghetto
   if (ferryPresent && hour >= 17) {
     departFerry();
   }
@@ -3885,6 +3928,65 @@ function spawnTrashItem(zone) {
 
 function countTrash() { return interactables.filter(it => it.type === 'trash').length; }
 
+/* =========================================================================
+   3VAGO: indice di gradimento dell'isola (10-50), mostrato in stelline da 1
+   a 5 (indice/10 arrotondato per eccesso). Parte da 10 (1 stellina) e non
+   può mai scendere sotto quel valore. Alcune condizioni si valutano alle
+   14:00 di ogni giorno (insieme al traghetto), altre a fine giornata
+   (mezzanotte, sul giorno appena concluso: sonno e sete).
+   ========================================================================= */
+let gradimentoIndice = 10;
+function gradimentoStelle() { return Math.ceil(gradimentoIndice / 10); }
+function adjustGradimento(delta) {
+  gradimentoIndice = Math.max(10, Math.min(50, gradimentoIndice + delta));
+}
+
+// Conta quanti oggetti di un certo tipo sono "presenti" (disponibili) contro
+// quanti sono "in rigenerazione" (es. abbattuti, in attesa di ricrescere).
+function countPresentiVsRigenerazione(type, pendingFlagKey) {
+  let presenti = 0, inRigenerazione = 0;
+  for (const it of interactables) {
+    if (it.type !== type) continue;
+    if (it.obj.userData[pendingFlagKey]) inRigenerazione++; else presenti++;
+  }
+  return { presenti, inRigenerazione };
+}
+
+let gradimento1400LastDay = -1;
+function checkGradimento1400() {
+  const day = clock.dayIndex;
+  if (gradimento1400LastDay === day) return;
+  gradimento1400LastDay = day;
+
+  adjustGradimento(ferryPresent ? 1 : -1); // arrivo / mancato arrivo del traghetto
+
+  adjustGradimento(countTrash() === 0 ? 1 : -1); // spazzatura in giro per le isole
+
+  const legna = countPresentiVsRigenerazione('woodTree', 'felled');
+  if (legna.presenti > legna.inRigenerazione) adjustGradimento(1);
+  else if (legna.inRigenerazione > legna.presenti) adjustGradimento(-1);
+
+  const rocce = countPresentiVsRigenerazione('rock', 'felled');
+  if (rocce.presenti > rocce.inRigenerazione) adjustGradimento(1);
+  else if (rocce.inRigenerazione > rocce.presenti) adjustGradimento(-1);
+
+  const frutta = countPresentiVsRigenerazione('fruitTree', 'harvested');
+  if (frutta.presenti > frutta.inRigenerazione) adjustGradimento(1);
+  else if (frutta.inRigenerazione > frutta.presenti) adjustGradimento(-1);
+}
+
+// Tracciati durante il giorno, valutati al cambio di giorno (sul giorno
+// appena concluso) e poi azzerati per il giorno nuovo.
+let sleepMinutesToday = 0;
+let hadThirstPenaltyToday = false;
+clock.on('day', () => {
+  if (sleepMinutesToday < 7 * 60) adjustGradimento(-1); // dormito meno di 7 ore in giornata
+  if (seteAttiva && hadThirstPenaltyToday) adjustGradimento(-1); // troppe ore senza bere
+  sleepMinutesToday = 0;
+  hadThirstPenaltyToday = false;
+});
+
+
 // 50 oggetti spazzatura sparsi su entrambe le isole all'avvio di una nuova
 // partita (chiamata più sotto, subito dopo la generazione del mondo).
 function spawnInitialTrash() {
@@ -4103,6 +4205,7 @@ function collectGratefulBottle(target) {
   scene.remove(target.obj);
   const idx = interactables.indexOf(target);
   if (idx !== -1) interactables.splice(idx, 1);
+  adjustGradimento(1); // aprire una bottiglia di ringraziamento fa piacere all'isola
   // Il regalo si decide e si applica ESATTAMENTE ora, all'apertura.
   const reward = Math.random() < 0.7 ? grantMysteryDayReduction() : null;
   const text = reward
@@ -4595,7 +4698,7 @@ function updateDevDebugPanel() {
     `x: ${player.position.x.toFixed(2)}   z: ${player.position.z.toFixed(2)}`,
     `Spazzatura non raccolta: ${countTrash()}`,
     `Animaletti di mare non raccolti: ${interactables.filter(it => it.type === 'seaItem').length}`,
-    `Lattine di alluminio non raccolte: ${interactables.filter(it => it.type === 'can').length}`,
+    `Lattine non raccolte: ${interactables.filter(it => it.type === 'can').length}`,
     `Semi non raccolti: ${interactables.filter(it => it.type === 'semeGrano' || it.type === 'semeFiore').length}`,
     `Frammenti di stella non raccolti: ${interactables.filter(it => it.type === 'starFragment').length}`,
     `Giorni al più vecchio albero da legna: ${daysUntilOldestPending(trees, it => it.obj.userData.felled, it => it.obj.userData.daysSinceFelled, treeRegrowDays)}`,
@@ -5606,6 +5709,96 @@ let hasHoe = false;
 let fishingRod = null; // { integrity, maxIntegrity, professional } oppure null se non posseduta
 let stoveBuilt = false;
 let stairsBuilt = false;
+
+/* =========================================================================
+   STUFETTA INVERNALE: si accende solo d'Inverno, consumando 1 legna per
+   24 ore di calore. Aggiungere legna a stufetta già accesa somma tempo con
+   la formula 24 + (24 - oreResidue) invece di sommare linearmente: più
+   tardi la rifornisci, meno "spreco" c'è. Le ore residue scendono col
+   tempo di gioco: al ritmo pieno se si è in casa, dimezzato se si è fuori
+   (comunque solo d'Inverno, l'unica stagione in cui può essere accesa).
+   ========================================================================= */
+let stufettaBuilt = false;
+let stufettaAccesa = false;
+let stufettaOreResidue = 0;
+let coldMinutesInHouse = 0; // minuti consecutivi in casa, d'Inverno, a stufetta spenta
+
+function igniteOrFeedStufetta() {
+  if (clock.season.name !== 'Inverno') {
+    showToast('🔥 La stufetta si accende solo d\'Inverno');
+    return;
+  }
+  if (inventory.legna < 1) {
+    showToast('🪵 Serve 1 legna per alimentare la stufetta');
+    return;
+  }
+  inventory.legna -= 1;
+  if (stufettaAccesa) {
+    stufettaOreResidue = 24 + (24 - stufettaOreResidue);
+    showToast(`🔥 Stufetta rifornita — ${Math.round(stufettaOreResidue)}h di calore residue`);
+  } else {
+    stufettaAccesa = true;
+    stufettaOreResidue = 24;
+    showToast('🔥 Stufetta accesa — 24h di calore');
+  }
+  updateStufettaVisual();
+  refreshInventoryHud();
+}
+
+function updateStufettaVisual() {
+  if (!stufettaParts) return;
+  stufettaParts.glow.material.color.setHex(stufettaAccesa ? 0xff7a33 : 0x2b2b2e);
+  stufettaParts.fireLight.intensity = stufettaAccesa ? 0.9 : 0;
+}
+
+// Evidenza permanente (richiesta esplicitamente): quante ore di riscaldamento
+// restano, sempre visibile mentre si è in casa (non nel piano inferiore).
+function updateStufettaHud() {
+  const el = document.getElementById('stufettaHud');
+  if (!stufettaBuilt) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.textContent = stufettaAccesa
+    ? `🔥 ${Math.max(0, Math.round(stufettaOreResidue))}h di calore`
+    : '❄️ Stufetta spenta';
+}
+
+// Consumo delle ore residue nel tempo di gioco (ritmo dimezzato fuori casa)
+function updateStufetta(deltaGameMinutes) {
+  if (!stufettaAccesa || deltaGameMinutes <= 0) return;
+  const rate = (insideHouse && !insideBasement) ? 1 : 0.5;
+  stufettaOreResidue -= (deltaGameMinutes / 60) * rate;
+  if (stufettaOreResidue <= 0) {
+    stufettaOreResidue = 0;
+    stufettaAccesa = false;
+    updateStufettaVisual();
+  }
+}
+
+// La stufetta ha senso solo d'Inverno: cambiando stagione si spegne da sola.
+clock.on('season', () => {
+  if (clock.season.name !== 'Inverno' && stufettaAccesa) {
+    stufettaAccesa = false;
+    stufettaOreResidue = 0;
+    updateStufettaVisual();
+  }
+});
+
+// Freddo in casa: se si resta più di 2 ore (di gioco) in casa, d'Inverno,
+// con la stufetta spenta (o non ancora costruita, non conta), la salute
+// crolla direttamente al minimo. Bere una Tisana resetta il contatore.
+function updateColdExposure(deltaGameMinutes) {
+  const isCold = stufettaBuilt && insideHouse && !insideBasement && clock.season.name === 'Inverno' && !stufettaAccesa;
+  if (!isCold || deltaGameMinutes <= 0) {
+    coldMinutesInHouse = 0;
+    return;
+  }
+  coldMinutesInHouse += deltaGameMinutes;
+  if (coldMinutesInHouse >= 120 && healthIndex > 0) {
+    healthIndex = 0;
+    showToast('🥶 Hai preso troppo freddo: la salute crolla al minimo');
+    refreshInventoryHud();
+  }
+}
 let fireflyCaughtEver = false;
 let portableLampBuilt = false;
 function makeCasetta(x, z, yaw) {
@@ -6465,12 +6658,24 @@ function fieldGrowthDaysRequired(kind) {
 function plantField(entry) {
   const d = entry.mesh.userData;
   const seedKey = d.fieldKind === 'grano' ? 'semiGrano' : 'semiFiori';
-  if (inventory[seedKey] < 2 || inventory.acqua < 3) {
-    showToast('Servono 2 semi e 3 acqua');
+  const WATER_COST = 3;
+  const annaffiatoioLitri = annaffiatoio ? annaffiatoio.litri : 0;
+  const totalWaterAvailable = annaffiatoioLitri + inventory.acqua;
+  if (inventory[seedKey] < 2 || totalWaterAvailable < WATER_COST) {
+    showToast('Servono 2 semi e 3 acqua (va bene anche quella nell\'Annaffiatoio)');
     return;
   }
   inventory[seedKey] -= 2;
-  inventory.acqua -= 3;
+  // Priorità all'acqua dell'Annaffiatoio (se presente), poi quella sfusa in
+  // inventario: evita l'assurdo di non poter seminare perché "l'acqua in
+  // spalla" è finita mentre se ne ha ancora litri nell'Annaffiatoio.
+  let remainingCost = WATER_COST;
+  if (annaffiatoio && annaffiatoio.litri > 0) {
+    const fromAnnaffiatoio = Math.min(annaffiatoio.litri, remainingCost);
+    annaffiatoio.litri -= fromAnnaffiatoio;
+    remainingCost -= fromAnnaffiatoio;
+  }
+  inventory.acqua -= remainingCost;
   d.planted = true;
   d.ready = false;
   d.growthDaysElapsed = 0;
@@ -6525,16 +6730,24 @@ function updateFieldGrowthDaily() {
     if (!d.planted) continue;
 
     d.daysSinceWatered = rainedOrSnowedYesterday ? 0 : (d.daysSinceWatered || 0) + 1;
+    if (d.daysSinceWatered === 0) d.dryPenaltyGiven = false; // riparte il conto: potrà segnalare di nuovo se torna a seccarsi
 
     if (d.daysSinceWatered >= 6) {
       d.planted = false;
       d.ready = false;
       d.growthDaysElapsed = 0;
       d.daysSinceWatered = 0;
+      d.dryPenaltyGiven = false;
       d.sproutGroup.visible = false;
       d.readyGroup.visible = false;
+      adjustGradimento(-1); // 3Vago: campo morto per siccità
       showToast(d.fieldKind === 'grano' ? '🥀 Il campo è appassito per la siccità: puoi seminarlo di nuovo' : '🥀 L\'aiuola è appassita per la siccità: puoi seminarla di nuovo');
       continue;
+    }
+
+    if (d.daysSinceWatered >= 3 && !d.dryPenaltyGiven) {
+      d.dryPenaltyGiven = true;
+      adjustGradimento(-1); // 3Vago: campo non innaffiato da almeno 3 giorni (una volta sola per "episodio" di siccità)
     }
 
     if (d.ready) continue; // già cresciuto: la sete conta comunque (sopra), la crescita no
@@ -6886,6 +7099,7 @@ document.getElementById('sleepConfirmBtn').addEventListener('click', () => {
   hours = Math.max(1, Math.min(240, hours));
   closeSleepMenu();
   clock.startSleep(hours, hours); // 1 ora di gioco = 1 secondo reale
+  sleepMinutesToday += hours * 60; // per "dormire meno di 7 ore in un giorno" (3Vago)
   zzzIndicator.classList.add('show');
   document.getElementById('sleep-dark-overlay').classList.add('show');
   saveGame();
@@ -6913,6 +7127,7 @@ function renderRecipes() {
       row.querySelector('.recipe-btn').addEventListener('click', () => {
         if (!Object.entries(r.cost).every(([k, v]) => inventory[k] >= v)) return;
         for (const [k, v] of Object.entries(r.cost)) inventory[k] -= v;
+        clampAcquaToCapacity(); // se la ricetta ha speso alluminio, la capienza dell'acqua può essersi ridotta
         r.craft();
         showToast(`✅ ${r.name}`);
         refreshInventoryHud();
@@ -6983,6 +7198,11 @@ function spendCookIngredient(key, count) {
     const toRemove = candidates.slice(0, count).sort((a, b) => b - a); // indici decrescenti per splice sicuro
     for (const i of toRemove) foodItems.splice(i, 1);
     syncFoodCounts();
+  } else if (key === 'acqua') {
+    // Prima quella nello zaino, poi quella conservata in frigorifero
+    const fromInventory = Math.min(inventory.acqua, count);
+    inventory.acqua -= fromInventory;
+    houseFridge.acqua -= (count - fromInventory);
   } else {
     inventory[key] -= count;
   }
@@ -6993,11 +7213,14 @@ const cookListEl = document.getElementById('cook-list');
 let cookMenuOpen = false;
 
 // Quanto di un ingrediente è davvero disponibile per cucinare: per la
-// frutta/pesce conta zaino + frigorifero (mai la cassa); per il resto
-// (farina, uova, acqua, grano, fiori, semi...) solo l'inventario, dato che
-// quegli oggetti non possono comunque stare né in cassa né in frigo.
+// frutta/pesce conta zaino + frigorifero (mai la cassa); l'acqua conta anche
+// zaino + frigorifero (si può conservarne di più lì, oltre il limite delle
+// lattine); per il resto (farina, uova, grano, fiori, semi...) solo l'inventario,
+// dato che quegli oggetti non possono comunque stare né in cassa né in frigo.
 function availableForCooking(key) {
-  return FOOD_TYPES.includes(key) ? (inventory[key] || 0) + (houseFridge[key] || 0) : (inventory[key] || 0);
+  if (FOOD_TYPES.includes(key)) return (inventory[key] || 0) + (houseFridge[key] || 0);
+  if (key === 'acqua') return (inventory.acqua || 0) + (houseFridge.acqua || 0);
+  return (inventory[key] || 0);
 }
 
 function renderCookMenu() {
@@ -7048,6 +7271,7 @@ const FERRY_SELL_BUNDLES = [
   { key: 'legna', amount: 10, payout: 5, label: 'Legna' },
   { key: 'pietra', amount: 10, payout: 10, label: 'Pietra' },
   { key: 'alluminio', amount: 10, payout: 5, label: 'Alluminio' },
+  { key: 'lattine', amount: 10, payout: 3, label: 'Lattine' },
   { key: 'spazzatura', amount: 1, payout: 0, label: 'Spazzatura' },
   { key: 'spazzatura', amount: 50, payout: 10, label: 'Spazzatura (blocco)' },
   { key: 'lucciole', amount: 3, payout: 1, label: 'Lucciole' },
@@ -7064,6 +7288,7 @@ const FERRY_BUY_ITEMS = [
   { id: 'buy_legna', label: 'Legna x10', cost: 10, key: 'legna', give: () => { inventory.legna += 10; } },
   { id: 'buy_pietra', label: 'Pietra x10', cost: 20, key: 'pietra', give: () => { inventory.pietra += 10; } },
   { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, key: 'alluminio', give: () => { inventory.alluminio += 10; } },
+  { id: 'buy_lattine', label: 'Lattine x10', cost: 8, key: 'lattine', give: () => { inventory.lattine += 10; } },
   {
     id: 'buy_rod_upgrade', label: 'Upgrade Canna da Pesca', cost: 50,
     visible: () => fishingRod && !fishingRod.professional,
@@ -7170,6 +7395,8 @@ function renderFerryMenu() {
       row.querySelector('.recipe-btn').addEventListener('click', () => {
         if (ferryBudget < b.payout || (inventory[b.key] || 0) < b.amount) return;
         inventory[b.key] -= b.amount;
+        clampAcquaToCapacity(); // se si è appena venduto alluminio, la capienza dell'acqua può essersi ridotta
+        if (SEA_ITEM_TYPES.includes(b.key)) adjustGradimento(-1); // vendere un animaletto di mare dispiace all'isola
         inventory.moneta += b.payout;
         ferryBudget -= b.payout;
         showToast(`💰 +${b.payout} monete`);
@@ -7459,6 +7686,27 @@ function fillContainersAtFontana() {
   return filled;
 }
 
+/* =========================================================================
+   ACQUA SFUSA: quanta se ne può portare dipende da quante Lattine (grezze,
+   non ancora lavorate) si hanno nello zaino, 2 unità di acqua per lattina.
+   Le Lattine sono una risorsa a parte dall'Alluminio (che si ottiene
+   lavorandole al banco da lavoro, 1 lattina = 1 alluminio): l'Alluminio
+   serve per costruire, le Lattine per portare acqua (finché non le lavori).
+   Spendere una lattina (lavorarla, venderla, depositarla in cassa) riduce
+   la capienza: se l'acqua portata supera la nuova capienza, quella in
+   eccesso va persa (si "versa"). clampAcquaToCapacity() va richiamata
+   ovunque le lattine in inventario possano diminuire.
+   ========================================================================= */
+function acquaMaxCarry() { return (inventory.lattine || 0) * 2; }
+function clampAcquaToCapacity() {
+  const maxCarry = acquaMaxCarry();
+  if (inventory.acqua > maxCarry) {
+    const spilled = inventory.acqua - maxCarry;
+    inventory.acqua = maxCarry;
+    showToast(`💧 Hai versato ${spilled} acqua: non hai più abbastanza lattine per portarla`);
+  }
+}
+
 function drinkFromBorraccia() {
   if (!seteAttiva) return; // niente da fare finché la meccanica non è mai stata attivata
   if (!borraccia || borraccia.sorsi <= 0) {
@@ -7475,6 +7723,7 @@ function drinkTisana() {
   inventory.tisana--;
   showToast('🍵 Tisana bevuta');
   registerDrink();
+  coldMinutesInHouse = 0; // una tisana calda ti scalda: azzera il conto alla rovescia del freddo
 }
 
 // Chiamata una volta al giorno: la borraccia scade dopo BORRACCIA_DURATA_GIORNI
@@ -7501,6 +7750,7 @@ function updateThirst(deltaGameMinutes) {
   while (minutesSinceDrink >= SETE_SOGLIA_MINUTI && healthIndex > 0) {
     minutesSinceDrink -= SETE_SOGLIA_MINUTI;
     healthIndex--;
+    hadThirstPenaltyToday = true; // per 3Vago: "non bere per più di 5 ore in una giornata"
     showToast('💧 Sono troppe ore che non bevi: la salute cala');
   }
   if (healthIndex === 0) minutesSinceDrink = Math.min(minutesSinceDrink, SETE_SOGLIA_MINUTI);
@@ -7605,7 +7855,7 @@ function syncFoodCounts() {
 
 const inventory = {
   legna: 0, pietra: 0, recinti: 0, selce: 0, torce: 0, muri: 0, casette: 0,
-  alluminio: 0, bottiglia: 0, lucciole: 0, frammenti: 0, spazzatura: 0,
+  alluminio: 0, lattine: 0, bottiglia: 0, lucciole: 0, frammenti: 0, spazzatura: 0,
   ciliegie: 0, nespole: 0, pesche: 0, fichi: 0, mele: 0, castagne: 0, arance: 0, mandarini: 0, pesce: 0,
   acqua: 0, fontane: 0, semiGrano: 0, semiFiori: 0, campiGrano: 0, aiuoleFiori: 0,
   grano: 0, fiori: 0, farina: 0, tisana: 0, sciroppo: 0,
@@ -7623,7 +7873,7 @@ const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
   ciliegie: ['🍒', 'Ciliegie'], nespole: ['🟠', 'Nespole'], pesche: ['🍑', 'Pesche'], fichi: ['🟣', 'Fichi'],
   mele: ['🍎', 'Mele'], castagne: ['🌰', 'Castagne'], arance: ['🍊', 'Arance'], mandarini: ['🟡', 'Mandarini'],
-  pesce: ['🐟', 'Pesce'], selce: ['🔥', 'Pietra focaia'], alluminio: ['🥫', 'Alluminio'],
+  pesce: ['🐟', 'Pesce'], selce: ['🔥', 'Pietra focaia'], alluminio: ['🔩', 'Alluminio'], lattine: ['🥫', 'Lattine'],
   frammenti: ['⭐', 'Frammenti di stella'], spazzatura: ['🗑️', 'Spazzatura'],
   recinti: ['🧱', 'Pannelli di recinto'], torce: ['🕯️', 'Torce'],
   muri: ['🧱', 'Muri di pietra'], casette: ['🏠', 'Casette (da piazzare)'],
@@ -7863,8 +8113,8 @@ function handleAction(target) {
     scene.remove(target.obj);
     const idx = interactables.indexOf(target);
     if (idx !== -1) interactables.splice(idx, 1);
-    inventory.alluminio++;
-    showToast('🥫 Alluminio +1');
+    inventory.lattine++;
+    showToast('🥫 Lattina +1');
     maybeShowTutorial('lattina');
     refreshInventoryHud();
   } else if (target.type === 'fireflySwarm') {
@@ -7893,9 +8143,16 @@ function handleAction(target) {
       enterHouse();
     } else if (d.placedEntry.itemType === 'fontana') {
       if (!fillContainersAtFontana()) {
-        inventory.acqua++;
-        showToast('💧 Acqua +1');
-        refreshInventoryHud();
+        const maxCarry = acquaMaxCarry();
+        if (maxCarry <= 0) {
+          showToast('💧 Se avessi almeno una lattina potresti portare dell\'acqua con te');
+        } else if (inventory.acqua >= maxCarry) {
+          showToast('💧 Non riesci a portare altra acqua: servirebbero più lattine');
+        } else {
+          inventory.acqua++;
+          showToast(`💧 Acqua +1 (${inventory.acqua}/${maxCarry})`);
+          refreshInventoryHud();
+        }
       }
     } else if (d.placedEntry.itemType === 'campoGrano' || d.placedEntry.itemType === 'aiuolaFiori') {
       maybeWaterField(d); // effetto collaterale silenzioso, non blocca raccolta/semina
@@ -8081,7 +8338,8 @@ const TUTORIAL_CONTENT = {
   },
   lattina: {
     pages: [
-      "Una lattina abbandonata sulla spiaggia... ma non buttarla via! Lavorata a dovere, quest'alluminio può diventare una risorsa preziosa per le tue costruzioni. 🥫",
+      "Una lattina abbandonata sulla spiaggia... ma non buttarla via! Lavorala al banco da lavoro per ricavarne Alluminio, prezioso per le tue costruzioni. 🥫",
+      "Finché resta una lattina, però, ha un altro pregio: ogni lattina in zaino ti permette di portare 2 unità d'acqua in più — utile alla fontana prima ancora di lavorarla. 💧",
     ],
   },
   frammentoStella: {
@@ -8110,6 +8368,8 @@ const TUTORIAL_CONTENT = {
     pages: [
       "Il traghetto postale attracca ogni giorno alle 14:00 e riparte alle 17:00. Mentre è qui puoi comprare materiali e oggetti utili, oppure vendergli le tue risorse in cambio di monete.",
       "Attenzione: ha un budget giornaliero limitato per gli acquisti da te, e un acquisto al giorno per articolo dal suo lato. Se lasci troppa spazzatura in giro, potrebbe anche saltare la visita! ⛴️",
+      "Hai anche notato il 🌟 sotto la tua salute? È \"3Vago\", l'indice di gradimento dell'isola, mostrato in stelline da 1 a 5. Cresce se tieni l'isola pulita, curata e in ordine — anche il traghetto stesso conta!",
+      "Cala invece se lasci spazzatura in giro, esaurisci troppo le risorse, trascuri i tuoi campi, dormi poco o (se hai attivato la Sete) resti troppo a lungo senza bere. Un'isola felice è un'isola che si prende cura di sé. ⋆",
     ],
   },
   bancoDaLavoro: {
@@ -8165,6 +8425,12 @@ const TUTORIAL_CONTENT = {
   scala: {
     pages: [
       "Hai costruito la scala per il piano inferiore! Interagisci con lei per scendere: per ora è una stanza vuota, ma un giorno potrebbe diventare qualcosa di speciale. 🪜",
+    ],
+  },
+  stufetta: {
+    pages: [
+      "Hai costruito la stufetta! Si accende solo d'Inverno: basta 1 legna per avere 24 ore di calore. Interagisci di nuovo, a stufetta già accesa, per aggiungere altra legna e prolungare il calore.",
+      "Se resti in casa per più di 2 ore d'Inverno con la stufetta spenta, la salute crolla al minimo — bere una Tisana calda azzera il pericolo. Le ore rimaste sono sempre visibili in alto mentre sei in casa. 🔥",
     ],
   },
 };
@@ -8287,6 +8553,7 @@ function updateClockHud() {
   document.getElementById('health-face').textContent = HEALTH_FACES[healthIndex];
   batteryCells.forEach((cell, i) => cell.classList.toggle('filled', i <= healthIndex));
   document.getElementById('sick-indicator').classList.toggle('show', isSick);
+  document.getElementById('gradimento-stelle').textContent = '⋆'.repeat(gradimentoStelle());
 }
 
 function fieldHintText(d) {
@@ -8602,7 +8869,52 @@ function makeStairs(x, z) {
   return group;
 }
 const stairsMesh = makeStairs(-3.4, 1.6);
-makeReservedSpot(0, -3.6, 0xff5a4a);     // futuro: caminetto (parete di fondo, centrale)
+// Stufetta invernale (sostituisce il marker riservato del "caminetto",
+// esattamente tra letto e fornelletto)
+function makeStufetta(x, z) {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x2b2b2e });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x8a6b3c, metalness: 0.5, roughness: 0.4 });
+
+  // Corpo cilindrico compatto
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.62, 12), bodyMat);
+  body.position.y = 0.41;
+  body.castShadow = true;
+  group.add(body);
+
+  // Basamento
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.08, 12), trimMat);
+  base.position.y = 0.06;
+  group.add(base);
+
+  // Comignolo
+  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8), bodyMat);
+  pipe.position.y = 0.97;
+  group.add(pipe);
+
+  // Sportellino con vetrino (si illumina quando è accesa)
+  const doorRing = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.02, 8, 16), trimMat);
+  doorRing.position.set(0, 0.38, 0.29);
+  doorRing.rotation.x = Math.PI / 2;
+  group.add(doorRing);
+  const glow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.11, 16),
+    new THREE.MeshBasicMaterial({ color: 0xff7a33 })
+  );
+  glow.position.set(0, 0.38, 0.3);
+  group.add(glow);
+  const fireLight = new THREE.PointLight(0xff8a3d, 0, 4, 2);
+  fireLight.position.set(0, 0.5, 0.3);
+  group.add(fireLight);
+
+  group.position.set(x, 0, z);
+  group.visible = false;
+  interiorScene.add(group);
+  return { group, glow, fireLight };
+}
+const stufettaParts = makeStufetta(0, -3.6);
+const stufettaMesh = stufettaParts.group;
+updateStufettaVisual(); // sincronizza subito lo stato visivo (spenta) col colore di partenza del vetrino
 
 /* =========================================================================
    PIANO INFERIORE: stanza vuota raggiungibile tramite la scala. Per ora
@@ -8677,6 +8989,7 @@ const HOUSE_FURNITURE_ALL = [
   { mesh: fridgeGroup, label: 'Frigorifero', action: () => openStorageMenu('frigorifero') },
   { mesh: stoveMesh, label: 'Fornellino', visible: () => stoveBuilt, action: () => openCookMenu() },
   { mesh: stairsMesh, label: 'Scala', visible: () => stairsBuilt, action: () => enterBasement() },
+  { mesh: stufettaMesh, label: 'Stufetta', visible: () => stufettaBuilt, action: () => igniteOrFeedStufetta() },
 ];
 function houseFurnitureList() { return HOUSE_FURNITURE_ALL.filter(f => !f.visible || f.visible()); }
 let houseSelectedIndex = 0;
@@ -8874,10 +9187,10 @@ let prevHouseExitBtn = false;
 /* Stoccaggio: cassa (tutte le risorse) e frigorifero (solo frutta e pesce).
    Un pulsante sposta TUTTA la quantità in un colpo solo, per non dover
    cliccare più volte per spostare tante unità. */
-const houseChest = { legna: 0, pietra: 0, selce: 0, alluminio: 0, muri: 0, recinti: 0, torce: 0, spazzatura: 0 };
+const houseChest = { legna: 0, pietra: 0, selce: 0, alluminio: 0, lattine: 0, muri: 0, recinti: 0, torce: 0, spazzatura: 0 };
 const houseFridge = {
   ciliegie: 0, nespole: 0, pesche: 0, fichi: 0, mele: 0, castagne: 0, arance: 0, mandarini: 0, pesce: 0,
-  spazzatura: 0,
+  acqua: 0, spazzatura: 0,
 };
 const STORAGE_TARGET = { cassa: houseChest, frigorifero: houseFridge };
 const STORAGE_TITLE = { cassa: 'Cassa', frigorifero: 'Frigorifero' };
@@ -8916,6 +9229,7 @@ function renderStorageMenu() {
       } else {
         target[key] += inventory[key];
         inventory[key] = 0;
+        if (key === 'lattine') clampAcquaToCapacity(); // depositando tutte le lattine, l'acqua portata potrebbe versarsi
       }
       renderStorageMenu();
       refreshInventoryHud();
@@ -8926,6 +9240,19 @@ function renderStorageMenu() {
         const item = pickFoodItem('fridge', key, false); // più vita rimasta = priorità
         if (item) item.location = 'inventory';
         syncFoodCounts();
+      } else if (key === 'acqua') {
+        // L'acqua prelevata dal frigo non può superare quanto le lattine
+        // permettono di portare: si preleva solo quello che entra, il resto
+        // resta al sicuro in frigo invece di essere versato per strada.
+        const room = Math.max(0, acquaMaxCarry() - inventory.acqua);
+        const toTake = Math.min(target.acqua, room);
+        if (toTake <= 0) {
+          showToast('💧 Non hai abbastanza lattine per portare altra acqua');
+        } else {
+          inventory.acqua += toTake;
+          target.acqua -= toTake;
+          if (toTake < target.acqua + toTake) showToast('💧 Prelevata solo una parte: servono più lattine per il resto');
+        }
       } else {
         inventory[key] += target[key];
         target[key] = 0;
@@ -8978,6 +9305,14 @@ function serializeGame() {
     hasHoe,
     stoveBuilt,
     stairsBuilt,
+    stufettaBuilt,
+    stufettaAccesa,
+    stufettaOreResidue,
+    coldMinutesInHouse,
+    gradimentoIndice,
+    gradimento1400LastDay,
+    sleepMinutesToday,
+    hadThirstPenaltyToday,
     fontanaPlacedEver,
     tutorialSeen,
     grainSeedsSpawnedTotal,
@@ -9026,6 +9361,7 @@ function serializeGame() {
         base.ready = d.ready;
         base.growthDaysElapsed = d.growthDaysElapsed;
         base.daysSinceWatered = d.daysSinceWatered;
+        base.dryPenaltyGiven = d.dryPenaltyGiven;
       }
       if (it.itemType === 'fiorePiantato') {
         base.creatureKind = it.mesh.userData.attachedCreature ? it.mesh.userData.attachedCreature.kind : 'none';
@@ -9090,6 +9426,16 @@ function loadGame() {
   stoveMesh.visible = stoveBuilt;
   stairsBuilt = !!data.stairsBuilt;
   stairsMesh.visible = stairsBuilt;
+  stufettaBuilt = !!data.stufettaBuilt;
+  stufettaMesh.visible = stufettaBuilt;
+  stufettaAccesa = !!data.stufettaAccesa;
+  stufettaOreResidue = data.stufettaOreResidue || 0;
+  coldMinutesInHouse = data.coldMinutesInHouse || 0;
+  updateStufettaVisual();
+  gradimentoIndice = data.gradimentoIndice !== undefined ? data.gradimentoIndice : 10;
+  gradimento1400LastDay = data.gradimento1400LastDay !== undefined ? data.gradimento1400LastDay : -1;
+  sleepMinutesToday = data.sleepMinutesToday || 0;
+  hadThirstPenaltyToday = !!data.hadThirstPenaltyToday;
   fontanaPlacedEver = !!data.fontanaPlacedEver;
   tutorialSeen = data.tutorialSeen || {};
   grainSeedsSpawnedTotal = data.grainSeedsSpawnedTotal || 0;
@@ -9179,6 +9525,7 @@ function loadGame() {
       d.ready = !!saved.ready;
       d.growthDaysElapsed = saved.growthDaysElapsed || 0;
       d.daysSinceWatered = saved.daysSinceWatered || 0;
+      d.dryPenaltyGiven = !!saved.dryPenaltyGiven;
       d.sproutGroup.visible = d.planted && !d.ready;
       d.readyGroup.visible = d.ready;
     }
@@ -9247,6 +9594,8 @@ function animate() {
   updateFoodDecay(gameMinutesElapsed);
   updateHealth(gameMinutesElapsed);
   updateThirst(gameMinutesElapsed);
+  updateStufetta(gameMinutesElapsed);
+  updateColdExposure(gameMinutesElapsed);
   updateBirdSeedSpawner(gameMinutesElapsed);
   updateDevDebugPanel();
   updateSky();
@@ -9281,6 +9630,7 @@ function animate() {
       renderer.render(basementScene, basementCamera);
     } else {
       updateHouseInput(dt);
+      updateStufettaHud();
       renderer.render(interiorScene, interiorCamera);
     }
     return;
