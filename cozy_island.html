@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Cozy Island v2.0</title>
+<title>Cozy Island v2.5</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1a2a; font-family: -apple-system, sans-serif; touch-action: none; }
@@ -575,6 +575,7 @@
     <button id="sitPhotoBtn" class="sit-btn">📷</button>
     <button id="sitThinkBtn" class="sit-btn">💭⚡</button>
     <button id="sitRockBtn" class="sit-btn">🪑</button>
+    <button id="sitGuitarBtn" class="sit-btn" style="display:none;">🎸</button>
     <button id="sitStandBtn" class="sit-btn">🚶</button>
   </div>
 </div>
@@ -942,6 +943,228 @@ clock.on('day', pickNewWeather); // per ora il meteo cambia una volta al giorno,
    SETUP BASE THREE.JS
    ========================================================================= */
 const scene = new THREE.Scene();
+
+/* =========================================================================
+   AUDIO: motore sintetizzato via Web Audio API, in stile chiptune/cozy,
+   nessun file audio esterno. Il contesto va sbloccato al primo gesto
+   dell'utente (regola dei browser); da lì in poi tutti gli sfxXxx() sono
+   pronti all'uso. Ogni suono è costruito con oscillatori/rumore + inviluppo
+   (attack/decay) per evitare click, mai suoni "nudi" senza fade.
+   ========================================================================= */
+let audioCtx = null;
+let masterGain = null;
+function ensureAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.35;
+    masterGain.connect(audioCtx.destination);
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+  window.addEventListener(ev, () => { ensureAudioCtx(); updateSeaAmbience(); }, { once: false, passive: true });
+});
+
+// Un singolo "blip" a oscillatore con inviluppo semplice (attack/decay).
+function playTone(freq, duration, { type = 'sine', gain = 0.5, when = 0, endFreq = null } = {}) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime + when;
+  const osc = audioCtx.createOscillator();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), t0 + duration);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + Math.min(0.02, duration * 0.3));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.02);
+}
+
+// Rumore bianco filtrato, utile per passi, spazzatura, onde, scatto foto...
+function playNoiseBurst(duration, { gain = 0.4, when = 0, filterFreq = 1200, filterType = 'lowpass', decayOnly = true } = {}) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime + when;
+  const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.frequency.value = filterFreq;
+  const g = audioCtx.createGain();
+  if (decayOnly) {
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+  } else {
+    g.gain.value = gain;
+  }
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(masterGain);
+  src.start(t0);
+  src.stop(t0 + duration + 0.02);
+  return { src, gainNode: g };
+}
+
+// --- Effetti puntuali ---
+function sfxFootstep() {
+  playNoiseBurst(0.08, { gain: 0.12, filterFreq: 400, filterType: 'lowpass' });
+}
+function sfxFerrySiren() {
+  playTone(220, 0.9, { type: 'sawtooth', gain: 0.25, endFreq: 165 });
+  playTone(220, 0.9, { type: 'sawtooth', gain: 0.2, when: 1.0, endFreq: 165 });
+}
+function sfxBuy() {
+  playTone(440, 0.1, { type: 'square', gain: 0.2 });
+  playTone(660, 0.14, { type: 'square', gain: 0.2, when: 0.09 });
+}
+function sfxSell() {
+  playTone(660, 0.1, { type: 'square', gain: 0.2 });
+  playTone(440, 0.14, { type: 'square', gain: 0.2, when: 0.09 });
+}
+function sfxBuild() {
+  playNoiseBurst(0.06, { gain: 0.3, filterFreq: 800 });
+  playTone(180, 0.12, { type: 'square', gain: 0.25, when: 0.03 });
+}
+function sfxCooking() {
+  for (let i = 0; i < 4; i++) {
+    playNoiseBurst(0.05, { gain: 0.08, filterFreq: 3000 + Math.random() * 2000, filterType: 'bandpass', when: i * 0.08 + Math.random() * 0.03 });
+  }
+}
+function sfxSnore() {
+  playTone(90, 0.4, { type: 'sine', gain: 0.15, endFreq: 60 });
+}
+function sfxTrash() {
+  playNoiseBurst(0.12, { gain: 0.22, filterFreq: 2500, filterType: 'highpass' });
+}
+function sfxSeeds() {
+  playTone(700, 0.08, { type: 'sine', gain: 0.18, endFreq: 900 });
+}
+function sfxPhoto() {
+  playNoiseBurst(0.03, { gain: 0.3, filterFreq: 4000, filterType: 'highpass' });
+  playTone(1200, 0.04, { type: 'square', gain: 0.15, when: 0.03 });
+}
+function sfxRockingChairCreak() {
+  playNoiseBurst(0.35, { gain: 0.1, filterFreq: 500, filterType: 'bandpass' });
+}
+function sfxBeeBuzz() {
+  playTone(150, 0.25, { type: 'sawtooth', gain: 0.06 });
+}
+function sfxBirdChirp() {
+  const base = 1800 + Math.random() * 600;
+  playTone(base, 0.09, { type: 'sine', gain: 0.12, endFreq: base * 1.4 });
+}
+
+// --- Ambienti a loop (onde del mare, grilli serali) ---
+function startNoiseLoop(filterFreq, filterType, baseGain) {
+  if (!audioCtx) return null;
+  const bufferSize = audioCtx.sampleRate * 2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.frequency.value = filterFreq;
+  const g = audioCtx.createGain();
+  g.gain.value = 0;
+  src.connect(filter);
+  filter.connect(g);
+  g.connect(masterGain);
+  src.start();
+  g.gain.linearRampToValueAtTime(baseGain, audioCtx.currentTime + 2);
+  return { src, gainNode: g };
+}
+let seaWavesLoop = null;
+function updateSeaAmbience() {
+  if (!audioCtx || seaWavesLoop) return;
+  seaWavesLoop = startNoiseLoop(700, 'lowpass', 0.05);
+}
+let cricketOsc = null;
+function updateCricketAmbience() {
+  const shouldPlay = clock.hour >= 18; // "18-24" = dalle 18 fino a mezzanotte, quando l'ora torna a 0
+  if (!audioCtx) return;
+  if (shouldPlay && !cricketOsc) {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = 4200;
+    const g = audioCtx.createGain();
+    g.gain.value = 0;
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start();
+    g.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 2);
+    cricketOsc = { osc, gainNode: g };
+  } else if (!shouldPlay && cricketOsc) {
+    cricketOsc.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+    cricketOsc.osc.stop(audioCtx.currentTime + 1.2);
+    cricketOsc = null;
+  }
+}
+
+/* =========================================================================
+   CHITARRA: 3 brani procedurali (mattina=allegro, pomeriggio=vivace,
+   sera/notte=blues), ~1 minuto ciascuno, generati con la stessa scala
+   ripetuta a frasi da 8 note finché non finisce il tempo o si smette di
+   suonare. Nessun file audio: solo playTone() con scale e ritmi diversi.
+   ========================================================================= */
+const GUITAR_SCALES = {
+  morning: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25],   // Do maggiore, brillante
+  afternoon: [293.66, 329.63, 392.00, 440.00, 493.88, 587.33], // Re maggiore, vivace
+  blues: [220.00, 261.63, 293.33, 311.13, 349.23, 392.00],     // scala blues in La
+};
+function guitarSongForNow() {
+  const h = clock.hour;
+  if (h >= 6 && h < 12) return 'morning';
+  if (h >= 12 && h < 18) return 'afternoon';
+  return 'blues';
+}
+let guitarPlaying = false;
+let guitarTimeoutId = null;
+function playGuitarSong(songKey) {
+  const scale = GUITAR_SCALES[songKey];
+  const noteDur = songKey === 'blues' ? 0.5 : (songKey === 'afternoon' ? 0.24 : 0.32); // vivace = note più corte e rapide
+  const waveType = songKey === 'blues' ? 'sawtooth' : 'triangle';
+  const totalSeconds = 60;
+  let elapsed = 0;
+  function playNextPhrase() {
+    if (!guitarPlaying) return;
+    for (let i = 0; i < 8; i++) {
+      const note = scale[Math.floor(Math.random() * scale.length)];
+      playTone(note, noteDur * 0.9, { type: waveType, gain: 0.14, when: i * noteDur });
+      if (i % 4 === 0) playTone(note / 2, noteDur * 1.8, { type: 'sine', gain: 0.08, when: i * noteDur }); // basso
+    }
+    elapsed += noteDur * 8;
+    if (elapsed < totalSeconds && guitarPlaying) {
+      guitarTimeoutId = setTimeout(playNextPhrase, noteDur * 8 * 1000);
+    } else {
+      stopGuitar();
+    }
+  }
+  playNextPhrase();
+}
+function toggleGuitar() {
+  if (guitarPlaying) { stopGuitar(); return; }
+  ensureAudioCtx();
+  guitarPlaying = true;
+  sitGuitarBtn.classList.add('active');
+  playGuitarSong(guitarSongForNow());
+}
+function stopGuitar() {
+  guitarPlaying = false;
+  if (guitarTimeoutId) { clearTimeout(guitarTimeoutId); guitarTimeoutId = null; }
+  sitGuitarBtn.classList.remove('active');
+}
+
 scene.background = new THREE.Color(0x9fd3e8);
 scene.fog = new THREE.Fog(0x9fd3e8, 220, 520);
 
@@ -1518,9 +1741,14 @@ function activeBirdCount() {
   return Math.min(BIRD_COUNT, countFountains() * 2);
 }
 
+let nextBirdChirpTime = 0;
 function updateBirds(elapsedTime) {
   const activeCount = activeBirdCount();
   const baseVisible = activeCount > 0 && !isNightTime() && currentWeather !== 'pioggia' && currentWeather !== 'neve';
+  if (baseVisible && elapsedTime > nextBirdChirpTime) {
+    sfxBirdChirp();
+    nextBirdChirpTime = elapsedTime + 3 + Math.random() * 5;
+  }
   for (let i = 0; i < birdGroups.length; i++) {
     const group = birdGroups[i];
     const visible = baseVisible && i < activeCount;
@@ -1844,9 +2072,15 @@ function updateFlowerCreatures(dt, elapsedTime, deltaGameMinutes) {
       const flap = Math.sin(elapsedTime * 30 + c.phase) * 0.5;
       c.mesh.userData.wingL.rotation.z = flap;
       c.mesh.userData.wingR.rotation.z = -flap;
+      // Ronzio quando il giocatore passa vicino, con un piccolo cooldown per non ripeterlo a raffica
+      if (elapsedTime > nextBeeBuzzTime && Math.hypot(c.mesh.position.x - player.position.x, c.mesh.position.z - player.position.z) < 4) {
+        sfxBeeBuzz();
+        nextBeeBuzzTime = elapsedTime + 1.5;
+      }
     }
   }
 }
+let nextBeeBuzzTime = 0;
 
 /* =========================================================================
    TERRENO: oceano + isola a heightmap (Valle+Cala in un'unica mesh, con
@@ -1995,7 +2229,15 @@ const bridgeProfile = computeBridgeProfile();
 function bridgeLocalCoords(x, z) {
   const b = ISLAND.bridge;
   const dx = x - b.cx, dz = z - b.cz;
-  const cos = Math.cos(-b.rotY), sin = Math.sin(-b.rotY);
+  // Inversa corretta della rotazione usata per costruire la mesh (vedi
+  // computeBridgeProfile/makeBridge: world = cx + sin(rotY)*off sull'asse X,
+  // cz + cos(rotY)*off sull'asse Z). La versione precedente usava
+  // cos(-rotY)/sin(-rotY) sui termini incrociati, introducendo un segno
+  // sbagliato sia su lx che su lz: il rettangolo di camminabilità risultava
+  // "storto" rispetto alla mesh reale (accesso disallineato) e bridgeHeightAt
+  // finiva per leggere l'altezza dell'estremità SBAGLIATA del ponte (da qui
+  // il corpo che si ritrovava a metà dentro l'impalcato in salita).
+  const cos = Math.cos(b.rotY), sin = Math.sin(b.rotY);
   return { lx: dx * cos - dz * sin, lz: dx * sin + dz * cos };
 }
 
@@ -2521,6 +2763,21 @@ const placedPoints = [];  // per tenere le risorse spaziate tra loro
    ========================================================================= */
 let toolTier = 1; // 1 = attrezzo base, 2 = rinforzato (meno colpi per abbattere)
 const RECIPES = [
+  {
+    id: 'casetta_scoiattoli',
+    name: 'Casetta per Scoiattoli',
+    cost: { legna: 5, pietra: 1, semiGrano: 3, semiFiori: 3 },
+    once: true,
+    isDone: () => squirrels.length > 0 && squirrels.every(sq => sq.hasHouse),
+    visible: () => squirrels.some(sq => !sq.hasHouse),
+    craft: () => {
+      const target = squirrels.find(sq => !sq.hasHouse);
+      if (target) {
+        target.hasHouse = true;
+        showToast('🏠 Casetta costruita: uno scoiattolo è ora protetto e non ruberà più semi!');
+      }
+    },
+  },
   {
     id: 'lavora_lattina',
     name: 'Lavora Lattina → Alluminio',
@@ -3072,6 +3329,249 @@ scatterPoints(16, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
 scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
 
 /* =========================================================================
+   SCOIATTOLI: 3 alberi da frutta dell'Isola Verde vengono scelti a inizio
+   partita per ospitare uno scoiattolo ciascuno. Mentre sono sul proprio
+   albero sono invisibili (stato 'hidden'); ne escono da soli dopo il
+   riposo (2-4 ore), oppure subito se si scuote il loro albero per
+   raccogliere la frutta. Una volta fuori corrono liberi per l'isola,
+   fermandosi ogni tanto, tornano al proprio albero a riposare ogni 3-4 ore
+   di attività, e si rifugiano lì anche di notte o con pioggia/neve. Se non
+   protetti da una Casetta, possono avvicinarsi ai campi coltivati e
+   rubarne i semi; mangiano anche i semi caduti a terra se ci passano
+   vicino. Il giocatore può scacciarli avvicinandosi troppo.
+   ========================================================================= */
+const SQUIRREL_COUNT = 3;
+const SQUIRREL_SPEED = 3.2; // unità al secondo
+const SQUIRREL_FLEE_RADIUS = 5;
+const SQUIRREL_FIELD_DETECT_RADIUS = 5.5;
+const SQUIRREL_SEED_EAT_RADIUS = 1.1;
+let squirrels = [];
+
+function makeSquirrelMesh() {
+  const group = new THREE.Group();
+  const furMat = new THREE.MeshLambertMaterial({ color: 0xa35c28 });
+  const bellyMat = new THREE.MeshLambertMaterial({ color: 0xe8c9a0 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1410 });
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), furMat);
+  body.scale.set(1, 0.9, 1.3);
+  body.position.y = 0.24;
+  group.add(body);
+
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), bellyMat);
+  belly.scale.set(1, 0.8, 1.1);
+  belly.position.set(0, 0.18, 0.1);
+  group.add(belly);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), furMat);
+  head.position.set(0, 0.36, 0.26);
+  group.add(head);
+
+  [-0.07, 0.07].forEach(ex => {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.09, 6), furMat);
+    ear.position.set(ex, 0.46, 0.24);
+    group.add(ear);
+  });
+
+  [-0.05, 0.05].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), eyeMat);
+    eye.position.set(ex, 0.37, 0.39);
+    group.add(eye);
+  });
+
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), furMat);
+  tail.scale.set(0.75, 1.6, 0.75);
+  tail.position.set(0, 0.44, -0.3);
+  tail.rotation.x = -0.5;
+  group.add(tail);
+
+  group.scale.set(1.3, 1.3, 1.3);
+  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+
+function pickSquirrelRoamTarget(sq) {
+  for (let i = 0; i < 12; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 4 + Math.random() * 16;
+    const x = sq.pos.x + Math.cos(a) * r;
+    const z = sq.pos.z + Math.sin(a) * r;
+    if (isWalkable(x, z)) { sq.targetPos = { x, z }; return; }
+  }
+  sq.targetPos = { x: sq.treePos.x, z: sq.treePos.z };
+}
+
+function pickSquirrelFleeTarget(sq) {
+  const dx = sq.pos.x - player.position.x, dz = sq.pos.z - player.position.z;
+  const baseAngle = Math.atan2(dz, dx);
+  for (let i = 0; i < 8; i++) {
+    const ang = baseAngle + (Math.random() - 0.5) * 1.2;
+    const r = 6 + Math.random() * 6;
+    const x = sq.pos.x + Math.cos(ang) * r;
+    const z = sq.pos.z + Math.sin(ang) * r;
+    if (isWalkable(x, z)) { sq.targetPos = { x, z }; return; }
+  }
+  pickSquirrelRoamTarget(sq);
+}
+
+function findNearbyPlantedField(sq) {
+  for (const it of placedItems) {
+    if (it.itemType !== 'campoGrano' && it.itemType !== 'aiuolaFiori') continue;
+    if (!it.mesh.userData.planted) continue;
+    if (Math.hypot(it.x - sq.pos.x, it.z - sq.pos.z) <= SQUIRREL_FIELD_DETECT_RADIUS) return it;
+  }
+  return null;
+}
+
+function isBadWeatherForSquirrels() {
+  return isNightTime() || currentWeather === 'pioggia' || currentWeather === 'neve';
+}
+
+function squirrelReturnToTree(sq) {
+  sq.state = 'hidden';
+  sq.subState = 'roaming';
+  sq.pos.x = sq.treePos.x; sq.pos.z = sq.treePos.z;
+  sq.mesh.visible = false;
+  sq.restHoursRemaining = 2 + Math.random() * 2; // 2-4 ore
+  sq.stealingField = null;
+}
+
+function squirrelComeOut(sq) {
+  sq.state = 'active';
+  sq.mesh.visible = true;
+  sq.mesh.position.set(sq.pos.x, terrainHeightAt(sq.pos.x, sq.pos.z), sq.pos.z);
+  sq.activeHoursRemaining = 3 + Math.random(); // 3-4 ore
+  sq.subState = 'roaming';
+  pickSquirrelRoamTarget(sq);
+  if (!sq.discovered) { sq.discovered = true; maybeShowTutorial('scoiattolo'); }
+}
+
+// Forza uno scoiattolo a scendere subito dal suo albero se ci si scuote
+// sopra per raccogliere la frutta (solo se le condizioni lo permettono).
+function revealSquirrelFromTree(sq) {
+  if (!sq || sq.state !== 'hidden') return;
+  if (isBadWeatherForSquirrels()) return; // non lo si fa uscire col brutto tempo
+  squirrelComeOut(sq);
+}
+
+function initSquirrels() {
+  const fruitTreesList = interactables.filter(it => it.type === 'fruitTree');
+  const shuffled = [...fruitTreesList].sort(() => Math.random() - 0.5);
+  const chosen = shuffled.slice(0, Math.min(SQUIRREL_COUNT, shuffled.length));
+  squirrels = chosen.map((treeIt, i) => {
+    const treePos = { x: treeIt.obj.position.x, z: treeIt.obj.position.z };
+    const sq = {
+      id: i,
+      treeIt, treePos,
+      mesh: makeSquirrelMesh(),
+      state: 'hidden',
+      subState: 'roaming',
+      pos: { x: treePos.x, z: treePos.z },
+      targetPos: { x: treePos.x, z: treePos.z },
+      restHoursRemaining: 0.2 + Math.random() * 1.3, // sfalsati, non escono tutti insieme all'avvio
+      activeHoursRemaining: 0,
+      pauseTimerMinutes: 0,
+      stealTimerMinutes: 0,
+      stealingField: null,
+      hasHouse: false,
+      discovered: false,
+    };
+    treeIt.obj.userData.squirrelRef = sq;
+    return sq;
+  });
+}
+initSquirrels();
+
+function updateSquirrels(dt, deltaGameMinutes) {
+  const badWeather = isBadWeatherForSquirrels();
+  for (const sq of squirrels) {
+    if (sq.state === 'hidden') {
+      if (deltaGameMinutes > 0) sq.restHoursRemaining -= deltaGameMinutes / 60;
+      if (sq.restHoursRemaining <= 0 && !badWeather) squirrelComeOut(sq);
+      continue;
+    }
+
+    if (badWeather) { squirrelReturnToTree(sq); continue; }
+    if (deltaGameMinutes > 0) sq.activeHoursRemaining -= deltaGameMinutes / 60;
+    if (sq.activeHoursRemaining <= 0) { squirrelReturnToTree(sq); continue; }
+
+    // Il giocatore troppo vicino ha sempre priorità: lo scoiattolo scappa.
+    const distToPlayer = Math.hypot(sq.pos.x - player.position.x, sq.pos.z - player.position.z);
+    if (distToPlayer < SQUIRREL_FLEE_RADIUS) {
+      if (sq.subState !== 'fleeing') {
+        sq.subState = 'fleeing';
+        sq.stealingField = null;
+        pickSquirrelFleeTarget(sq);
+      }
+    } else if (sq.subState === 'paused' || sq.subState === 'stealingField') {
+      if (deltaGameMinutes > 0) {
+        if (sq.subState === 'paused') {
+          sq.pauseTimerMinutes -= deltaGameMinutes;
+          if (sq.pauseTimerMinutes <= 0) { sq.subState = 'roaming'; pickSquirrelRoamTarget(sq); }
+        } else {
+          const fd = sq.stealingField;
+          if (!fd || !fd.mesh.userData.planted) {
+            sq.stealingField = null; sq.subState = 'roaming'; pickSquirrelRoamTarget(sq);
+          } else {
+            sq.stealTimerMinutes -= deltaGameMinutes;
+            if (sq.stealTimerMinutes <= 0) {
+              const d = fd.mesh.userData;
+              d.planted = false; d.ready = false; d.growthDaysElapsed = 0;
+              d.daysSinceWatered = 0; d.dryPenaltyGiven = false;
+              d.sproutGroup.visible = false; d.readyGroup.visible = false;
+              showToast('🐿️ Uno scoiattolo ti ha rubato i semi da un campo!');
+              sq.stealingField = null; sq.subState = 'roaming'; pickSquirrelRoamTarget(sq);
+            }
+          }
+        }
+      }
+    } else {
+      // roaming / fleeing: cammina verso targetPos
+      const dx = sq.targetPos.x - sq.pos.x, dz = sq.targetPos.z - sq.pos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < 0.4) {
+        if (sq.subState === 'fleeing') {
+          sq.subState = 'roaming';
+          pickSquirrelRoamTarget(sq);
+        } else {
+          const field = !sq.hasHouse ? findNearbyPlantedField(sq) : null;
+          if (field && Math.random() < 0.5) {
+            sq.subState = 'stealingField';
+            sq.stealingField = field;
+            sq.stealTimerMinutes = 30;
+          } else if (Math.random() < 0.5) {
+            sq.subState = 'paused';
+            sq.pauseTimerMinutes = 10 + Math.random() * 5;
+          } else {
+            pickSquirrelRoamTarget(sq);
+          }
+        }
+      } else {
+        const step = Math.min(dist, SQUIRREL_SPEED * dt);
+        sq.pos.x += (dx / dist) * step;
+        sq.pos.z += (dz / dist) * step;
+        sq.mesh.rotation.y = Math.atan2(dx, dz);
+      }
+    }
+
+    // Mangia i semi a terra se ci passa vicino, anche correndo senza fermarsi.
+    for (let i = interactables.length - 1; i >= 0; i--) {
+      const it = interactables[i];
+      if (it.type !== 'semeGrano' && it.type !== 'semeFiore') continue;
+      if (Math.hypot(it.obj.position.x - sq.pos.x, it.obj.position.z - sq.pos.z) < SQUIRREL_SEED_EAT_RADIUS) {
+        scene.remove(it.obj);
+        interactables.splice(i, 1);
+      }
+    }
+
+    sq.mesh.position.set(sq.pos.x, terrainHeightAt(sq.pos.x, sq.pos.z), sq.pos.z);
+  }
+}
+
+
+/* =========================================================================
    FRAMMENTI DI STELLA: nelle notti d'estate, ogni tanto una stella cade dal
    cielo lasciando una scia, e nel punto in cui atterra compare un frammento
    luminoso raccoglibile — sparisce da solo all'alba se non viene raccolto.
@@ -3203,6 +3703,8 @@ function spawnFallingStar() {
 clock.on('hour', () => {
   if (clock.season.name === 'Estate' && isNightTime() && Math.random() < 0.35) spawnFallingStar();
   if (clock.hour === 6) clearStarFragments(); // spariscono con la luce del giorno
+  if (clock.sleeping) sfxSnore(); // un russare ogni ora di sonno, se il sonno dura più a lungo di un attimo
+  updateCricketAmbience();
 });
 
 /* =========================================================================
@@ -3399,15 +3901,25 @@ function makeFerryBoat() {
   flag.position.set(0.7, 10.2, 0.8);
   group.add(flag);
 
-  // 5. MOLO DI LEGNO A PALAFITTA (PER L'IMBARCO)
-  const pierGroup = new THREE.Group();
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+
+// Molo di legno a palafitta: separato dallo scafo (era un pezzo dello stesso
+// gruppo) proprio per poter restare sempre visibile, fisso sulla sabbia,
+// indipendentemente da quando arriva/riparte il battello postale ogni giorno.
+function makeFerryPier() {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.9 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.3 });
 
   // Tavolato del molo
   const pierDeck = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.25, 10.0), woodMat);
   pierDeck.position.set(5.8, 2.5, 0.5);
   pierDeck.castShadow = true;
   pierDeck.receiveShadow = true;
-  pierGroup.add(pierDeck);
+  group.add(pierDeck);
 
   // Pali a palafitta immersi nell'acqua
   const pierPiles = [
@@ -3420,23 +3932,21 @@ function makeFerryBoat() {
     const pile = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 3.2, 8), woodMat);
     pile.position.set(px, 1.1, pz);
     pile.castShadow = true;
-    pierGroup.add(pile);
+    group.add(pile);
 
     // Bitte d'ormeggio sul molo
     if (px > 6.0) {
       const bitt = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.4, 8), metalMat);
       bitt.position.set(px - 0.2, 2.8, pz);
-      pierGroup.add(bitt);
+      group.add(bitt);
     }
   });
 
-  group.add(pierGroup);
-
-  group.visible = false;
   scene.add(group);
   return group;
 }
 const ferryBoat = makeFerryBoat();
+const ferryPier = makeFerryPier();
 
 let ferryPresent = false;
 let ferryLastArrivalDay = -1;
@@ -3450,35 +3960,56 @@ const CAKE_TYPES = [
 let ferryOfferFishDish = null; // quale piatto di pesce casuale offre oggi in acquisto
 let ferryOfferCake = null;     // quale torta casuale offre oggi in acquisto
 
-// Trova il punto esatto in cui la spiaggia incontra il mare, marciando
-// verso il largo da un punto sicuro sulla sabbia finché non si esce dal
-// camminabile. Piazzando la barca esattamente lì, metà scafo (e metà molo,
-// che è agganciato di fianco) restano naturalmente in acqua.
-function findShoreEdgeSpot() {
-  for (let attempts = 0; attempts < 40; attempts++) {
-    const a = Math.random() * Math.PI * 2;
-    const ux = Math.cos(a), uz = Math.sin(a); // direzione verso il mare aperto
-    let x = ISLAND.cala.cx + ux * ISLAND.cala.rx * 0.82;
-    let z = ISLAND.cala.cz + uz * ISLAND.cala.rz * 0.82;
-    if (!isWalkable(x, z)) continue;
-    if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < 20) continue;
-    let edge = { x, z };
-    for (let i = 0; i < 40; i++) {
-      const nx = x + ux * 1.0, nz = z + uz * 1.0;
-      if (!isWalkable(nx, nz)) break;
-      x = nx; z = nz;
-      edge = { x, z };
-    }
-    return { x: edge.x, z: edge.z, ux, uz };
+// Punto fisso di attracco: le coordinate di riferimento sono state rilevate
+// in gioco da Salvo (giocatore fermo sull'Isola di sabbia, vicino a un
+// punto pesca). Da lì si marcia verso il mare aperto (allontanandosi dal
+// centro dell'isola) finché non si esce dal camminabile, per trovare
+// esattamente il punto in cui la sabbia incontra l'acqua in quella zona.
+const FERRY_DOCK_REF = { x: 225.82, z: 123.00 };
+// Quanto scafo e molo vengono spinti al largo rispetto al bordo esatto
+// sabbia/acqua, lungo la normale alla riva. Alzato da 4 a 7 perché con 4 lo
+// scafo restava ancora visibilmente a metà sulla sabbia: la riva in quel
+// punto non è un bordo netto, quindi serve più margine di sicurezza.
+const FERRY_HULL_OFFSET = 7.0;
+function findFixedFerrySpot() {
+  const dx0 = FERRY_DOCK_REF.x - ISLAND.cala.cx;
+  const dz0 = FERRY_DOCK_REF.z - ISLAND.cala.cz;
+  const d0 = Math.hypot(dx0, dz0) || 1;
+  const ux = dx0 / d0, uz = dz0 / d0; // direzione dal centro dell'isola verso il mare aperto, in quella zona
+  if (!isWalkable(FERRY_DOCK_REF.x, FERRY_DOCK_REF.z)) return null;
+  let x = FERRY_DOCK_REF.x, z = FERRY_DOCK_REF.z;
+  let edge = { x, z };
+  for (let i = 0; i < 60; i++) {
+    const nx = x + ux * 1.0, nz = z + uz * 1.0;
+    if (!isWalkable(nx, nz)) break;
+    x = nx; z = nz;
+    edge = { x, z };
   }
-  return null;
+  return { x: edge.x, z: edge.z, ux, uz };
 }
 
+// Il molo va posizionato una sola volta, all'avvio: resta fisso e sempre
+// visibile sulla sabbia indipendentemente dagli orari del traghetto.
+function positionFixedPier() {
+  const spot = findFixedFerrySpot();
+  if (!spot) return;
+  ferryPier.position.set(spot.x + spot.ux * FERRY_HULL_OFFSET, ocean.position.y + 0.2, spot.z + spot.uz * FERRY_HULL_OFFSET);
+  ferryPier.rotation.y = Math.atan2(spot.ux, spot.uz) + Math.PI / 2;
+  ferryPier.visible = true;
+}
+positionFixedPier();
+
 function positionAndShowFerry() {
-  const spot = findShoreEdgeSpot();
+  const spot = findFixedFerrySpot();
   if (!spot) return false;
-  ferryBoat.position.set(spot.x, ocean.position.y + 0.2, spot.z);
-  ferryBoat.rotation.y = Math.atan2(spot.ux, spot.uz);
+  // Ruotato di 90° rispetto all'orientamento "a prua verso il largo": lo
+  // scafo corre parallelo alla riva invece di puntarci contro. Con questa
+  // rotazione il lato +X locale (dove prima era agganciato il molo) punta
+  // verso terra, quindi si spinge l'origine al largo (stesso FERRY_HULL_OFFSET
+  // usato per il molo fisso, così scafo e molo restano allineati ogni giorno)
+  // perché lo scafo resti interamente in acqua di fianco al molo.
+  ferryBoat.position.set(spot.x + spot.ux * FERRY_HULL_OFFSET, ocean.position.y + 0.2, spot.z + spot.uz * FERRY_HULL_OFFSET);
+  ferryBoat.rotation.y = Math.atan2(spot.ux, spot.uz) + Math.PI / 2;
   ferryBoat.visible = true;
   ferryPresent = true;
   interactables.push({ obj: ferryBoat, type: 'ferryDock' });
@@ -3491,6 +4022,7 @@ function arriveFerry() {
   ferryPurchasedToday = new Set();
   ferryOfferFishDish = FISH_DISH_TYPES[Math.floor(Math.random() * FISH_DISH_TYPES.length)];
   ferryOfferCake = CAKE_TYPES[Math.floor(Math.random() * CAKE_TYPES.length)];
+  sfxFerrySiren();
   showToast('⛴️ Il traghetto postale è attraccato!');
 }
 
@@ -4852,6 +5384,7 @@ function updatePhotoCapture() {
   }
   inventory.pellicola--;
   inventory.fotoFarfalla++;
+  sfxPhoto();
   showToast('📸 Foto di farfalla scattata!');
   refreshInventoryHud();
 }
@@ -4893,16 +5426,24 @@ const SIT_EYE_HEIGHT = 1.95;
 const sitOverlay = document.getElementById('sit-overlay');
 const sitThinkBtn = document.getElementById('sitThinkBtn');
 const sitRockBtn = document.getElementById('sitRockBtn');
+const sitGuitarBtn = document.getElementById('sitGuitarBtn');
 
-const sitButtonsList = [
-  document.getElementById('sitPhotoBtn'),
-  document.getElementById('sitThinkBtn'),
-  document.getElementById('sitRockBtn'),
-  document.getElementById('sitStandBtn'),
-];
+// La chitarra è sbloccabile a partita in corso (acquisto al traghetto), quindi
+// la lista dei pulsanti va ricalcolata ogni volta invece che fissata una
+// volta sola: altrimenti il pulsante nascosto resterebbe comunque nel giro
+// di navigazione gamepad anche se invisibile.
+function getSitButtonsList() {
+  return [
+    document.getElementById('sitPhotoBtn'),
+    sitThinkBtn,
+    sitRockBtn,
+    ...(hasGuitar ? [sitGuitarBtn] : []),
+    document.getElementById('sitStandBtn'),
+  ];
+}
 let sitButtonIndex = 0;
 function updateSitButtonHighlight() {
-  sitButtonsList.forEach((b, i) => b.classList.toggle('gamepad-focus', i === sitButtonIndex));
+  getSitButtonsList().forEach((b, i) => b.classList.toggle('gamepad-focus', i === sitButtonIndex));
 }
 
 function enterSitMode(entry) {
@@ -4912,6 +5453,7 @@ function enterSitMode(entry) {
   sitTimeBoost = false;
   sitThinkBtn.classList.remove('active');
   sitRockBtn.classList.remove('active');
+  sitGuitarBtn.style.display = hasGuitar ? '' : 'none';
   sitButtonIndex = 0;
   updateSitButtonHighlight();
   sitOverlay.classList.add('open');
@@ -4920,6 +5462,7 @@ function enterSitMode(entry) {
 }
 function exitSitMode() {
   sittingChair = null;
+  stopGuitar();
   sitOverlay.classList.remove('open');
   document.body.classList.remove('sitting');
 }
@@ -4930,8 +5473,10 @@ sitThinkBtn.addEventListener('click', () => {
 });
 sitRockBtn.addEventListener('click', () => {
   sitRocking = !sitRocking;
+  if (sitRocking) sfxRockingChairCreak();
   sitRockBtn.classList.toggle('active', sitRocking);
 });
+sitGuitarBtn.addEventListener('click', toggleGuitar);
 document.getElementById('sitPhotoBtn').addEventListener('click', takeSitPhoto);
 
 let prevSitStickLeft = false, prevSitStickRight = false, prevSitConfirm = false;
@@ -4944,17 +5489,18 @@ function updateSitButtonNav() {
   const dpadRight = !!(pad.buttons[15] && pad.buttons[15].pressed);
   const left = stickX < -0.5 || dpadLeft;
   const right = stickX > 0.5 || dpadRight;
+  const list = getSitButtonsList();
   if (left && !prevSitStickLeft) {
-    sitButtonIndex = (sitButtonIndex - 1 + sitButtonsList.length) % sitButtonsList.length;
+    sitButtonIndex = (sitButtonIndex - 1 + list.length) % list.length;
     updateSitButtonHighlight();
   }
   if (right && !prevSitStickRight) {
-    sitButtonIndex = (sitButtonIndex + 1) % sitButtonsList.length;
+    sitButtonIndex = (sitButtonIndex + 1) % list.length;
     updateSitButtonHighlight();
   }
   prevSitStickLeft = left; prevSitStickRight = right;
   const confirm = !!((pad.buttons[0] && pad.buttons[0].pressed) || (pad.buttons[2] && pad.buttons[2].pressed)); // A o X
-  if (confirm && !prevSitConfirm) sitButtonsList[sitButtonIndex].click();
+  if (confirm && !prevSitConfirm) list[sitButtonIndex].click();
   prevSitConfirm = confirm;
 }
 
@@ -5063,16 +5609,28 @@ function updatePlayer(dt) {
     const nextZ = player.position.z + dz;
 
     // Collisione semplice: prova prima il movimento pieno, poi solo asse per asse
+    let moved = false;
     if (isWalkable(nextX, nextZ) && !blockedByFences(nextX, nextZ) && !blockedByObstacles(nextX, nextZ)) {
       player.position.x = nextX;
       player.position.z = nextZ;
+      moved = true;
     } else if (isWalkable(nextX, player.position.z) && !blockedByFences(nextX, player.position.z) && !blockedByObstacles(nextX, player.position.z)) {
       player.position.x = nextX;
+      moved = true;
     } else if (isWalkable(player.position.x, nextZ) && !blockedByFences(player.position.x, nextZ) && !blockedByObstacles(player.position.x, nextZ)) {
       player.position.z = nextZ;
+      moved = true;
+    }
+    if (moved) {
+      footstepTimer -= dt;
+      if (footstepTimer <= 0) {
+        sfxFootstep();
+        footstepTimer = 0.32;
+      }
     }
   }
 }
+let footstepTimer = 0;
 
 /* =========================================================================
    PESCA: stile contemplativo. Lanci l'amo, aspetti (la parte rilassante),
@@ -6640,6 +7198,7 @@ const EDIT_VIA_SECONDARY = new Set(['fontana', 'campoGrano', 'aiuolaFiori', 'sed
 let grainHarvestedEver = false;
 let farinaEverCrafted = false;
 let hasCamera = false;
+let hasGuitar = false;
 let mieleEverCollected = false;
 let flowerHarvestedEver = false;
 
@@ -6682,6 +7241,7 @@ function plantField(entry) {
   d.daysSinceWatered = 0; // appena piantato, considerato innaffiato
   d.sproutGroup.visible = true;
   d.readyGroup.visible = false;
+  sfxSeeds();
   refreshInventoryHud();
   showToast(d.fieldKind === 'grano' ? '🌱 Campo seminato' : '🌱 Aiuola seminata');
 }
@@ -7100,6 +7660,7 @@ document.getElementById('sleepConfirmBtn').addEventListener('click', () => {
   closeSleepMenu();
   clock.startSleep(hours, hours); // 1 ora di gioco = 1 secondo reale
   sleepMinutesToday += hours * 60; // per "dormire meno di 7 ore in un giorno" (3Vago)
+  sfxSnore();
   zzzIndicator.classList.add('show');
   document.getElementById('sleep-dark-overlay').classList.add('show');
   saveGame();
@@ -7129,6 +7690,7 @@ function renderRecipes() {
         for (const [k, v] of Object.entries(r.cost)) inventory[k] -= v;
         clampAcquaToCapacity(); // se la ricetta ha speso alluminio, la capienza dell'acqua può essersi ridotta
         r.craft();
+        sfxBuild();
         showToast(`✅ ${r.name}`);
         refreshInventoryHud();
         renderRecipes();
@@ -7239,6 +7801,7 @@ function renderCookMenu() {
       if (!Object.entries(r.cost).every(([k, v]) => availableForCooking(k) >= v)) return;
       for (const [k, v] of Object.entries(r.cost)) spendCookIngredient(k, v);
       r.craft();
+      sfxCooking();
       showToast(`✅ ${r.name}`);
       refreshInventoryHud();
       renderCookMenu();
@@ -7335,7 +7898,29 @@ function renderFerryMenu() {
         if (hasCamera || inventory.moneta < 100) return;
         inventory.moneta -= 100;
         hasCamera = true;
+        sfxBuy();
         showToast('📷 Macchina fotografica acquistata!');
+        refreshInventoryHud();
+        renderFerryMenu();
+      });
+      ferryListEl.appendChild(row);
+    }
+    // Chitarra: acquisto una tantum, stesso schema della macchina fotografica.
+    // Attiva il pulsante "Suona" nella sedia a dondolo.
+    if (!hasGuitar) {
+      const guitarAffordable = inventory.moneta >= 100;
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      row.innerHTML = `
+        <div class="recipe-info">🎸 Chitarra<div class="recipe-cost">100 🪙 — una tantum</div></div>
+        <button class="recipe-btn" ${guitarAffordable ? '' : 'disabled'}>compra</button>
+      `;
+      row.querySelector('.recipe-btn').addEventListener('click', () => {
+        if (hasGuitar || inventory.moneta < 100) return;
+        inventory.moneta -= 100;
+        hasGuitar = true;
+        sfxBuy();
+        showToast('🎸 Chitarra acquistata! Puoi suonarla sulla sedia a dondolo.');
         refreshInventoryHud();
         renderFerryMenu();
       });
@@ -7370,6 +7955,7 @@ function renderFerryMenu() {
           inventory.moneta -= item.cost;
           item.give();
           ferryPurchasedToday.add(item.id);
+          sfxBuy();
           showToast(`✅ ${label}`);
           refreshInventoryHud();
           renderFerryMenu();
@@ -7397,6 +7983,7 @@ function renderFerryMenu() {
         inventory[b.key] -= b.amount;
         clampAcquaToCapacity(); // se si è appena venduto alluminio, la capienza dell'acqua può essersi ridotta
         if (SEA_ITEM_TYPES.includes(b.key)) adjustGradimento(-1); // vendere un animaletto di mare dispiace all'isola
+        sfxSell();
         inventory.moneta += b.payout;
         ferryBudget -= b.payout;
         showToast(`💰 +${b.payout} monete`);
@@ -8189,6 +8776,7 @@ function handleAction(target) {
       d.harvested = true;
       d.fruitsGroup.visible = false;
       d.daysSinceHarvest = 0;
+      revealSquirrelFromTree(d.squirrelRef); // se c'era uno scoiattolo nascosto qui, esce subito
       const pool = SEASON_FRUITS[clock.season.name] || SEASON_FRUITS.Primavera;
       addFoodItem(pool[Math.floor(Math.random() * pool.length)]);
       maybeShowTutorial('fruttaMarcisce');
@@ -8263,6 +8851,7 @@ function handleAction(target) {
   } else if (target.type === 'trash') {
     d.hits++;
     inventory.spazzatura++;
+    sfxTrash();
     showToast('🗑️ Spazzatura +1');
     maybeShowTutorial('isolaSporca');
     if (d.hits >= d.maxHits) {
@@ -8431,6 +9020,12 @@ const TUTORIAL_CONTENT = {
     pages: [
       "Hai costruito la stufetta! Si accende solo d'Inverno: basta 1 legna per avere 24 ore di calore. Interagisci di nuovo, a stufetta già accesa, per aggiungere altra legna e prolungare il calore.",
       "Se resti in casa per più di 2 ore d'Inverno con la stufetta spenta, la salute crolla al minimo — bere una Tisana calda azzera il pericolo. Le ore rimaste sono sempre visibili in alto mentre sei in casa. 🔥",
+    ],
+  },
+  scoiattolo: {
+    pages: [
+      "Uno scoiattolo è sceso dal suo albero! Corre libero per l'isola, si ferma ogni tanto e torna a riposare sul suo albero ogni poche ore (di notte o col brutto tempo resta lassù). Se ti avvicini troppo, scappa. 🐿️",
+      "Se non è protetto da una Casetta, può avvicinarsi ai tuoi campi coltivati e, se ci resta abbastanza, rubarne i semi — mangia anche i semi caduti a terra. Costruiscigli una Casetta al banco da lavoro per proteggerlo.",
     ],
   },
 };
@@ -9313,6 +9908,7 @@ function serializeGame() {
     gradimento1400LastDay,
     sleepMinutesToday,
     hadThirstPenaltyToday,
+    squirrels: squirrels.map(sq => ({ hasHouse: sq.hasHouse, discovered: sq.discovered })),
     fontanaPlacedEver,
     tutorialSeen,
     grainSeedsSpawnedTotal,
@@ -9324,6 +9920,7 @@ function serializeGame() {
     flowerHarvestedEver,
     farinaEverCrafted,
     hasCamera,
+    hasGuitar,
     fishingRod,
     mieleEverCollected,
     ferryLastArrivalDay,
@@ -9436,6 +10033,14 @@ function loadGame() {
   gradimento1400LastDay = data.gradimento1400LastDay !== undefined ? data.gradimento1400LastDay : -1;
   sleepMinutesToday = data.sleepMinutesToday || 0;
   hadThirstPenaltyToday = !!data.hadThirstPenaltyToday;
+  if (data.squirrels) {
+    data.squirrels.forEach((s, i) => {
+      if (squirrels[i]) {
+        squirrels[i].hasHouse = !!s.hasHouse;
+        squirrels[i].discovered = !!s.discovered;
+      }
+    });
+  }
   fontanaPlacedEver = !!data.fontanaPlacedEver;
   tutorialSeen = data.tutorialSeen || {};
   grainSeedsSpawnedTotal = data.grainSeedsSpawnedTotal || 0;
@@ -9447,6 +10052,7 @@ function loadGame() {
   flowerHarvestedEver = !!data.flowerHarvestedEver;
   farinaEverCrafted = !!data.farinaEverCrafted;
   hasCamera = !!data.hasCamera;
+  hasGuitar = !!data.hasGuitar;
   fishingRod = data.fishingRod || null;
   mieleEverCollected = !!data.mieleEverCollected;
   ferryLastArrivalDay = data.ferryLastArrivalDay !== undefined ? data.ferryLastArrivalDay : -1;
@@ -9605,6 +10211,7 @@ function animate() {
   updateWeatherParticles(dt);
   updateFireflies(elapsedTime);
   updateBirds(elapsedTime);
+  updateSquirrels(dt, gameMinutesElapsed);
   updateSeedMarkers(elapsedTime);
   updateFlowerCreatures(dt, elapsedTime, gameMinutesElapsed);
   updateTorches(elapsedTime);
