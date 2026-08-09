@@ -344,6 +344,17 @@
   #ferry-coins { font-size: 12px; color: #ffd166; margin-bottom: 8px; flex-shrink: 0; }
   #ferry-cancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
 
+  /* Tab per categoria: banco da lavoro, fornelletto, inventario. Stesso
+     stile dei tab del traghetto ma con flex-wrap, dato che qui ci sono
+     più di 2 categorie e non entrerebbero tutte su una riga sola. */
+  .menu-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; flex-shrink: 0; }
+  .menu-tab-btn {
+    flex: 1 1 auto; min-width: 64px; padding: 7px 8px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.75); font-size: 11px; text-align: center;
+  }
+  .menu-tab-btn.active { background: rgba(255,209,102,0.3); color: #fff; border-color: rgba(255,209,102,0.6); }
+
   /* --- Minigioco di pesca --- */
   #fishing-mini-overlay {
     position: fixed; inset: 0; z-index: 28; display: none;
@@ -482,6 +493,8 @@
 <div id="inventory-overlay">
   <div id="inventory-panel">
     <h3>Inventario</h3>
+    <div id="inventory-status"></div>
+    <div id="inventory-tabs" class="menu-tabs"></div>
     <div id="inventory-list"></div>
     <div id="inventory-album-btn" class="recipe-row" style="cursor:pointer; justify-content:center;">📷 Album Foto</div>
     <div id="inventory-close">chiudi</div>
@@ -518,6 +531,7 @@
 <div id="craft-overlay">
   <div id="craft-panel">
     <h3>Banco da lavoro</h3>
+    <div id="craft-tabs" class="menu-tabs"></div>
     <div id="recipe-list"></div>
     <div id="craft-cancel">chiudi</div>
   </div>
@@ -526,6 +540,7 @@
 <div id="cook-overlay">
   <div id="cook-panel">
     <h3>Fornellino</h3>
+    <div id="cook-tabs" class="menu-tabs"></div>
     <div id="cook-list"></div>
     <div id="cook-cancel">chiudi</div>
   </div>
@@ -958,11 +973,8 @@ const scene = new THREE.Scene();
    dell'utente (regola dei browser); da lì in poi tutti gli sfxXxx() sono
    pronti all'uso. Ogni suono è costruito con oscillatori/rumore + inviluppo
    (attack/decay) per evitare click, mai suoni "nudi" senza fade.
-   (audioCtx/masterGain sono dichiarati molto più sopra, prima del sistema
-   meteo, perché pickNewWeather() li usa già alla primissima chiamata a
-   inizio script: con "let" qui sotto sarebbero stati ancora nella loro
-   temporal dead zone in quel momento, causando un ReferenceError.)
    ========================================================================= */
+
 function ensureAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -973,9 +985,46 @@ function ensureAudioCtx() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
+
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
   window.addEventListener(ev, () => { ensureAudioCtx(); updateSeaAmbience(); updateRainAmbience(); }, { once: false, passive: true });
 });
+
+// Helper gen buffer rumore (Rosa / Bianco / Marrone)
+function createNoiseBuffer(type = 'white', duration = 2.0) {
+  if (!audioCtx) return null;
+  const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  
+  if (type === 'white') {
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  } else if (type === 'pink') {
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      let white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+      b6 = white * 0.115926;
+    }
+  } else if (type === 'brown') {
+    let lastOutput = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+      let white = Math.random() * 2 - 1;
+      data[i] = (lastOutput + (0.02 * white)) / 1.02;
+      lastOutput = data[i];
+      data[i] *= 3.5;
+    }
+  }
+  return buffer;
+}
 
 // Un singolo "blip" a oscillatore con inviluppo semplice (attack/decay).
 function playTone(freq, duration, { type = 'sine', gain = 0.5, when = 0, endFreq = null } = {}) {
@@ -1024,142 +1073,358 @@ function playNoiseBurst(duration, { gain = 0.4, when = 0, filterFreq = 1200, fil
 }
 
 // --- Effetti puntuali ---
+
 function sfxFootstep() {
   playNoiseBurst(0.08, { gain: 0.12, filterFreq: 400, filterType: 'lowpass' });
 }
+
+// Sirena Traghetto: tono cupo e profondo navale a due armoniche sovrapposte
 function sfxFerrySiren() {
-  playTone(220, 0.9, { type: 'sawtooth', gain: 0.25, endFreq: 165 });
-  playTone(220, 0.9, { type: 'sawtooth', gain: 0.2, when: 1.0, endFreq: 165 });
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const dur = 1.4;
+
+  [110, 138.6].forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const g = audioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.linearRampToValueAtTime(freq * 0.96, t0 + dur);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, t0);
+
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.18 - idx * 0.03, t0 + 0.3);
+    g.gain.setValueAtTime(0.18 - idx * 0.03, t0 + dur - 0.4);
+    g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+
+    osc.connect(filter);
+    filter.connect(g);
+    g.connect(masterGain);
+
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  });
 }
+
+// Sirena Traghetto in partenza: stesse due armoniche della sirena d'arrivo,
+// ma più corta e con intonazione discendente più marcata + dissolvenza più
+// lunga, per dare la sensazione di allontanamento verso il largo.
+function sfxFerryDeparture() {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const dur = 1.6;
+
+  [110, 138.6].forEach((freq, idx) => {
+    const osc = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const g = audioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.linearRampToValueAtTime(freq * 0.8, t0 + dur);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, t0);
+    filter.frequency.linearRampToValueAtTime(220, t0 + dur);
+
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.16 - idx * 0.03, t0 + 0.25);
+    g.gain.setValueAtTime(0.16 - idx * 0.03, t0 + dur - 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    osc.connect(filter);
+    filter.connect(g);
+    g.connect(masterGain);
+
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  });
+}
+
 function sfxBuy() {
   playTone(440, 0.1, { type: 'square', gain: 0.2 });
   playTone(660, 0.14, { type: 'square', gain: 0.2, when: 0.09 });
 }
+
 function sfxSell() {
   playTone(660, 0.1, { type: 'square', gain: 0.2 });
   playTone(440, 0.14, { type: 'square', gain: 0.2, when: 0.09 });
 }
+
 function sfxBuild() {
   playNoiseBurst(0.06, { gain: 0.3, filterFreq: 800 });
   playTone(180, 0.12, { type: 'square', gain: 0.25, when: 0.03 });
 }
+
 function sfxCooking() {
   for (let i = 0; i < 4; i++) {
     playNoiseBurst(0.05, { gain: 0.08, filterFreq: 3000 + Math.random() * 2000, filterType: 'bandpass', when: i * 0.08 + Math.random() * 0.03 });
   }
 }
+
 function sfxSnore() {
   playTone(90, 0.4, { type: 'sine', gain: 0.15, endFreq: 60 });
 }
+
 function sfxTrash() {
   playNoiseBurst(0.12, { gain: 0.22, filterFreq: 2500, filterType: 'highpass' });
 }
+
 function sfxSeeds() {
   playTone(700, 0.08, { type: 'sine', gain: 0.18, endFreq: 900 });
 }
+
 function sfxPhoto() {
   playNoiseBurst(0.03, { gain: 0.3, filterFreq: 4000, filterType: 'highpass' });
   playTone(1200, 0.04, { type: 'square', gain: 0.15, when: 0.03 });
 }
+
 function sfxRockingChairCreak() {
   playNoiseBurst(0.35, { gain: 0.1, filterFreq: 500, filterType: 'bandpass' });
 }
+
+// Ronzio d'Ape Pro (con panning stereo e LFO)
 function sfxBeeBuzz() {
-  playTone(150, 0.25, { type: 'sawtooth', gain: 0.06 });
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const dur = 0.5;
+
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(160, t0);
+
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 25; // Ronzio sfarfallante
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 15;
+  lfo.connect(osc.frequency);
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(0.09, t0 + 0.1);
+  g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+
+  let dest = masterGain;
+  if (audioCtx.createStereoPanner) {
+    const panner = audioCtx.createStereoPanner();
+    panner.pan.setValueAtTime(-0.8, t0);
+    panner.pan.linearRampToValueAtTime(0.8, t0 + dur);
+    g.connect(panner);
+    dest = panner;
+  }
+
+  osc.connect(g);
+  if (dest !== masterGain) dest.connect(masterGain);
+
+  lfo.start(t0); osc.start(t0);
+  lfo.stop(t0 + dur); osc.stop(t0 + dur);
 }
+
 function sfxBirdChirp() {
   const base = 1800 + Math.random() * 600;
   playTone(base, 0.09, { type: 'sine', gain: 0.12, endFreq: base * 1.4 });
 }
+
 function sfxAxeHit() {
   playNoiseBurst(0.05, { gain: 0.22, filterFreq: 1500, filterType: 'bandpass' });
   playTone(140, 0.09, { type: 'square', gain: 0.18, endFreq: 90 }); // il "toc" cupo della lama nel legno
 }
+
+// Colpo di Piccone Pro (squillo metallico + spacco roccia)
 function sfxPickaxeHit() {
-  playTone(1400, 0.05, { type: 'triangle', gain: 0.16, endFreq: 700 }); // il clangore metallico sulla pietra
-  playNoiseBurst(0.06, { gain: 0.14, filterFreq: 3000, filterType: 'highpass' });
+  playTone(1850, 0.12, { type: 'sine', gain: 0.18, endFreq: 1200 });
+  playTone(2900, 0.08, { type: 'triangle', gain: 0.12, endFreq: 2100 });
+  playTone(160, 0.08, { type: 'sawtooth', gain: 0.2, endFreq: 60 });
+  playNoiseBurst(0.07, { gain: 0.16, filterFreq: 2800, filterType: 'highpass' });
 }
+
 function sfxLeavesRustle() {
   playNoiseBurst(0.35, { gain: 0.12, filterFreq: 2200, filterType: 'bandpass' });
 }
+
+// Frito Cicala: rumore ad alta frequenza modulato in ampiezza (Tremolo)
 function sfxCicadaChirp() {
-  const dur = 1.1 + Math.random() * 0.8;
-  playNoiseBurst(dur, { gain: 0.06, filterFreq: 4600 + Math.random() * 900, filterType: 'bandpass' });
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const dur = 0.8 + Math.random() * 0.4;
+
+  const bufferSize = Math.floor(audioCtx.sampleRate * dur);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(5200, t0);
+  filter.Q.value = 3.0;
+
+  const tremoloG = audioCtx.createGain();
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.setValueAtTime(38, t0);
+
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.setValueAtTime(0.4, t0);
+
+  tremoloG.gain.setValueAtTime(0.5, t0);
+  lfo.connect(tremoloG.gain);
+
+  const mainG = audioCtx.createGain();
+  mainG.gain.setValueAtTime(0.0001, t0);
+  mainG.gain.linearRampToValueAtTime(0.08, t0 + 0.1);
+  mainG.gain.setValueAtTime(0.08, t0 + dur - 0.1);
+  mainG.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+
+  src.connect(filter);
+  filter.connect(tremoloG);
+  tremoloG.connect(mainG);
+  mainG.connect(masterGain);
+
+  lfo.start(t0);
+  src.start(t0);
+  lfo.stop(t0 + dur + 0.02);
+  src.stop(t0 + dur + 0.02);
 }
+
 function sfxCricketChirp() {
   const base = 4000 + Math.random() * 400;
   playTone(base, 0.05, { type: 'square', gain: 0.045 });
   playTone(base, 0.05, { type: 'square', gain: 0.045, when: 0.08 });
 }
 
-// --- Ambienti a loop (onde del mare, grilli serali) ---
-function startNoiseLoop(filterFreq, filterType, baseGain) {
-  if (!audioCtx) return null;
-  const bufferSize = audioCtx.sampleRate * 2;
-  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-  const src = audioCtx.createBufferSource();
-  src.buffer = buffer;
-  src.loop = true;
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = filterType;
-  filter.frequency.value = filterFreq;
-  const g = audioCtx.createGain();
-  g.gain.value = 0;
-  src.connect(filter);
-  filter.connect(g);
-  g.connect(masterGain);
-  src.start();
-  g.gain.linearRampToValueAtTime(baseGain, audioCtx.currentTime + 2);
-  return { src, gainNode: g };
-}
-let seaWavesLoop = null;
-function updateSeaAmbience() {
-  if (!audioCtx || seaWavesLoop) return;
-  seaWavesLoop = startNoiseLoop(700, 'lowpass', 0.05);
-}
+// --- Ambienti a loop (Onde del Mare Pro e Pioggia Pro) ---
 
-let rainLoop = null;
-function updateRainAmbience() {
+let seaWavesLoop = null;
+
+function updateSeaAmbience() {
   if (!audioCtx) return;
-  const shouldPlay = currentWeather === 'pioggia';
-  if (shouldPlay && !rainLoop) {
-    rainLoop = startNoiseLoop(3500, 'highpass', 0.06); // pioggia leggera: fruscio acuto e costante
-  } else if (!shouldPlay && rainLoop) {
-    rainLoop.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
-    rainLoop.src.stop(audioCtx.currentTime + 1.6);
-    rainLoop = null;
+  
+  if (!seaWavesLoop) {
+    const t0 = audioCtx.currentTime;
+    
+    const buf = createNoiseBuffer('pink', 5.0);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(300, t0);
+
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.setValueAtTime(0.22, t0);
+
+    const lfoFilterGain = audioCtx.createGain();
+    lfoFilterGain.gain.setValueAtTime(450, t0);
+    lfo.connect(lfoFilterGain);
+    lfoFilterGain.connect(filter.frequency);
+
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0.0001, t0);
+    gainNode.gain.linearRampToValueAtTime(0.08, t0 + 2.0);
+
+    const lfoAmpGain = audioCtx.createGain();
+    lfoAmpGain.gain.setValueAtTime(0.03, t0);
+    lfo.connect(lfoAmpGain);
+    lfoAmpGain.connect(gainNode.gain);
+
+    src.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(masterGain);
+
+    lfo.start(t0);
+    src.start(t0);
+
+    seaWavesLoop = { src, lfo, gainNode };
+  } else {
+    const t0 = audioCtx.currentTime;
+    seaWavesLoop.gainNode.gain.linearRampToValueAtTime(0.0001, t0 + 1.2);
+    seaWavesLoop.src.stop(t0 + 1.3);
+    seaWavesLoop.lfo.stop(t0 + 1.3);
+    seaWavesLoop = null;
   }
 }
 
-// Grilli (di notte) e cicale (di giorno): non un drone continuo, ma impulsi
-// distinti e ritmati, presenti solo con cielo sereno in tarda Primavera,
-// tutta l'Estate, e a inizio Autunno.
+let rainLoop = null;
+let rainDropInterval = null;
+
+function updateRainAmbience() {
+  if (!audioCtx) return;
+  const shouldPlay = currentWeather === 'pioggia';
+
+  if (shouldPlay && !rainLoop) {
+    const t0 = audioCtx.currentTime;
+    const buf = createNoiseBuffer('pink', 4.0);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(1200, t0);
+
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0.0001, t0);
+    gainNode.gain.linearRampToValueAtTime(0.07, t0 + 1.5);
+
+    src.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(masterGain);
+    src.start(t0);
+
+    rainLoop = { src, gainNode };
+
+    rainDropInterval = setInterval(() => {
+      if (currentWeather === 'pioggia' && audioCtx) {
+        const dropFreq = 2200 + Math.random() * 2500;
+        playTone(dropFreq, 0.015, { type: 'sine', gain: 0.02 + Math.random() * 0.02 });
+      }
+    }, 90);
+
+  } else if (!shouldPlay && rainLoop) {
+    const t0 = audioCtx.currentTime;
+    rainLoop.gainNode.gain.linearRampToValueAtTime(0.0001, t0 + 1.2);
+    rainLoop.src.stop(t0 + 1.3);
+    rainLoop = null;
+    if (rainDropInterval) {
+      clearInterval(rainDropInterval);
+      rainDropInterval = null;
+    }
+  }
+}
+
+// Grilli (di notte) e cicale (di giorno)
 function isCicadaSeasonWindow() {
   const s = clock.season.name;
   if (s === 'Estate') return true;
-  if (s === 'Primavera') return clock.dayInSeason >= 20; // ultimo terzo della stagione
-  if (s === 'Autunno') return clock.dayInSeason < 10;    // primo terzo della stagione
+  if (s === 'Primavera') return clock.dayInSeason >= 20;
+  if (s === 'Autunno') return clock.dayInSeason < 10;
   return false;
 }
+
 let nextCicadaTime = 0;
 let nextCricketTime = 0;
+
 function updateInsectAmbience(elapsedTime) {
   if (!audioCtx || currentWeather !== 'sereno' || !isCicadaSeasonWindow()) return;
   if (isNightTime()) {
     if (elapsedTime > nextCricketTime) {
       sfxCricketChirp();
-      nextCricketTime = elapsedTime + 1; // ogni secondo, come richiesto
+      nextCricketTime = elapsedTime + 1;
     }
   } else {
     if (elapsedTime > nextCicadaTime) {
       sfxCicadaChirp();
-      nextCicadaTime = elapsedTime + 3 + Math.random(); // ogni 3-4 secondi
+      nextCicadaTime = elapsedTime + 3 + Math.random();
     }
   }
 }
-
 /* =========================================================================
    CHITARRA: 3 brani procedurali (mattina=allegro, pomeriggio=vivace,
    sera/notte=blues), ~1 minuto ciascuno, generati con la stessa scala
@@ -1491,6 +1756,20 @@ function updateStars() {
   const cloudy = currentWeather === 'nuvoloso';
   starsBase.visible = night && (clear || cloudy);
   starsExtra.visible = night && clear;
+}
+
+// Rotazione lenta della volta celeste (solo le stelle, mai la luna: la luna
+// è un oggetto completamente separato con il proprio percorso in cielo,
+// vedi updateMoon più sotto). Girano entrambi i campi di stelle insieme
+// sullo stesso asse Y, in senso orario (rotation.y decrescente), solo
+// quando sono effettivamente visibili di notte: evita calcoli inutili di
+// giorno o col cielo coperto/piovoso.
+const STARFIELD_ROTATION_SPEED = 0.006; // rad/s: un giro completo richiede circa 17 minuti reali
+function rotateStarfield(dt) {
+  if (!starsBase.visible && !starsExtra.visible) return;
+  const delta = -STARFIELD_ROTATION_SPEED * dt;
+  starsBase.rotation.y += delta;
+  starsExtra.rotation.y += delta;
 }
 
 let shootingStarTimer = 5 + Math.random() * 10;
@@ -2484,6 +2763,321 @@ function makeLake() {
 }
 makeLake();
 
+/* =========================================================================
+   PESCE CHE SALTA NEL LAGHETTO: ogni ~5 minuti reali (con un po' di
+   variabilità, per non essere meccanico) un pesce rosso o dorato guizza
+   fuori dall'acqua dolce e ricade, lasciando 3-4 cerchi concentrici che si
+   allargano e svaniscono. Puramente decorativo — nessuna interazione, non
+   tocca l'inventario né il minigioco di pesca vero e proprio. Niente salti
+   mentre il laghetto è gelato (Inverno) o mentre il giocatore dorme.
+   ========================================================================= */
+let fishJumpTimer = 240 + Math.random() * 120; // prima volta tra 4 e 6 minuti reali
+let activeFishJumps = [];
+let activeRipples = [];
+const RIPPLE_RING_GEO = new THREE.RingGeometry(0.9, 1.05, 24); // anello unitario, riscalato per animare
+
+function spawnRippleRing(x, z, y, delay) {
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xe8f6ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+  const ring = new THREE.Mesh(RIPPLE_RING_GEO, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(x, y + 0.02, z);
+  ring.scale.setScalar(0.001);
+  ring.visible = false;
+  scene.add(ring);
+  activeRipples.push({ mesh: ring, life: -delay, duration: 1.3 + Math.random() * 0.3, maxRadius: 1.1 + Math.random() * 0.6 });
+}
+
+function triggerLakeSplash(x, z, y) {
+  const ringCount = 3 + Math.floor(Math.random() * 2); // 3 o 4 cerchi
+  for (let i = 0; i < ringCount; i++) spawnRippleRing(x, z, y, i * 0.16);
+}
+
+function spawnFishJump() {
+  const lakeWaterY = baseTerrainHeight(LAKE.cx, LAKE.cz) - 1.0;
+  const angle = Math.random() * Math.PI * 2;
+  const distFactor = Math.random() * 0.6; // resta lontano dai bordi del laghetto
+  const x = LAKE.cx + Math.cos(angle) * LAKE.rx * distFactor;
+  const z = LAKE.cz + Math.sin(angle) * LAKE.rz * distFactor;
+
+  const isGolden = Math.random() < 0.5;
+  const bodyMat = new THREE.MeshStandardMaterial({ color: isGolden ? 0xf2c14e : 0xe0472e, roughness: 0.4, metalness: 0.15 });
+  const fish = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), bodyMat);
+  body.scale.set(1.7, 0.9, 1);
+  fish.add(body);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 6), bodyMat);
+  tail.position.set(-0.26, 0, 0);
+  tail.rotation.z = Math.PI / 2;
+  fish.add(tail);
+  fish.rotation.y = Math.random() * Math.PI * 2;
+  fish.position.set(x, lakeWaterY, z);
+  scene.add(fish);
+
+  activeFishJumps.push({
+    mesh: fish, life: 0, duration: 1.0 + Math.random() * 0.2,
+    baseY: lakeWaterY, arcHeight: 1.0 + Math.random() * 0.5,
+    x, z, splashed: false,
+  });
+}
+
+function updateFishJumps(dt) {
+  for (let i = activeFishJumps.length - 1; i >= 0; i--) {
+    const j = activeFishJumps[i];
+    j.life += dt;
+    const t = Math.min(1, j.life / j.duration);
+    const arc = Math.sin(t * Math.PI);
+    j.mesh.position.y = j.baseY + arc * j.arcHeight;
+    j.mesh.rotation.x = (t < 0.5 ? 1 : -1) * arc * 0.7; // si inarca in salita, si raddrizza in ricaduta
+    if (!j.splashed && t >= 0.96) {
+      j.splashed = true;
+      triggerLakeSplash(j.x, j.z, j.baseY);
+    }
+    if (j.life >= j.duration) {
+      scene.remove(j.mesh);
+      activeFishJumps.splice(i, 1);
+    }
+  }
+}
+
+function updateLakeRipples(dt) {
+  for (let i = activeRipples.length - 1; i >= 0; i--) {
+    const r = activeRipples[i];
+    r.life += dt;
+    if (r.life < 0) continue; // ancora in attesa del proprio ritardo, prima di comparire
+    r.mesh.visible = true;
+    const t = Math.min(1, r.life / r.duration);
+    r.mesh.scale.setScalar(0.05 + t * r.maxRadius);
+    r.mesh.material.opacity = 0.55 * (1 - t);
+    if (r.life >= r.duration) {
+      scene.remove(r.mesh);
+      r.mesh.material.dispose(); // la geometria è condivisa (RIPPLE_RING_GEO): non va mai eliminata qui
+      activeRipples.splice(i, 1);
+    }
+  }
+}
+
+function updateLakeFishJump(dt) {
+  if (!clock.sleeping && !isLakeFrozen()) {
+    fishJumpTimer -= dt;
+    if (fishJumpTimer <= 0) {
+      spawnFishJump();
+      fishJumpTimer = 240 + Math.random() * 120; // prossimo salto tra 4 e 6 minuti reali
+    }
+  }
+  updateFishJumps(dt);
+  updateLakeRipples(dt);
+}
+
+/* =========================================================================
+   GRILLI: ogni tanto un grillo salta fuori dall'erba a pochi metri dal
+   giocatore, fa un balzo in una direzione casuale allontanandosi da lui, e
+   sparisce di nuovo nell'erba. Presenti in Primavera e Autunno (rari),
+   molto più frequenti d'Estate; assenti d'Inverno. Puramente decorativo.
+   ========================================================================= */
+const CRICKET_SEASON_PARAMS = {
+  Primavera: { intervalMin: 40, intervalMax: 75 },
+  Estate:    { intervalMin: 10, intervalMax: 22 },
+  Autunno:   { intervalMin: 40, intervalMax: 75 },
+  Inverno:   null, // niente grilli col freddo
+};
+let cricketTimer = 15 + Math.random() * 15;
+let activeCrickets = [];
+
+function makeCricketMesh() {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x3c2f1e, roughness: 0.85 });
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), mat);
+  body.scale.set(1, 0.8, 1.7);
+  group.add(body);
+  const legMat = mat;
+  [-1, 1].forEach(side => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.09, 4), legMat);
+    leg.position.set(side * 0.05, -0.02, -0.03);
+    leg.rotation.z = side * 0.9;
+    group.add(leg);
+  });
+  return group;
+}
+
+// Trova un punto camminabile a qualche metro dal giocatore, riprovando
+// alcune volte prima di rinunciare a questo ciclo (es. se il giocatore è
+// vicino ad acqua/bordo mappa su ogni lato).
+function findWalkableSpotNear(px, pz, minDist, maxDist, attempts) {
+  for (let i = 0; i < attempts; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const dist = minDist + Math.random() * (maxDist - minDist);
+    const x = px + Math.cos(ang) * dist;
+    const z = pz + Math.sin(ang) * dist;
+    if (isWalkable(x, z)) return { x, z, ang };
+  }
+  return null;
+}
+
+function spawnCricket() {
+  const spot = findWalkableSpotNear(player.position.x, player.position.z, 2, 5, 8);
+  if (!spot) return;
+  const groundY = terrainHeightAt(spot.x, spot.z);
+  const mesh = makeCricketMesh();
+  mesh.position.set(spot.x, groundY + 0.03, spot.z);
+  scene.add(mesh);
+
+  // Salta allontanandosi dal giocatore (stesso verso in cui si trova
+  // rispetto a lui, con un po' di variazione per non sembrare meccanico).
+  const jumpAngle = spot.ang + (Math.random() - 0.5) * 1.2;
+  const jumpDist = 1.4 + Math.random() * 2.2;
+  activeCrickets.push({
+    mesh, life: 0, duration: 0.45 + Math.random() * 0.2,
+    startX: spot.x, startZ: spot.z,
+    endX: spot.x + Math.cos(jumpAngle) * jumpDist,
+    endZ: spot.z + Math.sin(jumpAngle) * jumpDist,
+    arcHeight: 0.35 + Math.random() * 0.25,
+  });
+}
+
+function updateCrickets(dt) {
+  for (let i = activeCrickets.length - 1; i >= 0; i--) {
+    const c = activeCrickets[i];
+    c.life += dt;
+    const t = Math.min(1, c.life / c.duration);
+    const arc = Math.sin(t * Math.PI);
+    const x = c.startX + (c.endX - c.startX) * t;
+    const z = c.startZ + (c.endZ - c.startZ) * t;
+    c.mesh.position.set(x, terrainHeightAt(x, z) + 0.03 + arc * c.arcHeight, z);
+    c.mesh.rotation.y = Math.atan2(c.endX - c.startX, c.endZ - c.startZ);
+    if (t >= 1) {
+      scene.remove(c.mesh); // sparisce di nuovo nell'erba non appena atterra
+      activeCrickets.splice(i, 1);
+    }
+  }
+}
+
+function updateCricketSpawner(dt) {
+  const params = CRICKET_SEASON_PARAMS[clock.season.name];
+  if (params && !clock.sleeping) {
+    cricketTimer -= dt;
+    if (cricketTimer <= 0) {
+      spawnCricket();
+      cricketTimer = params.intervalMin + Math.random() * (params.intervalMax - params.intervalMin);
+    }
+  }
+  updateCrickets(dt);
+}
+
+/* =========================================================================
+   CONIGLIO D'INVERNO: ogni tanto spunta dalla terra la testa di un coniglio
+   a poca distanza dal giocatore. Guarda "avanti" (verso il giocatore, per
+   curiosità) per 2s, poi gira la testa a destra per 2s, poi a sinistra per
+   1s, infine rientra di nuovo sottoterra. Solo d'Inverno.
+   ========================================================================= */
+const RABBIT_TURN_SPEED = 5; // rad/s, velocità con cui la testa segue l'angolo target
+const RABBIT_RISE_DUR = 0.3;
+const RABBIT_FORWARD_DUR = 2;
+const RABBIT_RIGHT_DUR = 2;
+const RABBIT_LEFT_DUR = 1;
+const RABBIT_SINK_DUR = 0.3;
+const RABBIT_TOTAL_DUR = RABBIT_RISE_DUR + RABBIT_FORWARD_DUR + RABBIT_RIGHT_DUR + RABBIT_LEFT_DUR + RABBIT_SINK_DUR;
+const RABBIT_TURN_ANGLE = 1.0; // ~57°, abbastanza per leggersi chiaramente come "guarda di lato"
+const RABBIT_PEEK_HEIGHT = 0.07; // quanto emerge dal terreno una volta fuori
+
+let rabbitTimer = 30 + Math.random() * 30;
+let activeRabbitPeeks = [];
+
+function makeRabbitHeadMesh() {
+  const furMat = new THREE.MeshStandardMaterial({ color: 0xc2a883, roughness: 0.9 });
+  const innerEarMat = new THREE.MeshStandardMaterial({ color: 0xe8b4b8, roughness: 0.8 });
+  const noseMat = new THREE.MeshStandardMaterial({ color: 0xd98a8a, roughness: 0.6 });
+  const group = new THREE.Group();
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), furMat);
+  head.scale.set(1, 1.02, 0.95);
+  group.add(head);
+
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), noseMat);
+  nose.position.set(0, -0.02, 0.125);
+  group.add(nose);
+
+  [-1, 1].forEach(side => {
+    const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.045, 0.24, 6), furMat);
+    ear.position.set(side * 0.06, 0.2, -0.01);
+    ear.rotation.z = side * 0.18;
+    group.add(ear);
+    const innerEar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.028, 0.17, 6), innerEarMat);
+    innerEar.position.set(side * 0.06, 0.2, 0.02);
+    innerEar.rotation.z = side * 0.18;
+    group.add(innerEar);
+  });
+
+  return group;
+}
+
+function lerpAngle(a, b, t) {
+  let diff = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+  return a + diff * t;
+}
+
+function spawnRabbitPeek() {
+  const spot = findWalkableSpotNear(player.position.x, player.position.z, 2.5, 5.5, 8);
+  if (!spot) return;
+  const groundY = terrainHeightAt(spot.x, spot.z);
+  const mesh = makeRabbitHeadMesh();
+  mesh.position.set(spot.x, groundY - 0.22, spot.z); // parte sottoterra, poi emerge
+  scene.add(mesh);
+
+  const forwardAngle = Math.atan2(player.position.x - spot.x, player.position.z - spot.z);
+  activeRabbitPeeks.push({
+    mesh, life: 0, groundY,
+    forwardAngle,
+    currentYaw: forwardAngle,
+  });
+  mesh.rotation.y = forwardAngle;
+}
+
+function updateRabbitPeeks(dt) {
+  for (let i = activeRabbitPeeks.length - 1; i >= 0; i--) {
+    const r = activeRabbitPeeks[i];
+    r.life += dt;
+
+    // Altezza: emerge all'inizio, resta fuori, rientra sottoterra alla fine
+    let peekAmount;
+    if (r.life < RABBIT_RISE_DUR) {
+      peekAmount = r.life / RABBIT_RISE_DUR;
+    } else if (r.life < RABBIT_TOTAL_DUR - RABBIT_SINK_DUR) {
+      peekAmount = 1;
+    } else {
+      peekAmount = Math.max(0, (RABBIT_TOTAL_DUR - r.life) / RABBIT_SINK_DUR);
+    }
+    r.mesh.position.y = r.groundY - 0.22 + 0.22 * peekAmount + RABBIT_PEEK_HEIGHT * peekAmount;
+
+    // Direzione dello sguardo in base alla fase corrente
+    let targetYaw;
+    const tRight0 = RABBIT_RISE_DUR + RABBIT_FORWARD_DUR;
+    const tLeft0 = tRight0 + RABBIT_RIGHT_DUR;
+    if (r.life < tRight0) targetYaw = r.forwardAngle;
+    else if (r.life < tLeft0) targetYaw = r.forwardAngle - RABBIT_TURN_ANGLE;
+    else targetYaw = r.forwardAngle + RABBIT_TURN_ANGLE;
+
+    r.currentYaw = lerpAngle(r.currentYaw, targetYaw, Math.min(1, dt * RABBIT_TURN_SPEED));
+    r.mesh.rotation.y = r.currentYaw;
+
+    if (r.life >= RABBIT_TOTAL_DUR) {
+      scene.remove(r.mesh);
+      activeRabbitPeeks.splice(i, 1);
+    }
+  }
+}
+
+function updateRabbitSpawner(dt) {
+  const isWinter = clock.season.name === 'Inverno';
+  if (isWinter && !clock.sleeping) {
+    rabbitTimer -= dt;
+    if (rabbitTimer <= 0) {
+      spawnRabbitPeek();
+      rabbitTimer = 35 + Math.random() * 40; // prossima capatina tra 35 e 75 secondi reali
+    }
+  }
+  updateRabbitPeeks(dt);
+}
+
 // Tenda di partenza (placeholder semplice, verrà sostituita con un modello dedicato)
 function makeTent() {
   const group = new THREE.Group();
@@ -2926,6 +3520,20 @@ const placedPoints = [];  // per tenere le risorse spaziate tra loro
    BANCO DA LAVORO - ricette Livello 1
    ========================================================================= */
 let toolTier = 1; // 1 = attrezzo base, 2 = rinforzato (meno colpi per abbattere)
+// Categorie per i tab del Banco da Lavoro: raggruppano le ricette per tipo
+// così da non dover scorrere l'intera lista per trovare quella cercata.
+const RECIPE_CATEGORIES = ['Strumenti', 'Costruzioni', 'Arredo e Decorazioni', 'Coltivazione', 'Materiali'];
+// Tab speciale, aggiunto sia al Banco da Lavoro sia al Fornelletto: invece di
+// filtrare per categoria, mostra TUTTE le ricette craftabili subito (materiali
+// e ingredienti già sufficienti), mescolate senza distinzione di categoria.
+const FILTER_AVAILABLE_TAB = '✅ Disponibili';
+const RECIPE_CATEGORY_BY_ID = {
+  attrezzo_rinforzato: 'Strumenti', lampada: 'Strumenti', zappa: 'Strumenti', canna_pesca: 'Strumenti', borraccia: 'Strumenti', annaffiatoio: 'Strumenti',
+  ponte: 'Costruzioni', recinto: 'Costruzioni', muro: 'Costruzioni', casetta: 'Costruzioni', fornellino: 'Costruzioni', scala: 'Costruzioni', stufetta: 'Costruzioni',
+  casetta_scoiattoli: 'Arredo e Decorazioni', torcia: 'Arredo e Decorazioni', sedia_dondolo: 'Arredo e Decorazioni', fontana: 'Arredo e Decorazioni',
+  campo_grano: 'Coltivazione', aiuola_fiori: 'Coltivazione',
+  lavora_lattina: 'Materiali', farina: 'Materiali',
+};
 const RECIPES = [
   {
     id: 'casetta_scoiattoli',
@@ -3486,10 +4094,15 @@ function makeRock(x, z) {
   return group;
 }
 
-scatterPoints(16, ISLAND.valley, 9).forEach(p => makeFruitTree(p.x, p.z));
-scatterPoints(22, ISLAND.valley, 8).forEach(p => makeWoodTree(p.x, p.z));
+// Alberi raccolti in un array a parte (windSwayTrees) per poter far
+// dondolare tronco/chioma col vento senza dover rifiltrare ogni frame
+// l'intero array interactables (che contiene anche rocce, spazzatura, ecc.).
+const windSwayTrees = [
+  ...scatterPoints(16, ISLAND.valley, 9).map(p => makeFruitTree(p.x, p.z)),
+  ...scatterPoints(22, ISLAND.valley, 8).map(p => makeWoodTree(p.x, p.z)),
+];
 scatterPoints(9, ISLAND.valley, 8).forEach(p => makeRock(p.x, p.z));
-scatterPoints(16, ISLAND.cala, 8).forEach(p => makeWoodTree(p.x, p.z));
+windSwayTrees.push(...scatterPoints(16, ISLAND.cala, 8).map(p => makeWoodTree(p.x, p.z)));
 scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
 
 /* =========================================================================
@@ -4218,6 +4831,7 @@ function arriveFerry() {
 }
 
 function departFerry() {
+  sfxFerryDeparture();
   ferryPresent = false;
   ferryBoat.visible = false;
   const idx = interactables.findIndex(it => it.type === 'ferryDock');
@@ -5662,12 +6276,14 @@ function enterSitMode(entry) {
   sitOverlay.classList.add('open');
   document.body.classList.add('sitting');
   document.getElementById('hint-line').classList.remove('show'); // niente hint residui (es. "[E] per sedersi") mentre si è già seduti
+  player.visible = false; // niente personaggio in piedi visibile davanti alla vista in prima persona da seduti
 }
 function exitSitMode() {
   sittingChair = null;
   stopGuitar();
   sitOverlay.classList.remove('open');
   document.body.classList.remove('sitting');
+  player.visible = true;
 }
 document.getElementById('sitStandBtn').addEventListener('click', exitSitMode);
 sitThinkBtn.addEventListener('click', () => {
@@ -6183,6 +6799,136 @@ function removePlacedItem(entry) {
   if (fi !== -1) placedItems.splice(fi, 1);
   const ii = interactables.findIndex(it => it.obj === entry.mesh);
   if (ii !== -1) interactables.splice(ii, 1);
+}
+
+/* =========================================================================
+   VENTO: raffiche periodiche di 3-5 secondi (durata variabile per stagione)
+   che fanno dondolare alberi, grano, fiori (piantati e nelle aiuole).
+   Primavera e autunno sono le stagioni ventose: la primavera trascina via
+   petali di fiore, l'autunno foglie. L'estate ha raffiche brevi, l'inverno
+   raffiche lunghe. Tutto qui dentro lavora su rotazioni di oggetti già
+   esistenti (mai geometrie nuove o buffer pesanti), quindi il costo per
+   frame resta trascurabile anche con molte piante in campo.
+   ========================================================================= */
+const WIND_SEASON_PARAMS = {
+  Primavera: { intervalMin: 8,  intervalMax: 15, durationMin: 3, durationMax: 5, debris: 'fiori' },
+  Estate:    { intervalMin: 16, intervalMax: 26, durationMin: 2, durationMax: 3, debris: null },
+  Autunno:   { intervalMin: 8,  intervalMax: 15, durationMin: 3, durationMax: 5, debris: 'foglie' },
+  Inverno:   { intervalMin: 18, intervalMax: 28, durationMin: 5, durationMax: 8, debris: null },
+};
+let windActive = false;
+let windIntensity = 0; // 0..1, con rampa morbida in entrata/uscita dalla raffica
+let windTimer = 10 + Math.random() * 8; // countdown alla prossima raffica
+let windGustRemaining = 0;
+let windDirection = 0; // radianti, casuale ad ogni raffica
+
+// Piccolo hash deterministico dalla posizione: dà ad ogni pianta/albero una
+// fase diversa così non dondolano tutti all'unisono (effetto "a onda").
+function windPhaseFor(x, z) {
+  return ((Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+}
+
+function swayTreeGroup(mesh) {
+  if (mesh.userData.windBaseRotZ === undefined) mesh.userData.windBaseRotZ = mesh.rotation.z;
+  const phase = windPhaseFor(mesh.position.x, mesh.position.z);
+  mesh.rotation.z = mesh.userData.windBaseRotZ + windIntensity * 0.07 * Math.sin(elapsedTime * 1.8 + phase);
+}
+
+function swayFieldPlants(readyGroup, baseX, baseZ) {
+  if (!readyGroup.visible) return; // niente da far dondolare se il campo non è ancora cresciuto
+  for (let i = 0; i < readyGroup.children.length; i++) {
+    const plant = readyGroup.children[i];
+    if (plant.userData.windBaseRotZ === undefined) plant.userData.windBaseRotZ = plant.rotation.z;
+    const phase = windPhaseFor(baseX + plant.position.x, baseZ + plant.position.z);
+    plant.rotation.z = plant.userData.windBaseRotZ + windIntensity * 0.16 * Math.sin(elapsedTime * 2.4 + phase);
+  }
+}
+
+function swayDecorativeFlower(mesh) {
+  if (mesh.userData.windBaseRotZ === undefined) mesh.userData.windBaseRotZ = mesh.rotation.z;
+  const phase = windPhaseFor(mesh.position.x, mesh.position.z);
+  mesh.rotation.z = mesh.userData.windBaseRotZ + windIntensity * 0.22 * Math.sin(elapsedTime * 2.8 + phase);
+}
+
+function applyWindSway() {
+  // Sotto soglia: niente da aggiornare, si resta fermi all'ultima posa di riposo.
+  if (windIntensity < 0.0005) return;
+  for (const tree of windSwayTrees) swayTreeGroup(tree);
+  for (const it of placedItems) {
+    if (it.itemType === 'campoGrano' || it.itemType === 'aiuolaFiori') {
+      swayFieldPlants(it.mesh.userData.readyGroup, it.x, it.z);
+    } else if (it.itemType === 'fiorePiantato') {
+      swayDecorativeFlower(it.mesh);
+    }
+  }
+}
+
+/* --- Detriti trascinati dal vento: petali (primavera) o foglie (autunno),
+   un semplice sistema a punti come pioggia/neve, ma con deriva orizzontale
+   invece che caduta verticale. Attivo solo mentre la raffica è in corso e
+   solo nelle due stagioni interessate. --- */
+const WIND_DEBRIS_COUNT = 40;
+const windDebrisGeo = new THREE.BufferGeometry();
+const windDebrisPositions = new Float32Array(WIND_DEBRIS_COUNT * 3);
+for (let i = 0; i < WIND_DEBRIS_COUNT; i++) {
+  windDebrisPositions[i * 3 + 0] = (Math.random() - 0.5) * 60;
+  windDebrisPositions[i * 3 + 1] = 0.3 + Math.random() * 3.5;
+  windDebrisPositions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+}
+windDebrisGeo.setAttribute('position', new THREE.BufferAttribute(windDebrisPositions, 3));
+const windDebrisMat = new THREE.PointsMaterial({ color: 0xf2a3c0, size: 0.35, transparent: true, opacity: 0 });
+const windDebrisParticles = new THREE.Points(windDebrisGeo, windDebrisMat);
+windDebrisParticles.visible = false;
+scene.add(windDebrisParticles);
+
+function updateWindDebris(dt, params) {
+  const wantDebris = windActive && params.debris && windIntensity > 0.02;
+  windDebrisParticles.visible = wantDebris;
+  if (!wantDebris) return;
+
+  windDebrisParticles.position.x = player.position.x;
+  windDebrisParticles.position.z = player.position.z;
+  windDebrisMat.color.setHex(params.debris === 'fiori' ? 0xf2a3c0 : 0xc97a3a);
+  windDebrisMat.opacity = 0.75 * windIntensity;
+
+  const speed = 9 + windIntensity * 6;
+  const dx = Math.cos(windDirection) * speed * dt;
+  const dz = Math.sin(windDirection) * speed * dt;
+  const pos = windDebrisGeo.attributes.position;
+  for (let i = 0; i < WIND_DEBRIS_COUNT; i++) {
+    let x = pos.getX(i) + dx;
+    let z = pos.getZ(i) + dz;
+    let y = pos.getY(i) + Math.sin(elapsedTime * 2 + i) * 0.4 * dt; // leggero saliscendi svolazzante
+    if (x > 30) x = -30; else if (x < -30) x = 30;
+    if (z > 30) z = -30; else if (z < -30) z = 30;
+    pos.setX(i, x);
+    pos.setY(i, y);
+    pos.setZ(i, z);
+  }
+  pos.needsUpdate = true;
+}
+
+function updateWind(dt) {
+  const params = WIND_SEASON_PARAMS[clock.season.name] || WIND_SEASON_PARAMS.Estate;
+  if (clock.sleeping) { applyWindSway(); updateWindDebris(dt, params); return; } // il tempo di gioco è fermo: niente countdown, ma restiamo coerenti visivamente
+  if (windActive) {
+    windGustRemaining -= dt;
+    windIntensity = Math.min(1, windIntensity + dt * 2.5);
+    if (windGustRemaining <= 0) {
+      windActive = false;
+      windTimer = params.intervalMin + Math.random() * (params.intervalMax - params.intervalMin);
+    }
+  } else {
+    windIntensity = Math.max(0, windIntensity - dt * 1.5);
+    windTimer -= dt;
+    if (windTimer <= 0) {
+      windActive = true;
+      windGustRemaining = params.durationMin + Math.random() * (params.durationMax - params.durationMin);
+      windDirection = Math.random() * Math.PI * 2;
+    }
+  }
+  applyWindSway();
+  updateWindDebris(dt, params);
 }
 
 function makeFencePanel(x, z, yaw) {
@@ -7446,7 +8192,8 @@ function plantField(entry) {
   d.readyGroup.visible = false;
   sfxSeeds();
   refreshInventoryHud();
-  showToast(d.fieldKind === 'grano' ? '🌱 Campo seminato' : '🌱 Aiuola seminata');
+  const seedLabel = INVENTORY_LABELS[seedKey];
+  showToast(`${d.fieldKind === 'grano' ? '🌱 Campo seminato' : '🌱 Aiuola seminata'} (${seedLabel[0]} ${seedLabel[1]} -2, 💧 Acqua -${WATER_COST})`);
 }
 
 function harvestField(entry) {
@@ -7766,6 +8513,24 @@ function setTutorialMenuButtons(buttons) {
   gamepadNav.index = 0;
   updateMenuHighlight();
 }
+// Renderizza una barra di tab per categoria (Banco da Lavoro, Fornelletto,
+// Inventario), riusando lo stesso pattern dei tab Acquisti/Vendite del
+// traghetto: ogni bottone tab entra anche nella lista di navigazione
+// gamepad/tastiera restituita, così i tab sono raggiungibili con
+// D-pad/frecce esattamente come le altre voci del menu.
+function renderCategoryTabs(container, categories, activeTab, onSelect) {
+  container.innerHTML = '';
+  const tabButtons = [];
+  for (const cat of categories) {
+    const btn = document.createElement('button');
+    btn.className = 'menu-tab-btn' + (cat === activeTab ? ' active' : '');
+    btn.textContent = cat;
+    btn.addEventListener('click', () => onSelect(cat));
+    container.appendChild(btn);
+    tabButtons.push(btn);
+  }
+  return tabButtons;
+}
 function updateMenuHighlight() {
   gamepadNav.buttons.forEach((b, i) => b.classList.toggle('gp-selected', i === gamepadNav.index));
 }
@@ -7872,15 +8637,29 @@ document.getElementById('sleep-cancel').addEventListener('click', closeSleepMenu
 
 const craftOverlay = document.getElementById('craft-overlay');
 const recipeListEl = document.getElementById('recipe-list');
+const craftTabsEl = document.getElementById('craft-tabs');
 let craftMenuOpen = false;
+let craftActiveTab = RECIPE_CATEGORIES[0];
 
 function renderRecipes() {
   recipeListEl.innerHTML = '';
+  const tabButtons = renderCategoryTabs(craftTabsEl, [...RECIPE_CATEGORIES, FILTER_AVAILABLE_TAB], craftActiveTab, (cat) => {
+    craftActiveTab = cat;
+    renderRecipes();
+  });
   for (const r of RECIPES) {
     if (r.visible && !r.visible()) continue; // ricetta non ancora sbloccata
     const done = r.once && r.isDone();
-    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k}`).join(', ');
     const affordable = Object.entries(r.cost).every(([k, v]) => inventory[k] >= v);
+    if (craftActiveTab === FILTER_AVAILABLE_TAB) {
+      if (done || !affordable) continue; // mostra solo ciò che si può creare subito, di qualsiasi categoria
+    } else if (RECIPE_CATEGORY_BY_ID[r.id] !== craftActiveTab) {
+      continue; // non è la categoria selezionata
+    }
+    // Ogni ingrediente mostra anche quanto se ne ha già in Inventario, come
+    // nel menu del fornelletto, così è chiaro a colpo d'occhio se manca
+    // qualcosa e quanto.
+    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k} (hai ${inventory[k] || 0})`).join(', ');
     const row = document.createElement('div');
     row.className = 'recipe-row';
     row.innerHTML = `
@@ -7894,18 +8673,22 @@ function renderRecipes() {
         clampAcquaToCapacity(); // se la ricetta ha speso alluminio, la capienza dell'acqua può essersi ridotta
         r.craft();
         sfxBuild();
-        showToast(`✅ ${r.name}`);
+        showToast(`✅ ${r.name} (${formatResourceList(r.cost, '-')})`);
         refreshInventoryHud();
         renderRecipes();
       });
     }
     recipeListEl.appendChild(row);
   }
-  setMenuButtons([...recipeListEl.querySelectorAll('.recipe-btn'), document.getElementById('craft-cancel')]);
+  if (recipeListEl.children.length === 0) {
+    recipeListEl.innerHTML = `<div class="recipe-row"><div class="recipe-info">${craftActiveTab === FILTER_AVAILABLE_TAB ? 'Nessuna ricetta craftabile al momento' : 'Nessuna ricetta in questa categoria (ancora)'}</div></div>`;
+  }
+  setMenuButtons([...tabButtons, ...recipeListEl.querySelectorAll('.recipe-btn'), document.getElementById('craft-cancel')]);
 }
 
 function openCraftMenu() {
   craftMenuOpen = true;
+  craftActiveTab = RECIPE_CATEGORIES[0];
   renderRecipes();
   craftOverlay.classList.add('open');
   maybeShowTutorial('bancoDaLavoro');
@@ -7916,6 +8699,7 @@ function closeCraftMenu() {
 }
 document.getElementById('craft-cancel').addEventListener('click', closeCraftMenu);
 
+
 /* =========================================================================
    FORNELLINO: ricette di cottura, selezionabile come mobile in casa (come
    letto/cassa/frigorifero). A differenza delle ricette del banco da lavoro,
@@ -7923,6 +8707,16 @@ document.getElementById('craft-cancel').addEventListener('click', closeCraftMenu
    rimossi da lì, non solo scalati da inventory, altrimenti la prossima
    sincronizzazione (syncFoodCounts) li farebbe ricomparire.
    ========================================================================= */
+// Categorie per i tab del Fornelletto: stesso principio del Banco da Lavoro.
+const COOK_CATEGORIES = ['Piatti salati', 'Bevande', 'Frutta cotta', 'Torte e crostate', 'Miele aromatizzato'];
+const COOK_CATEGORY_BY_ID = {
+  pesce_impanato: 'Piatti salati', tartare_pesce: 'Piatti salati', frittata: 'Piatti salati', grande_frittata: 'Piatti salati',
+  tisana: 'Bevande', sciroppo: 'Bevande',
+  mela_cotta: 'Frutta cotta', cotto_ciliegie: 'Frutta cotta',
+  crostata_ciliegie: 'Torte e crostate', tartelletta_nespole: 'Torte e crostate', torta_pesche: 'Torte e crostate', torta_fichi: 'Torte e crostate',
+  torta_mele: 'Torte e crostate', torta_castagne: 'Torte e crostate', plumcake_arance: 'Torte e crostate', torta_mandarino: 'Torte e crostate',
+  miele_ciliegie: 'Miele aromatizzato', miele_castagne: 'Miele aromatizzato', miele_mandarino: 'Miele aromatizzato', miele_fichi: 'Miele aromatizzato',
+};
 const COOK_RECIPES = [
   { id: 'pesce_impanato', name: 'Pesce impanato', cost: { pesce: 1, farina: 1 }, visible: () => stoveBuilt, craft: () => { inventory.pesceImpanato++; } },
   { id: 'tartare_pesce', name: 'Tartare di pesce', cost: { pesce: 1, pesche: 1 }, visible: () => stoveBuilt, craft: () => { inventory.tartarePesce++; } },
@@ -7975,7 +8769,9 @@ function spendCookIngredient(key, count) {
 
 const cookOverlay = document.getElementById('cook-overlay');
 const cookListEl = document.getElementById('cook-list');
+const cookTabsEl = document.getElementById('cook-tabs');
 let cookMenuOpen = false;
+let cookActiveTab = COOK_CATEGORIES[0];
 
 // Quanto di un ingrediente è davvero disponibile per cucinare: per la
 // frutta/pesce conta zaino + frigorifero (mai la cassa); l'acqua conta anche
@@ -7990,10 +8786,19 @@ function availableForCooking(key) {
 
 function renderCookMenu() {
   cookListEl.innerHTML = '';
+  const tabButtons = renderCategoryTabs(cookTabsEl, [...COOK_CATEGORIES, FILTER_AVAILABLE_TAB], cookActiveTab, (cat) => {
+    cookActiveTab = cat;
+    renderCookMenu();
+  });
   for (const r of COOK_RECIPES) {
     if (r.visible && !r.visible()) continue;
-    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k} (hai ${availableForCooking(k)})`).join(', ');
     const affordable = Object.entries(r.cost).every(([k, v]) => availableForCooking(k) >= v);
+    if (cookActiveTab === FILTER_AVAILABLE_TAB) {
+      if (!affordable) continue; // mostra solo ciò che si può cucinare subito, di qualsiasi categoria
+    } else if (COOK_CATEGORY_BY_ID[r.id] !== cookActiveTab) {
+      continue; // non è la categoria selezionata
+    }
+    const costText = Object.entries(r.cost).map(([k, v]) => `${v} ${k} (hai ${availableForCooking(k)})`).join(', ');
     const row = document.createElement('div');
     row.className = 'recipe-row';
     row.innerHTML = `
@@ -8005,17 +8810,21 @@ function renderCookMenu() {
       for (const [k, v] of Object.entries(r.cost)) spendCookIngredient(k, v);
       r.craft();
       sfxCooking();
-      showToast(`✅ ${r.name}`);
+      showToast(`✅ ${r.name} (${formatResourceList(r.cost, '-')})`);
       refreshInventoryHud();
       renderCookMenu();
     });
     cookListEl.appendChild(row);
   }
-  setMenuButtons([...cookListEl.querySelectorAll('.recipe-btn'), document.getElementById('cook-cancel')]);
+  if (cookListEl.children.length === 0) {
+    cookListEl.innerHTML = `<div class="recipe-row"><div class="recipe-info">${cookActiveTab === FILTER_AVAILABLE_TAB ? 'Nessuna ricetta cucinabile al momento' : 'Nessuna ricetta in questa categoria (ancora)'}</div></div>`;
+  }
+  setMenuButtons([...tabButtons, ...cookListEl.querySelectorAll('.recipe-btn'), document.getElementById('cook-cancel')]);
 }
 
 function openCookMenu() {
   cookMenuOpen = true;
+  cookActiveTab = COOK_CATEGORIES[0];
   renderCookMenu();
   cookOverlay.classList.add('open');
 }
@@ -8424,6 +9233,8 @@ function eatFruit(type) {
   }
   minutesSinceMeal = 0;
   if (healthIndex < HEALTH_STATES.length - 1) healthIndex++;
+  const [icon, label] = INVENTORY_LABELS[type];
+  showToast(`${icon} ${label} -1`);
   refreshInventoryHud();
 }
 
@@ -8688,20 +9499,72 @@ const INVENTORY_LABELS = {
   mieleMandarino: ['🍊', 'Miele al mandarino'], mieleFichi: ['🥮', 'Miele cotto di fichi'],
   fioriDecorativi: ['🌼', 'Fiori da piantare'],
 };
+// Categorie per i tab dell'Inventario: raggruppano i tanti oggetti che si
+// accumulano in partita per tipo, così è più facile trovare quello cercato.
+const INVENTORY_CATEGORIES = ['Risorse', 'Frutta e Pesce', 'Piatti e Dolci', 'Da piazzare', 'Oggetti speciali'];
+const INVENTORY_CATEGORY_BY_KEY = {
+  legna: 'Risorse', pietra: 'Risorse', selce: 'Risorse', alluminio: 'Risorse', lattine: 'Risorse', frammenti: 'Risorse',
+  spazzatura: 'Risorse', acqua: 'Risorse', semiGrano: 'Risorse', semiFiori: 'Risorse', grano: 'Risorse', fiori: 'Risorse',
+  farina: 'Risorse', uova: 'Risorse', miele: 'Risorse', moneta: 'Risorse',
+  ciliegie: 'Frutta e Pesce', nespole: 'Frutta e Pesce', pesche: 'Frutta e Pesce', fichi: 'Frutta e Pesce', mele: 'Frutta e Pesce',
+  castagne: 'Frutta e Pesce', arance: 'Frutta e Pesce', mandarini: 'Frutta e Pesce', pesce: 'Frutta e Pesce',
+  tisana: 'Piatti e Dolci', sciroppo: 'Piatti e Dolci', pesceImpanato: 'Piatti e Dolci', tartarePesce: 'Piatti e Dolci',
+  frittata: 'Piatti e Dolci', grandeFrittata: 'Piatti e Dolci', melaCotta: 'Piatti e Dolci', cottoCiliegie: 'Piatti e Dolci',
+  crostataCiliegie: 'Piatti e Dolci', tartellettaNespole: 'Piatti e Dolci', tortaPesche: 'Piatti e Dolci', tortaFichi: 'Piatti e Dolci',
+  tortaMele: 'Piatti e Dolci', tortaCastagne: 'Piatti e Dolci', plumcakeArance: 'Piatti e Dolci', tortaMandarino: 'Piatti e Dolci',
+  mieleCiliegie: 'Piatti e Dolci', mieleCastagne: 'Piatti e Dolci', mieleMandarino: 'Piatti e Dolci', mieleFichi: 'Piatti e Dolci',
+  recinti: 'Da piazzare', torce: 'Da piazzare', muri: 'Da piazzare', casette: 'Da piazzare', fontane: 'Da piazzare',
+  campiGrano: 'Da piazzare', aiuoleFiori: 'Da piazzare', sedieDondolo: 'Da piazzare', fioriDecorativi: 'Da piazzare',
+  bottiglia: 'Oggetti speciali', lucciole: 'Oggetti speciali', pellicola: 'Oggetti speciali', fotoFarfalla: 'Oggetti speciali',
+  stellaMarina: 'Oggetti speciali', medusa: 'Oggetti speciali', conchiglia: 'Oggetti speciali', fotoPaesaggio: 'Oggetti speciali',
+};
+// Formatta un oggetto costo/consumo { chiave: quantità } in una stringa
+// leggibile con icone, es. "🌾 Grano -2, 💧 Acqua -3". Usata sia per i
+// toast di consumo che per mostrare il costo di ricette nei menu.
+function formatResourceList(costObj, sign) {
+  return Object.entries(costObj).map(([k, v]) => {
+    const label = INVENTORY_LABELS[k] ? `${INVENTORY_LABELS[k][0]} ${INVENTORY_LABELS[k][1]}` : k;
+    return `${label} ${sign}${v}`;
+  }).join(', ');
+}
 const inventoryListEl = document.getElementById('inventory-list');
+const inventoryStatusEl = document.getElementById('inventory-status');
+const inventoryTabsEl = document.getElementById('inventory-tabs');
+let inventoryActiveTab = INVENTORY_CATEGORIES[0];
 function refreshInventoryHud() {
   if (!inventoryMenuOpen) return; // niente da aggiornare se il menu non è a schermo
-  inventoryListEl.innerHTML = '';
+  // Attrezzo/Salute/Borraccia/Annaffiatoio restano sempre visibili sopra i
+  // tab (non sono legati a una categoria, servono come stato generale)
+  inventoryStatusEl.innerHTML = '';
   const toolRow = document.createElement('div');
   toolRow.className = 'inv-row';
   toolRow.innerHTML = `<span>⚒️ Attrezzo</span><span>${toolTier >= 2 ? 'rinforzato' : 'base'}</span>`;
-  inventoryListEl.appendChild(toolRow);
+  inventoryStatusEl.appendChild(toolRow);
   const healthRow = document.createElement('div');
   healthRow.className = 'inv-row';
   healthRow.innerHTML = `<span>❤️ Salute</span><span>${HEALTH_STATES[healthIndex]}${isSick ? ' 🤒 Malato' : ''}</span>`;
-  inventoryListEl.appendChild(healthRow);
+  inventoryStatusEl.appendChild(healthRow);
+  if (borraccia) {
+    const borracciaRow = document.createElement('div');
+    borracciaRow.className = 'inv-row';
+    borracciaRow.innerHTML = `<span>🎒 Borraccia</span><span>${borraccia.sorsi}/${BORRACCIA_MAX_SORSI} sorsi</span>`;
+    inventoryStatusEl.appendChild(borracciaRow);
+  }
+  if (annaffiatoio) {
+    const annaffiatoioRow = document.createElement('div');
+    annaffiatoioRow.className = 'inv-row';
+    annaffiatoioRow.innerHTML = `<span>🚿 Annaffiatoio</span><span>${annaffiatoio.litri}/${ANNAFFIATOIO_MAX_LITRI} litri</span>`;
+    inventoryStatusEl.appendChild(annaffiatoioRow);
+  }
+
+  inventoryListEl.innerHTML = '';
+  const tabButtons = renderCategoryTabs(inventoryTabsEl, INVENTORY_CATEGORIES, inventoryActiveTab, (cat) => {
+    inventoryActiveTab = cat;
+    refreshInventoryHud();
+  });
   for (const [key, [icon, label]] of Object.entries(INVENTORY_LABELS)) {
     if (!inventory[key]) continue; // niente voci a zero
+    if (INVENTORY_CATEGORY_BY_KEY[key] !== inventoryActiveTab) continue; // non è la categoria selezionata
     const row = document.createElement('div');
     row.className = 'inv-row';
     const isFruit = FRUIT_TYPES.includes(key);
@@ -8722,25 +9585,17 @@ function refreshInventoryHud() {
     }
     inventoryListEl.appendChild(row);
   }
-  if (borraccia) {
-    const borracciaRow = document.createElement('div');
-    borracciaRow.className = 'inv-row';
-    borracciaRow.innerHTML = `<span>🎒 Borraccia</span><span>${borraccia.sorsi}/${BORRACCIA_MAX_SORSI} sorsi</span>`;
-    inventoryListEl.appendChild(borracciaRow);
+  if (inventoryListEl.children.length === 0) {
+    inventoryListEl.innerHTML = '<div class="inv-row"><span>Nessun oggetto in questa categoria</span></div>';
   }
-  if (annaffiatoio) {
-    const annaffiatoioRow = document.createElement('div');
-    annaffiatoioRow.className = 'inv-row';
-    annaffiatoioRow.innerHTML = `<span>🚿 Annaffiatoio</span><span>${annaffiatoio.litri}/${ANNAFFIATOIO_MAX_LITRI} litri</span>`;
-    inventoryListEl.appendChild(annaffiatoioRow);
-  }
-  setMenuButtons([...inventoryListEl.querySelectorAll('.storage-btn'), document.getElementById('inventory-close')]);
+  setMenuButtons([...tabButtons, ...inventoryListEl.querySelectorAll('.storage-btn'), document.getElementById('inventory-close')]);
 }
 
 const inventoryOverlay = document.getElementById('inventory-overlay');
 let inventoryMenuOpen = false;
 function openInventoryMenu() {
   inventoryMenuOpen = true;
+  inventoryActiveTab = INVENTORY_CATEGORIES[0];
   inventoryOverlay.classList.add('open');
   refreshInventoryHud();
 }
@@ -9413,6 +10268,16 @@ function checkInteractions() {
         : INTERACT_HINTS[target.type];
       if (input.actionJustPressed && !isAnyOverlayOpen()) handleAction(target);
     }
+  }
+  // handleAction() può aver appena fatto scattare uno stato che nasconde
+  // del tutto l'hint normale (seduti sulla sedia a dondolo, entrati in
+  // casa...): senza questo controllo l'hint calcolato PRIMA di handleAction
+  // (es. "Sedia a dondolo - [E] per sedersi") verrebbe riscritto e mostrato
+  // qui sotto anche se nel frattempo si è già seduti/entrati, restando
+  // bloccato a video finché quello stato non termina.
+  if (sittingChair || insideHouse) {
+    hintEl.classList.remove('show');
+    return;
   }
   if (hint) {
     hintEl.textContent = localizeHint(hint);
@@ -10411,9 +11276,14 @@ function animate() {
   updateDevDebugPanel();
   updateSky();
   updateStars();
+  rotateStarfield(dt);
   trySpawnShootingStar(dt);
   updateShootingStars(dt);
   updateWeatherParticles(dt);
+  updateWind(dt);
+  updateLakeFishJump(dt);
+  updateCricketSpawner(dt);
+  updateRabbitSpawner(dt);
   updateFireflies(elapsedTime);
   updateBirds(elapsedTime);
   updateInsectAmbience(elapsedTime);
