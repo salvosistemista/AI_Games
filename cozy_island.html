@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Cozy Island v2.5</title>
+<title>Cozy Island v2.9</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1a2a; font-family: -apple-system, sans-serif; touch-action: none; }
@@ -856,6 +856,13 @@ function terrainHeightAt(x, z) {
    si aggancia ai suoi eventi invece di tenere un proprio timer separato.
    Durata stagioni: 7 giorni ciascuna per ora, facilmente estendibile.
    ========================================================================= */
+// Dichiarati qui (invece che più sotto, nel motore audio vero e proprio)
+// perché pickNewWeather(), poche righe sotto, chiama già updateRainAmbience()
+// alla primissima esecuzione a inizio script: servono quindi disponibili
+// da subito, non nella loro temporal dead zone.
+let audioCtx = null;
+let masterGain = null;
+
 const SEASONS = [
   { name: 'Primavera', lengthDays: 30, weatherPool: ['sereno', 'sereno', 'nuvoloso', 'pioggia'], coldness: 0.35 },
   { name: 'Estate',     lengthDays: 30, weatherPool: ['sereno', 'sereno', 'sereno', 'nuvoloso'],  coldness: 0.05 },
@@ -935,6 +942,7 @@ function pickNewWeather() {
   lastWeather = currentWeather;
   const pool = clock.season.weatherPool;
   currentWeather = pool[Math.floor(Math.random() * pool.length)];
+  updateRainAmbience();
 }
 pickNewWeather();
 clock.on('day', pickNewWeather); // per ora il meteo cambia una volta al giorno, si può affinare dopo
@@ -950,9 +958,11 @@ const scene = new THREE.Scene();
    dell'utente (regola dei browser); da lì in poi tutti gli sfxXxx() sono
    pronti all'uso. Ogni suono è costruito con oscillatori/rumore + inviluppo
    (attack/decay) per evitare click, mai suoni "nudi" senza fade.
+   (audioCtx/masterGain sono dichiarati molto più sopra, prima del sistema
+   meteo, perché pickNewWeather() li usa già alla primissima chiamata a
+   inizio script: con "let" qui sotto sarebbero stati ancora nella loro
+   temporal dead zone in quel momento, causando un ReferenceError.)
    ========================================================================= */
-let audioCtx = null;
-let masterGain = null;
 function ensureAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -964,7 +974,7 @@ function ensureAudioCtx() {
   return audioCtx;
 }
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
-  window.addEventListener(ev, () => { ensureAudioCtx(); updateSeaAmbience(); }, { once: false, passive: true });
+  window.addEventListener(ev, () => { ensureAudioCtx(); updateSeaAmbience(); updateRainAmbience(); }, { once: false, passive: true });
 });
 
 // Un singolo "blip" a oscillatore con inviluppo semplice (attack/decay).
@@ -1061,6 +1071,26 @@ function sfxBirdChirp() {
   const base = 1800 + Math.random() * 600;
   playTone(base, 0.09, { type: 'sine', gain: 0.12, endFreq: base * 1.4 });
 }
+function sfxAxeHit() {
+  playNoiseBurst(0.05, { gain: 0.22, filterFreq: 1500, filterType: 'bandpass' });
+  playTone(140, 0.09, { type: 'square', gain: 0.18, endFreq: 90 }); // il "toc" cupo della lama nel legno
+}
+function sfxPickaxeHit() {
+  playTone(1400, 0.05, { type: 'triangle', gain: 0.16, endFreq: 700 }); // il clangore metallico sulla pietra
+  playNoiseBurst(0.06, { gain: 0.14, filterFreq: 3000, filterType: 'highpass' });
+}
+function sfxLeavesRustle() {
+  playNoiseBurst(0.35, { gain: 0.12, filterFreq: 2200, filterType: 'bandpass' });
+}
+function sfxCicadaChirp() {
+  const dur = 1.1 + Math.random() * 0.8;
+  playNoiseBurst(dur, { gain: 0.06, filterFreq: 4600 + Math.random() * 900, filterType: 'bandpass' });
+}
+function sfxCricketChirp() {
+  const base = 4000 + Math.random() * 400;
+  playTone(base, 0.05, { type: 'square', gain: 0.045 });
+  playTone(base, 0.05, { type: 'square', gain: 0.045, when: 0.08 });
+}
 
 // --- Ambienti a loop (onde del mare, grilli serali) ---
 function startNoiseLoop(filterFreq, filterType, baseGain) {
@@ -1089,25 +1119,44 @@ function updateSeaAmbience() {
   if (!audioCtx || seaWavesLoop) return;
   seaWavesLoop = startNoiseLoop(700, 'lowpass', 0.05);
 }
-let cricketOsc = null;
-function updateCricketAmbience() {
-  const shouldPlay = clock.hour >= 18; // "18-24" = dalle 18 fino a mezzanotte, quando l'ora torna a 0
+
+let rainLoop = null;
+function updateRainAmbience() {
   if (!audioCtx) return;
-  if (shouldPlay && !cricketOsc) {
-    const osc = audioCtx.createOscillator();
-    osc.type = 'square';
-    osc.frequency.value = 4200;
-    const g = audioCtx.createGain();
-    g.gain.value = 0;
-    osc.connect(g);
-    g.connect(masterGain);
-    osc.start();
-    g.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 2);
-    cricketOsc = { osc, gainNode: g };
-  } else if (!shouldPlay && cricketOsc) {
-    cricketOsc.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
-    cricketOsc.osc.stop(audioCtx.currentTime + 1.2);
-    cricketOsc = null;
+  const shouldPlay = currentWeather === 'pioggia';
+  if (shouldPlay && !rainLoop) {
+    rainLoop = startNoiseLoop(3500, 'highpass', 0.06); // pioggia leggera: fruscio acuto e costante
+  } else if (!shouldPlay && rainLoop) {
+    rainLoop.gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+    rainLoop.src.stop(audioCtx.currentTime + 1.6);
+    rainLoop = null;
+  }
+}
+
+// Grilli (di notte) e cicale (di giorno): non un drone continuo, ma impulsi
+// distinti e ritmati, presenti solo con cielo sereno in tarda Primavera,
+// tutta l'Estate, e a inizio Autunno.
+function isCicadaSeasonWindow() {
+  const s = clock.season.name;
+  if (s === 'Estate') return true;
+  if (s === 'Primavera') return clock.dayInSeason >= 20; // ultimo terzo della stagione
+  if (s === 'Autunno') return clock.dayInSeason < 10;    // primo terzo della stagione
+  return false;
+}
+let nextCicadaTime = 0;
+let nextCricketTime = 0;
+function updateInsectAmbience(elapsedTime) {
+  if (!audioCtx || currentWeather !== 'sereno' || !isCicadaSeasonWindow()) return;
+  if (isNightTime()) {
+    if (elapsedTime > nextCricketTime) {
+      sfxCricketChirp();
+      nextCricketTime = elapsedTime + 1; // ogni secondo, come richiesto
+    }
+  } else {
+    if (elapsedTime > nextCicadaTime) {
+      sfxCicadaChirp();
+      nextCicadaTime = elapsedTime + 3 + Math.random(); // ogni 3-4 secondi
+    }
   }
 }
 
@@ -2247,6 +2296,117 @@ function bridgeHeightAt(x, z) {
   return bridgeProfile.deckY(t);
 }
 
+/* =========================================================================
+   ASSE SGANGHERATA PROVVISORIA: finché il ponte vero non è costruito, una
+   singola asse stretta e storta collega le due sponde nello stesso identico
+   punto in cui sorgerà il ponte (stessa ISLAND.bridge.cx/cz/rotY), così i
+   due non sono mai disallineati fra loro. Sparisce non appena il ponte vero
+   viene costruito. Niente arco: solo una linea dritta fra le due sponde con
+   una leggera ondulazione per sembrare raffazzonata, mai sotto il pelo
+   dell'acqua.
+   ========================================================================= */
+const TEMP_PLANK_HALF_WIDTH = 1.0; // molto più stretta del ponte vero: un'asse, non una passerella
+function computePlankProfile() {
+  const b = ISLAND.bridge;
+  const startX = b.cx + Math.sin(b.rotY) * -b.halfLength;
+  const startZ = b.cz + Math.cos(b.rotY) * -b.halfLength;
+  const endX = b.cx + Math.sin(b.rotY) * b.halfLength;
+  const endZ = b.cz + Math.cos(b.rotY) * b.halfLength;
+  const baseStart = terrainHeightAt(startX, startZ) + 0.1;
+  const baseEnd = terrainHeightAt(endX, endZ) + 0.1;
+  function deckY(t) {
+    const linear = baseStart + (baseEnd - baseStart) * t;
+    const wobble = Math.sin(t * Math.PI * 5) * 0.08; // ondulazione "raffazzonata"
+    return Math.max(linear + wobble, WATER_SURFACE_Y + 0.1);
+  }
+  return { deckY };
+}
+const plankProfile = computePlankProfile();
+function insideTempPlank(x, z) {
+  if (bridgeBuilt) return false;
+  const { lx, lz } = bridgeLocalCoords(x, z); // stessa geometria/orientamento del futuro ponte
+  return Math.abs(lx) <= TEMP_PLANK_HALF_WIDTH && Math.abs(lz) <= ISLAND.bridge.halfLength;
+}
+function plankHeightAt(x, z) {
+  const { lz } = bridgeLocalCoords(x, z);
+  const t = THREE.MathUtils.clamp((lz + ISLAND.bridge.halfLength) / (ISLAND.bridge.halfLength * 2), 0, 1);
+  return plankProfile.deckY(t);
+}
+let tempPlankGroup = null;
+function makeTempPlank() {
+  const b = ISLAND.bridge;
+  const group = new THREE.Group();
+  const plankMat = new THREE.MeshLambertMaterial({ color: 0x5a3f28 });
+  const N = 14;
+  const segLen = (b.halfLength * 2) / N;
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N, t1 = (i + 1) / N;
+    const y0 = plankProfile.deckY(t0), y1 = plankProfile.deckY(t1);
+    const off0 = -b.halfLength + t0 * b.halfLength * 2;
+    const offC = off0 + segLen / 2;
+    const yc = (y0 + y1) / 2;
+    const slope = Math.atan2(y1 - y0, segLen);
+    // ogni assicella un po' storta e sfalsata, mai perfettamente allineata:
+    // è raffazzonata, non un ponte in miniatura
+    const jitterX = (worldRandom() - 0.5) * 0.3;
+    const jitterRotZ = (worldRandom() - 0.5) * 0.14;
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(TEMP_PLANK_HALF_WIDTH * 2, 0.1, segLen * 0.8), plankMat);
+    plank.position.set(jitterX, yc, offC);
+    plank.rotation.x = -slope;
+    plank.rotation.z = jitterRotZ;
+    plank.castShadow = true;
+    plank.receiveShadow = true;
+    group.add(plank);
+  }
+  group.position.set(b.cx, 0, b.cz);
+  group.rotation.y = b.rotY;
+  scene.add(group);
+  return group;
+}
+tempPlankGroup = makeTempPlank();
+
+/* =========================================================================
+   MOLO: reso "solido" per camminarci sopra (non solo decorativo). Le
+   funzioni sono dichiarate qui, vicino a isWalkable, ma ferryPier viene
+   creato molto più avanti nel file (nella sezione traghetto): ferryPier è
+   quindi dichiarato con let (non const) e inizializzato a null, altrimenti
+   isWalkable() — chiamata moltissime volte già durante la generazione del
+   mondo, ben prima che il molo esista — andrebbe in errore accedendo a una
+   const non ancora inizializzata.
+   ========================================================================= */
+let ferryPier = null;
+const PIER_DECK_LOCAL = { xMin: 3.55, xMax: 8.05, zMin: -4.5, zMax: 5.5, y: 2.63 };
+// La scaletta si estende oltre il bordo "di terra" del molo (xMax del
+// tavolato) verso la sabbia, larga quanto una rampa spartana
+const PIER_STAIR_LOCAL = { xMin: PIER_DECK_LOCAL.xMax, xMax: PIER_DECK_LOCAL.xMax + 3.2, zMin: -1.4, zMax: 1.4 };
+function pierLocalCoords(x, z) {
+  if (!ferryPier) return { lx: Infinity, lz: Infinity };
+  const dx = x - ferryPier.position.x, dz = z - ferryPier.position.z;
+  const cos = Math.cos(ferryPier.rotation.y), sin = Math.sin(ferryPier.rotation.y);
+  return { lx: dx * cos - dz * sin, lz: dx * sin + dz * cos };
+}
+function insidePierDeck(x, z) {
+  if (!ferryPier) return false;
+  const { lx, lz } = pierLocalCoords(x, z);
+  return lx >= PIER_DECK_LOCAL.xMin && lx <= PIER_DECK_LOCAL.xMax && lz >= PIER_DECK_LOCAL.zMin && lz <= PIER_DECK_LOCAL.zMax;
+}
+function insidePierStairs(x, z) {
+  if (!ferryPier) return false;
+  const { lx, lz } = pierLocalCoords(x, z);
+  return lx >= PIER_STAIR_LOCAL.xMin && lx <= PIER_STAIR_LOCAL.xMax && lz >= PIER_STAIR_LOCAL.zMin && lz <= PIER_STAIR_LOCAL.zMax;
+}
+function pierHeightAt(x, z) {
+  const deckY = ferryPier.position.y + PIER_DECK_LOCAL.y;
+  if (insidePierDeck(x, z)) return deckY;
+  if (insidePierStairs(x, z)) {
+    const { lx } = pierLocalCoords(x, z);
+    const t = THREE.MathUtils.clamp((lx - PIER_STAIR_LOCAL.xMin) / (PIER_STAIR_LOCAL.xMax - PIER_STAIR_LOCAL.xMin), 0, 1);
+    const groundY = terrainHeightAt(x, z);
+    return deckY + (groundY - deckY) * t;
+  }
+  return terrainHeightAt(x, z);
+}
+
 function makeBridge() {
   const b = ISLAND.bridge;
   const N = bridgeProfile.segments;
@@ -2310,6 +2470,7 @@ function buildRealBridge() {
   if (bridgeBuilt) return;
   bridgeBuilt = true;
   makeBridge();
+  if (tempPlankGroup) { scene.remove(tempPlankGroup); tempPlankGroup = null; } // l'asse provvisoria non serve più
 }
 
 // Laghetto d'acqua dolce (separato dal mare, per una pesca diversa da quella marina)
@@ -2695,15 +2856,18 @@ function insideBridge(x, z) {
 }
 
 function isWalkable(x, z) {
-  const onLand = insideEllipse(x, z, ISLAND.valley) || insideEllipse(x, z, ISLAND.cala) || insideBridge(x, z);
+  const onPierStructure = insidePierDeck(x, z) || insidePierStairs(x, z);
+  const onLand = insideEllipse(x, z, ISLAND.valley) || insideEllipse(x, z, ISLAND.cala) || insideBridge(x, z) || insideTempPlank(x, z) || onPierStructure;
   if (!onLand) return false;
   // il fiume taglia fuori il passaggio anche se si è "tecnicamente" dentro
-  // Valle o Cala, finché il ponte vero non è stato costruito
+  // Valle o Cala, finché il ponte vero non è stato costruito (a meno di non
+  // essere sull'asse provvisoria, che colma il varco al suo posto)
   const onBridgeDeck = bridgeBuilt && insideBridge(x, z);
+  const onPlank = insideTempPlank(x, z);
   const inRiver = distToRiverSegment(x, z) < ISLAND.riverHalfWidth;
-  if (inRiver && !onBridgeDeck) return false;
-  // il laghetto non si attraversa a piedi
-  if (lakeInfluence(x, z) > 0.15) return false;
+  if (inRiver && !onBridgeDeck && !onPlank) return false;
+  // il laghetto non si attraversa a piedi (il molo, che sta altrove, resta comunque valido)
+  if (lakeInfluence(x, z) > 0.15 && !onPierStructure) return false;
   return true;
 }
 
@@ -3341,7 +3505,7 @@ scatterPoints(14, ISLAND.cala, 7).forEach(p => makeRock(p.x, p.z));
    vicino. Il giocatore può scacciarli avvicinandosi troppo.
    ========================================================================= */
 const SQUIRREL_COUNT = 3;
-const SQUIRREL_SPEED = 3.2; // unità al secondo
+const SQUIRREL_SPEED = 44; // il doppio della velocità massima del giocatore (PLAYER_SPEED 22 × HEALTH_SPEED_MULT massimo 1.0)
 const SQUIRREL_FLEE_RADIUS = 5;
 const SQUIRREL_FIELD_DETECT_RADIUS = 5.5;
 const SQUIRREL_SEED_EAT_RADIUS = 1.1;
@@ -3498,14 +3662,18 @@ function updateSquirrels(dt, deltaGameMinutes) {
     if (sq.activeHoursRemaining <= 0) { squirrelReturnToTree(sq); continue; }
 
     // Il giocatore troppo vicino ha sempre priorità: lo scoiattolo scappa.
+    // Attenzione: questo blocco deve SOLO impostare lo stato, mai bloccare
+    // l'esecuzione del movimento qui sotto — altrimenti finché il giocatore
+    // resta vicino lo scoiattolo resterebbe "congelato" in stato fuggiasco
+    // senza mai eseguire il ramo che lo fa effettivamente muovere.
     const distToPlayer = Math.hypot(sq.pos.x - player.position.x, sq.pos.z - player.position.z);
-    if (distToPlayer < SQUIRREL_FLEE_RADIUS) {
-      if (sq.subState !== 'fleeing') {
-        sq.subState = 'fleeing';
-        sq.stealingField = null;
-        pickSquirrelFleeTarget(sq);
-      }
-    } else if (sq.subState === 'paused' || sq.subState === 'stealingField') {
+    if (distToPlayer < SQUIRREL_FLEE_RADIUS && sq.subState !== 'fleeing') {
+      sq.subState = 'fleeing';
+      sq.stealingField = null;
+      pickSquirrelFleeTarget(sq);
+    }
+
+    if (sq.subState === 'paused' || sq.subState === 'stealingField') {
       if (deltaGameMinutes > 0) {
         if (sq.subState === 'paused') {
           sq.pauseTimerMinutes -= deltaGameMinutes;
@@ -3533,8 +3701,14 @@ function updateSquirrels(dt, deltaGameMinutes) {
       const dist = Math.hypot(dx, dz);
       if (dist < 0.4) {
         if (sq.subState === 'fleeing') {
-          sq.subState = 'roaming';
-          pickSquirrelRoamTarget(sq);
+          if (distToPlayer < SQUIRREL_FLEE_RADIUS) {
+            // il giocatore è ancora addosso: sceglie subito un'altra via di
+            // fuga invece di fermarsi un istante ad aspettare il prossimo giro
+            pickSquirrelFleeTarget(sq);
+          } else {
+            sq.subState = 'roaming';
+            pickSquirrelRoamTarget(sq);
+          }
         } else {
           const field = !sq.hasHouse ? findNearbyPlantedField(sq) : null;
           if (field && Math.random() < 0.5) {
@@ -3704,7 +3878,6 @@ clock.on('hour', () => {
   if (clock.season.name === 'Estate' && isNightTime() && Math.random() < 0.35) spawnFallingStar();
   if (clock.hour === 6) clearStarFragments(); // spariscono con la luce del giorno
   if (clock.sleeping) sfxSnore(); // un russare ogni ora di sonno, se il sonno dura più a lungo di un attimo
-  updateCricketAmbience();
 });
 
 /* =========================================================================
@@ -3942,11 +4115,29 @@ function makeFerryPier() {
     }
   });
 
+  // Scaletta spartana sul bordo "di terra" del molo (quello opposto allo
+  // scafo): pochi gradini grezzi, senza corrimano, che scendono verso la
+  // sabbia. Le coordinate locali coincidono apposta con PIER_STAIR_LOCAL,
+  // così la geometria visibile e la zona camminabile restano allineate.
+  const stairSteps = 5;
+  const stairXStart = 8.05, stairXEnd = 11.25;
+  const stairRun = stairXEnd - stairXStart;
+  const stairDrop = 2.63; // dal tavolato (in cima) fino a terra (in fondo)
+  for (let i = 0; i < stairSteps; i++) {
+    const stepX = stairXStart + (i + 0.5) * (stairRun / stairSteps);
+    const stepY = stairDrop - (i + 0.5) * (stairDrop / stairSteps);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(stairRun / stairSteps + 0.05, 0.15, 2.6), woodMat);
+    step.position.set(stepX, stepY, 0.5);
+    step.castShadow = true;
+    step.receiveShadow = true;
+    group.add(step);
+  }
+
   scene.add(group);
   return group;
 }
 const ferryBoat = makeFerryBoat();
-const ferryPier = makeFerryPier();
+ferryPier = makeFerryPier();
 
 let ferryPresent = false;
 let ferryLastArrivalDay = -1;
@@ -5107,8 +5298,20 @@ function buildPlayerGroup() {
 
 // Inizializzazione
 const player = buildPlayerGroup();
-player.position.set(TENT_POS.x + 13, terrainHeightAt(TENT_POS.x + 13, TENT_POS.z + 9), TENT_POS.z + 9);
-player.userData.yaw = 0;
+// Nuova Avventura: si parte sul molo (in cima alla scaletta, sul tavolato),
+// guardando verso l'Isola Verde in lontananza — il primo obiettivo naturale
+// da raggiungere. Se esiste un salvataggio, loadGame() sovrascriverà subito
+// questa posizione con quella salvata.
+{
+  const localSpawn = { x: 5.8, z: 0.5 }; // centro del tavolato del molo
+  const pierYaw = ferryPier.rotation.y;
+  const spawnX = ferryPier.position.x + localSpawn.x * Math.cos(pierYaw) + localSpawn.z * Math.sin(pierYaw);
+  const spawnZ = ferryPier.position.z - localSpawn.x * Math.sin(pierYaw) + localSpawn.z * Math.cos(pierYaw);
+  const spawnY = ferryPier.position.y + PIER_DECK_LOCAL.y;
+  player.position.set(spawnX, spawnY, spawnZ);
+  player.userData.yaw = Math.atan2(ISLAND.valley.cx - spawnX, ISLAND.valley.cz - spawnZ);
+  player.rotation.y = player.userData.yaw;
+}
 scene.add(player);
 
 // Il gruppo "player" è l'oggetto persistente usato ovunque nel gioco
@@ -8776,6 +8979,7 @@ function handleAction(target) {
       d.harvested = true;
       d.fruitsGroup.visible = false;
       d.daysSinceHarvest = 0;
+      sfxLeavesRustle();
       revealSquirrelFromTree(d.squirrelRef); // se c'era uno scoiattolo nascosto qui, esce subito
       const pool = SEASON_FRUITS[clock.season.name] || SEASON_FRUITS.Primavera;
       addFoodItem(pool[Math.floor(Math.random() * pool.length)]);
@@ -8798,6 +9002,7 @@ function handleAction(target) {
       d.hits++;
       d.shakeTimer = 0.2;
       const isFinalHit = d.hits >= d.maxHits;
+      if (target.type === 'woodTree') sfxAxeHit(); else sfxPickaxeHit();
 
       if (target.type === 'woodTree') {
         // Resa del legno: dipende dal tier dell'attrezzo (vedi RECIPES
@@ -10211,6 +10416,7 @@ function animate() {
   updateWeatherParticles(dt);
   updateFireflies(elapsedTime);
   updateBirds(elapsedTime);
+  updateInsectAmbience(elapsedTime);
   updateSquirrels(dt, gameMinutesElapsed);
   updateSeedMarkers(elapsedTime);
   updateFlowerCreatures(dt, elapsedTime, gameMinutesElapsed);
@@ -10272,7 +10478,11 @@ function animate() {
   }
   player.position.y = (bridgeBuilt && insideBridge(player.position.x, player.position.z))
     ? bridgeHeightAt(player.position.x, player.position.z)
-    : terrainHeightAt(player.position.x, player.position.z);
+    : (!bridgeBuilt && insideTempPlank(player.position.x, player.position.z))
+      ? plankHeightAt(player.position.x, player.position.z)
+      : (insidePierDeck(player.position.x, player.position.z) || insidePierStairs(player.position.x, player.position.z))
+        ? pierHeightAt(player.position.x, player.position.z)
+        : terrainHeightAt(player.position.x, player.position.z);
   updateCamera();
   updateMoon();
   checkInteractions();
