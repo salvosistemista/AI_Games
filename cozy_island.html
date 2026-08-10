@@ -116,6 +116,28 @@
   .hour-btn:active { background: rgba(255,255,255,0.25); }
   #sleep-cancel { font-size: 12px; color: rgba(255,255,255,0.6); padding: 6px; }
 
+  /* Righe volume nelle Opzioni (Musica/SFX): etichetta a tutta larghezza
+     sopra, poi −/slider/percentuale/+ centrati sotto, così restano leggibili
+     anche nel pannello stretto (300px) usato da tutti i menu del gioco. */
+  .vol-row {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 6px; padding: 4px 0 12px; border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  .vol-label { width: 100%; font-size: 11px; color: rgba(255,255,255,0.6); text-align: center; margin-bottom: 4px; }
+  .vol-btn { padding: 4px 11px; font-size: 14px; line-height: 1; }
+  .vol-text { font-size: 12px; width: 34px; text-align: center; font-family: monospace; color: #fff; }
+  .vol-row input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100px; height: 4px; border-radius: 3px;
+    background: rgba(255,255,255,0.18); outline: none;
+  }
+  .vol-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
+    background: #ffd166; cursor: pointer; border: none;
+  }
+  .vol-row input[type=range]::-moz-range-thumb {
+    width: 15px; height: 15px; border-radius: 50%; background: #ffd166; cursor: pointer; border: none;
+  }
+
   #zzz-indicator {
     position: fixed; inset: 0; z-index: 25; display: none;
     align-items: center; justify-content: center;
@@ -216,6 +238,22 @@
   #message-text { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 14px; }
   #message-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 4px 0 2px; }
   #storage-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
+  #diary-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #diary-overlay.open { display: flex; }
+  #diary-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 8px 0 2px; }
+  .diary-page { font-size: 13px; line-height: 1.65; color: rgba(255,255,255,0.9); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  #diary-stars { font-size: 24px; letter-spacing: 4px; margin-bottom: 10px; text-align: center; color: #ffd166; }
+  #diary-score { font-size: 13px; text-align: center; margin-bottom: 14px; color: rgba(255,255,255,0.75); }
+  .diary-event-row { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; }
+  .diary-event-delta { font-family: monospace; font-weight: 700; margin-left: 8px; flex-shrink: 0; }
+  .diary-event-delta.pos { color: #7ee787; }
+  .diary-event-delta.neg { color: #ff7b72; }
+  #diary-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0 6px; flex-shrink: 0; }
+  #diary-page-indicator { font-size: 12px; color: rgba(255,255,255,0.6); }
 
   /* Overlay Tutorial: stesso stile del messaggio nella bottiglia, con
      paginazione (puntini + indietro/avanti) per i contenuti più lunghi */
@@ -305,13 +343,13 @@
   }
   #fence-edit-overlay.open { display: flex; }
   #fenceEditCancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
-  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel, #photo-album-panel {
+  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel, #photo-album-panel, #diary-panel {
     background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
     font-family: -apple-system, sans-serif;
     max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column;
   }
-  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3, #photo-album-panel h3 {
+  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3, #photo-album-panel h3, #diary-panel h3 {
     font-weight: 500; font-size: 16px; margin-bottom: 12px; flex-shrink: 0;
   }
   #recipe-list, #cook-list, #build-list, #storage-list, #inventory-list, #ferry-list, #photo-album-list {
@@ -328,6 +366,35 @@
   #photo-album-overlay.open { display: flex; }
   #photo-album-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
   #inventory-album-btn { color: #ffd166; font-size: 13px; margin-top: 6px; flex-shrink: 0; }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photo-thumb { position: relative; width: 100%; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden;
+    cursor: pointer; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.3); }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-thumb .photo-star { position: absolute; top: 3px; right: 3px; font-size: 14px;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.8)); animation: photoStarSpin 3s linear infinite; }
+  .photo-thumb.gamepad-focus { outline: 2px solid #ffd166; }
+  @keyframes photoStarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  #photo-viewer-overlay {
+    position: fixed; inset: 0; z-index: 32; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.88); pointer-events: auto;
+  }
+  #photo-viewer-overlay.open { display: flex; }
+  #photo-viewer-panel { display: flex; flex-direction: column; align-items: center; gap: 14px;
+    max-width: 94vw; max-height: 94vh; max-height: 94dvh; font-family: -apple-system, sans-serif; }
+  #photo-viewer-imgwrap { position: relative; max-width: 90vw; max-height: 68vh; max-height: 68dvh; }
+  #photo-viewer-img { max-width: 90vw; max-height: 68vh; max-height: 68dvh; border-radius: 10px;
+    display: block; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
+  #photo-viewer-star { position: absolute; top: 10px; right: 10px; font-size: 28px;
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.9)); animation: photoStarSpin 3s linear infinite; display: none; }
+  #photo-viewer-buttons, #photo-viewer-confirm-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  #photo-viewer-confirm-row { display: none; }
+  #photo-viewer-confirm-row.show { display: flex; }
+  .photo-viewer-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff;
+    padding: 10px 16px; border-radius: 10px; font-size: 14px; cursor: pointer; }
+  .photo-viewer-btn.gamepad-focus { outline: 2px solid #ffd166; }
+  .photo-viewer-btn.danger { background: rgba(200,60,50,0.3); border-color: rgba(255,110,90,0.5); }
+  .photo-viewer-btn.confirm-danger { background: rgba(220,60,50,0.55); border-color: rgba(255,110,90,0.8); }
   .gamepad-style-btn.active-style { background: rgba(255,209,102,0.3); border-color: rgba(255,209,102,0.6); color: #fff; }
   #ferry-overlay {
     position: fixed; inset: 0; z-index: 30; display: none;
@@ -509,6 +576,24 @@
   </div>
 </div>
 
+<div id="photo-viewer-overlay">
+  <div id="photo-viewer-panel">
+    <div id="photo-viewer-imgwrap">
+      <img id="photo-viewer-img" src="" alt="Foto">
+      <div id="photo-viewer-star">⭐</div>
+    </div>
+    <div id="photo-viewer-buttons">
+      <div class="photo-viewer-btn" id="photo-viewer-sell">💰 Vendi (50 🪙)</div>
+      <div class="photo-viewer-btn danger" id="photo-viewer-delete">🗑️ Elimina</div>
+      <div class="photo-viewer-btn" id="photo-viewer-close">chiudi</div>
+    </div>
+    <div id="photo-viewer-confirm-row">
+      <div class="photo-viewer-btn confirm-danger" id="photo-viewer-delete-yes">Sì, elimina</div>
+      <div class="photo-viewer-btn" id="photo-viewer-delete-no">Annulla</div>
+    </div>
+  </div>
+</div>
+
 
 <div id="sleep-overlay">
   <div id="sleep-panel">
@@ -612,6 +697,26 @@
   </div>
 </div>
 
+<div id="diary-overlay">
+  <div id="diary-panel">
+    <h3>📔 Diario</h3>
+    <div id="diary-page-1" class="diary-page">
+      <p id="diary-entry-text"></p>
+    </div>
+    <div id="diary-page-2" class="diary-page" style="display:none;">
+      <div id="diary-stars"></div>
+      <div id="diary-score"></div>
+      <div id="diary-events"></div>
+    </div>
+    <div id="diary-nav">
+      <button class="recipe-btn" id="diary-prev-btn">‹</button>
+      <span id="diary-page-indicator">1 / 2</span>
+      <button class="recipe-btn" id="diary-next-btn">›</button>
+    </div>
+    <div id="diary-close">chiudi</div>
+  </div>
+</div>
+
 <div id="fence-edit-overlay">
   <div id="fence-edit-panel">
     <h3 id="fenceEditTitle">Oggetto piazzato</h3>
@@ -675,6 +780,34 @@
 <div id="options-overlay">
   <div id="options-panel">
     <h3>Opzioni</h3>
+    <div class="recipe-row">
+      <div class="recipe-info">Musica</div>
+      <div>
+        <button class="recipe-btn gamepad-style-btn" id="musicToggleYesBtn">Sì</button>
+        <button class="recipe-btn gamepad-style-btn" id="musicToggleNoBtn">No</button>
+      </div>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label">Volume Musica</span>
+      <div class="hour-btn vol-btn" id="musicVolMinusBtn">−</div>
+      <input type="range" id="musicVolSlider" min="1" max="100" step="1" value="30">
+      <span class="vol-text" id="musicVolText">30%</span>
+      <div class="hour-btn vol-btn" id="musicVolPlusBtn">+</div>
+    </div>
+    <div class="recipe-row">
+      <div class="recipe-info">Effetti sonori</div>
+      <div>
+        <button class="recipe-btn gamepad-style-btn" id="sfxToggleYesBtn">Sì</button>
+        <button class="recipe-btn gamepad-style-btn" id="sfxToggleNoBtn">No</button>
+      </div>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label">Volume Effetti (SFX)</span>
+      <div class="hour-btn vol-btn" id="sfxVolMinusBtn">−</div>
+      <input type="range" id="sfxVolSlider" min="1" max="100" step="1" value="80">
+      <span class="vol-text" id="sfxVolText">80%</span>
+      <div class="hour-btn vol-btn" id="sfxVolPlusBtn">+</div>
+    </div>
     <div class="recipe-row">
       <div class="recipe-info">Schermo intero</div>
       <button class="recipe-btn" id="fullscreenToggleBtn">attiva</button>
@@ -979,7 +1112,10 @@ function ensureAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.35;
+    // Volume/attivazione effetti sonori: preferenza persistente da Opzioni
+    // (sfxEnabled/sfxVolume, dichiarate più sotto insieme al resto del menu
+    // Opzioni — di default rispettivamente true e 0.80).
+    masterGain.gain.value = sfxEnabled ? sfxVolume : 0.0001;
     masterGain.connect(audioCtx.destination);
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -987,7 +1123,166 @@ function ensureAudioCtx() {
 }
 
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
-  window.addEventListener(ev, () => { ensureAudioCtx(); updateSeaAmbience(); updateRainAmbience(); }, { once: false, passive: true });
+  window.addEventListener(ev, () => { ensureAudioCtx(); updateSeaAmbience(); updateRainAmbience(); ensureMusicPlaying(); }, { once: false, passive: true });
+});
+
+/* =========================================================================
+   MUSICA DI SOTTOFONDO GENERATIVA: una composizione ambient diversa per
+   ciascuna stagione (scala musicale, timbro, ritmo), portata dal generatore
+   procedurale "Isola Incontaminata" — note sparse pescate a caso dalla scala
+   della stagione corrente, con un tocco di eco spaziale (delay+feedback) per
+   dare profondità senza bisogno di file audio esterni. Percorso audio
+   separato da quello degli effetti sonori (masterGain sopra): ha un proprio
+   nodo di volume (musicGainNode) regolato indipendentemente dalle Opzioni
+   (musicEnabled/musicVolume, dichiarate più sotto insieme al resto del menu
+   Opzioni — di default rispettivamente true e 0.30), così i due volumi
+   restano scorporati come richiesto.
+   ========================================================================= */
+const MUSIC_NOTE_FREQ = {
+  C3: 130.81, CS3: 138.59, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+  C4: 261.63, CS4: 277.18, D4: 293.66, E4: 329.63, F4: 349.23, FS4: 369.99, G4: 392.00, GS4: 415.30, A4: 440.00, B4: 493.88,
+  C5: 523.25, CS5: 554.37, D5: 587.33, E5: 659.25, F5: 698.46, FS5: 739.99, G5: 783.99, A5: 880.00, B5: 987.77,
+  C6: 1046.50, DS6: 1244.51, E6: 1318.51, GS6: 1661.22,
+};
+const MUSIC_SEASON_CONFIGS = {
+  // Primavera — F Lidio: sfumatura luminosa e sognante
+  Primavera: {
+    scale: [MUSIC_NOTE_FREQ.F3, MUSIC_NOTE_FREQ.A3, MUSIC_NOTE_FREQ.C4, MUSIC_NOTE_FREQ.E4, MUSIC_NOTE_FREQ.G4, MUSIC_NOTE_FREQ.A4, MUSIC_NOTE_FREQ.B4, MUSIC_NOTE_FREQ.C5, MUSIC_NOTE_FREQ.E5],
+    harmonics: 1.5, type: 'sine', attack: 0.05, decay: 3.2, interval: 2400, randomness: 2000,
+  },
+  // Estate — Re Maggiore pentatonica: calda, organica, timbro percussivo di marimba
+  Estate: {
+    scale: [MUSIC_NOTE_FREQ.D3, MUSIC_NOTE_FREQ.FS4, MUSIC_NOTE_FREQ.A4, MUSIC_NOTE_FREQ.B4, MUSIC_NOTE_FREQ.D5, MUSIC_NOTE_FREQ.FS5, MUSIC_NOTE_FREQ.A5],
+    harmonics: 2.0, type: 'triangle', attack: 0.01, decay: 1.6, interval: 1600, randomness: 1400,
+  },
+  // Autunno — La Eolio (minore): toni profondi, nostalgici, spazio per il vento
+  Autunno: {
+    scale: [MUSIC_NOTE_FREQ.A3, MUSIC_NOTE_FREQ.C4, MUSIC_NOTE_FREQ.E4, MUSIC_NOTE_FREQ.G4, MUSIC_NOTE_FREQ.A4, MUSIC_NOTE_FREQ.C5, MUSIC_NOTE_FREQ.E5, MUSIC_NOTE_FREQ.G5],
+    harmonics: 0.5, type: 'sine', attack: 0.12, decay: 4.5, interval: 3000, randomness: 2200,
+  },
+  // Inverno — Do# minore pentatonica / vetro: rintocchi cristallini e diradati
+  Inverno: {
+    scale: [MUSIC_NOTE_FREQ.CS4, MUSIC_NOTE_FREQ.E4, MUSIC_NOTE_FREQ.GS4, MUSIC_NOTE_FREQ.CS5, MUSIC_NOTE_FREQ.E5, MUSIC_NOTE_FREQ.GS6, MUSIC_NOTE_FREQ.C6],
+    harmonics: 3.0, type: 'sine', attack: 0.005, decay: 5.0, interval: 3800, randomness: 2800,
+  },
+};
+
+let musicGainNode = null, musicDelayNode = null, musicFeedbackGain = null;
+let musicPlaying = false;
+let musicTimerId = null;
+
+function ensureMusicAudioGraph() {
+  if (!audioCtx || musicGainNode) return;
+  musicGainNode = audioCtx.createGain();
+  musicGainNode.gain.value = 0.0001;
+
+  musicDelayNode = audioCtx.createDelay();
+  musicDelayNode.delayTime.value = 0.45; // eco di 450ms
+  musicFeedbackGain = audioCtx.createGain();
+  musicFeedbackGain.gain.value = 0.25; // riverbero soffice
+
+  musicGainNode.connect(audioCtx.destination);
+  musicGainNode.connect(musicDelayNode);
+  musicDelayNode.connect(musicFeedbackGain);
+  musicFeedbackGain.connect(musicDelayNode);
+  musicDelayNode.connect(audioCtx.destination);
+
+  updateMusicGainTarget();
+}
+
+// Applica lo stato attivo/volume corrente al nodo di guadagno della musica,
+// con una piccola rampa per evitare scatti udibili quando si cambia lo
+// slider o si spegne/accende dalle Opzioni.
+function updateMusicGainTarget() {
+  if (!musicGainNode || !audioCtx) return;
+  const target = musicEnabled ? musicVolume : 0.0001;
+  const t0 = audioCtx.currentTime;
+  musicGainNode.gain.cancelScheduledValues(t0);
+  musicGainNode.gain.setValueAtTime(musicGainNode.gain.value, t0);
+  musicGainNode.gain.linearRampToValueAtTime(Math.max(0.0001, target), t0 + 0.4);
+}
+
+// Sintesi a doppio oscillatore (fondamentale + armonica di colore), stessa
+// tecnica delle altre sfx procedurali del gioco: niente file audio esterni.
+function playMusicNote(freq, config) {
+  if (!audioCtx || !musicPlaying) return;
+  const now = audioCtx.currentTime;
+
+  const osc1 = audioCtx.createOscillator();
+  const gain1 = audioCtx.createGain();
+  osc1.type = config.type;
+  osc1.frequency.value = freq;
+
+  const osc2 = audioCtx.createOscillator();
+  const gain2 = audioCtx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * (config.harmonics || 1.5);
+
+  gain1.gain.setValueAtTime(0, now);
+  gain1.gain.linearRampToValueAtTime(0.18, now + config.attack);
+  gain1.gain.exponentialRampToValueAtTime(0.0001, now + config.decay);
+
+  gain2.gain.setValueAtTime(0, now);
+  gain2.gain.linearRampToValueAtTime(0.05, now + config.attack);
+  gain2.gain.exponentialRampToValueAtTime(0.0001, now + (config.decay * 0.6));
+
+  osc1.connect(gain1);
+  osc2.connect(gain2);
+  gain1.connect(musicGainNode);
+  gain2.connect(musicGainNode);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + config.decay + 0.1);
+  osc2.stop(now + config.decay + 0.1);
+}
+
+function currentMusicConfig() {
+  return MUSIC_SEASON_CONFIGS[clock.season.name] || MUSIC_SEASON_CONFIGS.Primavera;
+}
+
+function scheduleNextMusicNote() {
+  if (!musicPlaying) return;
+  const config = currentMusicConfig();
+
+  const isDyad = Math.random() < 0.22; // ogni tanto una diade (due note quasi insieme)
+  const note1 = config.scale[Math.floor(Math.random() * config.scale.length)];
+  playMusicNote(note1, config);
+  if (isDyad) {
+    const note2 = config.scale[Math.floor(Math.random() * config.scale.length)];
+    if (note1 !== note2) setTimeout(() => playMusicNote(note2, config), 60);
+  }
+
+  const nextTime = config.interval + (Math.random() * config.randomness - config.randomness / 2);
+  musicTimerId = setTimeout(scheduleNextMusicNote, Math.max(900, nextTime));
+}
+
+function startMusicPlayback() {
+  if (musicPlaying) return;
+  ensureMusicAudioGraph();
+  if (!musicGainNode) return; // audioCtx non ancora sbloccato: riproverà al prossimo input utile
+  musicPlaying = true;
+  clearTimeout(musicTimerId);
+  scheduleNextMusicNote();
+}
+function stopMusicPlayback() {
+  musicPlaying = false;
+  clearTimeout(musicTimerId);
+}
+// Chiamata ad ogni input utile e ogni volta che si riattiva la Musica dalle
+// Opzioni: se è già in corso non fa nulla (idempotente), altrimenti parte.
+function ensureMusicPlaying() {
+  if (musicEnabled) startMusicPlayback();
+}
+
+// Cambio stagione: la musica prosegue nel suo ciclo, ma la prossima nota
+// programmata userà già la nuova scala/timbro — nessun taglio secco, il
+// suono in corso finisce semplicemente il proprio decadimento naturale.
+clock.on('season', () => {
+  if (musicPlaying) {
+    clearTimeout(musicTimerId);
+    scheduleNextMusicNote();
+  }
 });
 
 // Helper gen buffer rumore (Rosa / Bianco / Marrone)
@@ -1277,8 +1572,8 @@ function sfxCicadaChirp() {
 
   const mainG = audioCtx.createGain();
   mainG.gain.setValueAtTime(0.0001, t0);
-  mainG.gain.linearRampToValueAtTime(0.08, t0 + 0.1);
-  mainG.gain.setValueAtTime(0.08, t0 + dur - 0.1);
+  mainG.gain.linearRampToValueAtTime(0.05, t0 + 0.1); // volume abbassato rispetto a 0.08 originale
+  mainG.gain.setValueAtTime(0.05, t0 + dur - 0.1);
   mainG.gain.linearRampToValueAtTime(0.0001, t0 + dur);
 
   src.connect(filter);
@@ -1299,6 +1594,34 @@ function sfxCricketChirp() {
 }
 
 // --- Ambienti a loop (Onde del Mare Pro e Pioggia Pro) ---
+
+// In casa si deve sentire SOLO la pioggia (più piano che fuori); tutti gli
+// altri rumori d'ambiente esterni (mare, grilli/cicale) vengono azzerati.
+// I suoni di interazione con mobili/attrezzi in casa (sfxCooking, ecc.) sono
+// chiamate dirette una-tantum, non passano da qui, quindi restano intatti.
+const RAIN_OUTDOOR_GAIN = 0.07;
+const RAIN_INDOOR_FACTOR = 0.55; // volume pioggia in casa: più basso che fuori
+function currentRainTargetGain() {
+  return insideHouse ? RAIN_OUTDOOR_GAIN * RAIN_INDOOR_FACTOR : RAIN_OUTDOOR_GAIN;
+}
+const SEA_OUTDOOR_GAIN = 0.08;
+
+// Richiamata da enterHouse()/exitHouse(): aggiorna dolcemente i volumi degli
+// ambienti a loop già attivi in base a dentro/fuori casa.
+function applyHouseAudioDucking() {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  if (rainLoop) {
+    rainLoop.gainNode.gain.cancelScheduledValues(t0);
+    rainLoop.gainNode.gain.setValueAtTime(rainLoop.gainNode.gain.value, t0);
+    rainLoop.gainNode.gain.linearRampToValueAtTime(currentRainTargetGain(), t0 + 0.8);
+  }
+  if (seaWavesLoop) {
+    seaWavesLoop.gainNode.gain.cancelScheduledValues(t0);
+    seaWavesLoop.gainNode.gain.setValueAtTime(seaWavesLoop.gainNode.gain.value, t0);
+    seaWavesLoop.gainNode.gain.linearRampToValueAtTime(insideHouse ? 0.0001 : SEA_OUTDOOR_GAIN, t0 + 0.8);
+  }
+}
 
 let seaWavesLoop = null;
 
@@ -1327,7 +1650,7 @@ function updateSeaAmbience() {
 
     const gainNode = audioCtx.createGain();
     gainNode.gain.setValueAtTime(0.0001, t0);
-    gainNode.gain.linearRampToValueAtTime(0.08, t0 + 2.0);
+    gainNode.gain.linearRampToValueAtTime(insideHouse ? 0.0001 : SEA_OUTDOOR_GAIN, t0 + 2.0);
 
     const lfoAmpGain = audioCtx.createGain();
     lfoAmpGain.gain.setValueAtTime(0.03, t0);
@@ -1371,7 +1694,7 @@ function updateRainAmbience() {
 
     const gainNode = audioCtx.createGain();
     gainNode.gain.setValueAtTime(0.0001, t0);
-    gainNode.gain.linearRampToValueAtTime(0.07, t0 + 1.5);
+    gainNode.gain.linearRampToValueAtTime(currentRainTargetGain(), t0 + 1.5);
 
     src.connect(filter);
     filter.connect(gainNode);
@@ -1383,7 +1706,8 @@ function updateRainAmbience() {
     rainDropInterval = setInterval(() => {
       if (currentWeather === 'pioggia' && audioCtx) {
         const dropFreq = 2200 + Math.random() * 2500;
-        playTone(dropFreq, 0.015, { type: 'sine', gain: 0.02 + Math.random() * 0.02 });
+        const dropGain = (0.02 + Math.random() * 0.02) * (insideHouse ? RAIN_INDOOR_FACTOR : 1);
+        playTone(dropFreq, 0.015, { type: 'sine', gain: dropGain });
       }
     }, 90);
 
@@ -1412,6 +1736,7 @@ let nextCicadaTime = 0;
 let nextCricketTime = 0;
 
 function updateInsectAmbience(elapsedTime) {
+  if (insideHouse) return; // in casa non si sentono grilli/cicale, solo la pioggia
   if (!audioCtx || currentWeather !== 'sereno' || !isCicadaSeasonWindow()) return;
   if (isNightTime()) {
     if (elapsedTime > nextCricketTime) {
@@ -2913,6 +3238,21 @@ function findWalkableSpotNear(px, pz, minDist, maxDist, attempts) {
   return null;
 }
 
+// Prepara un singolo balzo del grillo a partire dalla sua posizione attuale,
+// proseguendo lungo la direzione generale già presa (con una variazione
+// d'angolo contenuta, per non farlo zigzagare in modo innaturale).
+function startCricketHop(c, fromX, fromZ, baseAngle) {
+  const jumpAngle = baseAngle + (Math.random() - 0.5) * 1.2;
+  const jumpDist = 1.4 + Math.random() * 2.2;
+  c.startX = fromX; c.startZ = fromZ;
+  c.endX = fromX + Math.cos(jumpAngle) * jumpDist;
+  c.endZ = fromZ + Math.sin(jumpAngle) * jumpDist;
+  c.baseAngle = jumpAngle; // il prossimo balzo, se ce n'è un altro, continua da questa direzione
+  c.life = 0;
+  c.duration = 0.45 + Math.random() * 0.2;
+  c.arcHeight = 0.35 + Math.random() * 0.25;
+}
+
 function spawnCricket() {
   const spot = findWalkableSpotNear(player.position.x, player.position.z, 2, 5, 8);
   if (!spot) return;
@@ -2921,17 +3261,9 @@ function spawnCricket() {
   mesh.position.set(spot.x, groundY + 0.03, spot.z);
   scene.add(mesh);
 
-  // Salta allontanandosi dal giocatore (stesso verso in cui si trova
-  // rispetto a lui, con un po' di variazione per non sembrare meccanico).
-  const jumpAngle = spot.ang + (Math.random() - 0.5) * 1.2;
-  const jumpDist = 1.4 + Math.random() * 2.2;
-  activeCrickets.push({
-    mesh, life: 0, duration: 0.45 + Math.random() * 0.2,
-    startX: spot.x, startZ: spot.z,
-    endX: spot.x + Math.cos(jumpAngle) * jumpDist,
-    endZ: spot.z + Math.sin(jumpAngle) * jumpDist,
-    arcHeight: 0.35 + Math.random() * 0.25,
-  });
+  const c = { mesh, jumpsRemaining: Math.floor(Math.random() * 3) }; // da 1 a 3 salti totali
+  startCricketHop(c, spot.x, spot.z, spot.ang); // allontanandosi dal giocatore, come prima
+  activeCrickets.push(c);
 }
 
 function updateCrickets(dt) {
@@ -2945,8 +3277,13 @@ function updateCrickets(dt) {
     c.mesh.position.set(x, terrainHeightAt(x, z) + 0.03 + arc * c.arcHeight, z);
     c.mesh.rotation.y = Math.atan2(c.endX - c.startX, c.endZ - c.startZ);
     if (t >= 1) {
-      scene.remove(c.mesh); // sparisce di nuovo nell'erba non appena atterra
-      activeCrickets.splice(i, 1);
+      if (c.jumpsRemaining > 0) {
+        c.jumpsRemaining--;
+        startCricketHop(c, c.endX, c.endZ, c.baseAngle); // salto successivo, stessa direzione generale
+      } else {
+        scene.remove(c.mesh); // sparisce di nuovo nell'erba dopo l'ultimo balzo
+        activeCrickets.splice(i, 1);
+      }
     }
   }
 }
@@ -3529,7 +3866,7 @@ const RECIPE_CATEGORIES = ['Strumenti', 'Costruzioni', 'Arredo e Decorazioni', '
 const FILTER_AVAILABLE_TAB = '✅ Disponibili';
 const RECIPE_CATEGORY_BY_ID = {
   attrezzo_rinforzato: 'Strumenti', lampada: 'Strumenti', zappa: 'Strumenti', canna_pesca: 'Strumenti', borraccia: 'Strumenti', annaffiatoio: 'Strumenti',
-  ponte: 'Costruzioni', recinto: 'Costruzioni', muro: 'Costruzioni', casetta: 'Costruzioni', fornellino: 'Costruzioni', scala: 'Costruzioni', stufetta: 'Costruzioni',
+  ponte: 'Costruzioni', recinto: 'Costruzioni', recinto_angolo: 'Costruzioni', muro: 'Costruzioni', muro_angolo: 'Costruzioni', casetta: 'Costruzioni', fornellino: 'Costruzioni', scala: 'Costruzioni', stufetta: 'Costruzioni',
   casetta_scoiattoli: 'Arredo e Decorazioni', torcia: 'Arredo e Decorazioni', sedia_dondolo: 'Arredo e Decorazioni', fontana: 'Arredo e Decorazioni',
   campo_grano: 'Coltivazione', aiuola_fiori: 'Coltivazione',
   lavora_lattina: 'Materiali', farina: 'Materiali',
@@ -3539,14 +3876,17 @@ const RECIPES = [
     id: 'casetta_scoiattoli',
     name: 'Casetta per Scoiattoli',
     cost: { legna: 5, pietra: 1, semiGrano: 3, semiFiori: 3 },
-    once: true,
-    isDone: () => squirrels.length > 0 && squirrels.every(sq => sq.hasHouse),
-    visible: () => squirrels.some(sq => !sq.hasHouse),
+    once: false,
+    isDone: () => false,
     craft: () => {
+      inventory.casetteScoiattoli++;
+      squirrelHouseEverBuilt = true;
+      // Bonus: se c'è ancora uno scoiattolo non protetto, questa casetta lo mette al sicuro
+      // dal furto di semi, oltre a poter essere piazzata nel mondo dal menu Costruisci.
       const target = squirrels.find(sq => !sq.hasHouse);
       if (target) {
         target.hasHouse = true;
-        showToast('🏠 Casetta costruita: uno scoiattolo è ora protetto e non ruberà più semi!');
+        showToast('🏠 Casetta per Scoiattoli creata (e uno scoiattolo è ora protetto)!');
       }
     },
   },
@@ -3591,6 +3931,14 @@ const RECIPES = [
     craft: () => { inventory.recinti++; },
   },
   {
+    id: 'recinto_angolo',
+    name: 'Pannello di recinto ad angolo',
+    cost: { legna: 5 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.recintiAngolo++; },
+  },
+  {
     id: 'torcia',
     name: 'Torcia',
     cost: { legna: 1, pietra: 1, selce: 1 },
@@ -3605,6 +3953,14 @@ const RECIPES = [
     once: false,
     isDone: () => false,
     craft: () => { inventory.muri++; },
+  },
+  {
+    id: 'muro_angolo',
+    name: 'Muro di pietra ad angolo',
+    cost: { pietra: 4 },
+    once: false,
+    isDone: () => false,
+    craft: () => { inventory.muriAngolo++; },
   },
   {
     id: 'casetta',
@@ -4126,45 +4482,126 @@ let squirrels = [];
 
 function makeSquirrelMesh() {
   const group = new THREE.Group();
-  const furMat = new THREE.MeshLambertMaterial({ color: 0xa35c28 });
-  const bellyMat = new THREE.MeshLambertMaterial({ color: 0xe8c9a0 });
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1410 });
 
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), furMat);
-  body.scale.set(1, 0.9, 1.3);
-  body.position.y = 0.24;
-  group.add(body);
+  // Materiali
+  const furMat = new THREE.MeshLambertMaterial({ color: 0xaa5a22 });    // Pelliccia principale
+  const bellyMat = new THREE.MeshLambertMaterial({ color: 0xf0d3b0 });  // Pancia e dettagli orecchie
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });       // Occhi
+  const noseMat = new THREE.MeshLambertMaterial({ color: 0x221510 });   // Naso
 
-  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), bellyMat);
-  belly.scale.set(1, 0.8, 1.1);
-  belly.position.set(0, 0.18, 0.1);
-  group.add(belly);
+  // Le zampe posteriori restano sempre piantate a terra (base del gruppo);
+  // tutto il resto (corpo, testa, zampe anteriori, coda) vive in poseGroup,
+  // che può inclinarsi all'indietro attorno a questo stesso punto base per
+  // far "stare dritto sulle due zampe" lo scoiattolo quando si ferma —
+  // vedi userData.poseGroup e il suo uso in updateSquirrels().
+  const poseGroup = new THREE.Group();
+  group.add(poseGroup);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), furMat);
-  head.position.set(0, 0.36, 0.26);
-  group.add(head);
+  // Corpo principale (leggermente inclinato in avanti)
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), furMat);
+  body.scale.set(0.9, 1.1, 1.2);
+  body.position.set(0, 0.22, 0);
+  body.rotation.x = 0.15;
+  poseGroup.add(body);
 
-  [-0.07, 0.07].forEach(ex => {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.09, 6), furMat);
-    ear.position.set(ex, 0.46, 0.24);
-    group.add(ear);
+  // Pancia soffice
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), bellyMat);
+  belly.scale.set(0.85, 1.0, 0.8);
+  belly.position.set(0, 0.20, 0.11);
+  poseGroup.add(belly);
+
+  // Testa
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), furMat);
+  head.scale.set(0.95, 0.95, 1.05);
+  head.position.set(0, 0.38, 0.22);
+  poseGroup.add(head);
+
+  // Musetto leggermente allungato
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), bellyMat);
+  snout.scale.set(0.9, 0.8, 1.1);
+  snout.position.set(0, 0.36, 0.32);
+  poseGroup.add(snout);
+
+  // Naso
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), noseMat);
+  nose.position.set(0, 0.38, 0.39);
+  poseGroup.add(nose);
+
+  // Occhi espressivi
+  [-0.075, 0.075].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), eyeMat);
+    eye.position.set(ex, 0.40, 0.30);
+    poseGroup.add(eye);
   });
 
-  [-0.05, 0.05].forEach(ex => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), eyeMat);
-    eye.position.set(ex, 0.37, 0.39);
-    group.add(eye);
+  // Orecchie con interno chiaro
+  [-0.065, 0.065].forEach(ex => {
+    const earGroup = new THREE.Group();
+    
+    const earOuter = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.1, 6), furMat);
+    earOuter.rotation.x = -0.1;
+    earGroup.add(earOuter);
+
+    const earInner = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.07, 6), bellyMat);
+    earInner.position.set(0, -0.01, 0.01);
+    earInner.rotation.x = -0.1;
+    earGroup.add(earInner);
+
+    earGroup.position.set(ex, 0.50, 0.20);
+    earGroup.rotation.z = ex > 0 ? -0.15 : 0.15;
+    poseGroup.add(earGroup);
   });
 
-  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), furMat);
-  tail.scale.set(0.75, 1.6, 0.75);
-  tail.position.set(0, 0.44, -0.3);
-  tail.rotation.x = -0.5;
-  group.add(tail);
+  // Zampe posteriori (accovacciate, restano fisse a terra — vedi sopra)
+  [-0.14, 0.14].forEach(ex => {
+    const thigh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), furMat);
+    thigh.scale.set(0.6, 1.1, 1.1);
+    thigh.position.set(ex, 0.13, -0.02);
+    group.add(thigh);
 
-  group.scale.set(1.3, 1.3, 1.3);
-  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.1), furMat);
+    foot.position.set(ex, 0.025, 0.06);
+    group.add(foot);
+  });
+
+  // Zampe anteriori (chinesi sul petto)
+  [-0.06, 0.06].forEach(ex => {
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), furMat);
+    paw.scale.set(0.8, 1.2, 0.8);
+    paw.position.set(ex, 0.26, 0.20);
+    poseGroup.add(paw);
+  });
+
+  // Coda folta ad "S" (Base + Punta curva)
+  const tailGroup = new THREE.Group();
+
+  const tailBase = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), furMat);
+  tailBase.scale.set(0.8, 1.5, 0.8);
+  tailBase.position.set(0, 0.18, -0.12);
+  tailBase.rotation.x = -0.6;
+  tailGroup.add(tailBase);
+
+  const tailTop = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 10), furMat);
+  tailTop.scale.set(0.9, 1.4, 0.9);
+  tailTop.position.set(0, 0.38, -0.22);
+  tailTop.rotation.x = 0.5;
+  tailGroup.add(tailTop);
+
+  tailGroup.position.set(0, 0.1, -0.1);
+  poseGroup.add(tailGroup);
+
+  // Configurazione finale gruppo
+  group.scale.set(1.2, 1.2, 1.2);
+  group.traverse(o => { 
+    if (o.isMesh) {
+      o.castShadow = true; 
+      o.receiveShadow = true;
+    }
+  });
+  
   group.visible = false;
+  group.userData.poseGroup = poseGroup;
+  group.userData.poseAngle = 0; // stato corrente, interpolato dolcemente verso il target in updateSquirrels
   scene.add(group);
   return group;
 }
@@ -4354,6 +4791,14 @@ function updateSquirrels(dt, deltaGameMinutes) {
     }
 
     sq.mesh.position.set(sq.pos.x, terrainHeightAt(sq.pos.x, sq.pos.z), sq.pos.z);
+
+    // Quando si ferma a riposare (subState 'paused'), si tira dritto sulle
+    // zampe posteriori invece di restare accovacciato; appena riparte a
+    // camminare (o scappa, o ruba semi chinandosi su un campo) torna nella
+    // posa normale. Interpolato dolcemente per un movimento naturale.
+    const targetPoseAngle = sq.subState === 'paused' ? -1.0 : 0;
+    sq.mesh.userData.poseAngle += (targetPoseAngle - sq.mesh.userData.poseAngle) * Math.min(1, dt * 4);
+    sq.mesh.userData.poseGroup.rotation.x = sq.mesh.userData.poseAngle;
   }
 }
 
@@ -5274,8 +5719,20 @@ function countTrash() { return interactables.filter(it => it.type === 'trash').l
    ========================================================================= */
 let gradimentoIndice = 10;
 function gradimentoStelle() { return Math.ceil(gradimentoIndice / 10); }
-function adjustGradimento(delta) {
+// Ultimi eventi che hanno modificato il punteggio (usati dalla pagina 2 del
+// diario in casa): ogni voce è {delta, label, day}. Registriamo solo le
+// variazioni EFFETTIVE — se il punteggio è già al minimo/massimo e la
+// variazione non ha effetto, non finisce nel diario (sarebbe fuorviante).
+const GRADIMENTO_LOG_MAX = 50;
+let gradimentoLog = [];
+function adjustGradimento(delta, label) {
+  const before = gradimentoIndice;
   gradimentoIndice = Math.max(10, Math.min(50, gradimentoIndice + delta));
+  const applied = gradimentoIndice - before;
+  if (applied !== 0 && label) {
+    gradimentoLog.push({ delta: applied, label, day: clock.dayIndex });
+    if (gradimentoLog.length > GRADIMENTO_LOG_MAX) gradimentoLog.shift();
+  }
 }
 
 // Conta quanti oggetti di un certo tipo sono "presenti" (disponibili) contro
@@ -5295,21 +5752,21 @@ function checkGradimento1400() {
   if (gradimento1400LastDay === day) return;
   gradimento1400LastDay = day;
 
-  adjustGradimento(ferryPresent ? 1 : -1); // arrivo / mancato arrivo del traghetto
+  adjustGradimento(ferryPresent ? 1 : -1, ferryPresent ? 'Il traghetto è arrivato' : 'Il traghetto non è arrivato'); // arrivo / mancato arrivo del traghetto
 
-  adjustGradimento(countTrash() === 0 ? 1 : -1); // spazzatura in giro per le isole
+  adjustGradimento(countTrash() === 0 ? 1 : -1, countTrash() === 0 ? 'Isole pulite, niente spazzatura in giro' : 'Spazzatura lasciata in giro'); // spazzatura in giro per le isole
 
   const legna = countPresentiVsRigenerazione('woodTree', 'felled');
-  if (legna.presenti > legna.inRigenerazione) adjustGradimento(1);
-  else if (legna.inRigenerazione > legna.presenti) adjustGradimento(-1);
+  if (legna.presenti > legna.inRigenerazione) adjustGradimento(1, 'Boschi di legna rigogliosi');
+  else if (legna.inRigenerazione > legna.presenti) adjustGradimento(-1, 'Troppi alberi da legna abbattuti');
 
   const rocce = countPresentiVsRigenerazione('rock', 'felled');
-  if (rocce.presenti > rocce.inRigenerazione) adjustGradimento(1);
-  else if (rocce.inRigenerazione > rocce.presenti) adjustGradimento(-1);
+  if (rocce.presenti > rocce.inRigenerazione) adjustGradimento(1, 'Cave di pietra intatte');
+  else if (rocce.inRigenerazione > rocce.presenti) adjustGradimento(-1, 'Troppe rocce frantumate');
 
   const frutta = countPresentiVsRigenerazione('fruitTree', 'harvested');
-  if (frutta.presenti > frutta.inRigenerazione) adjustGradimento(1);
-  else if (frutta.inRigenerazione > frutta.presenti) adjustGradimento(-1);
+  if (frutta.presenti > frutta.inRigenerazione) adjustGradimento(1, 'Alberi da frutto rigogliosi');
+  else if (frutta.inRigenerazione > frutta.presenti) adjustGradimento(-1, 'Troppi alberi da frutto spogliati');
 }
 
 // Tracciati durante il giorno, valutati al cambio di giorno (sul giorno
@@ -5317,8 +5774,8 @@ function checkGradimento1400() {
 let sleepMinutesToday = 0;
 let hadThirstPenaltyToday = false;
 clock.on('day', () => {
-  if (sleepMinutesToday < 7 * 60) adjustGradimento(-1); // dormito meno di 7 ore in giornata
-  if (seteAttiva && hadThirstPenaltyToday) adjustGradimento(-1); // troppe ore senza bere
+  if (sleepMinutesToday < 7 * 60) adjustGradimento(-1, 'Hai dormito troppo poco'); // dormito meno di 7 ore in giornata
+  if (seteAttiva && hadThirstPenaltyToday) adjustGradimento(-1, 'Sei rimasto assetato troppo a lungo'); // troppe ore senza bere
   sleepMinutesToday = 0;
   hadThirstPenaltyToday = false;
 });
@@ -5542,7 +5999,7 @@ function collectGratefulBottle(target) {
   scene.remove(target.obj);
   const idx = interactables.indexOf(target);
   if (idx !== -1) interactables.splice(idx, 1);
-  adjustGradimento(1); // aprire una bottiglia di ringraziamento fa piacere all'isola
+  adjustGradimento(1, 'Hai aperto una bottiglia di ringraziamento del mare'); // aprire una bottiglia di ringraziamento fa piacere all'isola
   // Il regalo si decide e si applica ESATTAMENTE ora, all'apertura.
   const reward = Math.random() < 0.7 ? grantMysteryDayReduction() : null;
   const text = reward
@@ -5636,6 +6093,79 @@ function updateSeedMarkers(elapsedTime) {
   for (const it of interactables) {
     if (it.type !== 'semeGrano' && it.type !== 'semeFiore') continue;
     it.obj.userData.seedMesh.position.y = 0.3 + Math.sin(elapsedTime * 2.4 + it.obj.userData.bobPhase) * 0.08;
+  }
+}
+
+/* =========================================================================
+   CASETTE PER SCOIATTOLI: ogni tanto, vicino a una casetta piazzata,
+   compaiono noci/nocciole/pigne raccoglibili a terra (stesso pattern visivo
+   dei semi degli uccelli: un piccolo oggetto che rimbalza piano + un alone
+   colorato). Non c'è un tetto massimo totale come per i semi (dipende da
+   quante casette si costruiscono), ma un limite di oggetti non ancora
+   raccolti per casetta, per non affollare troppo il terreno lì vicino.
+   ========================================================================= */
+const FOREST_SPAWN_INTERVAL_MINUTES = 40; // minuti di gioco, non reali
+const FOREST_MAX_MARKERS_PER_HOUSE = 2;
+let forestSpawnTimerMinutes = 0;
+
+function makeForestMarker(x, z, kind) {
+  const group = new THREE.Group();
+  const color = kind === 'noce' ? 0x8a6a4a : kind === 'nocciola' ? 0xc98f4a : 0x5c4326;
+  let mesh;
+  if (kind === 'pigna') {
+    mesh = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 8), new THREE.MeshStandardMaterial({ color, roughness: 0.85 }));
+  } else {
+    mesh = new THREE.Mesh(new THREE.SphereGeometry(kind === 'noce' ? 0.09 : 0.07, 8, 7), new THREE.MeshStandardMaterial({ color, roughness: 0.75 }));
+  }
+  mesh.position.y = 0.28;
+  mesh.castShadow = true;
+  group.add(mesh);
+  const halo = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.29, 16), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = 0.03;
+  group.add(halo);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.userData = { bobPhase: Math.random() * Math.PI * 2, mainMesh: mesh };
+  scene.add(group);
+  interactables.push({ obj: group, type: kind + 'Ground' });
+  return group;
+}
+
+function countForestMarkersNear(house) {
+  let n = 0;
+  for (const it of interactables) {
+    if (it.type !== 'noceGround' && it.type !== 'nocciolaGround' && it.type !== 'pignaGround') continue;
+    if (Math.hypot(it.obj.position.x - house.x, it.obj.position.z - house.z) < 4) n++;
+  }
+  return n;
+}
+
+function spawnForestIngredient() {
+  const houses = placedItems.filter(it => it.itemType === 'casettaScoiattoli');
+  if (houses.length === 0) return;
+  const candidates = houses.filter(h => countForestMarkersNear(h) < FOREST_MAX_MARKERS_PER_HOUSE);
+  if (candidates.length === 0) return;
+  const house = candidates[Math.floor(Math.random() * candidates.length)];
+  const spot = findWalkableSpotNear(house.x, house.z, 0.8, 2.5, 8);
+  if (!spot || isSpotBuiltOver(spot.x, spot.z)) return;
+  const kinds = ['noce', 'nocciola', 'pigna'];
+  makeForestMarker(spot.x, spot.z, kinds[Math.floor(Math.random() * kinds.length)]);
+}
+
+function updateSquirrelHouseSpawner(deltaGameMinutes) {
+  if (deltaGameMinutes <= 0) return;
+  if (!placedItems.some(it => it.itemType === 'casettaScoiattoli')) return;
+  forestSpawnTimerMinutes += deltaGameMinutes;
+  while (forestSpawnTimerMinutes >= FOREST_SPAWN_INTERVAL_MINUTES) {
+    forestSpawnTimerMinutes -= FOREST_SPAWN_INTERVAL_MINUTES;
+    spawnForestIngredient();
+  }
+}
+
+function updateForestMarkers(elapsedTime) {
+  for (const it of interactables) {
+    if (it.type !== 'noceGround' && it.type !== 'nocciolaGround' && it.type !== 'pignaGround') continue;
+    it.obj.userData.mainMesh.position.y = 0.28 + Math.sin(elapsedTime * 2.2 + it.obj.userData.bobPhase) * 0.06;
   }
 }
 
@@ -5741,48 +6271,60 @@ function buildPlayerGroup() {
   const shoeMat  = new THREE.MeshLambertMaterial({ color: shoeColor });
 
   // 1. PIEDI E GAMBE
+  // Ogni gamba vive nel proprio "legGroup" con perno all'altezza dell'anca
+  // (0.82, dove attacca la vita dei pantaloni): ruotandolo attorno all'asse
+  // X si ottiene lo swing avanti/indietro della camminata, senza dover
+  // rifare la geometria. Le coordinate Y dei pezzi sono ricalcolate come
+  // offset relativo al perno invece che assolute rispetto al terreno.
+  const HIP_Y = 0.82;
+  const legGroups = {};
   [-0.28, 0.28].forEach(lx => {
+    const legGroup = new THREE.Group();
+    legGroup.position.set(lx, HIP_Y, 0);
+    player.add(legGroup);
+    legGroups[lx < 0 ? 'left' : 'right'] = legGroup;
+
     if (s === "Estate") {
       // Infradito
       const sole = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.08, 0.48), shoeMat);
-      sole.position.set(lx, 0.04, 0.05);
+      sole.position.set(0, 0.04 - HIP_Y, 0.05);
       sole.castShadow = true;
-      player.add(sole);
+      legGroup.add(sole);
 
       const strapMat = new THREE.MeshLambertMaterial({ color: shoeSoleColor });
       [-0.06, 0.06].forEach(sx => {
         const strap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.25), strapMat);
-        strap.position.set(lx + sx, 0.1, 0.05);
+        strap.position.set(sx, 0.1 - HIP_Y, 0.05);
         strap.rotation.y = sx < 0 ? -0.3 : 0.3;
-        player.add(strap);
+        legGroup.add(strap);
       });
 
       // Gamba Nuda + Shorts
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.32), skinMat);
-      leg.position.set(lx, 0.28, 0);
-      player.add(leg);
+      leg.position.set(0, 0.28 - HIP_Y, 0);
+      legGroup.add(leg);
 
       const shorts = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.35, 0.38), pantsMat);
-      shorts.position.set(lx, 0.6, 0);
+      shorts.position.set(0, 0.6 - HIP_Y, 0);
       shorts.castShadow = true;
-      player.add(shorts);
+      legGroup.add(shorts);
     } else {
       // Scarpe chiuse (Sneakers / Scarponi)
       const sole = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.52), new THREE.MeshLambertMaterial({ color: shoeSoleColor }));
-      sole.position.set(lx, 0.05, 0.04);
+      sole.position.set(0, 0.05 - HIP_Y, 0.04);
       sole.castShadow = true;
-      player.add(sole);
+      legGroup.add(sole);
 
       const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.48), shoeMat);
-      shoe.position.set(lx, 0.18, 0.04);
+      shoe.position.set(0, 0.18 - HIP_Y, 0.04);
       shoe.castShadow = true;
-      player.add(shoe);
+      legGroup.add(shoe);
 
       // Pantaloni Lunghi
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.52, 0.36), pantsMat);
-      leg.position.set(lx, 0.52, 0);
+      leg.position.set(0, 0.52 - HIP_Y, 0);
       leg.castShadow = true;
-      player.add(leg);
+      legGroup.add(leg);
     }
   });
 
@@ -5829,29 +6371,39 @@ function buildPlayerGroup() {
   }
 
   // 3. BRACCIA E MANI
+  // Stesso principio delle gambe: ogni braccio nel proprio "armGroup" con
+  // perno all'altezza della spalla (1.5), coordinate Y ricalcolate come
+  // offset relativo.
+  const SHOULDER_Y = 1.5;
+  const armGroups = {};
   [-0.72, 0.72].forEach(ax => {
+    const armGroup = new THREE.Group();
+    armGroup.position.set(ax, SHOULDER_Y, 0);
+    player.add(armGroup);
+    armGroups[ax < 0 ? 'left' : 'right'] = armGroup;
+
     if (s === "Estate") {
       // Manica corta + braccio nudo
       const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.32), shirtMat);
-      sleeve.position.set(ax, 1.42, 0);
-      player.add(sleeve);
+      sleeve.position.set(0, 1.42 - SHOULDER_Y, 0);
+      armGroup.add(sleeve);
 
       const arm = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.6, 0.28), skinMat);
-      arm.position.set(ax, 0.98, 0);
+      arm.position.set(0, 0.98 - SHOULDER_Y, 0);
       arm.castShadow = true;
-      player.add(arm);
+      armGroup.add(arm);
     } else {
       // Manica lunga
       const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.65, 0.32), shirtMat);
-      sleeve.position.set(ax, 1.22, 0);
+      sleeve.position.set(0, 1.22 - SHOULDER_Y, 0);
       sleeve.castShadow = true;
-      player.add(sleeve);
+      armGroup.add(sleeve);
 
       // Guanti in Inverno / Mani nude negli altri casi
       const handMat = (s === "Inverno") ? new THREE.MeshLambertMaterial({ color: 0x2b2d42 }) : skinMat;
       const hand = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.22, 0.26), handMat);
-      hand.position.set(ax, 0.78, 0);
-      player.add(hand);
+      hand.position.set(0, 0.78 - SHOULDER_Y, 0);
+      armGroup.add(hand);
     }
   });
 
@@ -5907,6 +6459,15 @@ function buildPlayerGroup() {
     }
   }
 
+  // Riferimenti agli arti per l'animazione di camminata (vedi
+  // updatePlayerWalkAnimation): braccia e gambe si muovono in coordinazione
+  // controlaterale (braccio destro avanti insieme alla gamba sinistra).
+  player.userData.legL = legGroups.left;
+  player.userData.legR = legGroups.right;
+  player.userData.armL = armGroups.left;
+  player.userData.armR = armGroups.right;
+  player.userData.walkPhase = 0;
+
   return player;
 }
 
@@ -5938,15 +6499,29 @@ function rebuildPlayerAppearance() {
   while (player.children.length > 0) {
     const child = player.children[0];
     player.remove(child);
-    if (child.geometry) child.geometry.dispose();
-    if (child.material) {
-      if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
-      else child.material.dispose();
-    }
+    // I vestiti ora includono anche gruppi (le braccia/gambe pivotate per
+    // l'animazione di camminata), non solo mesh dirette: bisogna scendere
+    // dentro ogni gruppo per trovare le mesh vere e proprie da smaltire,
+    // altrimenti geometrie e materiali dei loro figli restano in memoria.
+    child.traverse(o => {
+      if (o.isMesh) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) {
+          if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+          else o.material.dispose();
+        }
+      }
+    });
   }
   while (freshOutfit.children.length > 0) {
     player.add(freshOutfit.children[0]);
   }
+  // I riferimenti agli arti (per l'animazione di camminata) puntano ai
+  // gruppi appena trapiantati, non più a quelli vecchi appena smaltiti.
+  player.userData.legL = freshOutfit.userData.legL;
+  player.userData.legR = freshOutfit.userData.legR;
+  player.userData.armL = freshOutfit.userData.armL;
+  player.userData.armR = freshOutfit.userData.armR;
 }
 clock.on('season', rebuildPlayerAppearance);
 
@@ -6020,7 +6595,29 @@ window.addEventListener('keydown', e => {
     devDebugOpen = !devDebugOpen;
     devDebugPanel.style.display = devDebugOpen ? 'block' : 'none';
   }
+  if (e.key === 'ù' || e.key === 'Ù') {
+    inventory.moneta += 100;
+  }
+  if (e.key === 'à' || e.key === 'À') {
+    jumpToLastDayOfSeason();
+  }
 });
+// Salta direttamente all'ultimo giorno della stagione in corso (stessa ora
+// del giorno), facendo comunque scattare un evento 'day' per ciascun
+// giorno saltato — così crescita dei campi, semi degli uccelli, ecc.
+// avanzano correttamente invece di un balzo secco che li lascerebbe indietro.
+function jumpToLastDayOfSeason() {
+  const season = clock.season;
+  const targetDayInSeason = season.lengthDays - 1;
+  const daysToAdvance = targetDayInSeason - clock.dayInSeason;
+  if (daysToAdvance <= 0) { showToast(`⏩ Sei già all'ultimo giorno di ${season.name}`); return; }
+  for (let i = 0; i < daysToAdvance; i++) {
+    clock.totalMinutes += 24 * 60;
+    clock._prevDay = clock.dayIndex;
+    clock.emit('day', clock.dayIndex);
+  }
+  showToast(`⏩ Salto all'ultimo giorno di ${season.name}`);
+}
 // Quanti giorni mancano al più "vecchio" elemento di una lista che aspetta
 // di rigenerarsi (quello fermo da più tempo, quindi il prossimo a tornare).
 function daysUntilOldestPending(items, isPending, daysSinceFn, totalDays) {
@@ -6183,27 +6780,203 @@ function updateInputEdges() {
   prevPhotoPressed = input.photoPressed;
 }
 
-const PHOTO_RANGE = 8;
-function updatePhotoCapture() {
-  if (!input.photoJustPressed) return;
-  if (!hasCamera) { showToast('📷 Non hai ancora una macchina fotografica'); return; }
-  if (inventory.pellicola <= 0) { showToast('🎞️ Rullino esaurito — comprane uno dal traghetto'); return; }
-  if (insideHouse || placementMode || fishingState !== 'idle' || isAnyOverlayOpen()) return;
-  let target = null, bestDist = Infinity;
-  for (const c of flowerCreatures) {
-    if (c.kind !== 'farfalla' || !c.resting || !c.mesh.visible) continue;
-    const d = Math.hypot(player.position.x - c.mesh.position.x, player.position.z - c.mesh.position.z);
-    if (d < PHOTO_RANGE && d < bestDist) { target = c; bestDist = d; }
+/* =========================================================================
+   FOTOGRAFIE VERE: a differenza del vecchio sistema (solo contatori
+   astratti), ora ogni scatto cattura davvero il fotogramma renderizzato in
+   quel momento — esattamente quello che il personaggio vede, seduto o in
+   piedi — senza HUD né scritte, perché l'HUD è fatto di elementi HTML
+   sovrapposti via CSS e non tocca mai il canvas WebGL che catturiamo.
+   Le foto vengono ridimensionate (lato lungo max 720px, JPEG qualità 0.72)
+   per stare comodamente in localStorage anche a 30 foto piene: anche nel
+   caso peggiore (30 foto da ~90-120KB, orientamento landscape con più
+   pixel) restano sotto i ~3.5MB, ben dentro il limite tipico di 5-10MB per
+   origine che i browser desktop e mobile riservano a localStorage. Ogni
+   foto salva anche la propria orientazione (larghezza/altezza) così viene
+   mostrata correttamente sia se scattata in landscape sia in portrait.
+   ========================================================================= */
+const PHOTO_ALBUM_MAX = 30;
+const PHOTO_MAX_DIM = 720;
+const PHOTO_SELL_PAYOUT = 50;
+const PHOTO_STORAGE_KEY = 'cozyIslandPhotos';
+
+let photos = [];
+function loadPhotosFromStorage() {
+  try {
+    const raw = localStorage.getItem(PHOTO_STORAGE_KEY);
+    photos = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(photos)) photos = [];
+  } catch (e) {
+    photos = [];
   }
-  if (!target) {
-    showToast('📷 Nessuna farfalla da fotografare qui vicino');
+}
+function savePhotosToStorage() {
+  try {
+    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    return true;
+  } catch (e) {
+    // Quota localStorage esaurita (raro, dato il ridimensionamento sopra,
+    // ma può succedere se il browser ha già altri dati salvati lì).
+    showToast('⚠️ Spazio di salvataggio locale esaurito: elimina qualche foto dall\'album');
+    return false;
+  }
+}
+loadPhotosFromStorage();
+
+// Un soggetto è "inquadrato" se è abbastanza vicino ED entro un cono
+// ragionevole davanti alla camera (non basta essere nei paraggi, deve
+// essere davvero visibile in foto). minDot più basso = cono più largo.
+function subjectPosInView(pos, maxDist, minDot) {
+  const camPos = camera.position;
+  const dx = pos.x - camPos.x, dy = pos.y - camPos.y, dz = pos.z - camPos.z;
+  const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  if (dist > maxDist || dist < 0.05) return false;
+  const camDir = new THREE.Vector3();
+  camera.getWorldDirection(camDir);
+  const dot = (camDir.x * dx + camDir.y * dy + camDir.z * dz) / dist;
+  return dot > (minDot ?? 0.4);
+}
+
+// Elenco dei soggetti "vendibili": la prima corrispondenza trovata decide
+// l'etichetta mostrata nell'album. Se nessuno corrisponde, è comunque una
+// foto valida (paesaggio), semplicemente non vendibile.
+function detectPhotoSubject() {
+  for (const c of flowerCreatures) {
+    if (c.kind === 'farfalla' && c.resting && c.mesh.visible && subjectPosInView(c.mesh.position, 9)) {
+      return 'Farfalla su un fiore';
+    }
+  }
+  for (const sq of squirrels) {
+    if (sq.state !== 'hidden' && sq.mesh.visible && subjectPosInView(sq.mesh.position, 11)) {
+      return 'Uno scoiattolo';
+    }
+  }
+  const house = placedItems.find(it => it.itemType === 'casetta');
+  if (house && subjectPosInView(house.mesh.position, 13)) return 'La casetta';
+
+  const tentEntry = interactables.find(it => it.type === 'tent');
+  if (tentEntry && subjectPosInView(tentEntry.obj.position, 11)) return 'La tenda';
+
+  const plantedFlowers = placedItems.filter(it => it.itemType === 'fiorePiantato');
+  if (plantedFlowers.length >= 9 && plantedFlowers.some(it => subjectPosInView(it.mesh.position, 9))) {
+    return '9 fiori piantati';
+  }
+  const readyFlowerField = placedItems.find(it => it.itemType === 'aiuolaFiori' && it.mesh.userData.ready && subjectPosInView(it.mesh.position, 9));
+  if (readyFlowerField) return 'Campo di fiori pronto';
+
+  const readyWheatField = placedItems.find(it => it.itemType === 'campoGrano' && it.mesh.userData.ready && subjectPosInView(it.mesh.position, 9));
+  if (readyWheatField) return 'Campo di grano pronto';
+
+  const fruitedTree = interactables.find(it => it.type === 'fruitTree' && !it.obj.userData.harvested && subjectPosInView(it.obj.position, 9));
+  if (fruitedTree) return 'Albero da frutto';
+
+  if (ferryPresent && subjectPosInView(ferryBoat.position, 16)) return 'Il traghetto';
+
+  if (bridgeBuilt) {
+    const bx = ISLAND.bridge.cx, bz = ISLAND.bridge.cz;
+    if (subjectPosInView({ x: bx, y: terrainHeightAt(bx, bz) + 1, z: bz }, 14)) return 'Il ponte';
+  }
+
+  if (moonGroup.visible && currentMoonPhaseIndex() === 4 && subjectPosInView(moonGroup.position, 400, 0.55)) {
+    return 'La luna piena';
+  }
+
+  return null;
+}
+
+// Cattura effettiva: legge il canvas WebGL così com'è appena renderizzato
+// (chiamata subito dopo renderer.render(), vedi i due punti di innesco più
+// sotto), lo ridimensiona su un canvas offscreen e lo salva come JPEG.
+// Se non si è seduti, sposta temporaneamente la camera al punto di vista in
+// prima persona del personaggio (stessa idea della vista dalla sedia a
+// dondolo, ma per quando si cammina): altezza occhi, nella direzione verso
+// cui è girato, col personaggio nascosto perché non blocchi la vista.
+// Esegue callback() con la camera lì, poi ripristina tutto com'era prima.
+// Se invece si è già seduti, la vista è già in prima persona: non c'è
+// nulla da spostare, si esegue callback() così com'è. Il ripristino finale
+// ri-renderizza subito la vista normale, quindi il giocatore non vede mai
+// lo sfarfallio: tutto avviene nello stesso istante sincrono, prima che il
+// browser disegni a schermo.
+const PLAYER_EYE_HEIGHT = 1.95;
+function withPlayerEyeView(callback) {
+  if (sittingChair) return callback();
+
+  const savedPos = camera.position.clone();
+  const savedQuat = camera.quaternion.clone();
+  const savedPlayerVisible = player.visible;
+
+  const yaw = player.userData.yaw;
+  const eyeX = player.position.x, eyeY = player.position.y + PLAYER_EYE_HEIGHT, eyeZ = player.position.z;
+  camera.position.set(eyeX, eyeY, eyeZ);
+  const lookDist = 10;
+  camera.lookAt(eyeX + Math.sin(yaw) * lookDist, eyeY, eyeZ + Math.cos(yaw) * lookDist);
+  player.visible = false;
+
+  renderer.render(scene, camera);
+  const result = callback();
+
+  player.visible = savedPlayerVisible;
+  camera.position.copy(savedPos);
+  camera.quaternion.copy(savedQuat);
+  renderer.render(scene, camera);
+
+  return result;
+}
+
+function capturePhoto() {
+  if (!hasCamera) { showToast('📷 Non hai una macchina fotografica'); return; }
+  if (inventory.pellicola <= 0) { showToast('🎞️ Rullino esaurito — comprane uno dal traghetto'); return; }
+  if (!sittingChair && (insideHouse || placementMode || fishingState !== 'idle' || isAnyOverlayOpen())) return;
+  if (photos.length >= PHOTO_ALBUM_MAX) {
+    showToast('📷 Album pieno (30 foto): vendi o elimina qualche foto per farne altre');
     return;
   }
+
+  // Quello che finisce nella foto è quello che vede l'OMINO (i suoi occhi),
+  // non la telecamera esterna che segue il giocatore da dietro: sia il
+  // rilevamento del soggetto sia la cattura dell'immagine avvengono con la
+  // stessa identica prospettiva in prima persona.
+  const { dataUrl, outW, outH, subjectLabel } = withPlayerEyeView(() => {
+    const detectedSubject = detectPhotoSubject();
+    const srcCanvas = renderer.domElement;
+    const srcW = srcCanvas.width, srcH = srcCanvas.height;
+    const scale = Math.min(1, PHOTO_MAX_DIM / Math.max(srcW, srcH));
+    const capturedW = Math.max(1, Math.round(srcW * scale));
+    const capturedH = Math.max(1, Math.round(srcH * scale));
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = capturedW;
+    outCanvas.height = capturedH;
+    const ctx = outCanvas.getContext('2d');
+    ctx.drawImage(srcCanvas, 0, 0, capturedW, capturedH);
+    return { dataUrl: outCanvas.toDataURL('image/jpeg', 0.72), outW: capturedW, outH: capturedH, subjectLabel: detectedSubject };
+  });
+
+  const photo = {
+    id: `${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+    dataUrl, w: outW, h: outH,
+    sellable: !!subjectLabel,
+    subjectLabel: subjectLabel || 'Foto del paesaggio',
+    takenAt: Date.now(),
+  };
+  photos.push(photo);
+  if (!savePhotosToStorage()) {
+    photos.pop(); // non salvata: non tenerla solo in RAM, andrebbe persa comunque al refresh
+    return;
+  }
+
   inventory.pellicola--;
-  inventory.fotoFarfalla++;
   sfxPhoto();
-  showToast('📸 Foto di farfalla scattata!');
+  if (inventory.pellicola <= 0) {
+    showToast('🎞️ Rullino esaurito! Comprane uno nuovo dal traghetto');
+  } else {
+    showToast(subjectLabel ? `📸 Foto scattata: ${subjectLabel} ⭐ (vendibile)` : '📸 Foto scattata');
+  }
   refreshInventoryHud();
+  if (typeof photoAlbumOpen !== 'undefined' && photoAlbumOpen) renderPhotoAlbum();
+}
+
+function updatePhotoCapture() {
+  if (!input.photoJustPressed) return;
+  capturePhoto();
 }
 
 /* =========================================================================
@@ -6325,28 +7098,16 @@ function updateSitButtonNav() {
 
 function takeSitPhoto() {
   if (!sittingChair) return;
-  if (!hasCamera) { showToast('📷 Non hai una macchina fotografica'); return; }
-  if (inventory.pellicola <= 0) { showToast('🎞️ Rullino esaurito — comprane uno dal traghetto'); return; }
-  inventory.pellicola--;
-  // Se una farfalla posata è nei paraggi la cattura come sempre, altrimenti
-  // scatta comunque un panorama: da seduti si fotografa "quello che si vede".
-  let target = null, bestDist = Infinity;
-  for (const c of flowerCreatures) {
-    if (c.kind !== 'farfalla' || !c.resting || !c.mesh.visible) continue;
-    const d = Math.hypot(sittingChair.mesh.position.x - c.mesh.position.x, sittingChair.mesh.position.z - c.mesh.position.z);
-    if (d < PHOTO_RANGE && d < bestDist) { target = c; bestDist = d; }
-  }
-  if (target) {
-    inventory.fotoFarfalla++;
-    showToast('📸 Foto di farfalla scattata!');
-  } else {
-    inventory.fotoPaesaggio++;
-    showToast('📸 Foto del paesaggio scattata!');
-  }
-  refreshInventoryHud();
+  capturePhoto();
 }
 
 window.addEventListener('mousemove', e => {
+  // Su mobile un tap sui pulsanti Foto/Pensa/Dondola/Esci può generare un
+  // mousemove "sintetico" nel punto toccato subito prima del click: se lo
+  // lasciassimo passare, la fotocamera scatterebbe verso quel punto dello
+  // schermo (in basso) invece di restare ferma. Lo ignoriamo quando il tocco
+  // parte da uno dei pulsanti della UI da seduti.
+  if (e.target && e.target.closest && e.target.closest('.sit-btn')) return;
   sitMouseT.x = e.clientX / window.innerWidth;
   sitMouseT.y = e.clientY / window.innerHeight;
 });
@@ -6417,6 +7178,7 @@ function updatePlayer(dt) {
     player.rotation.y = player.userData.yaw;
   }
 
+  let movedThisFrame = false;
   // Movimento: sempre lungo la direzione in cui il player è attualmente orientato
   if (throttle !== 0) {
     const yaw = player.userData.yaw;
@@ -6440,6 +7202,7 @@ function updatePlayer(dt) {
       player.position.z = nextZ;
       moved = true;
     }
+    movedThisFrame = moved;
     if (moved) {
       footstepTimer -= dt;
       if (footstepTimer <= 0) {
@@ -6448,8 +7211,89 @@ function updatePlayer(dt) {
       }
     }
   }
+
+  updatePlayerWalkAnimation(dt, movedThisFrame ? Math.abs(throttle) : 0);
+  updatePlayerToolSwing(dt);
+}
+
+// Animazione di camminata: braccia e gambe oscillano in coordinazione
+// controlaterale (braccio destro avanti insieme alla gamba sinistra, come
+// una camminata vera), con ampiezza e velocità del ciclo proporzionali a
+// quanto forte è la marcia (throttle) — cammino lento = oscillazione lenta
+// e contenuta, marcia a fondo = oscillazione ampia e rapida. Da fermi le
+// braccia/gambe tornano dolcemente alla posa neutra invece di bloccarsi a
+// metà movimento.
+const WALK_CYCLE_SPEED = 9.0;   // rad/s di avanzamento fase, a marcia piena
+const WALK_LEG_AMPLITUDE = 0.55; // rad, ~31°
+const WALK_ARM_AMPLITUDE = 0.45; // rad, ~26°
+function updatePlayerWalkAnimation(dt, moveMag) {
+  const ud = player.userData;
+  if (!ud.legL) return; // difensivo: se per qualche motivo il modello non ha gli arti pivotati
+  if (moveMag > 0.001) {
+    ud.walkPhase += moveMag * WALK_CYCLE_SPEED * dt;
+    const amp = 0.35 + 0.65 * moveMag; // a marcia leggera lo swing resta comunque leggibile, non nullo
+    const legSwing = WALK_LEG_AMPLITUDE * amp * Math.sin(ud.walkPhase);
+    const armSwing = WALK_ARM_AMPLITUDE * amp * Math.sin(ud.walkPhase);
+    ud.legL.rotation.x = legSwing;
+    ud.legR.rotation.x = -legSwing;
+    // Controlaterale: il braccio si accompagna alla gamba del lato OPPOSTO.
+    ud.armR.rotation.x = armSwing;
+    ud.armL.rotation.x = -armSwing;
+  } else {
+    // Fermo: rilassa dolcemente verso la posa neutra invece di uno scatto secco.
+    const relax = Math.min(1, dt * 6);
+    ud.legL.rotation.x += (0 - ud.legL.rotation.x) * relax;
+    ud.legR.rotation.x += (0 - ud.legR.rotation.x) * relax;
+    ud.armL.rotation.x += (0 - ud.armL.rotation.x) * relax;
+    ud.armR.rotation.x += (0 - ud.armR.rotation.x) * relax;
+  }
 }
 let footstepTimer = 0;
+
+/* =========================================================================
+   ANIMAZIONE USO ATTREZZI: un rapido movimento delle braccia (entrambe,
+   come se reggessero l'attrezzo a due mani) quando si colpisce un albero da
+   legna o un sasso con l'accetta/piccone, si zappa un campo, o lo si
+   annaffia. Ha la priorità sull'animazione di camminata sulle braccia per
+   tutta la sua breve durata (vedi ordine di chiamata in updatePlayer). Le
+   gambe non vengono toccate: il personaggio è fermo quando usa l'attrezzo.
+   ========================================================================= */
+const TOOL_SWING_PARAMS = {
+  axe:     { duration: 0.32, amplitude: 2.1, curve: 'chop' },
+  pickaxe: { duration: 0.32, amplitude: 2.1, curve: 'chop' },
+  hoe:     { duration: 0.42, amplitude: 1.6, curve: 'chop' },
+  water:   { duration: 0.5,  amplitude: 1.1, curve: 'pour' },
+};
+let toolSwingTimer = 0;
+let toolSwingType = null;
+
+function triggerToolSwing(type) {
+  const p = TOOL_SWING_PARAMS[type];
+  if (!p) return;
+  toolSwingTimer = p.duration;
+  toolSwingType = type;
+}
+
+function updatePlayerToolSwing(dt) {
+  if (toolSwingTimer <= 0) return;
+  const p = TOOL_SWING_PARAMS[toolSwingType];
+  toolSwingTimer = Math.max(0, toolSwingTimer - dt);
+  const t = 1 - toolSwingTimer / p.duration; // 0 all'inizio del gesto, 1 alla fine
+  const ud = player.userData;
+  if (!ud.armR) return;
+  let angle;
+  if (p.curve === 'pour') {
+    // Inclinazione più dolce e un po' più lenta a tornare su, come se si
+    // versasse davvero l'acqua invece di un colpo secco.
+    angle = -p.amplitude * Math.sin(Math.min(1, t * 1.15) * Math.PI * 0.85);
+  } else {
+    // Un unico arco rapido avanti (il "colpo"): sale, scende, torna su.
+    angle = -p.amplitude * Math.sin(t * Math.PI);
+  }
+  ud.armR.rotation.x = angle;
+  ud.armL.rotation.x = angle * 0.7; // l'altra mano accompagna, come se aiutasse a reggere l'attrezzo
+  if (toolSwingTimer <= 0) toolSwingType = null;
+}
 
 /* =========================================================================
    PESCA: stile contemplativo. Lanci l'amo, aspetti (la parte rilassante),
@@ -6850,6 +7694,17 @@ function swayDecorativeFlower(mesh) {
   mesh.rotation.z = mesh.userData.windBaseRotZ + windIntensity * 0.22 * Math.sin(elapsedTime * 2.8 + phase);
 }
 
+// Sedia a dondolo mossa dal vento: dondola avanti/indietro (rotazione sul suo
+// asse X, lo stesso verso in cui dondola un occupante) solo se non c'è
+// nessuno seduto sopra — altrimenti il movimento del vento si sommerebbe in
+// modo confuso a quello controllato dal giocatore mentre è seduto.
+function swayRockingChair(entry) {
+  const mesh = entry.mesh;
+  if (mesh.userData.windBaseRotX === undefined) mesh.userData.windBaseRotX = mesh.rotation.x;
+  const phase = windPhaseFor(mesh.position.x, mesh.position.z);
+  mesh.rotation.x = mesh.userData.windBaseRotX + windIntensity * 0.05 * Math.sin(elapsedTime * 1.6 + phase);
+}
+
 function applyWindSway() {
   // Sotto soglia: niente da aggiornare, si resta fermi all'ultima posa di riposo.
   if (windIntensity < 0.0005) return;
@@ -6859,6 +7714,8 @@ function applyWindSway() {
       swayFieldPlants(it.mesh.userData.readyGroup, it.x, it.z);
     } else if (it.itemType === 'fiorePiantato') {
       swayDecorativeFlower(it.mesh);
+    } else if (it.itemType === 'sediaDondolo' && sittingChair !== it) {
+      swayRockingChair(it);
     }
   }
 }
@@ -7034,6 +7891,64 @@ function makeFencePanel(x, z, yaw) {
   return group;
 }
 
+// Casetta per Scoiattoli: un palo lungo un metro con sopra una piccola
+// casetta in legno (tettuccio spiovente, foro d'ingresso tondo, piccola
+// mensola/poggiatoio). Ogni tanto vi compaiono vicino noci, nocciole e
+// pigne raccoglibili (vedi updateSquirrelHouseSpawner).
+function makeCasettaScoiattoli(x, z, yaw) {
+  const group = new THREE.Group();
+
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.85 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x9a6b3c, roughness: 0.75 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x7a3b2e, roughness: 0.7 });
+  const holeMat = new THREE.MeshStandardMaterial({ color: 0x2c1c10, roughness: 0.9 });
+  const perchMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.8 });
+
+  // 1. PALO (1 metro)
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.065, 1.0, 8), poleMat);
+  pole.position.y = 0.5;
+  pole.castShadow = true;
+  group.add(pole);
+
+  // 2. CORPO CASETTA (sopra il palo)
+  const houseGroup = new THREE.Group();
+  houseGroup.position.y = 1.0;
+  group.add(houseGroup);
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.36, 0.38), wallMat);
+  body.position.y = 0.18;
+  body.castShadow = true;
+  houseGroup.add(body);
+
+  // Tetto a due falde
+  [-1, 1].forEach(side => {
+    const roofPanel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.44), roofMat);
+    roofPanel.position.set(0, 0.36 + 0.09, side * 0.12);
+    roofPanel.rotation.x = side * 0.5;
+    houseGroup.add(roofPanel);
+  });
+
+  // Foro d'ingresso tondo
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.06, 12), holeMat);
+  hole.rotation.z = Math.PI / 2;
+  hole.position.set(0, 0.22, 0.2);
+  houseGroup.add(hole);
+
+  // Piccolo poggiatoio sotto il foro
+  const perch = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 6), perchMat);
+  perch.rotation.z = Math.PI / 2;
+  perch.position.set(0, 0.13, 0.24);
+  houseGroup.add(perch);
+
+  // Ingrandita del 50% rispetto alle dimensioni "naturali" disegnate sopra
+  // (richiesto esplicitamente): scala l'intero gruppo, palo compreso.
+  group.scale.set(1.5, 1.5, 1.5);
+  group.position.set(x, terrainHeightAt(x, z), z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
 function makeTorch(x, z, yaw) {
   const group = new THREE.Group();
 
@@ -7203,6 +8118,182 @@ function makeWall(x, z, yaw) {
   group.add(cap);
 
   // Posizionamento nel mondo
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+  group.rotation.y = yaw;
+
+  scene.add(group);
+  return group;
+}
+
+// Pannello di recinto AD ANGOLO: due "bracci" corti (metà della lunghezza
+// di un pannello dritto, così si allineano ai pannelli dritti sulle celle
+// adiacenti) che partono da un palo d'angolo condiviso all'origine, uno
+// verso +X e uno verso +Z. Ruotando l'intero pezzo con [Ruota] nel menu di
+// modifica si può orientare l'angolo in una qualsiasi delle 4 direzioni.
+function makeFencePanelCorner(x, z, yaw) {
+  const group = new THREE.Group();
+
+  const woodPostMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.8 });
+  const woodRailMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+  const woodPicketMat = new THREE.MeshStandardMaterial({ color: 0x9a6b3c, roughness: 0.6 });
+
+  const ARM_LEN = 1.05; // stessa distanza centro-palo del pannello dritto (posti a ±1.05)
+
+  function makePost() {
+    const postGroup = new THREE.Group();
+    const postBody = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 1.3, 6), woodPostMat);
+    postBody.position.y = 0.65;
+    postBody.castShadow = true;
+    postBody.receiveShadow = true;
+    postGroup.add(postBody);
+    const postTop = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.15, 6), woodPostMat);
+    postTop.position.y = 0.65 + 0.725;
+    postTop.rotation.y = Math.PI / 6;
+    postTop.castShadow = true;
+    postGroup.add(postTop);
+    return postGroup;
+  }
+
+  // Palo d'angolo condiviso, all'origine (dove i due bracci si incontrano)
+  group.add(makePost());
+
+  // Un braccio dritto dal palo d'angolo (x=0) fino a x=ARM_LEN, con palo
+  // terminale, due traverse e alcuni picchetti: stessa tecnica del pannello
+  // dritto, ma su metà lunghezza e senza centratura (parte da 0, non da
+  // -ARM_LEN/2), così il palo d'angolo resta esattamente all'origine.
+  function buildArm() {
+    const arm = new THREE.Group();
+
+    const endPost = makePost();
+    endPost.position.x = ARM_LEN;
+    arm.add(endPost);
+
+    [0.45, 0.95].forEach(h => {
+      const railShape = new THREE.Shape();
+      railShape.moveTo(-0.05, -0.07);
+      railShape.lineTo(0.05, -0.07);
+      railShape.lineTo(0.04, 0.07);
+      railShape.lineTo(-0.04, 0.07);
+      railShape.closePath();
+      const railGeo = new THREE.ExtrudeGeometry(railShape, { depth: ARM_LEN, bevelEnabled: false });
+      const rail = new THREE.Mesh(railGeo, woodRailMat);
+      rail.position.set(0, h, 0);
+      rail.rotation.y = Math.PI / 2; // la lunghezza estrusa (0..ARM_LEN) diventa l'asse X locale
+      rail.castShadow = true;
+      rail.receiveShadow = true;
+      arm.add(rail);
+    });
+
+    const picketCount = 6;
+    const picketWidth = 0.12;
+    const picketThickness = 0.04;
+    const picketGap = (ARM_LEN - (picketCount * picketWidth)) / (picketCount + 1);
+    const picketShape = new THREE.Shape();
+    picketShape.moveTo(-picketWidth / 2, -0.6);
+    picketShape.lineTo(picketWidth / 2, -0.6);
+    picketShape.lineTo(picketWidth / 2, 0.5);
+    picketShape.lineTo(0, 0.6);
+    picketShape.lineTo(-picketWidth / 2, 0.5);
+    picketShape.closePath();
+    for (let i = 0; i < picketCount; i++) {
+      const xPos = picketGap + i * (picketWidth + picketGap) + picketWidth / 2;
+      const picketGeo = new THREE.ExtrudeGeometry(picketShape, { depth: picketThickness, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 });
+      picketGeo.center();
+      const picket = new THREE.Mesh(picketGeo, woodPicketMat);
+      picket.position.set(xPos, 0.6, 0.05 + picketThickness / 2);
+      picket.castShadow = true;
+      picket.receiveShadow = true;
+      arm.add(picket);
+    }
+    return arm;
+  }
+
+  group.add(buildArm()); // braccio verso +X
+  const armZ = buildArm();
+  armZ.rotation.y = Math.PI / 2; // stesso braccio, ruotato: ora punta verso +Z
+  group.add(armZ);
+
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+  group.rotation.y = yaw;
+
+  scene.add(group);
+  return group;
+}
+
+// Muro di pietra AD ANGOLO: stesso principio del recinto ad angolo — due
+// bracci corti (metà di un muro dritto) che partono da un pilastro
+// d'angolo condiviso all'origine, uno verso +X e uno verso +Z.
+function makeWallCorner(x, z, yaw) {
+  const group = new THREE.Group();
+
+  const stoneColors = [0x9a958a, 0x8a857a, 0xaa9f90, 0x7a756a];
+  const stoneMaterials = stoneColors.map(color => new THREE.MeshLambertMaterial({ color }));
+  const capMat = new THREE.MeshLambertMaterial({ color: 0xb5b0a2 });
+  const mortarMat = new THREE.MeshLambertMaterial({ color: 0x5a554a });
+  const pillarMat = new THREE.MeshLambertMaterial({ color: 0x87816f });
+
+  const ARM_LEN = 1.1; // metà di un muro dritto, così si allineano
+
+  // Pilastro d'angolo condiviso, più massiccio per segnare la giunzione
+  const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.46, 1.66, 0.46), pillarMat);
+  pillar.position.y = 0.83;
+  pillar.castShadow = true;
+  pillar.receiveShadow = true;
+  group.add(pillar);
+  const pillarCap = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.12, 0.54), capMat);
+  pillarCap.position.y = 1.66 + 0.06;
+  pillarCap.castShadow = true;
+  group.add(pillarCap);
+
+  function buildArm() {
+    const arm = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.BoxGeometry(ARM_LEN, 1.5, 0.36), mortarMat);
+    core.position.set(ARM_LEN / 2, 0.75, 0);
+    arm.add(core);
+
+    const rows = 5, cols = 2;
+    const wallHeight = 1.5;
+    const rowHeight = wallHeight / rows;
+    const colWidth = ARM_LEN / cols;
+    for (let r = 0; r < rows; r++) {
+      const isOdd = r % 2 !== 0;
+      const numStones = isOdd ? cols + 1 : cols;
+      for (let c = 0; c < numStones; c++) {
+        let width = colWidth;
+        let xOffset = c * colWidth + colWidth / 2;
+        if (isOdd) {
+          if (c === 0 || c === numStones - 1) width = colWidth / 2;
+          xOffset = c * colWidth;
+        }
+        const depth = 0.4 + (Math.random() - 0.5) * 0.03;
+        const height = rowHeight - 0.02;
+        const mat = stoneMaterials[(r + c) % stoneMaterials.length];
+        const stoneGeo = new THREE.BoxGeometry(Math.max(0.05, width - 0.03), height, depth);
+        const stone = new THREE.Mesh(stoneGeo, mat);
+        const randomZ = (Math.random() - 0.5) * 0.02;
+        const randomY = (Math.random() - 0.5) * 0.01;
+        stone.position.set(xOffset, r * rowHeight + rowHeight / 2 + 0.02 + randomY, randomZ);
+        stone.castShadow = true;
+        stone.receiveShadow = true;
+        arm.add(stone);
+      }
+    }
+
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(ARM_LEN + 0.06, 0.12, 0.46), capMat);
+    cap.position.set(ARM_LEN / 2, 1.56, 0);
+    cap.castShadow = true;
+    cap.receiveShadow = true;
+    arm.add(cap);
+    return arm;
+  }
+
+  group.add(buildArm()); // braccio verso +X
+  const armZ = buildArm();
+  armZ.rotation.y = Math.PI / 2; // stesso braccio, ruotato: ora punta verso +Z
+  group.add(armZ);
+
   const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
   group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
@@ -7700,6 +8791,12 @@ borderData.forEach(b => {
   // 4. POSIZIONAMENTO E METADATI (Invariati)
   group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
+  // Rimpicciolito rispetto alle dimensioni "naturali" disegnate sopra (che
+  // arrivavano a ~2.8 di lato, più della cella della griglia di
+  // piazzamento): così due campi possono stare su celle adiacenti, fianco a
+  // fianco, senza sovrapporsi visivamente (vedi anche ITEM_FOOTPRINT più in
+  // basso, ridotto in coerenza con questa scala).
+  group.scale.setScalar(0.78);
   group.userData = { 
     fieldKind: 'grano', 
     planted: false, 
@@ -7851,6 +8948,9 @@ for (let i = 0; i < stonesPerSide; i++) {
   // 4. POSIZIONAMENTO E METADATI (Invariati)
   group.position.set(x, terrainHeightAt(x, z), z);
   group.rotation.y = yaw;
+  // Stesso motivo del campo di grano: rimpicciolita per stare su una cella
+  // della griglia di piazzamento senza sovrapporsi a un'aiuola/campo vicino.
+  group.scale.setScalar(0.82);
   group.userData = { 
     fieldKind: 'fiori', 
     planted: false, 
@@ -8114,10 +9214,10 @@ function updateTorches(elapsedTime) {
 // Fabbrica mesh, chiave inventario e "ingombro" (spaziatura minima) per ogni
 // tipo di oggetto piazzabile — aggiungere un tipo nuovo in futuro (es. una
 // futura fontana) significa solo aggiungere una riga in ciascuna di queste.
-const ITEM_FACTORY = { recinto: makeFencePanel, torcia: makeTorch, muro: makeWall, casetta: makeCasetta, fontana: makeFontana, campoGrano: makeCampoGrano, aiuolaFiori: makeAiuolaFiori, fiorePiantato: makeFioreDecorativo, sediaDondolo: makeSediaDondolo };
-const ITEM_INV_KEY = { recinto: 'recinti', torcia: 'torce', muro: 'muri', casetta: 'casette', fontana: 'fontane', campoGrano: 'campiGrano', aiuolaFiori: 'aiuoleFiori', fiorePiantato: 'fiori', sediaDondolo: 'sedieDondolo' };
-const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2, fontana: GRID_SIZE * 1.3, campoGrano: GRID_SIZE * 1.2, aiuolaFiori: GRID_SIZE * 1.1, fiorePiantato: GRID_SIZE * 0.5, sediaDondolo: GRID_SIZE * 0.9 };
-const ITEM_SOLID = { recinto: true, torcia: false, muro: true, casetta: true, fontana: true, campoGrano: false, aiuolaFiori: false, fiorePiantato: false, sediaDondolo: true }; // blocca il movimento?
+const ITEM_FACTORY = { recinto: makeFencePanel, recintoAngolo: makeFencePanelCorner, torcia: makeTorch, muro: makeWall, muroAngolo: makeWallCorner, casetta: makeCasetta, fontana: makeFontana, campoGrano: makeCampoGrano, aiuolaFiori: makeAiuolaFiori, fiorePiantato: makeFioreDecorativo, sediaDondolo: makeSediaDondolo, casettaScoiattoli: makeCasettaScoiattoli };
+const ITEM_INV_KEY = { recinto: 'recinti', recintoAngolo: 'recintiAngolo', torcia: 'torce', muro: 'muri', muroAngolo: 'muriAngolo', casetta: 'casette', fontana: 'fontane', campoGrano: 'campiGrano', aiuolaFiori: 'aiuoleFiori', fiorePiantato: 'fiori', sediaDondolo: 'sedieDondolo', casettaScoiattoli: 'casetteScoiattoli' };
+const ITEM_FOOTPRINT = { recinto: GRID_SIZE * 0.9, recintoAngolo: GRID_SIZE * 0.9, torcia: GRID_SIZE * 0.9, muro: GRID_SIZE * 0.9, muroAngolo: GRID_SIZE * 0.9, casetta: GRID_SIZE * 3.2, fontana: GRID_SIZE * 1.3, campoGrano: GRID_SIZE * 0.96, aiuolaFiori: GRID_SIZE * 0.96, fiorePiantato: GRID_SIZE * 0.5, sediaDondolo: GRID_SIZE * 0.9, casettaScoiattoli: GRID_SIZE * 1.3 };
+const ITEM_SOLID = { recinto: true, recintoAngolo: true, torcia: false, muro: true, muroAngolo: true, casetta: true, fontana: true, campoGrano: false, aiuolaFiori: false, fiorePiantato: false, sediaDondolo: true, casettaScoiattoli: false }; // blocca il movimento?
 
 const ghostMats = {};
 const ghostMeshes = {};
@@ -8137,7 +9237,7 @@ function activeGhostMat() { return ghostMats[placementItemType]; }
 // Oggetti piazzati la cui azione primaria [E] non è "modifica" (fontana =
 // raccogli acqua, campi/aiuole = semina o raccogli): per questi, ruota/
 // sposta/rimuovi passano al tasto secondario [B].
-const EDIT_VIA_SECONDARY = new Set(['fontana', 'campoGrano', 'aiuolaFiori', 'sediaDondolo']);
+const EDIT_VIA_SECONDARY = new Set(['fontana', 'campoGrano', 'aiuolaFiori', 'sediaDondolo', 'casetta']);
 
 /* =========================================================================
    CAMPI COLTIVABILI E AIUOLE DI FIORI: crescita per stagione, coltivazione
@@ -8150,6 +9250,7 @@ let hasCamera = false;
 let hasGuitar = false;
 let mieleEverCollected = false;
 let flowerHarvestedEver = false;
+let squirrelHouseEverBuilt = false;
 
 function fieldGrowthDaysRequired(kind) {
   const s = clock.season.name;
@@ -8238,6 +9339,10 @@ function updateFieldGrowthDaily() {
     if (it.itemType !== 'campoGrano' && it.itemType !== 'aiuolaFiori') continue;
     const d = it.mesh.userData;
     if (!d.planted) continue;
+    // Un campo già maturo non ha più bisogno di essere innaffiato: niente
+    // conteggio della sete, niente rischio di seccarsi, finché non viene
+    // raccolto. Il conto riparte da zero solo quando si semina di nuovo.
+    if (d.ready) continue;
 
     d.daysSinceWatered = rainedOrSnowedYesterday ? 0 : (d.daysSinceWatered || 0) + 1;
     if (d.daysSinceWatered === 0) d.dryPenaltyGiven = false; // riparte il conto: potrà segnalare di nuovo se torna a seccarsi
@@ -8250,17 +9355,15 @@ function updateFieldGrowthDaily() {
       d.dryPenaltyGiven = false;
       d.sproutGroup.visible = false;
       d.readyGroup.visible = false;
-      adjustGradimento(-1); // 3Vago: campo morto per siccità
+      adjustGradimento(-1, 'Un campo è morto per la siccità'); // 3Vago: campo morto per siccità
       showToast(d.fieldKind === 'grano' ? '🥀 Il campo è appassito per la siccità: puoi seminarlo di nuovo' : '🥀 L\'aiuola è appassita per la siccità: puoi seminarla di nuovo');
       continue;
     }
 
     if (d.daysSinceWatered >= 3 && !d.dryPenaltyGiven) {
       d.dryPenaltyGiven = true;
-      adjustGradimento(-1); // 3Vago: campo non innaffiato da almeno 3 giorni (una volta sola per "episodio" di siccità)
+      adjustGradimento(-1, 'Un campo non innaffiato da giorni'); // 3Vago: campo non innaffiato da almeno 3 giorni (una volta sola per "episodio" di siccità)
     }
-
-    if (d.ready) continue; // già cresciuto: la sete conta comunque (sopra), la crescita no
 
     const req = fieldGrowthDaysRequired(d.fieldKind);
     if (req == null) continue;
@@ -8276,6 +9379,68 @@ function updateFieldGrowthDaily() {
   }
 }
 clock.on('day', updateFieldGrowthDaily);
+
+/* =========================================================================
+   INDICATORE VISIVO DI SETE DEI CAMPI: una gocciolina semi-trasparente che
+   rimbalza a 1 metro da terra sopra il campo, al posto (o in aggiunta) del
+   testo "servirebbe acqua". Piccola se il campo ha solo bisogno di essere
+   innaffiato (1-2 giorni senza pioggia/annaffiatoio), più grande e con un
+   rimbalzo più rapido se sta seccando sul serio (3+ giorni, rischio di
+   morire). Vale anche per i campi già pronti: possono seccare comunque.
+   ========================================================================= */
+function makeWaterDropMesh(dying) {
+  const group = new THREE.Group();
+  const scale = dying ? 1.5 : 1.0;
+  const mat = new THREE.MeshBasicMaterial({ color: dying ? 0x2f7dc9 : 0x6fc0f0, transparent: true, opacity: 0.6, depthWrite: false });
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.09 * scale, 10, 8), mat);
+  bulb.position.y = -0.03 * scale;
+  group.add(bulb);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.075 * scale, 0.14 * scale, 10), mat);
+  tip.position.y = 0.08 * scale;
+  group.add(tip);
+  return group;
+}
+
+function updateFieldWaterDrops(elapsedTime) {
+  for (const it of placedItems) {
+    if (it.itemType !== 'campoGrano' && it.itemType !== 'aiuolaFiori') continue;
+    const d = it.mesh.userData;
+    const dsw = d.daysSinceWatered || 0;
+    // Un campo già maturo non ha più bisogno d'acqua finché non lo si
+    // raccoglie (vedi updateFieldGrowthDaily): niente gocciolina neanche qui.
+    const needsWater = d.planted && !d.ready && dsw >= 1;
+    if (!needsWater) {
+      if (d.waterDropMesh) d.waterDropMesh.visible = false;
+      continue;
+    }
+    const dying = dsw >= 3;
+    // Il campo è stato rimpicciolito (vedi makeCampoGrano/makeAiuolaFiori,
+    // ora scala <1 per poter stare fianco a fianco con un altro campo sulla
+    // griglia): compensiamo qui con l'inverso della sua scala, così la
+    // goccia resta sempre della stessa dimensione assoluta e sempre a un
+    // metro vero da terra, qualunque sia il rimpicciolimento del campo.
+    const invScale = 1 / (it.mesh.scale.x || 1);
+    if (!d.waterDropMesh) {
+      d.waterDropMesh = makeWaterDropMesh(dying);
+      d.waterDropDying = dying;
+      d.waterDropPhase = Math.random() * Math.PI * 2;
+      it.mesh.add(d.waterDropMesh);
+    } else if (d.waterDropDying !== dying) {
+      // passaggio da "servirebbe acqua" a "sta seccando" (o viceversa se
+      // ripiove nel frattempo): ricrea la goccia nella taglia giusta.
+      it.mesh.remove(d.waterDropMesh);
+      d.waterDropMesh.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+      d.waterDropMesh = makeWaterDropMesh(dying);
+      d.waterDropDying = dying;
+      it.mesh.add(d.waterDropMesh);
+    }
+    d.waterDropMesh.visible = true;
+    d.waterDropMesh.scale.setScalar(invScale);
+    const speed = dying ? 3.4 : 2.0;
+    const amplitude = dying ? 0.22 : 0.14;
+    d.waterDropMesh.position.set(0, (1.0 + Math.abs(Math.sin(elapsedTime * speed + d.waterDropPhase)) * amplitude) * invScale, 0);
+  }
+}
 
 
 function isInValleyOnly(x, z) {
@@ -8363,7 +9528,7 @@ function exitPlacementMode() {
 const buildChip = document.getElementById('buildChip');
 const buildOverlay = document.getElementById('build-overlay');
 const buildListEl = document.getElementById('build-list');
-const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore', sediaDondolo: 'Sedia a dondolo' };
+const ITEM_LABEL_FULL = { recinto: 'Pannello di recinto', recintoAngolo: 'Pannello di recinto ad angolo', torcia: 'Torcia', muro: 'Muro di pietra', muroAngolo: 'Muro di pietra ad angolo', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore', sediaDondolo: 'Sedia a dondolo', casettaScoiattoli: 'Casetta per Scoiattoli' };
 let buildMenuOpen = false;
 
 function renderBuildMenu() {
@@ -8545,7 +9710,7 @@ function updateMenuGamepadNav(dt) {
   const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
   const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen || tutorialOverlayOpen ||
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen || tutorialOverlayOpen || diaryOpen ||
     mainMenuOverlay.classList.contains('open') || optionsOverlay.classList.contains('open') ||
     newGameConfirmOverlay.classList.contains('open') || returnMenuConfirmOverlay.classList.contains('open');
   if (!anyMenuOpen || !pad) {
@@ -8582,12 +9747,14 @@ function updateMenuGamepadNav(dt) {
     if (craftMenuOpen) closeCraftMenu();
     if (cookMenuOpen) closeCookMenu();
     if (ferryMenuOpen) closeFerryMenu();
-  if (photoAlbumOpen) closePhotoAlbum();
+    if (photoAlbumOpen && !photoViewerOpen) closePhotoAlbum();
+    if (photoViewerOpen) { if (photoViewerConfirming) cancelDeleteCurrentPhoto(); else closePhotoViewer(); }
     if (fenceEditMenuOpen) closeFenceEditMenu();
     if (buildMenuOpen) closeBuildMenu();
     if (storageMenuOpen) closeStorageMenu();
     if (messageOverlayOpen) closeMessageOverlay();
     if (inventoryMenuOpen) closeInventoryMenu();
+    if (diaryOpen) closeDiary();
   }
   prevPadConfirm = confirmNow;
   prevPadCancel = cancelNow;
@@ -8708,7 +9875,7 @@ document.getElementById('craft-cancel').addEventListener('click', closeCraftMenu
    sincronizzazione (syncFoodCounts) li farebbe ricomparire.
    ========================================================================= */
 // Categorie per i tab del Fornelletto: stesso principio del Banco da Lavoro.
-const COOK_CATEGORIES = ['Piatti salati', 'Bevande', 'Frutta cotta', 'Torte e crostate', 'Miele aromatizzato'];
+const COOK_CATEGORIES = ['Piatti salati', 'Bevande', 'Frutta cotta', 'Torte e crostate', 'Miele aromatizzato', 'Frutta Secca del Bosco'];
 const COOK_CATEGORY_BY_ID = {
   pesce_impanato: 'Piatti salati', tartare_pesce: 'Piatti salati', frittata: 'Piatti salati', grande_frittata: 'Piatti salati',
   tisana: 'Bevande', sciroppo: 'Bevande',
@@ -8716,6 +9883,7 @@ const COOK_CATEGORY_BY_ID = {
   crostata_ciliegie: 'Torte e crostate', tartelletta_nespole: 'Torte e crostate', torta_pesche: 'Torte e crostate', torta_fichi: 'Torte e crostate',
   torta_mele: 'Torte e crostate', torta_castagne: 'Torte e crostate', plumcake_arance: 'Torte e crostate', torta_mandarino: 'Torte e crostate',
   miele_ciliegie: 'Miele aromatizzato', miele_castagne: 'Miele aromatizzato', miele_mandarino: 'Miele aromatizzato', miele_fichi: 'Miele aromatizzato',
+  granola_boschi: 'Frutta Secca del Bosco', biscotti_nocciole: 'Frutta Secca del Bosco', snack_frutta_secca: 'Frutta Secca del Bosco', pigna_glassata: 'Frutta Secca del Bosco',
 };
 const COOK_RECIPES = [
   { id: 'pesce_impanato', name: 'Pesce impanato', cost: { pesce: 1, farina: 1 }, visible: () => stoveBuilt, craft: () => { inventory.pesceImpanato++; } },
@@ -8738,6 +9906,10 @@ const COOK_RECIPES = [
   { id: 'miele_castagne', name: 'Miele di castagne', cost: { miele: 2, castagne: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleCastagne++; } },
   { id: 'miele_mandarino', name: 'Miele al mandarino', cost: { miele: 2, mandarini: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleMandarino++; } },
   { id: 'miele_fichi', name: 'Miele cotto di fichi', cost: { miele: 2, fichi: 2 }, visible: () => stoveBuilt && mieleEverCollected, craft: () => { inventory.mieleFichi++; } },
+  { id: 'granola_boschi', name: 'Granola dei Boschi', cost: { noci: 1, nocciole: 1, miele: 1 }, visible: () => stoveBuilt && squirrelHouseEverBuilt, craft: () => { inventory.granolaBoschi++; } },
+  { id: 'biscotti_nocciole', name: 'Biscotti alle Nocciole', cost: { farina: 2, nocciole: 2, uova: 1 }, visible: () => stoveBuilt && squirrelHouseEverBuilt, craft: () => { inventory.biscottiNocciole++; } },
+  { id: 'snack_frutta_secca', name: 'Snack Frutta Secca', cost: { nocciole: 1, noci: 1 }, visible: () => stoveBuilt && squirrelHouseEverBuilt, craft: () => { inventory.snackFruttaSecca++; } },
+  { id: 'pigna_glassata', name: 'Pigna Glassata', cost: { pigne: 1, miele: 1 }, visible: () => stoveBuilt && squirrelHouseEverBuilt, craft: () => { inventory.pignaGlassata++; } },
 ];
 
 // Rimuove `count` unità di una risorsa dal costo di una ricetta di cottura:
@@ -8853,7 +10025,6 @@ const FERRY_SELL_BUNDLES = [
   { key: 'frammenti', amount: 1, payout: 20, label: 'Frammento di stella' },
   { key: 'fiori', amount: 3, payout: 10, label: 'Fiori' },
   { key: 'grano', amount: 10, payout: 10, label: 'Grano' },
-  { key: 'fotoFarfalla', amount: 1, payout: 50, label: 'Foto di farfalla' },
   { key: 'stellaMarina', amount: 1, payout: 10, label: 'Stella marina' },
   { key: 'medusa', amount: 1, payout: 10, label: 'Medusa' },
   { key: 'conchiglia', amount: 1, payout: 10, label: 'Conchiglia' },
@@ -8994,7 +10165,7 @@ function renderFerryMenu() {
         if (ferryBudget < b.payout || (inventory[b.key] || 0) < b.amount) return;
         inventory[b.key] -= b.amount;
         clampAcquaToCapacity(); // se si è appena venduto alluminio, la capienza dell'acqua può essersi ridotta
-        if (SEA_ITEM_TYPES.includes(b.key)) adjustGradimento(-1); // vendere un animaletto di mare dispiace all'isola
+        if (SEA_ITEM_TYPES.includes(b.key)) adjustGradimento(-1, 'Hai venduto una creatura marina'); // vendere un animaletto di mare dispiace all'isola
         sfxSell();
         inventory.moneta += b.payout;
         ferryBudget -= b.payout;
@@ -9066,16 +10237,19 @@ document.getElementById('ferry-cancel').addEventListener('click', closeFerryMenu
 const fenceEditOverlay = document.getElementById('fence-edit-overlay');
 const RECIPE_BY_ITEM = {
   recinto: RECIPES.find(r => r.id === 'recinto'),
+  recintoAngolo: RECIPES.find(r => r.id === 'recinto_angolo'),
   torcia: RECIPES.find(r => r.id === 'torcia'),
   muro: RECIPES.find(r => r.id === 'muro'),
+  muroAngolo: RECIPES.find(r => r.id === 'muro_angolo'),
   casetta: RECIPES.find(r => r.id === 'casetta'),
   fontana: RECIPES.find(r => r.id === 'fontana'),
   campoGrano: RECIPES.find(r => r.id === 'campo_grano'),
   aiuolaFiori: RECIPES.find(r => r.id === 'aiuola_fiori'),
   fiorePiantato: FIORE_DECORATIVO_RECIPE,
   sediaDondolo: RECIPES.find(r => r.id === 'sedia_dondolo'),
+  casettaScoiattoli: RECIPES.find(r => r.id === 'casetta_scoiattoli'),
 };
-const ITEM_LABEL = { recinto: 'Pannello di recinto', torcia: 'Torcia', muro: 'Muro di pietra', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore', sediaDondolo: 'Sedia a dondolo' };
+const ITEM_LABEL = { recinto: 'Pannello di recinto', recintoAngolo: 'Recinto ad angolo', torcia: 'Torcia', muro: 'Muro di pietra', muroAngolo: 'Muro ad angolo', casetta: 'Casetta', fontana: 'Fontana', campoGrano: 'Campo coltivabile', aiuolaFiori: 'Aiuola di fiori', fiorePiantato: 'Fiore', sediaDondolo: 'Sedia a dondolo', casettaScoiattoli: 'Casetta per Scoiattoli' };
 
 function refundFor(itemType) {
   const cost = RECIPE_BY_ITEM[itemType].cost;
@@ -9384,7 +10558,7 @@ clock.on('day', () => {
 // Pensata per essere chiamata come "effetto collaterale" di ogni [E] su un
 // campo piantato, senza interferire con raccolta/semina nello stesso tasto.
 function maybeWaterField(d) {
-  if (!d.planted || (d.daysSinceWatered || 0) === 0) return; // già innaffiato oggi
+  if (!d.planted || d.ready || (d.daysSinceWatered || 0) === 0) return; // già innaffiato oggi, o maturo (non ne ha più bisogno finché non si raccoglie)
   if (!annaffiatoio) return; // nessun annaffiatoio: nessun avviso, si annaffierà quando ne avrà uno
   if (annaffiatoio.litri <= 0) {
     showToast('🚿 Annaffiatoio vuoto — riempilo alla fontana');
@@ -9392,6 +10566,7 @@ function maybeWaterField(d) {
   }
   annaffiatoio.litri--;
   d.daysSinceWatered = 0;
+  triggerToolSwing('water');
   showToast('💦 Campo innaffiato');
   refreshInventoryHud();
 }
@@ -9455,7 +10630,7 @@ function syncFoodCounts() {
 }
 
 const inventory = {
-  legna: 0, pietra: 0, recinti: 0, selce: 0, torce: 0, muri: 0, casette: 0,
+  legna: 0, pietra: 0, recinti: 0, recintiAngolo: 0, selce: 0, torce: 0, muri: 0, muriAngolo: 0, casette: 0,
   alluminio: 0, lattine: 0, bottiglia: 0, lucciole: 0, frammenti: 0, spazzatura: 0,
   ciliegie: 0, nespole: 0, pesche: 0, fichi: 0, mele: 0, castagne: 0, arance: 0, mandarini: 0, pesce: 0,
   acqua: 0, fontane: 0, semiGrano: 0, semiFiori: 0, campiGrano: 0, aiuoleFiori: 0,
@@ -9464,11 +10639,13 @@ const inventory = {
   crostataCiliegie: 0, tartellettaNespole: 0, tortaPesche: 0, tortaFichi: 0, tortaMele: 0, tortaCastagne: 0,
   plumcakeArance: 0, tortaMandarino: 0,
   moneta: 0,
-  pellicola: 0, fotoFarfalla: 0, miele: 0,
+  pellicola: 0, miele: 0,
   stellaMarina: 0, medusa: 0, conchiglia: 0,
-  sedieDondolo: 0, fotoPaesaggio: 0,
+  sedieDondolo: 0,
   mieleCiliegie: 0, mieleCastagne: 0, mieleMandarino: 0, mieleFichi: 0,
   fioriDecorativi: 0,
+  casetteScoiattoli: 0, noci: 0, nocciole: 0, pigne: 0,
+  granolaBoschi: 0, biscottiNocciole: 0, snackFruttaSecca: 0, pignaGlassata: 0,
 };
 const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
@@ -9477,7 +10654,9 @@ const INVENTORY_LABELS = {
   pesce: ['🐟', 'Pesce'], selce: ['🔥', 'Pietra focaia'], alluminio: ['🔩', 'Alluminio'], lattine: ['🥫', 'Lattine'],
   frammenti: ['⭐', 'Frammenti di stella'], spazzatura: ['🗑️', 'Spazzatura'],
   recinti: ['🧱', 'Pannelli di recinto'], torce: ['🕯️', 'Torce'],
+  recintiAngolo: ['📐', 'Pannelli di recinto ad angolo'],
   muri: ['🧱', 'Muri di pietra'], casette: ['🏠', 'Casette (da piazzare)'],
+  muriAngolo: ['📐', 'Muri di pietra ad angolo'],
   bottiglia: ['🍾', 'Bottiglietta col messaggio'], lucciole: ['✨', 'Lucciole'],
   acqua: ['💧', 'Acqua'], fontane: ['⛲', 'Fontane (da piazzare)'],
   semiGrano: ['🌱', 'Semi di grano'], semiFiori: ['🌷', 'Semi di fiore'],
@@ -9492,12 +10671,16 @@ const INVENTORY_LABELS = {
   tortaCastagne: ['🍂', 'Torta autunnale'], plumcakeArance: ['🍊', 'Plumcake glassato alle arance'],
   tortaMandarino: ['🍋', 'Torta meringata al mandarino'],
   moneta: ['🪙', 'Monete'],
-  pellicola: ['🎞️', 'Pellicola (foto rimaste)'], fotoFarfalla: ['🦋', 'Foto di farfalla'], miele: ['🍯', 'Miele'],
+  pellicola: ['🎞️', 'Pellicola (foto rimaste)'], miele: ['🍯', 'Miele'],
   stellaMarina: ['🌟', 'Stella marina'], medusa: ['🪼', 'Medusa'], conchiglia: ['🐚', 'Conchiglia'],
-  sedieDondolo: ['🪑', 'Sedie a dondolo (da piazzare)'], fotoPaesaggio: ['🏞️', 'Foto del paesaggio'],
+  sedieDondolo: ['🪑', 'Sedie a dondolo (da piazzare)'],
   mieleCiliegie: ['🍒', 'Miele alle ciliegie'], mieleCastagne: ['🌰', 'Miele di castagne'],
   mieleMandarino: ['🍊', 'Miele al mandarino'], mieleFichi: ['🥮', 'Miele cotto di fichi'],
   fioriDecorativi: ['🌼', 'Fiori da piantare'],
+  casetteScoiattoli: ['🏠', 'Casette per scoiattoli (da piazzare)'],
+  noci: ['🌰', 'Noci'], nocciole: ['🌰', 'Nocciole'], pigne: ['🌲', 'Pigne'],
+  granolaBoschi: ['🥣', 'Granola dei Boschi'], biscottiNocciole: ['🍪', 'Biscotti alle Nocciole'],
+  snackFruttaSecca: ['🥜', 'Snack Frutta Secca'], pignaGlassata: ['🌲', 'Pigna Glassata'],
 };
 // Categorie per i tab dell'Inventario: raggruppano i tanti oggetti che si
 // accumulano in partita per tipo, così è più facile trovare quello cercato.
@@ -9505,7 +10688,7 @@ const INVENTORY_CATEGORIES = ['Risorse', 'Frutta e Pesce', 'Piatti e Dolci', 'Da
 const INVENTORY_CATEGORY_BY_KEY = {
   legna: 'Risorse', pietra: 'Risorse', selce: 'Risorse', alluminio: 'Risorse', lattine: 'Risorse', frammenti: 'Risorse',
   spazzatura: 'Risorse', acqua: 'Risorse', semiGrano: 'Risorse', semiFiori: 'Risorse', grano: 'Risorse', fiori: 'Risorse',
-  farina: 'Risorse', uova: 'Risorse', miele: 'Risorse', moneta: 'Risorse',
+  farina: 'Risorse', uova: 'Risorse', miele: 'Risorse', moneta: 'Risorse', noci: 'Risorse', nocciole: 'Risorse', pigne: 'Risorse',
   ciliegie: 'Frutta e Pesce', nespole: 'Frutta e Pesce', pesche: 'Frutta e Pesce', fichi: 'Frutta e Pesce', mele: 'Frutta e Pesce',
   castagne: 'Frutta e Pesce', arance: 'Frutta e Pesce', mandarini: 'Frutta e Pesce', pesce: 'Frutta e Pesce',
   tisana: 'Piatti e Dolci', sciroppo: 'Piatti e Dolci', pesceImpanato: 'Piatti e Dolci', tartarePesce: 'Piatti e Dolci',
@@ -9513,10 +10696,12 @@ const INVENTORY_CATEGORY_BY_KEY = {
   crostataCiliegie: 'Piatti e Dolci', tartellettaNespole: 'Piatti e Dolci', tortaPesche: 'Piatti e Dolci', tortaFichi: 'Piatti e Dolci',
   tortaMele: 'Piatti e Dolci', tortaCastagne: 'Piatti e Dolci', plumcakeArance: 'Piatti e Dolci', tortaMandarino: 'Piatti e Dolci',
   mieleCiliegie: 'Piatti e Dolci', mieleCastagne: 'Piatti e Dolci', mieleMandarino: 'Piatti e Dolci', mieleFichi: 'Piatti e Dolci',
-  recinti: 'Da piazzare', torce: 'Da piazzare', muri: 'Da piazzare', casette: 'Da piazzare', fontane: 'Da piazzare',
+  granolaBoschi: 'Piatti e Dolci', biscottiNocciole: 'Piatti e Dolci', snackFruttaSecca: 'Piatti e Dolci', pignaGlassata: 'Piatti e Dolci',
+  recinti: 'Da piazzare', recintiAngolo: 'Da piazzare', torce: 'Da piazzare', muri: 'Da piazzare', muriAngolo: 'Da piazzare', casette: 'Da piazzare', fontane: 'Da piazzare',
   campiGrano: 'Da piazzare', aiuoleFiori: 'Da piazzare', sedieDondolo: 'Da piazzare', fioriDecorativi: 'Da piazzare',
-  bottiglia: 'Oggetti speciali', lucciole: 'Oggetti speciali', pellicola: 'Oggetti speciali', fotoFarfalla: 'Oggetti speciali',
-  stellaMarina: 'Oggetti speciali', medusa: 'Oggetti speciali', conchiglia: 'Oggetti speciali', fotoPaesaggio: 'Oggetti speciali',
+  casetteScoiattoli: 'Da piazzare',
+  bottiglia: 'Oggetti speciali', lucciole: 'Oggetti speciali', pellicola: 'Oggetti speciali',
+  stellaMarina: 'Oggetti speciali', medusa: 'Oggetti speciali', conchiglia: 'Oggetti speciali',
 };
 // Formatta un oggetto costo/consumo { chiave: quantità } in una stringa
 // leggibile con icone, es. "🌾 Grano -2, 💧 Acqua -3". Usata sia per i
@@ -9641,24 +10826,39 @@ function autoEat() {
 }
 document.getElementById('inventory-close').addEventListener('click', closeInventoryMenu);
 
-/* Album Foto: raggiungibile da un tasto nel menu Inventario. Per ora
-   contiene solo le foto di farfalle (le uniche catturabili), mostrate come
-   voce contata — da qui si può vendere una foto direttamente al traghetto
-   se è presente, oppure basta ricordarsi di farlo dal suo menu Vendite. */
+/* Album Foto: raggiungibile dal pulsante nel menu Inventario. Mostra una
+   griglia di miniature delle foto scattate davvero (vedi capturePhoto());
+   toccando/cliccando/confermando una miniatura si apre il visualizzatore a
+   tutto schermo con i pulsanti Vendi (solo se la foto ha un soggetto
+   vendibile riconosciuto, segnalato dalla stellina che ruota) ed Elimina
+   (con conferma), navigabile anche da tastiera/gamepad/touch come tutti gli
+   altri menu del gioco. */
 const photoAlbumOverlay = document.getElementById('photo-album-overlay');
 const photoAlbumListEl = document.getElementById('photo-album-list');
 let photoAlbumOpen = false;
+
 function renderPhotoAlbum() {
   photoAlbumListEl.innerHTML = '';
-  if (inventory.fotoFarfalla > 0) {
-    const row = document.createElement('div');
-    row.className = 'recipe-row';
-    row.innerHTML = `<div class="recipe-info">🦋 Foto di farfalla<div class="recipe-cost">Vendibile al traghetto per 50 🪙</div></div><div>${inventory.fotoFarfalla}</div>`;
-    photoAlbumListEl.appendChild(row);
-  } else {
-    photoAlbumListEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Nessuna foto ancora scattata. Serve la macchina fotografica (dal traghetto) e una farfalla posata su un fiore.</div></div>';
+  if (photos.length === 0) {
+    photoAlbumListEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Nessuna foto ancora scattata. Serve la macchina fotografica (dal traghetto) e un rullino: premi [F] per scattare.</div></div>';
+    setMenuButtons([document.getElementById('photo-album-close')]);
+    return;
   }
-  setMenuButtons([document.getElementById('photo-album-close')]);
+  const grid = document.createElement('div');
+  grid.className = 'photo-grid';
+  const ordered = [...photos].reverse(); // le più recenti per prime
+  const thumbs = [];
+  for (const p of ordered) {
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    thumb.innerHTML = `<img src="${p.dataUrl}" alt="Foto">${p.sellable ? '<div class="photo-star">⭐</div>' : ''}`;
+    thumb.addEventListener('click', () => openPhotoViewer(p.id));
+    thumb.addEventListener('touchstart', e => { e.preventDefault(); openPhotoViewer(p.id); }, { passive: false });
+    grid.appendChild(thumb);
+    thumbs.push(thumb);
+  }
+  photoAlbumListEl.appendChild(grid);
+  setMenuButtons([...thumbs, document.getElementById('photo-album-close')]);
 }
 function openPhotoAlbum() {
   photoAlbumOpen = true;
@@ -9670,7 +10870,102 @@ function closePhotoAlbum() {
   photoAlbumOverlay.classList.remove('open');
 }
 document.getElementById('inventory-album-btn').addEventListener('click', openPhotoAlbum);
+document.getElementById('inventory-album-btn').addEventListener('touchstart', e => { e.preventDefault(); openPhotoAlbum(); }, { passive: false });
 document.getElementById('photo-album-close').addEventListener('click', closePhotoAlbum);
+document.getElementById('photo-album-close').addEventListener('touchstart', e => { e.preventDefault(); closePhotoAlbum(); }, { passive: false });
+
+/* Visualizzatore foto a tutto schermo: apribile solo da una miniatura
+   dell'album. Il pulsante Elimina non cancella subito — mostra prima una
+   riga di conferma (Sì/Annulla), sempre navigabile da tutti gli input. */
+const photoViewerOverlay = document.getElementById('photo-viewer-overlay');
+const photoViewerImg = document.getElementById('photo-viewer-img');
+const photoViewerStar = document.getElementById('photo-viewer-star');
+const photoViewerButtonsEl = document.getElementById('photo-viewer-buttons');
+const photoViewerConfirmRowEl = document.getElementById('photo-viewer-confirm-row');
+const photoViewerSellBtn = document.getElementById('photo-viewer-sell');
+const photoViewerDeleteBtn = document.getElementById('photo-viewer-delete');
+let photoViewerOpen = false;
+let photoViewerPhotoId = null;
+let photoViewerConfirming = false;
+
+function updatePhotoViewerMenuButtons() {
+  if (photoViewerConfirming) {
+    setMenuButtons([document.getElementById('photo-viewer-delete-yes'), document.getElementById('photo-viewer-delete-no')]);
+    return;
+  }
+  const p = photos.find(x => x.id === photoViewerPhotoId);
+  const list = [];
+  if (p && p.sellable) list.push(photoViewerSellBtn);
+  list.push(photoViewerDeleteBtn, document.getElementById('photo-viewer-close'));
+  setMenuButtons(list);
+}
+
+function openPhotoViewer(photoId) {
+  const p = photos.find(x => x.id === photoId);
+  if (!p) return;
+  photoViewerPhotoId = photoId;
+  photoViewerConfirming = false;
+  photoViewerImg.src = p.dataUrl;
+  photoViewerStar.style.display = p.sellable ? 'block' : 'none';
+  photoViewerSellBtn.style.display = p.sellable ? '' : 'none';
+  photoViewerButtonsEl.style.display = 'flex';
+  photoViewerConfirmRowEl.classList.remove('show');
+  photoViewerOpen = true;
+  photoViewerOverlay.classList.add('open');
+  updatePhotoViewerMenuButtons();
+}
+function closePhotoViewer() {
+  photoViewerOpen = false;
+  photoViewerPhotoId = null;
+  photoViewerConfirming = false;
+  photoViewerOverlay.classList.remove('open');
+  if (photoAlbumOpen) renderPhotoAlbum(); // torna alla griglia con la navigazione gamepad reimpostata sulle miniature
+}
+
+function sellCurrentPhoto() {
+  const idx = photos.findIndex(x => x.id === photoViewerPhotoId);
+  if (idx === -1) return;
+  const p = photos[idx];
+  if (!p.sellable) return;
+  photos.splice(idx, 1);
+  savePhotosToStorage();
+  inventory.moneta += PHOTO_SELL_PAYOUT;
+  showToast(`💰 Foto venduta per ${PHOTO_SELL_PAYOUT} 🪙`);
+  refreshInventoryHud();
+  closePhotoViewer();
+}
+function requestDeleteCurrentPhoto() {
+  photoViewerConfirming = true;
+  photoViewerButtonsEl.style.display = 'none';
+  photoViewerConfirmRowEl.classList.add('show');
+  updatePhotoViewerMenuButtons();
+}
+function cancelDeleteCurrentPhoto() {
+  photoViewerConfirming = false;
+  photoViewerButtonsEl.style.display = 'flex';
+  photoViewerConfirmRowEl.classList.remove('show');
+  updatePhotoViewerMenuButtons();
+}
+function confirmDeleteCurrentPhoto() {
+  const idx = photos.findIndex(x => x.id === photoViewerPhotoId);
+  if (idx !== -1) {
+    photos.splice(idx, 1);
+    savePhotosToStorage();
+  }
+  showToast('🗑️ Foto eliminata');
+  closePhotoViewer();
+}
+
+photoViewerSellBtn.addEventListener('click', sellCurrentPhoto);
+photoViewerSellBtn.addEventListener('touchstart', e => { e.preventDefault(); sellCurrentPhoto(); }, { passive: false });
+photoViewerDeleteBtn.addEventListener('click', requestDeleteCurrentPhoto);
+photoViewerDeleteBtn.addEventListener('touchstart', e => { e.preventDefault(); requestDeleteCurrentPhoto(); }, { passive: false });
+document.getElementById('photo-viewer-delete-yes').addEventListener('click', confirmDeleteCurrentPhoto);
+document.getElementById('photo-viewer-delete-yes').addEventListener('touchstart', e => { e.preventDefault(); confirmDeleteCurrentPhoto(); }, { passive: false });
+document.getElementById('photo-viewer-delete-no').addEventListener('click', cancelDeleteCurrentPhoto);
+document.getElementById('photo-viewer-delete-no').addEventListener('touchstart', e => { e.preventDefault(); cancelDeleteCurrentPhoto(); }, { passive: false });
+document.getElementById('photo-viewer-close').addEventListener('click', closePhotoViewer);
+document.getElementById('photo-viewer-close').addEventListener('touchstart', e => { e.preventDefault(); closePhotoViewer(); }, { passive: false });
 
 
 /* Apertura/chiusura inventario: tastiera [I], gamepad D-pad basso (indice 13) */
@@ -9804,7 +11099,7 @@ function handleAction(target) {
       if (d.ready) {
         harvestField(d.placedEntry);
       } else if (!d.planted) {
-        if (hasHoe) plantField(d.placedEntry);
+        if (hasHoe) { plantField(d.placedEntry); triggerToolSwing('hoe'); }
         else showToast('Serve la Zappa per coltivare');
       }
       // se è già piantato ma non ancora pronto: niente da fare, si aspetta
@@ -9828,6 +11123,14 @@ function handleAction(target) {
     inventory.semiFiori++;
     flowerSeedEverCollected = true;
     showToast('🌸 Seme di fiore +1');
+    refreshInventoryHud();
+  } else if (target.type === 'noceGround' || target.type === 'nocciolaGround' || target.type === 'pignaGround') {
+    scene.remove(target.obj);
+    const idx = interactables.indexOf(target);
+    if (idx !== -1) interactables.splice(idx, 1);
+    if (target.type === 'noceGround') { inventory.noci++; showToast('🌰 Noce +1'); }
+    else if (target.type === 'nocciolaGround') { inventory.nocciole++; showToast('🌰 Nocciola +1'); }
+    else { inventory.pigne++; showToast('🌲 Pigna +1'); }
     refreshInventoryHud();
   } else if (target.type === 'fruitTree') {
     if (!d.harvested) {
@@ -9856,6 +11159,7 @@ function handleAction(target) {
       maybeShowTutorial('legnaEPietra');
       d.hits++;
       d.shakeTimer = 0.2;
+      triggerToolSwing(target.type === 'woodTree' ? 'axe' : 'pickaxe');
       const isFinalHit = d.hits >= d.maxHits;
       if (target.type === 'woodTree') sfxAxeHit(); else sfxPickaxeHit();
 
@@ -9940,6 +11244,9 @@ const INTERACT_HINTS = {
   rock: 'Roccia\n[E] per colpire',
   semeGrano: 'Un seme di grano\n[E] per raccoglierlo',
   semeFiore: 'Un seme di fiore\n[E] per raccoglierlo',
+  noceGround: 'Una noce\n[E] per raccoglierla',
+  nocciolaGround: 'Una nocciola\n[E] per raccoglierla',
+  pignaGround: 'Una pigna\n[E] per raccoglierla',
 };
 
 const MESSAGE_TEXT = "A chiunque legga questo messaggio: quest'isola ora è tua. Divertiti ma tienila pulita. PS: attento alle lucciole... con qualcosa che luccica possono illuminarti la via!";
@@ -10214,7 +11521,9 @@ function updateClockHud() {
 function fieldHintText(d) {
   const label = d.fieldKind === 'grano' ? 'Campo di grano' : 'Aiuola di fiori';
   const dsw = d.daysSinceWatered || 0;
-  const waterStatus = !d.planted ? '' : dsw === 0 ? ' 💧' : dsw >= 3 ? ' 🥵 secco da troppi giorni!' : ' — servirebbe acqua';
+  // Un campo già pronto (maturo) non ha più bisogno di essere innaffiato:
+  // niente più avviso "servirebbe acqua" una volta raggiunto quello stato.
+  const waterStatus = (!d.planted || d.ready) ? '' : dsw === 0 ? ' 💧' : dsw >= 3 ? ' 🥵 secco da troppi giorni!' : ' — servirebbe acqua';
   if (d.ready) return `${label} pronto${waterStatus}\n[E] per raccogliere`;
   if (d.planted) return `${label} in crescita${waterStatus}`;
   if (!hasHoe) return `${label}\nserve la Zappa per coltivarlo`;
@@ -10249,7 +11558,7 @@ function checkInteractions() {
     const depleted = (target.type === 'fruitTree' && d.harvested) || ((target.type === 'woodTree' || target.type === 'rock') && d.felled);
     if (!depleted) {
       hint = target.type === 'placedItem'
-        ? (d.placedEntry.itemType === 'casetta' ? 'Casetta\n[E] per entrare'
+        ? (d.placedEntry.itemType === 'casetta' ? 'Casetta\n[E] per entrare — [B] per modificare'
           : d.placedEntry.itemType === 'fontana' ? 'Fontana\n[E] per raccogliere acqua — [B] per modificare'
           : (d.placedEntry.itemType === 'campoGrano' || d.placedEntry.itemType === 'aiuolaFiori')
           ? fieldHintText(d) + '\n[B] per modificare'
@@ -10408,6 +11717,36 @@ bedGroup.add(blanketFold);
 
 bedGroup.position.set(-2.8, 0, -2.6);
 interiorScene.add(bedGroup);
+
+// Comodino di fianco al letto (vicino al cuscino), alto esattamente quanto
+// il materasso (y=0.75, stessa altezza della sua superficie superiore), con
+// sopra il diario da leggere — vedi HOUSE_FURNITURE_ALL e openDiary() più
+// sotto per l'interazione [E].
+const NIGHTSTAND_TOP_Y = 0.75; // = altezza superficie materasso (0.575 + 0.35/2)
+const nightstandGroup = new THREE.Group();
+const nightstandBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, NIGHTSTAND_TOP_Y, 0.5), new THREE.MeshLambertMaterial({ color: 0x6b4a2c }));
+nightstandBody.position.y = NIGHTSTAND_TOP_Y / 2;
+nightstandGroup.add(nightstandBody);
+const nightstandTop = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.04, 0.54), new THREE.MeshLambertMaterial({ color: 0x5a3d24 }));
+nightstandTop.position.y = NIGHTSTAND_TOP_Y + 0.02;
+nightstandGroup.add(nightstandTop);
+const nightstandHandle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.02), new THREE.MeshLambertMaterial({ color: 0x2b2118 }));
+nightstandHandle.position.set(0, NIGHTSTAND_TOP_Y * 0.55, 0.26);
+nightstandGroup.add(nightstandHandle);
+
+// Diario chiuso, appoggiato sul piano del comodino
+const diaryGroup = new THREE.Group();
+const diaryBook = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 0.2), new THREE.MeshLambertMaterial({ color: 0x7a2f3f }));
+diaryBook.position.y = 0.025;
+diaryGroup.add(diaryBook);
+const diaryStrap = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.052, 0.21), new THREE.MeshLambertMaterial({ color: 0xd4af37 }));
+diaryStrap.position.set(0.1, 0.025, 0);
+diaryGroup.add(diaryStrap);
+diaryGroup.position.set(0, NIGHTSTAND_TOP_Y + 0.045, 0.02);
+nightstandGroup.add(diaryGroup);
+
+nightstandGroup.position.set(-1.15, 0, -3.5);
+interiorScene.add(nightstandGroup);
 
 // Cassa
 const chestGroup = new THREE.Group();
@@ -10650,6 +11989,7 @@ let savedPlayerYaw = 0;
    voce finché una condizione non è vera (es. il fornellino va costruito). */
 const HOUSE_FURNITURE_ALL = [
   { mesh: bedGroup, label: 'Letto', action: () => openSleepMenu() },
+  { mesh: nightstandGroup, label: 'Diario', action: () => openDiary() },
   { mesh: chestGroup, label: 'Cassa', action: () => openStorageMenu('cassa') },
   { mesh: fridgeGroup, label: 'Frigorifero', action: () => openStorageMenu('frigorifero') },
   { mesh: stoveMesh, label: 'Fornellino', visible: () => stoveBuilt, action: () => openCookMenu() },
@@ -10668,7 +12008,7 @@ const houseSelector = new THREE.Mesh(
 houseSelector.rotation.x = Math.PI;
 interiorScene.add(houseSelector);
 
-function houseSubMenuOpen() { return sleepMenuOpen || storageMenuOpen || cookMenuOpen || tutorialOverlayOpen; }
+function houseSubMenuOpen() { return sleepMenuOpen || storageMenuOpen || cookMenuOpen || tutorialOverlayOpen || diaryOpen; }
 
 function updateHouseSelector(dt) {
   const label = document.getElementById('houseSelectionLabel');
@@ -10707,6 +12047,7 @@ function activateSelectedFurniture() {
 function enterHouse() {
   if (insideHouse) return;
   insideHouse = true;
+  applyHouseAudioDucking();
   houseSelectedIndex = 0;
   setHousePan(0);
   document.body.classList.add('inside-house');
@@ -10725,6 +12066,7 @@ function enterHouse() {
 function exitHouse() {
   insideHouse = false;
   insideBasement = false; // se si esce direttamente dal piano inferiore, resetta anche quello
+  applyHouseAudioDucking();
   document.body.classList.remove('inside-house');
   document.body.classList.remove('inside-basement');
   document.getElementById('houseSelectionLabel').classList.remove('show');
@@ -10941,6 +12283,85 @@ function closeStorageMenu() {
   document.getElementById('storage-overlay').classList.remove('open');
 }
 document.getElementById('storage-close').addEventListener('click', closeStorageMenu);
+
+/* =========================================================================
+   DIARIO: due pagine, sul comodino di fianco al letto. Pagina 1 è una nota
+   generata al volo in base a quanti giorni sono passati, la stagione
+   corrente e quali campi il giocatore ha piantato. Pagina 2 mostra 3Vago
+   (stelline, punteggio di dettaglio, ultimi 5 eventi che l'hanno cambiato).
+   ========================================================================= */
+let diaryOpen = false;
+let diaryPage = 1;
+
+// Il mondo di gioco parte sempre dal 21° giorno di Primavera (dayIndex 20,
+// vedi inizializzazione di "clock" più sopra) — è solo la data del calendario
+// dell'isola, non i giorni che il personaggio ci ha davvero passato: per
+// quelli si conta da qui, così alla primissima giornata di gioco il diario
+// dice correttamente "1" e non "21".
+const GAME_START_DAY_INDEX = 20;
+function diaryPage1Text() {
+  const days = Math.max(1, clock.dayIndex - GAME_START_DAY_INDEX + 1); // giorni "vissuti" sull'isola, contati da 1
+  const season = clock.season.name.toLowerCase();
+  const hasGrano = placedItems.some(it => it.itemType === 'campoGrano');
+  const hasFiori = placedItems.some(it => it.itemType === 'aiuolaFiori');
+  let campiText;
+  if (hasGrano && hasFiori) campiText = 'dei miei campi di grano e dei miei campi di fiori';
+  else if (hasGrano) campiText = 'dei miei campi di grano';
+  else if (hasFiori) campiText = 'dei miei campi di fiori';
+  else campiText = 'del mio piccolo angolo di isola';
+  return `Caro Diario, sono già ${days} giorni che vivo su quest'isola. Siamo già in ${season} e devo prendermi cura ${campiText}.`;
+}
+
+function renderDiary() {
+  document.getElementById('diary-page-1').style.display = diaryPage === 1 ? 'block' : 'none';
+  document.getElementById('diary-page-2').style.display = diaryPage === 2 ? 'block' : 'none';
+  document.getElementById('diary-page-indicator').textContent = `${diaryPage} / 2`;
+
+  if (diaryPage === 1) {
+    document.getElementById('diary-entry-text').textContent = diaryPage1Text();
+  } else {
+    const stelle = gradimentoStelle();
+    document.getElementById('diary-stars').textContent = '⭐'.repeat(stelle) + '☆'.repeat(5 - stelle);
+    document.getElementById('diary-score').textContent = `Punteggio di dettaglio: ${gradimentoIndice} / 50`;
+
+    const eventsEl = document.getElementById('diary-events');
+    eventsEl.innerHTML = '';
+    const lastFive = gradimentoLog.slice(-5).reverse();
+    if (lastFive.length === 0) {
+      eventsEl.innerHTML = '<div class="diary-event-row"><span>Nessun evento ancora registrato.</span></div>';
+    } else {
+      for (const ev of lastFive) {
+        const row = document.createElement('div');
+        row.className = 'diary-event-row';
+        const sign = ev.delta > 0 ? '+' : '';
+        row.innerHTML = `<span>${ev.label}</span><span class="diary-event-delta ${ev.delta > 0 ? 'pos' : 'neg'}">${sign}${ev.delta}</span>`;
+        eventsEl.appendChild(row);
+      }
+    }
+  }
+
+  const buttons = [document.getElementById('diary-prev-btn'), document.getElementById('diary-next-btn'), document.getElementById('diary-close')];
+  document.getElementById('diary-prev-btn').disabled = diaryPage === 1;
+  document.getElementById('diary-next-btn').disabled = diaryPage === 2;
+  setMenuButtons(buttons.filter(b => !b.disabled));
+}
+
+function openDiary() {
+  diaryOpen = true;
+  diaryPage = 1;
+  renderDiary();
+  document.getElementById('diary-overlay').classList.add('open');
+}
+function closeDiary() {
+  diaryOpen = false;
+  document.getElementById('diary-overlay').classList.remove('open');
+}
+document.getElementById('diary-prev-btn').addEventListener('click', () => { if (diaryPage > 1) { diaryPage--; renderDiary(); } });
+document.getElementById('diary-next-btn').addEventListener('click', () => { if (diaryPage < 2) { diaryPage++; renderDiary(); } });
+document.getElementById('diary-close').addEventListener('click', closeDiary);
+document.getElementById('diary-prev-btn').addEventListener('touchstart', e => { e.preventDefault(); if (diaryPage > 1) { diaryPage--; renderDiary(); } }, { passive: false });
+document.getElementById('diary-next-btn').addEventListener('touchstart', e => { e.preventDefault(); if (diaryPage < 2) { diaryPage++; renderDiary(); } }, { passive: false });
+document.getElementById('diary-close').addEventListener('touchstart', e => { e.preventDefault(); closeDiary(); }, { passive: false });
 
 /* =========================================================================
    SALVATAGGIO
@@ -11273,6 +12694,7 @@ function animate() {
   updateStufetta(gameMinutesElapsed);
   updateColdExposure(gameMinutesElapsed);
   updateBirdSeedSpawner(gameMinutesElapsed);
+  updateSquirrelHouseSpawner(gameMinutesElapsed);
   updateDevDebugPanel();
   updateSky();
   updateStars();
@@ -11289,6 +12711,8 @@ function animate() {
   updateInsectAmbience(elapsedTime);
   updateSquirrels(dt, gameMinutesElapsed);
   updateSeedMarkers(elapsedTime);
+  updateForestMarkers(elapsedTime);
+  updateFieldWaterDrops(elapsedTime);
   updateFlowerCreatures(dt, elapsedTime, gameMinutesElapsed);
   updateTorches(elapsedTime);
   updateResources(dt);
@@ -11338,9 +12762,12 @@ function animate() {
     updateMoon();
     updateClockHud();
     renderer.render(scene, camera);
+    // La cattura foto va DOPO il render: così la schermata salvata è quella
+    // appena disegnata con la camera già nella posizione corretta di questo
+    // fotogramma, non quella (leggermente vecchia) del fotogramma precedente.
+    if (input.photoJustPressed) takeSitPhoto(); // tasto F: scatta come premere il pulsante 📷 della UI da seduti
     return;
   }
-  updatePhotoCapture();
 
   const controlsLocked = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || clock.sleeping || fishingState !== 'idle' || isAnyOverlayOpen();
   if (!controlsLocked) {
@@ -11359,6 +12786,9 @@ function animate() {
   updatePortableLamp(elapsedTime);
 
   renderer.render(scene, camera);
+  // Stesso motivo di sopra: cattura DOPO il render, con la camera di questo
+  // stesso fotogramma già applicata (updateCamera() è appena stato chiamato).
+  updatePhotoCapture();
 }
 
 /* =========================================================================
@@ -11417,6 +12847,14 @@ document.getElementById('cancelNewGameBtn').addEventListener('click', () => {
 mainMenuOptionsBtn.addEventListener('click', () => {
   optionsOverlay.classList.add('open');
   setMenuButtons([
+    document.getElementById('musicToggleYesBtn'),
+    document.getElementById('musicToggleNoBtn'),
+    document.getElementById('musicVolMinusBtn'),
+    document.getElementById('musicVolPlusBtn'),
+    document.getElementById('sfxToggleYesBtn'),
+    document.getElementById('sfxToggleNoBtn'),
+    document.getElementById('sfxVolMinusBtn'),
+    document.getElementById('sfxVolPlusBtn'),
     document.getElementById('fullscreenToggleBtn'),
     document.getElementById('gamepadStyleXboxBtn'),
     document.getElementById('gamepadStylePsBtn'),
@@ -11429,6 +12867,101 @@ document.getElementById('options-close').addEventListener('click', () => {
   optionsOverlay.classList.remove('open');
   refreshMainMenu();
 });
+
+/* Musica di sottofondo ed Effetti sonori (SFX): preferenze di dispositivo,
+   non di partita, quindi persistono in localStorage come le voci sopra
+   (icone gamepad, tutorial). Musica: attiva di default, volume 30%.
+   Effetti sonori: attivi di default, volume 80%. I due volumi restano
+   sempre scorporati (masterGain per gli SFX, musicGainNode per la musica —
+   vedi la sezione "MUSICA DI SOTTOFONDO GENERATIVA" più sopra). */
+let musicEnabled = (() => {
+  const v = localStorage.getItem('musicEnabled');
+  return v === null ? true : v === 'true';
+})();
+let musicVolume = (() => {
+  const v = localStorage.getItem('musicVolume');
+  return v === null ? 0.30 : Math.max(0.01, Math.min(1, parseFloat(v)));
+})();
+let sfxEnabled = (() => {
+  const v = localStorage.getItem('sfxEnabled');
+  return v === null ? true : v === 'true';
+})();
+let sfxVolume = (() => {
+  const v = localStorage.getItem('sfxVolume');
+  return v === null ? 0.80 : Math.max(0.01, Math.min(1, parseFloat(v)));
+})();
+
+const musicToggleYesBtn = document.getElementById('musicToggleYesBtn');
+const musicToggleNoBtn = document.getElementById('musicToggleNoBtn');
+const musicVolSlider = document.getElementById('musicVolSlider');
+const musicVolText = document.getElementById('musicVolText');
+function updateMusicToggleButtons() {
+  musicToggleYesBtn.classList.toggle('active-style', musicEnabled);
+  musicToggleNoBtn.classList.toggle('active-style', !musicEnabled);
+}
+function applyMusicEnabled(v) {
+  musicEnabled = v;
+  localStorage.setItem('musicEnabled', v ? 'true' : 'false');
+  updateMusicToggleButtons();
+  updateMusicGainTarget();
+  if (musicEnabled) ensureMusicPlaying(); else stopMusicPlayback();
+}
+musicToggleYesBtn.addEventListener('click', () => applyMusicEnabled(true));
+musicToggleNoBtn.addEventListener('click', () => applyMusicEnabled(false));
+updateMusicToggleButtons();
+
+function setMusicVolume(pct) {
+  musicVolume = Math.max(0.01, Math.min(1, pct / 100));
+  localStorage.setItem('musicVolume', String(musicVolume));
+  musicVolSlider.value = Math.round(musicVolume * 100);
+  musicVolText.textContent = `${Math.round(musicVolume * 100)}%`;
+  updateMusicGainTarget();
+}
+musicVolSlider.addEventListener('input', () => setMusicVolume(parseInt(musicVolSlider.value, 10)));
+document.getElementById('musicVolMinusBtn').addEventListener('click', () => setMusicVolume(Math.max(1, Math.round(musicVolume * 100) - 5)));
+document.getElementById('musicVolPlusBtn').addEventListener('click', () => setMusicVolume(Math.min(100, Math.round(musicVolume * 100) + 5)));
+setMusicVolume(Math.round(musicVolume * 100)); // applica subito il valore caricato da localStorage
+
+const sfxToggleYesBtn = document.getElementById('sfxToggleYesBtn');
+const sfxToggleNoBtn = document.getElementById('sfxToggleNoBtn');
+const sfxVolSlider = document.getElementById('sfxVolSlider');
+const sfxVolText = document.getElementById('sfxVolText');
+function updateSfxToggleButtons() {
+  sfxToggleYesBtn.classList.toggle('active-style', sfxEnabled);
+  sfxToggleNoBtn.classList.toggle('active-style', !sfxEnabled);
+}
+// Applica lo stato attivo/volume corrente al nodo di guadagno degli effetti
+// sonori (masterGain, usato da tutte le sfx esistenti del gioco), con una
+// piccola rampa per evitare scatti udibili.
+function updateSfxGainTarget() {
+  if (!masterGain || !audioCtx) return;
+  const target = sfxEnabled ? sfxVolume : 0.0001;
+  const t0 = audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(t0);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, t0);
+  masterGain.gain.linearRampToValueAtTime(Math.max(0.0001, target), t0 + 0.15);
+}
+function applySfxEnabled(v) {
+  sfxEnabled = v;
+  localStorage.setItem('sfxEnabled', v ? 'true' : 'false');
+  updateSfxToggleButtons();
+  updateSfxGainTarget();
+}
+sfxToggleYesBtn.addEventListener('click', () => applySfxEnabled(true));
+sfxToggleNoBtn.addEventListener('click', () => applySfxEnabled(false));
+updateSfxToggleButtons();
+
+function setSfxVolume(pct) {
+  sfxVolume = Math.max(0.01, Math.min(1, pct / 100));
+  localStorage.setItem('sfxVolume', String(sfxVolume));
+  sfxVolSlider.value = Math.round(sfxVolume * 100);
+  sfxVolText.textContent = `${Math.round(sfxVolume * 100)}%`;
+  updateSfxGainTarget();
+}
+sfxVolSlider.addEventListener('input', () => setSfxVolume(parseInt(sfxVolSlider.value, 10)));
+document.getElementById('sfxVolMinusBtn').addEventListener('click', () => setSfxVolume(Math.max(1, Math.round(sfxVolume * 100) - 5)));
+document.getElementById('sfxVolPlusBtn').addEventListener('click', () => setSfxVolume(Math.min(100, Math.round(sfxVolume * 100) + 5)));
+setSfxVolume(Math.round(sfxVolume * 100));
 
 const fullscreenToggleBtn = document.getElementById('fullscreenToggleBtn');
 function updateFullscreenLabel() {
@@ -11507,7 +13040,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnT
 document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
 
 function isAnyOverlayOpen() {
-  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || tutorialOverlayOpen ||
+  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || tutorialOverlayOpen || diaryOpen ||
     optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
     returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
 }
