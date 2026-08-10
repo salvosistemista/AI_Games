@@ -3896,7 +3896,7 @@ const RECIPES = [
   {
     id: 'casetta_scoiattoli',
     name: 'Casetta per Scoiattoli',
-    cost: { legna: 5, pietra: 1, semiGrano: 3, semiFiori: 3 },
+    cost: { legna: 4, viti: 2, semiGrano: 3, semiFiori: 3 },
     once: false,
     isDone: () => false,
     craft: () => {
@@ -3922,7 +3922,7 @@ const RECIPES = [
   {
     id: 'ponte',
     name: 'Ponte',
-    cost: { legna: 12, pietra: 6 },
+    cost: { legna: 12, pietra: 6, viti: 12 },
     once: true,
     isDone: () => bridgeBuilt,
     craft: () => { buildRealBridge(); },
@@ -3946,7 +3946,7 @@ const RECIPES = [
   {
     id: 'recinto',
     name: 'Pannello di recinto',
-    cost: { legna: 4 },
+    cost: { legna: 4, viti: 1 },
     once: false,
     isDone: () => false,
     craft: () => { inventory.recinti++; },
@@ -3954,7 +3954,7 @@ const RECIPES = [
   {
     id: 'recinto_angolo',
     name: 'Pannello di recinto ad angolo',
-    cost: { legna: 5 },
+    cost: { legna: 4, viti: 2 },
     once: false,
     isDone: () => false,
     craft: () => { inventory.recintiAngolo++; },
@@ -3962,7 +3962,7 @@ const RECIPES = [
   {
     id: 'torcia',
     name: 'Torcia',
-    cost: { legna: 1, pietra: 1, selce: 1 },
+    cost: { legna: 1, selce: 1, viti: 1 },
     once: false,
     isDone: () => false,
     craft: () => { inventory.torce++; },
@@ -3986,7 +3986,7 @@ const RECIPES = [
   {
     id: 'casetta',
     name: 'Fondamenta della Casa',
-    cost: { legna: 20, viti: 30, pietra: 8 },
+    cost: { legna: 20, viti: 20, pietra: 8 },
     once: true,
     isDone: () => casettaBuilt || inventory.casette > 0 || placedItems.some(it => it.itemType === 'casetta'),
     visible: () => hasAxe && hasHammer && hasSaw,
@@ -4007,7 +4007,7 @@ const RECIPES = [
   {
     id: 'zappa',
     name: 'Zappa',
-    cost: { legna: 2, pietra: 2, alluminio: 2 },
+    cost: { legna: 2, pietra: 1, alluminio: 2, viti: 1 },
     once: true,
     isDone: () => hasHoe,
     craft: () => { hasHoe = true; },
@@ -4015,7 +4015,7 @@ const RECIPES = [
   {
     id: 'canna_pesca',
     name: 'Canna da Pesca',
-    cost: { legna: 5 },
+    cost: { legna: 4, cordaFibra: 1 },
     once: false,
     isDone: () => false,
     // Ripetibile solo se non se ne possiede già una (non è un contatore in
@@ -4064,7 +4064,7 @@ const RECIPES = [
   {
     id: 'sedia_dondolo',
     name: 'Sedia a dondolo',
-    cost: { legna: 10, alluminio: 3, pietra: 1 },
+    cost: { legna: 2, alluminio: 2, viti: 4 },
     once: false,
     isDone: () => false,
     craft: () => { inventory.sedieDondolo++; },
@@ -4072,7 +4072,7 @@ const RECIPES = [
   {
     id: 'fornellino',
     name: 'Fornellino',
-    cost: { legna: 2, pietra: 5, alluminio: 5, selce: 1 },
+    cost: { legna: 2, pietra: 4, alluminio: 4, selce: 1, viti: 4 },
     once: true,
     isDone: () => stoveBuilt,
     craft: () => { stoveBuilt = true; stoveMesh.visible = true; maybeShowTutorial('fornellino'); },
@@ -4080,7 +4080,7 @@ const RECIPES = [
   {
     id: 'scala',
     name: 'Scala per il piano inferiore',
-    cost: { pietra: 15, legna: 15 },
+    cost: { legna: 10, viti: 10 },
     once: true,
     isDone: () => stairsBuilt,
     craft: () => { stairsBuilt = true; stairsMesh.visible = true; maybeShowTutorial('scala'); },
@@ -10394,7 +10394,7 @@ const FERRY_SELL_BUNDLES = [
 
 const FERRY_BUY_ITEMS = [
   { id: 'buy_legna', label: 'Legna x10', cost: 10, key: 'legna', give: () => { inventory.legna += 10; } },
-  { id: 'buy_viti', label: 'Viti x20', cost: 5, key: 'viti', give: () => { inventory.viti += 20; } },
+  { id: 'buy_viti', label: 'Viti x25', cost: 5, key: 'viti', give: () => { inventory.viti += 25; } },
   { id: 'buy_pietra', label: 'Pietra x10', cost: 20, key: 'pietra', give: () => { inventory.pietra += 10; } },
   { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, key: 'alluminio', give: () => { inventory.alluminio += 10; } },
   { id: 'buy_lattine', label: 'Lattine x10', cost: 8, key: 'lattine', give: () => { inventory.lattine += 10; } },
