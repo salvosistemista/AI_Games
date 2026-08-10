@@ -155,6 +155,17 @@
   #hud-top-right {
     position: absolute; top: 8px; right: 8px; display: flex; gap: 8px;
   }
+  /* Icona indicativa (non interagibile) che segnala solo la presenza di
+     spazzatura ancora in giro sull'isola — centrata in verticale, a
+     sinistra, come richiesto: stesso stile "leggero" del drink/eat su
+     mobile (piccola, semi-trasparente), ma qui è puramente informativa. */
+  #trashIndicator {
+    position: fixed; left: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 22px; background: rgba(0,0,0,0.35); border-radius: 50%;
+    width: 40px; height: 40px; display: none; align-items: center; justify-content: center;
+    opacity: 0.55; pointer-events: none; z-index: 5;
+  }
+  #trashIndicator.show { display: flex; }
 .inv-item {
   background: rgba(0,0,0,0.4); color: #fff; display: flex; align-items: center;
   
@@ -547,6 +558,8 @@
     <div class="inv-item" id="drinkBtn" style="pointer-events:auto; display:none;"><span>💧</span></div>
     <div class="inv-item" id="eatBtn" style="pointer-events:auto;"><span>🍽️</span></div>
   </div>
+
+  <div id="trashIndicator" title="C'è ancora spazzatura sull'isola">🗑️</div>
 </div>
 
 <div id="build-overlay">
@@ -825,6 +838,14 @@
         <button class="recipe-btn gamepad-style-btn" id="tutorialToggleYesBtn">Sì</button>
         <button class="recipe-btn gamepad-style-btn" id="tutorialToggleNoBtn">No</button>
       </div>
+    </div>
+    <div class="recipe-row">
+      <div class="recipe-info">Salvataggio<div class="recipe-cost">Esporta o recupera i tuoi progressi da un file</div></div>
+    </div>
+    <div class="vol-row">
+      <button class="recipe-btn" id="exportSaveBtn" style="flex:1 1 auto;">⬇️ Esporta su file</button>
+      <button class="recipe-btn" id="importSaveBtn" style="flex:1 1 auto;">⬆️ Importa da file</button>
+      <input type="file" id="importSaveFileInput" accept="application/json,.json" style="display:none;">
     </div>
     <div id="options-close">chiudi</div>
   </div>
@@ -3964,11 +3985,15 @@ const RECIPES = [
   },
   {
     id: 'casetta',
-    name: 'Casetta',
-    cost: { legna: 20, pietra: 10 },
+    name: 'Fondamenta della Casa',
+    cost: { legna: 20, viti: 30, pietra: 8 },
     once: true,
-    isDone: () => casettaBuilt || inventory.casette > 0,
-    craft: () => { inventory.casette = 1; },
+    isDone: () => casettaBuilt || inventory.casette > 0 || placedItems.some(it => it.itemType === 'casetta'),
+    visible: () => hasAxe && hasHammer && hasSaw,
+    craft: () => {
+      inventory.casette = 1;
+      showToast('🏗️ Fondamenta pronte: piazzale dal menu Costruisci, poi torna a parlarci sopra per proseguire i lavori');
+    },
   },
   {
     id: 'lampada',
@@ -5339,16 +5364,40 @@ const TRASH_TYPES = [
 ];
 const TRASH_BY_ID = Object.fromEntries(TRASH_TYPES.map(t => [t.id, t]));
 
+// Raggio da tenere libero attorno a ciascun tipo di oggetto già presente,
+// così la spazzatura non spunta mai sovrapposta a qualcosa che c'è già
+// (alberi, rocce, punti pesca, altra spazzatura...). Dichiarato qui vicino
+// a findTrashSpot (e non insieme a OBSTACLE_RADIUS, definita più avanti nel
+// file) perché spawnInitialTrash() chiama già questa funzione in modo
+// sincrono all'avvio, prima che quella costante esista ancora.
+const TRASH_AVOID_RADIUS = { fruitTree: 1.3, woodTree: 1.3, rock: 1.6, tent: 3, workbench: 2.4, trash: 1.6, ferryDock: 3, fishingSpot: 1.5 };
+
 function findTrashSpot(zone) {
-  for (let attempts = 0; attempts < 25; attempts++) {
+  for (let attempts = 0; attempts < 40; attempts++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * 0.9;
     const x = zone.cx + Math.cos(a) * zone.rx * r;
     const z = zone.cz + Math.sin(a) * zone.rz * r;
     if (!isWalkable(x, z)) continue;
-    if (Math.hypot(x - ISLAND.bridge.cx, z - ISLAND.bridge.cz) < 12) continue;
+    // Il ponte: evitiamo anche un margine tutt'intorno alla campata esatta
+    // (non solo il rettangolo del tavolato), così non spunta neanche a
+    // ridosso dei parapetti.
+    const { lx, lz } = bridgeLocalCoords(x, z);
+    if (Math.abs(lx) <= ISLAND.bridge.halfWidth + 1.5 && Math.abs(lz) <= ISLAND.bridge.halfLength + 1.5) continue;
     if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 6) continue;
-    if (isSpotBuiltOver(x, z)) continue;
+    if (isSpotBuiltOver(x, z)) continue; // non sopra un oggetto piazzato dal giocatore
+    // Non sopra (né troppo vicino a) un oggetto naturale o strutturale già
+    // presente — "dove non c'è già qualcosa", come richiesto — includendo
+    // anche altra spazzatura già a terra, per non farla ammucchiare tutta
+    // nello stesso punto.
+    let tooClose = false;
+    for (const it of interactables) {
+      if (it.type === 'placedItem') continue; // già gestito sopra da isSpotBuiltOver
+      const radius = TRASH_AVOID_RADIUS[it.type];
+      if (radius === undefined) continue; // tipo non rilevante per lo spazio libero (es. semi, frammenti)
+      if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < radius) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
     return { x, z };
   }
   return null;
@@ -5708,7 +5757,11 @@ function spawnTrashItem(zone) {
   return makeTrashMesh(typeId, spot.x, spot.z);
 }
 
-function countTrash() { return interactables.filter(it => it.type === 'trash').length; }
+// Anche le lattine abbandonate sulla spiaggia contano come spazzatura
+// (indicatore in HUD, giudizio di pulizia di 3Vago), oltre ai veri mucchi
+// di rifiuti — sono comunque immondizia lasciata in giro, anche se si
+// raccolgono separatamente come risorsa utile (vedi target.type === 'can').
+function countTrash() { return interactables.filter(it => it.type === 'trash' || it.type === 'can').length; }
 
 /* =========================================================================
    3VAGO: indice di gradimento dell'isola (10-50), mostrato in stelline da 1
@@ -5923,8 +5976,10 @@ function createDetailedJellyfish() {
 
 function createDetailedShell() {
   const group = new THREE.Group();
-  const shellMat = new THREE.MeshStandardMaterial({ color: 0xf4a261, roughness: 0.4 });
-  const innerMat = new THREE.MeshStandardMaterial({ color: 0xe76f51, roughness: 0.2 });
+  // Bianca con macchie grigie sparse, invece dell'arancio/rosso di prima.
+  const shellMat = new THREE.MeshStandardMaterial({ color: 0xf2efe4, roughness: 0.4 }); // bianco crema
+  const innerMat = new THREE.MeshStandardMaterial({ color: 0xe4e1d6, roughness: 0.25 }); // apertura interna, bianco più opaco
+  const spotMat = new THREE.MeshStandardMaterial({ color: 0x8a877c, roughness: 0.5 }); // macchie grigie
 
   // Spirale conica composta
   const turns = 35;
@@ -5934,7 +5989,13 @@ function createDetailedShell() {
     const radius = 0.25 * (1 - t * 0.85);
     const r = 0.1 * (1 - t * 0.75);
 
-    const segment = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), (i < 5) ? innerMat : shellMat);
+    // Macchie grigie sparse in modo pseudo-casuale (ma sempre uguale ad ogni
+    // generazione, per coerenza visiva), lasciando bianca l'apertura interna.
+    let mat = shellMat;
+    if (i < 5) mat = innerMat;
+    else if ((i * 7) % 11 < 3) mat = spotMat;
+
+    const segment = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), mat);
     segment.position.set(Math.cos(angle) * radius, t * 0.28 + 0.05, Math.sin(angle) * radius);
     segment.scale.set(1.2, 1.0, 1.0);
     group.add(segment);
@@ -6931,6 +6992,16 @@ function capturePhoto() {
     return;
   }
 
+  // Le goccioline virtuali sopra i campi assetati sono un indicatore per il
+  // giocatore, non un vero elemento del mondo: le nascondiamo un istante
+  // prima dello scatto perché non compaiano nella foto. Non serve poi
+  // "ripristinarle" esplicitamente: updateFieldWaterDrops() le ricalcola e
+  // le rimostra da sé al prossimo fotogramma, del tutto normalmente.
+  for (const it of placedItems) {
+    if (it.itemType !== 'campoGrano' && it.itemType !== 'aiuolaFiori') continue;
+    if (it.mesh.userData.waterDropMesh) it.mesh.userData.waterDropMesh.visible = false;
+  }
+
   // Quello che finisce nella foto è quello che vede l'OMINO (i suoi occhi),
   // non la telecamera esterna che segue il giocatore da dietro: sia il
   // rilevamento del soggetto sia la cattura dell'immagine avvengono con la
@@ -7628,6 +7699,182 @@ function placementDistanceFor(itemType) { return ITEM_PLACEMENT_DISTANCE[itemTyp
 const placedItems = []; // { itemType: 'recinto'|'torcia', x, z, yaw, mesh }
 spawnInitialTrash(); // 50 pezzi di spazzatura sparsi su entrambe le isole a inizio partita (va dopo placedItems: isSpotBuiltOver ne ha bisogno)
 
+/* =========================================================================
+   RELITTI: 3 grandi mucchi di materiale abbandonato, arenati sulla
+   spiaggia in punti fissi dell'isola, che raccolgono tutto ciò che serve
+   per costruire la casa (oltre a legna e pietra, che restano da procurarsi
+   nel modo consueto). Ogni relitto ha un proprio bottino fisso deciso una
+   volta sola all'avvio (RNG con seme fisso, come alberi e rocce, così resta
+   coerente tra un "Continua" e l'altro): premendo [E] si estrae un oggetto
+   alla volta finché non è vuoto.
+   ========================================================================= */
+function shuffleSeeded(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(worldRandom() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Il "materiale che manca dalla lista" (legna e pietra) non è qui: quello
+// si procura come sempre abbattendo alberi e rompendo sassi in giro per
+// l'isola. Qui c'è solo ciò che si trova ESCLUSIVAMENTE nei relitti.
+const WRECK_LOOT_POOL = [
+  { key: 'martello', amount: 1, label: 'Martello' },
+  { key: 'segaccio', amount: 1, label: 'Segaccio da legno' },
+  { key: 'accetta', amount: 1, label: 'Strumento (accetta)' },
+  { key: 'legna', amount: 10, label: 'Legna' },
+  { key: 'legna', amount: 10, label: 'Legna' },
+  { key: 'legna', amount: 10, label: 'Legna' },
+  { key: 'viti', amount: 10, label: 'Viti di metallo' },
+  { key: 'viti', amount: 10, label: 'Viti di metallo' },
+  { key: 'viti', amount: 10, label: 'Viti di metallo' },
+  { key: 'viti', amount: 10, label: 'Viti di metallo' },
+  { key: 'viti', amount: 10, label: 'Viti di metallo' },
+  { key: 'strisceMetallo', amount: 1, label: 'Striscia di metallo' },
+  { key: 'strisceMetallo', amount: 1, label: 'Striscia di metallo' },
+  { key: 'cordaFibra', amount: 5, label: 'Corda di fibra vegetale' },
+  { key: 'resina', amount: 1, label: 'Resina trasparente' },
+  { key: 'frigoriferoRelitto', amount: 1, label: 'Vecchio frigorifero' },
+  { key: 'coperta', amount: 1, label: 'Coperta' },
+  { key: 'cuscino', amount: 1, label: 'Cuscino' },
+];
+
+function distributeWreckLoot() {
+  const shuffled = shuffleSeeded(WRECK_LOOT_POOL);
+  const piles = [[], [], []];
+  shuffled.forEach((item, i) => piles[i % 3].push({ ...item }));
+  return piles;
+}
+
+// Stesso principio di findTrashSpot, ma con un raggio di sicurezza più
+// ampio (i relitti sono grandi) e un raggio preferito verso il bordo
+// dell'isola (r 0.72-0.92), per un effetto "arenato sulla spiaggia".
+function findWreckSpot(zone, otherWrecks) {
+  for (let attempts = 0; attempts < 80; attempts++) {
+    const a = worldRandom() * Math.PI * 2;
+    const r = 0.72 + worldRandom() * 0.2;
+    const x = zone.cx + Math.cos(a) * zone.rx * r;
+    const z = zone.cz + Math.sin(a) * zone.rz * r;
+    if (!isWalkable(x, z)) continue;
+    const { lx, lz } = bridgeLocalCoords(x, z);
+    if (Math.abs(lx) <= ISLAND.bridge.halfWidth + 3 && Math.abs(lz) <= ISLAND.bridge.halfLength + 3) continue;
+    if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 8) continue;
+    if (isSpotBuiltOver(x, z)) continue;
+    let tooClose = false;
+    for (const it of interactables) {
+      if (it.type === 'placedItem') continue;
+      const radius = TRASH_AVOID_RADIUS[it.type];
+      if (radius === undefined) continue;
+      if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < radius + 2.5) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
+    if (otherWrecks.some(w => Math.hypot(x - w.x, z - w.z) < 30)) continue;
+    return { x, z };
+  }
+  return null;
+}
+
+// Un grande mucchio di relitti: scafo spezzato semisepolto, assi sparse,
+// una cassa sfondata e un pezzo d'albero maestro spezzato — tutto in toni
+// di legno consumato dal sale, per distinguerlo a colpo d'occhio dagli
+// alberi/rocce normali.
+function makeWreck(x, z, yaw) {
+  const group = new THREE.Group();
+  const hullMat = new THREE.MeshLambertMaterial({ color: 0x5a4230 });
+  const hullDarkMat = new THREE.MeshLambertMaterial({ color: 0x3d2e21 });
+  const plankMat = new THREE.MeshLambertMaterial({ color: 0x6b5138 });
+  const crateMat = new THREE.MeshLambertMaterial({ color: 0x7a5c3a });
+  const ropeMat = new THREE.MeshLambertMaterial({ color: 0xb8a06a });
+  const metalMat = new THREE.MeshLambertMaterial({ color: 0x6b6b64 });
+
+  // Sezione di scafo spezzata, semisepolta e inclinata
+  const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 3.2, 8, 1, true, 0, Math.PI), hullMat);
+  hull.rotation.z = Math.PI / 2;
+  hull.rotation.y = 0.3;
+  hull.position.set(0, 0.5, 0);
+  hull.castShadow = true;
+  hull.receiveShadow = true;
+  group.add(hull);
+
+  // Doghe dello scafo in rilievo
+  for (let i = 0; i < 5; i++) {
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.12, 0.08), hullDarkMat);
+    const ang = (i / 4 - 0.5) * Math.PI * 0.85;
+    plank.position.set(0, 0.5 + Math.sin(ang) * 1.1, Math.cos(ang) * 1.1);
+    plank.rotation.x = ang;
+    group.add(plank);
+  }
+
+  // Albero maestro spezzato, appoggiato di traverso
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 4.2, 7), hullDarkMat);
+  mast.rotation.z = Math.PI / 2.3;
+  mast.rotation.y = 0.5;
+  mast.position.set(1.6, 0.5, -0.8);
+  mast.castShadow = true;
+  group.add(mast);
+
+  // Assi sparse a terra intorno al mucchio
+  for (let i = 0; i < 6; i++) {
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(1.6 + worldRandom() * 0.8, 0.08, 0.22), plankMat);
+    const ang = worldRandom() * Math.PI * 2;
+    const dist = 1.6 + worldRandom() * 1.4;
+    plank.position.set(Math.cos(ang) * dist, 0.04, Math.sin(ang) * dist);
+    plank.rotation.y = worldRandom() * Math.PI;
+    plank.castShadow = true;
+    plank.receiveShadow = true;
+    group.add(plank);
+  }
+
+  // Cassa di legno sfondata, con dentro un accenno di corda arrotolata
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), crateMat);
+  crate.position.set(-1.5, 0.35, 1.0);
+  crate.rotation.y = 0.4;
+  crate.castShadow = true;
+  crate.receiveShadow = true;
+  group.add(crate);
+  const crateLid = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.08, 0.6), crateMat);
+  crateLid.position.set(-1.7, 0.75, 1.2);
+  crateLid.rotation.set(0.5, 0.4, 0.3);
+  group.add(crateLid);
+
+  const rope = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.05, 6, 12), ropeMat);
+  rope.rotation.x = Math.PI / 2;
+  rope.position.set(-1.5, 0.42, 1.0);
+  group.add(rope);
+
+  // Qualche bullone/rinforzo metallico arrugginito sullo scafo
+  for (let i = 0; i < 4; i++) {
+    const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), metalMat);
+    const ang = (worldRandom() - 0.5) * Math.PI * 0.8;
+    bolt.position.set((worldRandom() - 0.5) * 2.4, 0.5 + Math.sin(ang) * 1.05, Math.cos(ang) * 1.05);
+    group.add(bolt);
+  }
+
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
+function spawnInitialWrecks() {
+  const loot = distributeWreckLoot();
+  const placed = [];
+  const zones = [ISLAND.cala, ISLAND.cala, ISLAND.valley]; // almeno 2 sulla Cala (l'isola di sabbia), una in Valle
+  for (let i = 0; i < 3; i++) {
+    const spot = findWreckSpot(zones[i], placed);
+    if (!spot) continue;
+    const yaw = worldRandom() * Math.PI * 2;
+    const mesh = makeWreck(spot.x, spot.z, yaw);
+    mesh.userData = { loot: loot[i], searched: false };
+    interactables.push({ obj: mesh, type: 'wreck' });
+    placed.push(spot);
+  }
+}
+spawnInitialWrecks();
+
 function registerPlacedItem(entry) {
   entry.mesh.userData.placedEntry = entry;
   placedItems.push(entry);
@@ -8302,7 +8549,87 @@ function makeWallCorner(x, z, yaw) {
   return group;
 }
 
+// La casa non è più un singolo oggetto costruito in un colpo solo: si passa
+// da buildStage 1 (fondamenta, appena piazzata) a 2 (muri e aperture) a 3
+// (tetto, completa) — tracciato su mesh.userData.buildStage dell'istanza
+// stessa (vedi makeCasetta). casettaBuilt resta per compatibilità col resto
+// del codice (menu, salvataggi) e viene impostato true solo allo stage 3.
 let casettaBuilt = false;
+
+// Costo del passaggio ALLO stage indicato (indice 2 = costo per passare da
+// fondamenta a muri, indice 3 = costo per passare da muri a tetto). Lo
+// stage 1 (fondamenta) non è qui: si paga con la ricetta "casetta" al Banco
+// da Lavoro, prima ancora di piazzarla.
+const CASA_STAGE_COST = {
+  2: { legna: 20, viti: 20, strisceMetallo: 2, cordaFibra: 5, resina: 1, frigoriferoRelitto: 1 },
+  3: { legna: 15, viti: 20, pietra: 2 },
+};
+const CASA_STAGE_LABEL = { 2: 'Muri e aperture', 3: 'Tetto' };
+
+// Chiamata quando si preme [E] su una casa non ancora completa: prova a far
+// avanzare la costruzione di uno stage, consumando i materiali necessari
+// solo se ce ne sono davvero abbastanza E si possiedono i 3 attrezzi.
+function tryAdvanceCasaStage(d) {
+  const stage = d.buildStage || 1;
+  if (stage >= 3) { enterHouse(); return; }
+  if (!hasAxe || !hasHammer || !hasSaw) {
+    showToast('🛠️ Servono Martello, Segaccio e uno Strumento (accetta) per proseguire i lavori — cercali tra i resti dei relitti');
+    return;
+  }
+  const nextStage = stage + 1;
+  const cost = CASA_STAGE_COST[nextStage];
+  const missing = Object.entries(cost).filter(([k, v]) => (inventory[k] || 0) < v);
+  if (missing.length > 0) {
+    const list = missing.map(([k, v]) => `${v - (inventory[k] || 0)} ${INVENTORY_LABELS[k] ? INVENTORY_LABELS[k][1] : k}`).join(', ');
+    showToast(`🏗️ Materiali insufficienti per "${CASA_STAGE_LABEL[nextStage]}": mancano ${list}`);
+    return;
+  }
+  for (const [k, v] of Object.entries(cost)) inventory[k] -= v;
+  d.buildStage = nextStage;
+  d.foundationGroup.visible = d.buildStage >= 1;
+  d.wallsGroup.visible = d.buildStage >= 2;
+  d.roofGroup.visible = d.buildStage >= 3;
+  sfxBuild();
+  showToast(`🏗️ "${CASA_STAGE_LABEL[nextStage]}" completati!`);
+  refreshInventoryHud();
+  if (d.buildStage >= 3) {
+    casettaBuilt = true;
+    maybeShowTutorial('casettaCostruita');
+    showToast('🏠 La casa è finita! Ora puoi entrarci.');
+    removeAllWrecks();
+  }
+}
+
+// Una volta finita la casa, i relitti hanno esaurito il loro scopo
+// narrativo (fornire i materiali per costruirla): spariscono tutti e 3,
+// indipendentemente da quanto bottino contenessero ancora.
+function removeAllWrecks() {
+  for (let i = interactables.length - 1; i >= 0; i--) {
+    if (interactables[i].type !== 'wreck') continue;
+    scene.remove(interactables[i].obj);
+    interactables.splice(i, 1);
+  }
+}
+
+// Testo dell'indicazione a schermo mentre si guarda la casa: cambia in base
+// a quanto è stata costruita finora.
+function casaHintText(d) {
+  const stage = d.buildStage || 1;
+  if (stage >= 3) return 'Casetta\n[E] per entrare — [B] per modificare';
+  const nextStage = stage + 1;
+  const cost = CASA_STAGE_COST[nextStage];
+  const costText = Object.entries(cost).map(([k, v]) => `${v} ${INVENTORY_LABELS[k] ? INVENTORY_LABELS[k][1] : k} (hai ${inventory[k] || 0})`).join(', ');
+  const stageLabel = stage === 1 ? 'Fondamenta' : 'Muri e aperture';
+  return `${stageLabel} della casa\n[E] per costruire "${CASA_STAGE_LABEL[nextStage]}": ${costText}`;
+}
+// L'accetta ("Strumento"), il martello e il segaccio non sono più posseduti
+// in automatico: vanno trovati fra i resti dei relitti sparsi sull'isola
+// (vedi la sezione RELITTI più sotto). Servono tutti e tre per costruire
+// qualunque step della casa; l'accetta serve anche solo per abbattere
+// alberi da legna e rompere sassi.
+let hasAxe = false;
+let hasHammer = false;
+let hasSaw = false;
 let hasHoe = false;
 let fishingRod = null; // { integrity, maxIntegrity, professional } oppure null se non posseduta
 let stoveBuilt = false;
@@ -8399,8 +8726,20 @@ function updateColdExposure(deltaGameMinutes) {
 }
 let fireflyCaughtEver = false;
 let portableLampBuilt = false;
-function makeCasetta(x, z, yaw) {
+// La casa si costruisce in 3 step (fondamenta, muri e aperture, tetto — vedi
+// la sezione COSTRUZIONE DELLA CASA IN 3 STEP più sotto), ma è sempre lo
+// stesso oggetto piazzato una sola volta: qui viene disegnata per intero
+// (esattamente come prima), semplicemente organizzata in 3 gruppi
+// (foundationGroup, wallsGroup, roofGroup) la cui visibilità viene accesa
+// mano a mano che il giocatore completa gli step. stage (1, 2 o 3) decide
+// quanto mostrarne subito alla creazione.
+function makeCasetta(x, z, yaw, stage) {
+  if (stage === undefined) stage = 3; // retrocompatibilità: chiamata senza stage = casa già completa
   const group = new THREE.Group();
+  const foundationGroup = new THREE.Group();
+  const wallsGroup = new THREE.Group();
+  const roofGroup = new THREE.Group();
+  group.add(foundationGroup, wallsGroup, roofGroup);
 
   // Materiali rustici a prevalenza legno
   const stoneMat = new THREE.MeshLambertMaterial({ color: 0x7a756d }); // Pietra grezza (solo base e camino)
@@ -8411,29 +8750,41 @@ function makeCasetta(x, z, yaw) {
   const glassMat = new THREE.MeshLambertMaterial({ color: 0x81d4fa, transparent: true, opacity: 0.75, emissive: 0x1a3344, emissiveIntensity: 0.2 });
   const ironMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
 
-  // 1. PICCOLA BASE IN PIETRA (Bassa e discreta)
+  // 1. FONDAMENTA: base in pietra + piattaforma di legno rialzata sopra
   const base = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.35, 6.6), stoneMat);
   base.position.y = 0.175;
   base.castShadow = true;
   base.receiveShadow = true;
-  group.add(base);
+  foundationGroup.add(base);
 
-  // 2. CORPO PRINCIPALE IN LEGNO
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.16, 6.4), woodPlankMat);
+  deck.position.y = 0.35 + 0.08;
+  deck.castShadow = true;
+  deck.receiveShadow = true;
+  foundationGroup.add(deck);
+  // Qualche asse in rilievo sulla piattaforma, per non farla sembrare un blocco unico
+  for (let dx = -2.8; dx <= 2.8; dx += 0.8) {
+    const plankLine = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 6.3), woodDarkMat);
+    plankLine.position.set(dx, 0.35 + 0.16 + 0.01, 0);
+    foundationGroup.add(plankLine);
+  }
+
+  // 2. CORPO PRINCIPALE IN LEGNO (muri e aperture)
   const walls = new THREE.Mesh(new THREE.BoxGeometry(6.0, 3.6, 6.0), woodWallMat);
   walls.position.y = 2.15;
   walls.castShadow = true;
   walls.receiveShadow = true;
-  group.add(walls);
+  wallsGroup.add(walls);
 
   // Assi di legno orizzontali in rilievo
   for (let h = 0.6; h < 3.8; h += 0.4) {
     const plankFront = new THREE.Mesh(new THREE.BoxGeometry(6.08, 0.08, 0.04), woodPlankMat);
     plankFront.position.set(0, h, 3.01);
-    group.add(plankFront);
+    wallsGroup.add(plankFront);
 
     const plankBack = new THREE.Mesh(new THREE.BoxGeometry(6.08, 0.08, 0.04), woodPlankMat);
     plankBack.position.set(0, h, -3.01);
-    group.add(plankBack);
+    wallsGroup.add(plankBack);
   }
 
   // Travi d'angolo verticali in legno grezzo (tronchi)
@@ -8442,21 +8793,20 @@ function makeCasetta(x, z, yaw) {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 3.7, 8), woodDarkMat);
     post.position.set(cx, 2.15, cz);
     post.castShadow = true;
-    group.add(post);
+    wallsGroup.add(post);
   });
 
   // 3. CAMINETTO IN PIETRA LATERALE
   const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.7, 4.8, 0.7), stoneMat);
   chimney.position.set(-2.2, 2.4, -2.2);
   chimney.castShadow = true;
-  group.add(chimney);
+  wallsGroup.add(chimney);
 
   const chimneyCap = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.15, 0.85), stoneMat);
   chimneyCap.position.set(-2.2, 4.85, -2.2);
-  group.add(chimneyCap);
+  wallsGroup.add(chimneyCap);
 
-  // 4. TETTO A CAPANNA IN LEGNO
-  const roofGroup = new THREE.Group();
+  // 4. TETTO A CAPANNA IN LEGNO (ultimo step)
   roofGroup.position.y = 3.95;
 
   const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.5, 4), roofWoodMat);
@@ -8472,50 +8822,48 @@ function makeCasetta(x, z, yaw) {
   ridgeBeam.position.set(0, 0.9, 0);
   roofGroup.add(ridgeBeam);
 
-  group.add(roofGroup);
-
-  // 5. PORTA E PIANEROTTOLO IN LEGNO
+  // 5. PORTA E PIANEROTTOLO IN LEGNO (muri e aperture)
   const porchDeck = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.2, 1.2), woodDarkMat);
   porchDeck.position.set(0, 0.25, 3.6);
   porchDeck.receiveShadow = true;
-  group.add(porchDeck);
+  wallsGroup.add(porchDeck);
 
   const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.4, 0.1), woodDarkMat);
   doorFrame.position.set(0, 1.55, 3.02);
-  group.add(doorFrame);
+  wallsGroup.add(doorFrame);
 
   const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), woodPlankMat);
   door.position.set(0, 1.45, 3.05);
-  group.add(door);
+  wallsGroup.add(door);
 
   const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.08), ironMat);
   handle.position.set(0.45, 1.45, 3.12);
-  group.add(handle);
+  wallsGroup.add(handle);
 
   // Tettuccio portico in legno
   const porchRoof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 1.0), roofWoodMat);
   porchRoof.position.set(0, 2.85, 3.5);
   porchRoof.rotation.x = 0.15;
   porchRoof.castShadow = true;
-  group.add(porchRoof);
+  wallsGroup.add(porchRoof);
 
   [-0.9, 0.9].forEach(px => {
     const pPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.5, 8), woodDarkMat);
     pPost.position.set(px, 1.5, 3.9);
     pPost.castShadow = true;
-    group.add(pPost);
+    wallsGroup.add(pPost);
   });
 
   // Lanterna d'ingresso
   const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.18), ironMat);
   lantern.position.set(0, 2.5, 3.5);
-  group.add(lantern);
+  wallsGroup.add(lantern);
 
   const light = new THREE.PointLight(0xffaa44, 1.0, 7, 1);
   light.position.set(0, 2.4, 3.5);
-  group.add(light);
+  wallsGroup.add(light);
 
-  // 6. FINESTRE IN LEGNO CON SCURI APERTI
+  // 6. FINESTRE IN LEGNO CON SCURI APERTI (muri e aperture)
   const windowPositions = [
     { x: -1.8, y: 2.1, z: 3.02, rx: 0 },                  // Frontale Sinistra
     { x: 1.8,  y: 2.1, z: 3.02, rx: 0 },                  // Frontale Destra
@@ -8549,13 +8897,19 @@ function makeCasetta(x, z, yaw) {
     shutterR.rotation.y = 0.3;
 
     winGroup.add(shutterL, shutterR);
-    group.add(winGroup);
+    wallsGroup.add(winGroup);
   });
+
+  // Visibilità in base allo step raggiunto finora
+  foundationGroup.visible = stage >= 1;
+  wallsGroup.visible = stage >= 2;
+  roofGroup.visible = stage >= 3;
 
   // Posizionamento nel mondo
   const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
   group.position.set(x, terrainY, z);
   group.rotation.y = yaw;
+  group.userData = { buildStage: stage, foundationGroup, wallsGroup, roofGroup };
 
   scene.add(group);
   return group;
@@ -9509,13 +9863,22 @@ function enterPlacementMode(itemType) {
   buildChip.classList.add('active');
   suppressActionJustPressed();
 }
+// La casa ha bisogno di un parametro in più (lo stage di costruzione
+// raggiunto) rispetto a tutti gli altri oggetti piazzabili: questo piccolo
+// wrapper lo gestisce così i punti che creano/ricreano mesh piazzate (sotto)
+// restano identici per ogni tipo di oggetto.
+function makePlacedMesh(itemType, x, z, yaw, buildStage) {
+  if (itemType === 'casetta') return makeCasetta(x, z, yaw, buildStage || 1);
+  return ITEM_FACTORY[itemType](x, z, yaw);
+}
+
 function exitPlacementMode() {
   placementMode = false;
   for (const type of Object.keys(ghostMeshes)) ghostMeshes[type].visible = false;
   buildChip.classList.remove('active');
   if (movingItem) {
     // annullato mentre si spostava un oggetto: lo si ripiazza dov'era prima
-    const mesh = ITEM_FACTORY[movingItem.itemType](movingItem.x, movingItem.z, movingItem.yaw);
+    const mesh = makePlacedMesh(movingItem.itemType, movingItem.x, movingItem.z, movingItem.yaw, movingItem.buildStage);
     registerPlacedItem({ itemType: movingItem.itemType, x: movingItem.x, z: movingItem.z, yaw: movingItem.yaw, mesh });
     movingItem = null;
   }
@@ -9590,9 +9953,8 @@ function confirmPlacement() {
   const ghost = activeGhost();
   if (!ghost.userData.valid) return;
   const { gx, gz, yaw } = ghost.userData;
-  const mesh = ITEM_FACTORY[placementItemType](gx, gz, yaw);
+  const mesh = makePlacedMesh(placementItemType, gx, gz, yaw, movingItem ? movingItem.buildStage : 1);
   registerPlacedItem({ itemType: placementItemType, x: gx, z: gz, yaw, mesh });
-  if (placementItemType === 'casetta') { casettaBuilt = true; maybeShowTutorial('casettaCostruita'); }
   if (placementItemType === 'fontana' && !fontanaPlacedEver) {
     fontanaPlacedEver = true;
     spawnInitialBirdSeeds();
@@ -10032,6 +10394,7 @@ const FERRY_SELL_BUNDLES = [
 
 const FERRY_BUY_ITEMS = [
   { id: 'buy_legna', label: 'Legna x10', cost: 10, key: 'legna', give: () => { inventory.legna += 10; } },
+  { id: 'buy_viti', label: 'Viti x20', cost: 5, key: 'viti', give: () => { inventory.viti += 20; } },
   { id: 'buy_pietra', label: 'Pietra x10', cost: 20, key: 'pietra', give: () => { inventory.pietra += 10; } },
   { id: 'buy_alluminio', label: 'Alluminio x10', cost: 10, key: 'alluminio', give: () => { inventory.alluminio += 10; } },
   { id: 'buy_lattine', label: 'Lattine x10', cost: 8, key: 'lattine', give: () => { inventory.lattine += 10; } },
@@ -10292,7 +10655,7 @@ document.getElementById('fenceRotateBtn').addEventListener('click', () => {
 document.getElementById('fenceMoveBtn').addEventListener('click', () => {
   if (!fenceEditTarget) return;
   const entry = fenceEditTarget;
-  movingItem = { itemType: entry.itemType, x: entry.x, z: entry.z, yaw: entry.yaw };
+  movingItem = { itemType: entry.itemType, x: entry.x, z: entry.z, yaw: entry.yaw, buildStage: entry.mesh.userData.buildStage };
   removePlacedItem(entry); // tolto dalla scena: torna a comparire come fantasma di piazzamento
   closeFenceEditMenu();
   placementMode = true;
@@ -10646,6 +11009,8 @@ const inventory = {
   fioriDecorativi: 0,
   casetteScoiattoli: 0, noci: 0, nocciole: 0, pigne: 0,
   granolaBoschi: 0, biscottiNocciole: 0, snackFruttaSecca: 0, pignaGlassata: 0,
+  fondamentaCasetta: 0,
+  viti: 0, strisceMetallo: 0, cordaFibra: 0, resina: 0, frigoriferoRelitto: 0, coperta: 0, cuscino: 0,
 };
 const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
@@ -10681,10 +11046,15 @@ const INVENTORY_LABELS = {
   noci: ['🌰', 'Noci'], nocciole: ['🌰', 'Nocciole'], pigne: ['🌲', 'Pigne'],
   granolaBoschi: ['🥣', 'Granola dei Boschi'], biscottiNocciole: ['🍪', 'Biscotti alle Nocciole'],
   snackFruttaSecca: ['🥜', 'Snack Frutta Secca'], pignaGlassata: ['🌲', 'Pigna Glassata'],
+  fondamentaCasetta: ['🏗️', 'Fondamenta di casetta (da piazzare)'],
+  viti: ['🔩', 'Viti di metallo'], strisceMetallo: ['🔗', 'Strisce di metallo'],
+  cordaFibra: ['🧵', 'Corda di fibra vegetale'], resina: ['🟠', 'Resina trasparente'],
+  frigoriferoRelitto: ['🧊', 'Vecchio frigorifero (dal relitto)'],
+  coperta: ['🧶', 'Coperta'], cuscino: ['🛏️', 'Cuscino'],
 };
 // Categorie per i tab dell'Inventario: raggruppano i tanti oggetti che si
 // accumulano in partita per tipo, così è più facile trovare quello cercato.
-const INVENTORY_CATEGORIES = ['Risorse', 'Frutta e Pesce', 'Piatti e Dolci', 'Da piazzare', 'Oggetti speciali'];
+const INVENTORY_CATEGORIES = ['Risorse', 'Frutta e Pesce', 'Piatti e Dolci', 'Da piazzare', 'Materiali da Relitto', 'Oggetti speciali'];
 const INVENTORY_CATEGORY_BY_KEY = {
   legna: 'Risorse', pietra: 'Risorse', selce: 'Risorse', alluminio: 'Risorse', lattine: 'Risorse', frammenti: 'Risorse',
   spazzatura: 'Risorse', acqua: 'Risorse', semiGrano: 'Risorse', semiFiori: 'Risorse', grano: 'Risorse', fiori: 'Risorse',
@@ -10700,6 +11070,10 @@ const INVENTORY_CATEGORY_BY_KEY = {
   recinti: 'Da piazzare', recintiAngolo: 'Da piazzare', torce: 'Da piazzare', muri: 'Da piazzare', muriAngolo: 'Da piazzare', casette: 'Da piazzare', fontane: 'Da piazzare',
   campiGrano: 'Da piazzare', aiuoleFiori: 'Da piazzare', sedieDondolo: 'Da piazzare', fioriDecorativi: 'Da piazzare',
   casetteScoiattoli: 'Da piazzare',
+  fondamentaCasetta: 'Da piazzare',
+  viti: 'Materiali da Relitto', strisceMetallo: 'Materiali da Relitto', cordaFibra: 'Materiali da Relitto',
+  resina: 'Materiali da Relitto', frigoriferoRelitto: 'Materiali da Relitto',
+  coperta: 'Materiali da Relitto', cuscino: 'Materiali da Relitto',
   bottiglia: 'Oggetti speciali', lucciole: 'Oggetti speciali', pellicola: 'Oggetti speciali',
   stellaMarina: 'Oggetti speciali', medusa: 'Oggetti speciali', conchiglia: 'Oggetti speciali',
 };
@@ -11080,7 +11454,8 @@ function handleAction(target) {
     if (!ferryMenuOpen) openFerryMenu();
   } else if (target.type === 'placedItem') {
     if (d.placedEntry.itemType === 'casetta') {
-      enterHouse();
+      if ((d.buildStage || 3) >= 3) enterHouse();
+      else tryAdvanceCasaStage(d);
     } else if (d.placedEntry.itemType === 'fontana') {
       if (!fillContainersAtFontana()) {
         const maxCarry = acquaMaxCarry();
@@ -11151,6 +11526,10 @@ function handleAction(target) {
       maybeGiveHoney();
     }
   } else if (target.type === 'woodTree' || target.type === 'rock') {
+    if (!hasAxe) {
+      showToast('🪓 Serve uno Strumento (accetta) per abbattere alberi e rompere sassi — trovane uno tra i resti dei relitti sulla spiaggia');
+      return;
+    }
     if (!d.felled) {
       if (healthIndex === 0) {
         showToast('😮‍💨 Sei troppo debole: mangia qualcosa prima di usare l\'attrezzo');
@@ -11224,6 +11603,22 @@ function handleAction(target) {
       if (idx !== -1) interactables.splice(idx, 1);
     }
     refreshInventoryHud();
+  } else if (target.type === 'wreck') {
+    if (d.loot.length === 0) {
+      showToast('Questo relitto è ormai spogliato di tutto');
+    } else {
+      const item = d.loot.pop();
+      if (item.key === 'martello') { hasHammer = true; showToast('🔨 Martello trovato!'); }
+      else if (item.key === 'segaccio') { hasSaw = true; showToast('🪚 Segaccio da legno trovato!'); }
+      else if (item.key === 'accetta') { hasAxe = true; showToast('🪓 Strumento (accetta) trovato!'); }
+      else {
+        inventory[item.key] = (inventory[item.key] || 0) + item.amount;
+        showToast(`${INVENTORY_LABELS[item.key] ? INVENTORY_LABELS[item.key][0] : '📦'} ${item.label} +${item.amount}`);
+      }
+      d.searched = true;
+      sfxTrash();
+      refreshInventoryHud();
+    }
   }
 }
 
@@ -11516,6 +11911,7 @@ function updateClockHud() {
   batteryCells.forEach((cell, i) => cell.classList.toggle('filled', i <= healthIndex));
   document.getElementById('sick-indicator').classList.toggle('show', isSick);
   document.getElementById('gradimento-stelle').textContent = '⋆'.repeat(gradimentoStelle());
+  document.getElementById('trashIndicator').classList.toggle('show', countTrash() > 0);
 }
 
 function fieldHintText(d) {
@@ -11558,7 +11954,7 @@ function checkInteractions() {
     const depleted = (target.type === 'fruitTree' && d.harvested) || ((target.type === 'woodTree' || target.type === 'rock') && d.felled);
     if (!depleted) {
       hint = target.type === 'placedItem'
-        ? (d.placedEntry.itemType === 'casetta' ? 'Casetta\n[E] per entrare — [B] per modificare'
+        ? (d.placedEntry.itemType === 'casetta' ? casaHintText(d)
           : d.placedEntry.itemType === 'fontana' ? 'Fontana\n[E] per raccogliere acqua — [B] per modificare'
           : (d.placedEntry.itemType === 'campoGrano' || d.placedEntry.itemType === 'aiuolaFiori')
           ? fieldHintText(d) + '\n[B] per modificare'
@@ -11572,8 +11968,12 @@ function checkInteractions() {
         ? 'Punto di pesca\n[E] per pescare — [B] per rigettare in mare gli animaletti'
         : (target.type === 'fireflySwarm' && firefliesCaughtTonight)
         ? 'Le lucciole!\ngià raccolte stanotte, torna domani'
+        : ((target.type === 'woodTree' || target.type === 'rock') && !hasAxe)
+        ? `${target.type === 'woodTree' ? 'Albero da legna' : 'Roccia'} — serve uno Strumento (accetta)`
         : target.type === 'trash'
         ? `${TRASH_BY_ID[d.typeId].label}\n[E] per raccogliere (${d.hits}/${d.maxHits})`
+        : target.type === 'wreck'
+        ? (d.loot.length > 0 ? `Resti di un vecchio relitto\n[E] per rovistare (${d.loot.length} oggetti rimasti)` : 'Resti di un vecchio relitto\normai spogliato di tutto')
         : INTERACT_HINTS[target.type];
       if (input.actionJustPressed && !isAnyOverlayOpen()) handleAction(target);
     }
@@ -12389,6 +12789,7 @@ function serializeGame() {
     portableLampBuilt,
     messageBottleCollected,
     hasHoe,
+    hasAxe, hasHammer, hasSaw,
     stoveBuilt,
     stairsBuilt,
     stufettaBuilt,
@@ -12454,6 +12855,9 @@ function serializeGame() {
       if (it.itemType === 'fiorePiantato') {
         base.creatureKind = it.mesh.userData.attachedCreature ? it.mesh.userData.attachedCreature.kind : 'none';
       }
+      if (it.itemType === 'casetta') {
+        base.buildStage = it.mesh.userData.buildStage;
+      }
       return base;
     }),
     fruitTrees: fruitTrees.map(it => ({ harvested: it.obj.userData.harvested, daysSinceHarvest: it.obj.userData.daysSinceHarvest })),
@@ -12475,6 +12879,9 @@ function serializeGame() {
       felled: it.obj.userData.felled, hits: it.obj.userData.hits,
       daysSinceFelled: it.obj.userData.daysSinceFelled, maxHits: it.obj.userData.maxHits,
     })),
+    wrecks: interactables.filter(it => it.type === 'wreck').map(it => ({
+      loot: it.obj.userData.loot, searched: it.obj.userData.searched,
+    })),
   };
 }
 
@@ -12491,6 +12898,92 @@ function saveGame() {
 function hasSavedGame() {
   try { return localStorage.getItem(SAVE_KEY) !== null; } catch (e) { return false; }
 }
+
+/* =========================================================================
+   ESPORTA / IMPORTA SALVATAGGIO SU FILE: un backup completo dei progressi
+   (stato di gioco + album foto) in un file .json scaricabile, recuperabile
+   in un secondo momento anche su un altro dispositivo/browser. L'importazione
+   ricarica subito la pagina dopo aver scritto i dati in localStorage: è il
+   modo più sicuro per evitare "sovrapposizioni" (oggetti duplicati, stato
+   incoerente) con la partita eventualmente già in corso — esattamente come
+   un normale avvio con "Continua", che parte sempre da un mondo generato da
+   zero e applica i dati salvati sopra, mai per somma.
+   ========================================================================= */
+function exportSaveToFile() {
+  let saveData;
+  try {
+    saveData = serializeGame();
+  } catch (e) {
+    showToast('⚠️ Impossibile preparare il salvataggio da esportare');
+    return;
+  }
+  const payload = { app: 'cozy-island', formatVersion: 1, exportedAt: Date.now(), save: saveData, photos };
+  let json;
+  try {
+    json = JSON.stringify(payload);
+  } catch (e) {
+    showToast('⚠️ Impossibile preparare il file da esportare');
+    return;
+  }
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `cozy-island-salvataggio-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('💾 Salvataggio esportato');
+}
+
+function importSaveFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(reader.result);
+    } catch (e) {
+      showToast('⚠️ File non valido: non sembra un salvataggio di Cozy Island');
+      return;
+    }
+    if (!parsed || !parsed.save || !parsed.save.player) {
+      showToast('⚠️ File non valido: non sembra un salvataggio di Cozy Island');
+      return;
+    }
+    const ok = window.confirm('Importare questo salvataggio sostituirà TUTTI i progressi attuali (isola e album foto). Continuare?');
+    if (!ok) return;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(parsed.save));
+      if (Array.isArray(parsed.photos)) {
+        localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(parsed.photos));
+      } else {
+        localStorage.removeItem(PHOTO_STORAGE_KEY);
+      }
+    } catch (e) {
+      showToast('⚠️ Spazio locale insufficiente per importare questo salvataggio');
+      return;
+    }
+    showToast('✅ Salvataggio importato: ricarico la partita...');
+    // Si ricarica davvero la pagina (non solo "riavviare" via JS): è l'unico
+    // modo per ripartire da un mondo rigenerato da zero senza mescolarlo con
+    // quello già in corso — vedi nota sopra su "senza sovrapposizioni".
+    setTimeout(() => location.reload(), 700);
+  };
+  reader.onerror = () => showToast('⚠️ Impossibile leggere il file selezionato');
+  reader.readAsText(file);
+}
+
+document.getElementById('exportSaveBtn').addEventListener('click', exportSaveToFile);
+document.getElementById('exportSaveBtn').addEventListener('touchstart', e => { e.preventDefault(); exportSaveToFile(); }, { passive: false });
+document.getElementById('importSaveBtn').addEventListener('click', () => document.getElementById('importSaveFileInput').click());
+document.getElementById('importSaveBtn').addEventListener('touchstart', e => { e.preventDefault(); document.getElementById('importSaveFileInput').click(); }, { passive: false });
+document.getElementById('importSaveFileInput').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (file) importSaveFromFile(file);
+  e.target.value = ''; // permette di reimportare lo stesso file una seconda volta, se serve
+});
 
 function loadGame() {
   let data;
@@ -12510,6 +13003,9 @@ function loadGame() {
   firefliesCaughtTonight = !!data.firefliesCaughtTonight;
   portableLampBuilt = !!data.portableLampBuilt;
   hasHoe = !!data.hasHoe;
+  hasAxe = !!data.hasAxe;
+  hasHammer = !!data.hasHammer;
+  hasSaw = !!data.hasSaw;
   stoveBuilt = !!data.stoveBuilt;
   stoveMesh.visible = stoveBuilt;
   stairsBuilt = !!data.stairsBuilt;
@@ -12614,7 +13110,12 @@ function loadGame() {
 
   for (const it of [...placedItems]) removePlacedItem(it);
   for (const saved of data.placedItems || []) {
-    const mesh = ITEM_FACTORY[saved.itemType](saved.x, saved.z, saved.yaw);
+    // Retrocompatibilità: un salvataggio precedente a questo aggiornamento
+    // non ha "buildStage" perché la casa nasceva già completa in un colpo
+    // solo — se risulta già costruita (casettaBuilt) la ricreiamo comunque
+    // completa (stage 3) invece di farla ripartire dalle sole fondamenta.
+    const stage = saved.itemType === 'casetta' ? (saved.buildStage || (data.casettaBuilt ? 3 : 1)) : undefined;
+    const mesh = makePlacedMesh(saved.itemType, saved.x, saved.z, saved.yaw, stage);
     registerPlacedItem({ itemType: saved.itemType, x: saved.x, z: saved.z, yaw: saved.yaw, mesh });
     if (saved.itemType === 'campoGrano' || saved.itemType === 'aiuolaFiori') {
       const d = mesh.userData;
@@ -12654,6 +13155,18 @@ function loadGame() {
     d.felled = s.felled; d.hits = s.hits; d.daysSinceFelled = s.daysSinceFelled; d.maxHits = s.maxHits;
     rocks[i].obj.visible = !s.felled;
   });
+  const wrecks = interactables.filter(it => it.type === 'wreck');
+  (data.wrecks || []).forEach((s, i) => {
+    if (!wrecks[i]) return;
+    const d = wrecks[i].obj.userData;
+    d.loot = s.loot || [];
+    d.searched = !!s.searched;
+  });
+  // Retrocompatibilità: un salvataggio con la casa già completa ma senza
+  // "wrecks" salvato (perché precedente a questa funzione) si ritroverebbe
+  // 3 relitti apparsi dal nulla nel mondo appena generato — li rimuoviamo
+  // subito, visto che con la casa finita non servono più comunque.
+  if (casettaBuilt) removeAllWrecks();
 
   foodItems = data.foodItems || [];
   healthIndex = data.healthIndex !== undefined ? data.healthIndex : 3;
@@ -12829,12 +13342,22 @@ mainMenuNewBtn.addEventListener('click', () => {
     newGameConfirmOverlay.classList.add('open');
     setMenuButtons([document.getElementById('confirmNewGameBtn'), document.getElementById('cancelNewGameBtn')]);
   } else {
+    // Nessun salvataggio esistente: comunque, se per qualche motivo restano
+    // foto orfane in memoria locale (es. salvataggio cancellato a mano),
+    // ripartire "pulito" le azzera anche qui.
+    photos = [];
+    try { localStorage.removeItem(PHOTO_STORAGE_KEY); } catch (e) { /* ignora */ }
     mainMenuOverlay.classList.remove('open');
     beginGameLoop();
   }
 });
 document.getElementById('confirmNewGameBtn').addEventListener('click', () => {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignora */ }
+  // Una nuova avventura riparte anche senza le foto scattate in quella
+  // precedente: sarebbero comunque foto di un'isola/partita che non esiste
+  // più, quindi si azzera anche l'album insieme al resto dei progressi.
+  photos = [];
+  try { localStorage.removeItem(PHOTO_STORAGE_KEY); } catch (e) { /* ignora */ }
   newGameConfirmOverlay.classList.remove('open');
   mainMenuOverlay.classList.remove('open');
   beginGameLoop();
@@ -12860,6 +13383,8 @@ mainMenuOptionsBtn.addEventListener('click', () => {
     document.getElementById('gamepadStylePsBtn'),
     document.getElementById('tutorialToggleYesBtn'),
     document.getElementById('tutorialToggleNoBtn'),
+    document.getElementById('exportSaveBtn'),
+    document.getElementById('importSaveBtn'),
     document.getElementById('options-close'),
   ]);
 });
