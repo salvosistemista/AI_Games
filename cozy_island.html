@@ -248,6 +248,18 @@
   #message-panel { width: 320px; }
   #message-text { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 14px; }
   #message-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 4px 0 2px; }
+  #captain-dialogue-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #captain-dialogue-overlay.open { display: flex; }
+  #captain-dialogue-panel { width: 320px; max-height: 80vh; max-height: 80dvh; overflow-y: auto; }
+  #captain-dialogue-greeting { font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.75); margin-bottom: 10px; font-style: italic; }
+  #captain-dialogue-question { font-size: 13px; line-height: 1.55; color: #ffd166; margin-bottom: 10px; }
+  #captain-dialogue-answer { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 14px; }
+  #captain-dialogue-step-nav { display: flex; justify-content: space-between; gap: 8px; }
+  #captain-dialogue-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 10px 0 2px; }
   #storage-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
   #diary-overlay {
     position: fixed; inset: 0; z-index: 30; display: none;
@@ -257,6 +269,7 @@
   #diary-overlay.open { display: flex; }
   #diary-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 8px 0 2px; }
   .diary-page { font-size: 13px; line-height: 1.65; color: rgba(255,255,255,0.9); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  #diary-entry-text { white-space: pre-line; }
   #diary-stars { font-size: 24px; letter-spacing: 4px; margin-bottom: 10px; text-align: center; color: #ffd166; }
   #diary-score { font-size: 13px; text-align: center; margin-bottom: 14px; color: rgba(255,255,255,0.75); }
   .diary-event-row { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; }
@@ -354,13 +367,13 @@
   }
   #fence-edit-overlay.open { display: flex; }
   #fenceEditCancel { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 12px 0 2px; }
-  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel, #photo-album-panel, #diary-panel {
+  #craft-panel, #cook-panel, #fence-edit-panel, #inventory-panel, #build-panel, #storage-panel, #message-panel, #ferry-panel, #photo-album-panel, #diary-panel, #captain-dialogue-panel {
     background: rgba(20, 24, 38, 0.94); border: 1px solid rgba(255,255,255,0.15);
     border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
     font-family: -apple-system, sans-serif;
     max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column;
   }
-  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3, #photo-album-panel h3, #diary-panel h3 {
+  #craft-panel h3, #cook-panel h3, #fence-edit-panel h3, #inventory-panel h3, #build-panel h3, #storage-panel h3, #message-panel h3, #ferry-panel h3, #photo-album-panel h3, #diary-panel h3, #captain-dialogue-panel h3 {
     font-weight: 500; font-size: 16px; margin-bottom: 12px; flex-shrink: 0;
   }
   #recipe-list, #cook-list, #build-list, #storage-list, #inventory-list, #ferry-list, #photo-album-list {
@@ -751,9 +764,26 @@
 
 <div id="message-overlay">
   <div id="message-panel">
-    <h3>Un messaggio nella bottiglia</h3>
+    <h3 id="message-title">Un messaggio nella bottiglia</h3>
     <p id="message-text"></p>
     <div id="message-close">chiudi</div>
+  </div>
+</div>
+
+<div id="captain-dialogue-overlay">
+  <div id="captain-dialogue-panel">
+    <h3>Il Capitano</h3>
+    <div id="captain-dialogue-greeting"></div>
+    <div id="captain-dialogue-directions"></div>
+    <div id="captain-dialogue-step" style="display:none;">
+      <div id="captain-dialogue-question"></div>
+      <div id="captain-dialogue-answer"></div>
+      <div id="captain-dialogue-step-nav">
+        <button class="recipe-btn" id="captain-dialogue-back">‹ Altri argomenti</button>
+        <button class="recipe-btn" id="captain-dialogue-next" style="display:none;">Avanti ›</button>
+      </div>
+    </div>
+    <div id="captain-dialogue-close">chiudi</div>
   </div>
 </div>
 
@@ -5224,6 +5254,17 @@ ferryPier = makeFerryPier();
 
 let ferryPresent = false;
 let ferryLastArrivalDay = -1;
+let ferryDockCheckDay = -1;   // giorno in cui è già stato fatto il controllo anticipato (13:00) sulla spiaggia
+let ferryWillDockToday = true; // esito di quel controllo
+
+// Orario di partenza del traghetto: 17:00 SOLO nella primissima Primavera
+// della partita (i giorni 0-29 dall'inizio del mondo, che è quella in cui
+// si parte già al 21° giorno) — da Estate in poi, e già dalla seconda
+// Primavera in avanti, resta fino alle 18:00.
+function ferryDepartureHour() {
+  const isVeryFirstSpring = clock.season.name === 'Primavera' && clock.dayIndex < 30;
+  return isVeryFirstSpring ? 17 : 18;
+}
 let ferryBudget = 0; // monete che il traghetto ha per comprare dal giocatore
 let ferryPurchasedToday = new Set(); // id degli articoli già comprati oggi dal giocatore
 const FISH_DISH_TYPES = ['pesceImpanato', 'tartarePesce'];
@@ -5234,6 +5275,729 @@ const CAKE_TYPES = [
 let ferryOfferFishDish = null; // quale piatto di pesce casuale offre oggi in acquisto
 let ferryOfferCake = null;     // quale torta casuale offre oggi in acquisto
 
+/* =========================================================================
+   IL CAPITANO: ogni giorno, quando il traghetto attracca, il Capitano
+   scende dal molo con il suo sgabello, lo appoggia su un pezzo di
+   spiaggia libera vicino al molo e si siede a fumare la pipa finché non è
+   ora di ripartire — allora si alza, riprende lo sgabello e torna a bordo.
+   Il giocatore può avvicinarsi e salutarlo; per ora è un dialogo a senso
+   unico che ferma il tempo di gioco (vedi messageOverlayOpen più sotto).
+   ========================================================================= */
+
+// Materiale condiviso da corpo e sgabello per coerenza cromatica
+// Il player ha una testa larga 1.0 unità e un'altezza totale di ~2.5 unità
+// (stile blocky esagerato, non proporzioni realistiche): il Capitano deve
+// essere sulla STESSA scala, non su una scala "umana normale" — qui sotto
+// riprendo esattamente le dimensioni del corpo del player (vedi buildPlayerGroup)
+// e in fondo applico un ulteriore +12% perché risulti un po' più grande di lui,
+// come richiesto.
+const CAPTAIN_STANDING_HIP_Y = 0.82; // stessa altezza bacino del player
+const CAPTAIN_SIT_HIP_Y = 0.5;       // altezza del sedile dello sgabello (gambe grosse quanto quelle del player)
+const CAPTAIN_SIT_DROP = CAPTAIN_STANDING_HIP_Y - CAPTAIN_SIT_HIP_Y;
+const CAPTAIN_SCALE = 1.12; // "almeno il 10% in più" del player
+
+function makeCaptainStool() {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2c, roughness: 0.75 });
+  const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.34, 0.09, 10), woodMat);
+  seat.position.y = CAPTAIN_SIT_HIP_Y;
+  seat.castShadow = true;
+  seat.receiveShadow = true;
+  group.add(seat);
+  const legAngles = [0, Math.PI * 2 / 3, Math.PI * 4 / 3];
+  legAngles.forEach(a => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, CAPTAIN_SIT_HIP_Y, 6), woodMat);
+    leg.position.set(Math.cos(a) * 0.24, CAPTAIN_SIT_HIP_Y / 2, Math.sin(a) * 0.24);
+    leg.rotation.x = Math.sin(a) * 0.12;
+    leg.rotation.z = -Math.cos(a) * 0.12;
+    leg.castShadow = true;
+    group.add(leg);
+  });
+  group.scale.setScalar(CAPTAIN_SCALE);
+  return group;
+}
+
+function makeCaptainMesh() {
+  const group = new THREE.Group();
+
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xd8a878, roughness: 0.85 });
+  const coatMat = new THREE.MeshStandardMaterial({ color: 0x1c3050, roughness: 0.6 });
+  const trouserMat = new THREE.MeshStandardMaterial({ color: 0x13213a, roughness: 0.75 });
+  const bootMat = new THREE.MeshStandardMaterial({ color: 0x171512, roughness: 0.55 });
+  const beardMat = new THREE.MeshStandardMaterial({ color: 0xe6e1d3, roughness: 0.95 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.55, roughness: 0.35 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.7 });
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3d2a17, roughness: 0.5 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x2b2118 });
+
+  // --- GAMBE IN PIEDI (in cammino / appena sceso) — stessa taglia dei
+  // pantaloni lunghi del player (BoxGeometry 0.36 x 0.52 x 0.36 + scarpe).
+  // Ogni gamba vive nel proprio "pivot" perno all'altezza dell'anca, così
+  // updateCaptainMovement() può farle oscillare avanti/indietro mentre
+  // cammina, invece di scivolare rigido come prima.
+  const standingLegs = new THREE.Group();
+  const standingLegPivots = {};
+  [-0.18, 0.18].forEach(lx => {
+    const legPivot = new THREE.Group();
+    legPivot.position.set(lx, CAPTAIN_STANDING_HIP_Y, 0);
+    standingLegs.add(legPivot);
+    standingLegPivots[lx < 0 ? 'left' : 'right'] = legPivot;
+
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.52), bootMat);
+    sole.position.set(0, 0.05 - CAPTAIN_STANDING_HIP_Y, 0.04);
+    sole.castShadow = true;
+    legPivot.add(sole);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.48), bootMat);
+    shoe.position.set(0, 0.18 - CAPTAIN_STANDING_HIP_Y, 0.04);
+    shoe.castShadow = true;
+    legPivot.add(shoe);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.52, 0.36), trouserMat);
+    leg.position.set(0, 0.52 - CAPTAIN_STANDING_HIP_Y, 0);
+    leg.castShadow = true;
+    legPivot.add(leg);
+  });
+  group.add(standingLegs);
+
+  // --- GAMBE SEDUTO (sullo sgabello), stessa larghezza di quelle in piedi ---
+  const sittingLegs = new THREE.Group();
+  [-0.18, 0.18].forEach(lx => {
+    const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.3, 0.5), trouserMat);
+    thigh.position.set(lx, CAPTAIN_SIT_HIP_Y, 0.2);
+    thigh.rotation.x = -1.35;
+    thigh.castShadow = true;
+    sittingLegs.add(thigh);
+    const shin = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.46, 0.36), trouserMat);
+    shin.position.set(lx, CAPTAIN_SIT_HIP_Y / 2 - 0.02, 0.4);
+    shin.castShadow = true;
+    sittingLegs.add(shin);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.48), bootMat);
+    shoe.position.set(lx, 0.11, 0.46);
+    shoe.castShadow = true;
+    sittingLegs.add(shoe);
+  });
+  sittingLegs.visible = false;
+  group.add(sittingLegs);
+
+  // Vita
+  const waist = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.62), trouserMat);
+  waist.position.y = CAPTAIN_STANDING_HIP_Y;
+  group.add(waist);
+
+  // --- CORPO SUPERIORE, condiviso fra le due pose: si abbassa nel suo
+  // insieme (bodyGroup.position.y) quando è seduto, invece di ricalcolare
+  // ogni singolo pezzo. Le coordinate qui sotto sono quelle "in piedi",
+  // riprese 1:1 dalla taglia del torso/testa/braccia del player.
+  const bodyGroup = new THREE.Group();
+  group.add(bodyGroup);
+
+  const shirt = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.4), shirtMat);
+  shirt.position.set(0, 1.22, 0.12);
+  bodyGroup.add(shirt);
+
+  // Cappotto doppiopetto blu, stessa sagoma del busto del player
+  const coat = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.72, 0.6), coatMat);
+  coat.position.y = 1.22;
+  coat.castShadow = true;
+  bodyGroup.add(coat);
+
+  // Bottoni dorati (doppia fila, stile doppiopetto)
+  [-0.22, 0.22].forEach(bx => {
+    for (let by = 0.94; by <= 1.5; by += 0.16) {
+      const btn = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), goldMat);
+      btn.position.set(bx, by, 0.31);
+      bodyGroup.add(btn);
+    }
+  });
+
+  // Spalline dorate
+  [-0.62, 0.62].forEach(sx => {
+    const epaulette = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.26), goldMat);
+    epaulette.position.set(sx, 1.56, 0);
+    bodyGroup.add(epaulette);
+  });
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.16, 8), skinMat);
+  neck.position.set(0, 1.66, 0);
+  bodyGroup.add(neck);
+
+  // Testa: stessa BoxGeometry(1.0, 0.9, 0.9) del player
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.9, 0.9), skinMat);
+  head.position.y = 2.05;
+  head.castShadow = true;
+  bodyGroup.add(head);
+
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.1), skinMat);
+  nose.position.set(0, 1.98, 0.47);
+  bodyGroup.add(nose);
+
+  [-0.22, 0.22].forEach(ex => {
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.06), beardMat);
+    brow.position.set(ex, 2.24, 0.44);
+    brow.rotation.z = ex < 0 ? 0.15 : -0.15;
+    bodyGroup.add(brow);
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.04), eyeMat);
+    eye.position.set(ex, 2.1, 0.46);
+    bodyGroup.add(eye);
+  });
+
+  // Barba folta bianco-grigia e baffi, il tratto distintivo del Capitano
+  const beard = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), beardMat);
+  beard.position.set(0, 1.85, 0.14);
+  beard.scale.set(0.85, 0.8, 0.75);
+  bodyGroup.add(beard);
+  const mustache = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.09, 0.14), beardMat);
+  mustache.position.set(0, 1.96, 0.46);
+  bodyGroup.add(mustache);
+
+  // Berretto da capitano: calotta blu, fascia dorata, visiera nera, ancora
+  // — stessa base del cappello stagionale del player (BoxGeometry 1.06 x
+  // 0.38 x 0.96 a y=2.42), ridecorata da marina.
+  const capGroup = new THREE.Group();
+  capGroup.position.set(0, 2.42, 0);
+  const capTop = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.32, 0.96), coatMat);
+  capTop.castShadow = true;
+  capGroup.add(capTop);
+  const capBand = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.12, 0.98), goldMat);
+  capBand.position.y = -0.1;
+  capGroup.add(capBand);
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.05, 0.3), bootMat);
+  visor.position.set(0, -0.16, 0.55);
+  visor.rotation.x = -0.08;
+  capGroup.add(visor);
+  const anchor = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.022, 6, 10), goldMat);
+  anchor.position.set(0, 0.02, 0.485);
+  capGroup.add(anchor);
+  bodyGroup.add(capGroup);
+
+  // Braccio sinistro, rilassato lungo il fianco (stessa taglia manica lunga del player)
+  const leftArm = new THREE.Group();
+  const leftSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.65, 0.32), coatMat);
+  leftSleeve.position.set(0, -0.325, 0);
+  leftArm.add(leftSleeve);
+  const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.22, 0.26), skinMat);
+  leftHand.position.set(0, -0.76, 0);
+  leftArm.add(leftHand);
+  leftArm.position.set(-0.72, 1.5, 0);
+  leftArm.rotation.z = 0.15;
+  bodyGroup.add(leftArm);
+
+  // Braccio destro, piegato: porta la pipa fino quasi alla bocca
+  const rightArm = new THREE.Group();
+  const rightUpper = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.32), coatMat);
+  rightUpper.position.set(0, -0.17, 0);
+  rightArm.add(rightUpper);
+  const rightFore = new THREE.Group();
+  rightFore.position.set(0, -0.34, 0);
+  rightFore.rotation.x = -1.5;
+  const rightForeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.28), coatMat);
+  rightForeMesh.position.set(0, -0.17, 0);
+  rightFore.add(rightForeMesh);
+  const rightHand = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), skinMat);
+  rightHand.position.set(0, -0.36, 0);
+  rightFore.add(rightHand);
+  rightArm.add(rightFore);
+  rightArm.position.set(0.72, 1.5, 0);
+  rightArm.rotation.z = -0.1;
+  bodyGroup.add(rightArm);
+
+  // La pipa, incastrata nella mano destra vicino alla bocca
+  const pipeGroup = new THREE.Group();
+  const pipeStem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.26, 6), pipeMat);
+  pipeStem.rotation.z = Math.PI / 2;
+  pipeStem.position.set(0.13, 0, 0);
+  pipeGroup.add(pipeStem);
+  const pipeBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.13, 8), pipeMat);
+  pipeBowl.position.set(0.28, -0.06, 0);
+  pipeGroup.add(pipeBowl);
+  pipeGroup.position.set(0, -0.36, 0.05);
+  rightFore.add(pipeGroup);
+
+  group.userData.standingLegs = standingLegs;
+  group.userData.legL = standingLegPivots.left;
+  group.userData.legR = standingLegPivots.right;
+  group.userData.sittingLegs = sittingLegs;
+  group.userData.bodyGroup = bodyGroup;
+  group.userData.pipeBowl = pipeBowl; // riferimento per far partire il fumo dalla punta della pipa
+
+  group.scale.setScalar(CAPTAIN_SCALE);
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+
+const captainStool = makeCaptainStool();
+captainStool.visible = false;
+scene.add(captainStool);
+const captainMesh = makeCaptainMesh();
+interactables.push({ obj: captainMesh, type: 'captain' });
+
+// Punti fissi del percorso del Capitano: il bordo del molo (dove sta la
+// nave) e un punto su un pezzo di spiaggia libera, spostato bene di lato
+// rispetto all'asse del molo (non più dritto davanti, dove finiva
+// sovrapposto alla sua scaletta) e abbastanza all'interno da restare
+// chiaramente su sabbia libera. Prova alcuni punti candidati e tiene il
+// primo che risulta davvero camminabile.
+// Converte coordinate LOCALI del molo (stesso sistema di riferimento di
+// pierLocalCoords/PIER_DECK_LOCAL/PIER_STAIR_LOCAL) in coordinate del
+// mondo: serve per piazzare i punti del percorso del Capitano esattamente
+// sopra il tavolato e sulla scaletta vera, non solo vicino ad essi.
+function pierWorldFromLocal(lx, lz) {
+  const cos = Math.cos(ferryPier.rotation.y), sin = Math.sin(ferryPier.rotation.y);
+  const dx = lx * cos + lz * sin;
+  const dz = -lx * sin + lz * cos;
+  return { x: ferryPier.position.x + dx, z: ferryPier.position.z + dz };
+}
+
+// Percorso completo del Capitano: dal tavolato del molo (dove attracca la
+// nave), lungo la scaletta, fino a un punto libero sulla spiaggia dove
+// sedersi. pierHeightAt() gestisce da sola l'altezza corretta in ognuno
+// di questi tratti (tavolato, scalini, sabbia), quindi non serve
+// distinguerli a mano nel movimento.
+function computeCaptainWaypoints() {
+  const spot = findFixedFerrySpot();
+  if (!spot) return null;
+  const stairZ = (PIER_STAIR_LOCAL.zMin + PIER_STAIR_LOCAL.zMax) / 2;
+  const board = pierWorldFromLocal((PIER_DECK_LOCAL.xMin + PIER_DECK_LOCAL.xMax) / 2, stairZ);
+  const stairTop = pierWorldFromLocal(PIER_STAIR_LOCAL.xMin, stairZ);
+  const stairBottom = pierWorldFromLocal(PIER_STAIR_LOCAL.xMax, stairZ);
+
+  const perpX = -spot.uz, perpZ = spot.ux; // perpendicolare alla normale riva/mare
+  const candidates = [
+    [10, 7], [10, -7], [12, 8], [12, -8], [8, 6], [8, -6], [14, 9], [14, -9],
+  ];
+  let beach = null;
+  for (const [inland, lateral] of candidates) {
+    const x = spot.x - spot.ux * inland + perpX * lateral;
+    const z = spot.z - spot.uz * inland + perpZ * lateral;
+    if (isWalkable(x, z)) { beach = { x, z }; break; }
+  }
+  if (!beach) beach = { x: spot.x - spot.ux * 8, z: spot.z - spot.uz * 8 }; // ripiego
+
+  return { board, stairTop, stairBottom, beach };
+}
+let captainWaypoints = null;
+let captainPath = []; // coda di punti ancora da raggiungere, per il tragitto in corso
+
+let captainState = 'hidden'; // hidden | walkingOut | sitting | walkingBack
+let captainMetBefore = false;
+// "Paletti" che garantiscono che sbarco e rientro scattino una volta sola a
+// visita, invece di essere ricontrollati (e potenzialmente rifatti scattare)
+// ad ogni frame finché la condizione oraria resta vera.
+let captainLastDisembarkDay = -1;
+let captainReturnStartedThisVisit = false;
+
+const CAPTAIN_WALK_SPEED = 1.6;
+const CAPTAIN_WALK_CYCLE_SPEED = 8.5; // rad/s: quanto veloce oscillano le gambe mentre cammina
+const CAPTAIN_LEG_SWING_AMPLITUDE = 0.5; // rad, ~29°
+let captainWalkPhase = 0;
+
+function captainSetPose(sitting) {
+  captainMesh.userData.standingLegs.visible = !sitting;
+  captainMesh.userData.sittingLegs.visible = sitting;
+  captainMesh.userData.bodyGroup.position.y = sitting ? -CAPTAIN_SIT_DROP : 0;
+  // Riparte sempre da gambe dritte, sia entrando in cammino sia fermandosi
+  // a sedere: evita che resti "a metà passo" da una posa all'altra.
+  captainMesh.userData.legL.rotation.x = 0;
+  captainMesh.userData.legR.rotation.x = 0;
+  captainWalkPhase = 0;
+}
+
+function captainStartDisembark() {
+  captainWaypoints = computeCaptainWaypoints();
+  if (!captainWaypoints) return;
+  const w = captainWaypoints;
+  captainMesh.position.set(w.board.x, pierHeightAt(w.board.x, w.board.z), w.board.z);
+  captainMesh.visible = true;
+  captainStool.visible = false; // ancora "in mano", non disegnato separatamente durante il cammino
+  captainSetPose(false);
+  // Dal tavolato, scende la scaletta e poi cammina fino al punto sulla spiaggia
+  captainPath = [w.stairTop, w.stairBottom, w.beach];
+  captainState = 'walkingOut';
+  captainReturnStartedThisVisit = false; // nuova visita: il rientro potrà scattare di nuovo, una volta sola
+}
+
+function captainStartReturn() {
+  if (captainState !== 'sitting' || !captainWaypoints) return;
+  captainStool.visible = false;
+  captainSetPose(false);
+  const w = captainWaypoints;
+  // Dalla spiaggia, torna alla base della scaletta, la risale e raggiunge
+  // il tavolato dove sale a bordo
+  captainPath = [w.stairBottom, w.stairTop, w.board];
+  captainState = 'walkingBack';
+}
+
+function updateCaptainMovement(dt) {
+  if (captainState !== 'walkingOut' && captainState !== 'walkingBack') return;
+  if (captainPath.length === 0) return;
+  const target = captainPath[0];
+  const dx = target.x - captainMesh.position.x;
+  const dz = target.z - captainMesh.position.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist < 0.2) {
+    captainMesh.position.x = target.x;
+    captainMesh.position.z = target.z;
+    captainPath.shift();
+    if (captainPath.length > 0) return; // ancora tappe da fare, prosegue al prossimo frame verso la successiva
+    if (captainState === 'walkingOut') {
+      captainState = 'sitting';
+      captainSetPose(true);
+      captainStool.position.set(target.x, terrainHeightAt(target.x, target.z), target.z);
+      captainStool.rotation.y = captainMesh.rotation.y;
+      captainStool.visible = true;
+    } else {
+      captainState = 'hidden';
+      captainMesh.visible = false;
+    }
+    return;
+  }
+  const yaw = Math.atan2(dx, dz);
+  captainMesh.rotation.y = yaw;
+  captainMesh.position.x += Math.sin(yaw) * CAPTAIN_WALK_SPEED * dt;
+  captainMesh.position.z += Math.cos(yaw) * CAPTAIN_WALK_SPEED * dt;
+  captainMesh.position.y = pierHeightAt(captainMesh.position.x, captainMesh.position.z);
+
+  // Le gambe oscillano avanti/indietro (una in fase opposta all'altra)
+  // finché è davvero in cammino, per simulare il passo.
+  captainWalkPhase += dt * CAPTAIN_WALK_CYCLE_SPEED;
+  const swing = Math.sin(captainWalkPhase) * CAPTAIN_LEG_SWING_AMPLITUDE;
+  captainMesh.userData.legL.rotation.x = swing;
+  captainMesh.userData.legR.rotation.x = -swing;
+}
+
+// Fumo della pipa: qualche piccola sfera semi-trasparente che sale e si
+// dilata lentamente, generata di tanto in tanto solo mentre è seduto.
+let captainSmokeTimer = 0;
+let activeCaptainSmoke = [];
+
+function updateCaptainSmoke(dt) {
+  if (captainState === 'sitting') {
+    captainSmokeTimer -= dt;
+    if (captainSmokeTimer <= 0) {
+      captainSmokeTimer = 1.4 + Math.random() * 1.0;
+      const tip = new THREE.Vector3();
+      captainMesh.userData.pipeBowl.getWorldPosition(tip);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xdcdcd4, transparent: true, opacity: 0.5 });
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), mat);
+      puff.position.copy(tip);
+      scene.add(puff);
+      activeCaptainSmoke.push({ mesh: puff, life: 0, duration: 2.2, driftX: (Math.random() - 0.5) * 0.15 });
+    }
+  }
+  for (let i = activeCaptainSmoke.length - 1; i >= 0; i--) {
+    const s = activeCaptainSmoke[i];
+    s.life += dt;
+    const t = s.life / s.duration;
+    if (t >= 1) {
+      scene.remove(s.mesh);
+      s.mesh.material.dispose();
+      activeCaptainSmoke.splice(i, 1);
+      continue;
+    }
+    s.mesh.position.y += dt * 0.35;
+    s.mesh.position.x += s.driftX * dt;
+    s.mesh.scale.setScalar(1 + t * 2.5);
+    s.mesh.material.opacity = 0.5 * (1 - t);
+  }
+}
+
+// Orari legati esattamente a quelli del traghetto (arriva alle 14, riparte
+// a ferryDepartureHour() — 17:00 solo nella primissima Primavera, 18:00 da
+// lì in poi): scende poco dopo l'arrivo, si rimette in cammino verso il
+// molo un quarto d'ora prima della partenza (16:45 o 17:45 a seconda dei
+// casi), per fare sicuramente in tempo. "captainLastDisembarkDay" e
+// "captainReturnStartedThisVisit" garantiscono che sbarco e rientro
+// scattino una volta sola a visita, anche se questa funzione viene
+// richiamata più volte mentre la condizione oraria resta vera.
+function updateCaptainSchedule() {
+  const hour = clock.hour;
+  const minute = clock.minuteOfHour;
+  const day = clock.dayIndex;
+  if (ferryPresent && captainState === 'hidden' && hour >= 14 && captainLastDisembarkDay !== day) {
+    captainLastDisembarkDay = day;
+    captainStartDisembark();
+  }
+  const returnHour = ferryDepartureHour() - 1; // un quarto d'ora prima della partenza vera
+  const pastReturnTime = hour > returnHour || (hour === returnHour && minute >= 45);
+  if (captainState === 'sitting' && pastReturnTime && !captainReturnStartedThisVisit) {
+    captainReturnStartedThisVisit = true;
+    captainStartReturn();
+  }
+  if (!ferryPresent && (captainState === 'sitting' || captainState === 'walkingOut')) {
+    // Il traghetto è ripartito senza che il Capitano abbia fatto in tempo
+    // (es. dopo un salto di orario da debug): lo rimettiamo comunque a
+    // bordo, invisibile, invece di lasciarlo bloccato sulla spiaggia.
+    captainState = 'hidden';
+    captainMesh.visible = false;
+    captainStool.visible = false;
+  }
+}
+
+function updateCaptain(dt) {
+  updateCaptainSchedule();
+  updateCaptainMovement(dt);
+  updateCaptainSmoke(dt);
+}
+
+let captainGreetingIsFirst = false;
+function talkToCaptain() {
+  captainGreetingIsFirst = !captainMetBefore;
+  captainMetBefore = true;
+  openCaptainDialogue();
+}
+
+/* =========================================================================
+   DIALOGO DEL CAPITANO: albero a direzioni/step. Ogni direzione (A-E) ha i
+   propri step in ordine; "maxUnlocked" è quanto in profondità si può
+   arrivare con [Avanti] in quella direzione, "lastViewed" è lo step
+   effettivamente mostrato l'ultima volta (il segnalibro). Sbloccare "lo
+   step N di una direzione" significa portare maxUnlocked almeno a N: gli
+   step intermedi eventualmente non ancora visti restano comunque
+   raggiungibili in ordine con [Avanti], non vengono saltati.
+   ========================================================================= */
+const DIALOGUE_DIRECTIONS = {
+  A: {
+    title: 'La vita del Capitano',
+    steps: [
+      { q: "È la prima volta che vieni su quest'isola?", a: "No, ci ero già stato da giovane. All'epoca qui viveva un uomo chiamato Robinson.", unlocks: [['A', 2], ['B', 1]] },
+      { q: 'Che fine ha fatto questo Robinson?', a: "Alla fine si è costruito una barca e ha abbandonato l'isola, lasciando tutto quello che aveva in una buca segreta, pensando di tornare. Ma non è mai tornato.", unlocks: [['A', 3], ['B', 5]] },
+      { q: 'Hai mai pensato di venire a vivere su questa splendida isola?', a: 'Il mio lavoro mi porta a vivere sul mare.', unlocks: [['A', 4]] },
+      { q: 'Vuoi raccontarmi qualcosa della tua vita?', a: "Ho conosciuto l'amore per il mare da piccolo: mio papà mi portava sempre cartoline con disegnato il mare.", unlocks: [] },
+      { q: 'Che lavoro faceva tuo papà?', a: 'Faceva il postino, proprio come faccio io adesso con il mio traghetto postale.', unlocks: [] },
+    ],
+  },
+  B: {
+    title: 'Robinson Crusoe?',
+    steps: [
+      { q: 'Chi è questo Robinson? Di cognome faceva Crusoe?', a: '(ridendo) No, non si chiamava Crusoe. Si chiamava Defoe.', unlocks: [['B', 2]] },
+      { q: "Mi sento un po' confuso...", a: 'Forse leggi troppo, o hai troppa immaginazione.', unlocks: [['B', 3]] },
+      { q: "Per quanto tempo ha vissuto su quest'isola?", a: 'Probabilmente almeno 4 anni.', unlocks: [['B', 4]] },
+      { q: "Stare tanto tempo su un'isola fa perdere la testa?", a: 'Stare sempre nello stesso posto fa sempre perdere un po\u2019 la testa.', unlocks: [] },
+      { q: 'Sai dove è stato nascosto il tesoro?', a: '(ridendo) Non ne ho la minima idea.', unlocks: [['C', 1], ['B', 6]] },
+      { q: 'Pensi che Robinson sia tornato dalla sua famiglia?', a: "Molto probabilmente sì, ma senza farsi vedere. Dev'essere ripartito subito.", unlocks: [['B', 7], ['D', 1]] },
+      { q: 'Sai se la sua famiglia lo ha cercato in tutto questo tempo?', a: 'Il padre di Robinson ha chiesto a tutti, per mesi e mesi, se avevano visto suo figlio. Anche a mio padre.', unlocks: [['B', 8], ['A', 5]] },
+      { q: 'Spero che il padre si sia fatto una ragione...', a: "Il padre forse sì, ma la madre è impazzita di dolore ed è morta poco tempo dopo.", unlocks: [['B', 9]] },
+      { q: 'Vedi ancora il padre di Robinson?', a: 'Sì, ogni tanto lo vedo al cimitero. Piange perché non ha fiori da portare sulla tomba della moglie.', unlocks: [['B', 10]] },
+      { q: 'Posso regalargli ogni tanto dei fiori da portare al padre, così che possa metterli sulla tomba della moglie?', a: 'Sono onorato di aiutarti con questo nobile gesto.', unlocks: [['E', 1]] },
+    ],
+  },
+  C: {
+    title: 'Il tesoro',
+    steps: [
+      { q: 'Hai un metal detector?', a: 'No, non ce l\u2019ho.', unlocks: [] },
+    ],
+  },
+  D: {
+    title: 'Nessuno lo ha visto',
+    steps: [
+      { q: 'Per davvero nessuno lo ha mai visto?', a: 'Mio padre è convinto di averlo visto controllare la sua buca delle lettere, prima di sparire definitivamente.', unlocks: [['A', 5]] },
+    ],
+  },
+  E: {
+    title: 'Il padre di Robinson',
+    steps: [
+      { special: true, unlocks: [] },                    // 1: consegna fiori (condizionale)
+      { special: true, unlocks: [['E', 3]] },             // 2: lettera di ringraziamento
+      { special: true, unlocks: [] },                     // 3: chiede carta e penna
+      { special: true, unlocks: [['E', 5]] },             // 4: riceve carta e penna
+      { special: true, unlocks: [] },                     // 5: consegna lettera scritta (condizionale)
+      { q: 'Hai una lettera del padre di Robinson?', a: 'Sì.', unlocks: [] }, // 6
+    ],
+  },
+};
+
+const dialogueState = {
+  A: { unlocked: true, maxUnlocked: 1, lastViewed: 0 },
+  B: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
+  C: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
+  D: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
+  E: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
+};
+
+// Stato dei fatti/oggetti legati alla trama del padre di Robinson (Direzione E)
+let robinsonFlowersDelivered = false;   // step E1 completato (fiori consegnati)
+let hasThankYouLetter = false;          // step E2 completato (lettera di ringraziamento ricevuta)
+let paperPenPromised = false;           // step E3 completato (carta e penna richieste)
+let letterSuppliesUnlocked = false;     // step E4 completato: sblocca carta/penna al traghetto
+let pennaUsesRemaining = 0;             // usi rimasti della penna (0-10)
+let hasWrittenLetterForRobinsonsFather = false; // meccanica futura (scrittura lettera in casa): per ora sempre false
+let robinsonLetterDelivered = false;    // step E5 completato (lettera del giocatore consegnata)
+// Sblocchi che scattano solo al PROSSIMO attracco del traghetto (non subito)
+let pendingDialogueUnlocks = [];
+
+function unlockDialogueStep(dirKey, stepIdx) {
+  const st = dialogueState[dirKey];
+  if (!st) return;
+  st.unlocked = true;
+  st.maxUnlocked = Math.max(st.maxUnlocked, stepIdx);
+}
+
+function processPendingDialogueUnlocks() {
+  if (pendingDialogueUnlocks.length === 0) return;
+  for (const [dir, step] of pendingDialogueUnlocks) unlockDialogueStep(dir, step);
+  pendingDialogueUnlocks = [];
+  showToast('✉️ Il Capitano ha qualcosa di nuovo da raccontarti');
+}
+
+// Alcuni step (nella Direzione E) hanno testo ed effetti che dipendono da
+// oggetti/stato del gioco invece che essere fissi: qui si applicano gli
+// EFFETTI (consumo oggetti, sblocchi), pensata per essere richiamata una
+// volta ogni volta che si arriva su quello step (idempotente: i flag
+// impediscono che si ripeta l'effetto rientrando più volte sullo stesso step).
+function applyDialogueStepSideEffects(dirKey, stepIdx) {
+  if (dirKey !== 'E') return;
+  if (stepIdx === 1 && !robinsonFlowersDelivered) {
+    if ((inventory.fiori || 0) >= 5) {
+      inventory.fiori -= 5;
+      robinsonFlowersDelivered = true;
+      pendingDialogueUnlocks.push(['E', 2]);
+      refreshInventoryHud();
+    }
+  } else if (stepIdx === 2 && !hasThankYouLetter) {
+    hasThankYouLetter = true;
+    unlockDialogueStep('E', 3);
+  } else if (stepIdx === 3 && !paperPenPromised) {
+    paperPenPromised = true;
+    pendingDialogueUnlocks.push(['E', 4]);
+  } else if (stepIdx === 4 && !letterSuppliesUnlocked) {
+    inventory.cartaDaLettera = (inventory.cartaDaLettera || 0) + 3;
+    inventory.penna = (inventory.penna || 0) + 1;
+    pennaUsesRemaining = 10;
+    letterSuppliesUnlocked = true;
+    unlockDialogueStep('E', 5);
+    refreshInventoryHud();
+  } else if (stepIdx === 5 && !robinsonLetterDelivered) {
+    if (hasWrittenLetterForRobinsonsFather) {
+      robinsonLetterDelivered = true;
+      pendingDialogueUnlocks.push(['E', 6]);
+    }
+  }
+}
+
+// Testo effettivo da mostrare per lo step corrente: per gli step "normali"
+// (data-driven) è semplicemente quello scritto in DIALOGUE_DIRECTIONS; per
+// quelli speciali della Direzione E dipende dallo stato/oggetti attuali.
+function getDialogueDisplayContent(dirKey, stepIdx) {
+  const stepDef = DIALOGUE_DIRECTIONS[dirKey].steps[stepIdx - 1];
+  if (!stepDef.special) return { q: stepDef.q, a: stepDef.a };
+  if (dirKey === 'E' && stepIdx === 1) {
+    return robinsonFlowersDelivered
+      ? { q: 'Ecco 5 fiori per il padre di Robinson.', a: 'Grazie di cuore. Glieli porterò al più presto.' }
+      : { q: 'Vorrei darti dei fiori da portare al padre di Robinson...', a: 'Non li hai ancora pronti? Nessun problema, posso aspettare.' };
+  }
+  if (dirKey === 'E' && stepIdx === 2) {
+    return { q: 'Come sta il padre di Robinson?', a: 'Eccoti una lettera di ringraziamento da parte sua, per i fiori.' };
+  }
+  if (dirKey === 'E' && stepIdx === 3) {
+    return { q: 'Posso avere carta e penna per rispondere alla lettera del padre di Robinson?', a: 'La prossima volta che torno sull\u2019isola te li porto.' };
+  }
+  if (dirKey === 'E' && stepIdx === 4) {
+    return { q: 'Ti sei ricordato di carta e penna?', a: 'Certo! Eccoti 3 fogli di carta da lettera e una penna.' };
+  }
+  if (dirKey === 'E' && stepIdx === 5) {
+    return robinsonLetterDelivered
+      ? { q: 'Ecco la lettera che ho scritto per il padre di Robinson.', a: 'La consegnerò di persona, te lo prometto.' }
+      : { q: 'Vorrei darti la lettera che ho scritto per il padre di Robinson...', a: 'Non l\u2019hai ancora scritta? Nessun problema, posso aspettare.' };
+  }
+  return { q: '...', a: '...' };
+}
+
+let captainDialogueOpen = false;
+let captainDialogueCurrentDir = null; // null = lista direzioni, altrimenti 'A'..'E'
+
+function goToDialogueStep(dirKey, stepIdx) {
+  dialogueState[dirKey].lastViewed = stepIdx;
+  applyDialogueStepSideEffects(dirKey, stepIdx);
+  const stepDef = DIALOGUE_DIRECTIONS[dirKey].steps[stepIdx - 1];
+  if (!stepDef.special) {
+    for (const [d, s] of stepDef.unlocks) unlockDialogueStep(d, s);
+  } else if (dirKey === 'E' && (stepIdx === 2 || stepIdx === 4)) {
+    for (const [d, s] of stepDef.unlocks) unlockDialogueStep(d, s);
+  }
+  maybeLogDialogueStepToDiary(dirKey, stepIdx);
+  captainDialogueCurrentDir = dirKey;
+  renderCaptainDialogue();
+}
+
+function renderCaptainDialogue() {
+  if (captainDialogueCurrentDir) renderCaptainDialogueStep();
+  else renderCaptainDialogueDirections();
+}
+
+function renderCaptainDialogueDirections() {
+  document.getElementById('captain-dialogue-directions').style.display = 'block';
+  document.getElementById('captain-dialogue-step').style.display = 'none';
+  document.getElementById('captain-dialogue-greeting').textContent = captainGreetingIsFirst
+    ? 'Il Capitano ti saluta con un cenno cortese. "Era da tanto tempo che non sentivo che qualcuno avesse deciso di raggiungere quest\u2019isola" dice, con un sorriso nascosto tra i baffi.'
+    : 'Il Capitano ti saluta con un cenno cortese.';
+  const container = document.getElementById('captain-dialogue-directions');
+  container.innerHTML = '';
+  const buttons = [];
+  for (const key of Object.keys(DIALOGUE_DIRECTIONS)) {
+    if (!dialogueState[key].unlocked) continue;
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    // Titolo in grassetto finché c'è almeno uno step sbloccato non ancora
+    // letto (maxUnlocked più avanti di lastViewed): torna normale appena
+    // il giocatore raggiunge quello step con [Avanti].
+    const hasUnread = dialogueState[key].maxUnlocked > dialogueState[key].lastViewed;
+    const titleHtml = hasUnread ? `<strong>${DIALOGUE_DIRECTIONS[key].title}</strong>` : DIALOGUE_DIRECTIONS[key].title;
+    row.innerHTML = `<div class="recipe-info">${titleHtml}</div><button class="recipe-btn">apri</button>`;
+    const btn = row.querySelector('.recipe-btn');
+    btn.addEventListener('click', () => {
+      if (dialogueState[key].lastViewed === 0) dialogueState[key].lastViewed = 1;
+      goToDialogueStep(key, dialogueState[key].lastViewed);
+    });
+    container.appendChild(row);
+    buttons.push(btn);
+  }
+  if (buttons.length === 0) {
+    container.innerHTML = '<div class="recipe-row"><div class="recipe-info">Per ora non ha altro da raccontarti.</div></div>';
+  }
+  setMenuButtons([...buttons, document.getElementById('captain-dialogue-close')]);
+}
+
+function renderCaptainDialogueStep() {
+  document.getElementById('captain-dialogue-directions').style.display = 'none';
+  document.getElementById('captain-dialogue-step').style.display = 'block';
+  const dirKey = captainDialogueCurrentDir;
+  const st = dialogueState[dirKey];
+  const stepIdx = st.lastViewed;
+  const content = getDialogueDisplayContent(dirKey, stepIdx);
+  document.getElementById('captain-dialogue-question').textContent = `Tu: "${content.q}"`;
+  document.getElementById('captain-dialogue-answer').textContent = `Capitano: "${content.a}"`;
+
+  const nextBtn = document.getElementById('captain-dialogue-next');
+  const canAdvance = stepIdx < DIALOGUE_DIRECTIONS[dirKey].steps.length && (stepIdx + 1) <= st.maxUnlocked;
+  nextBtn.style.display = canAdvance ? '' : 'none';
+  nextBtn.onclick = canAdvance ? () => goToDialogueStep(dirKey, stepIdx + 1) : null;
+
+  const backBtn = document.getElementById('captain-dialogue-back');
+  backBtn.onclick = () => {
+    captainDialogueCurrentDir = null;
+    renderCaptainDialogue();
+  };
+
+  const buttons = [backBtn];
+  if (canAdvance) buttons.push(nextBtn);
+  setMenuButtons([...buttons, document.getElementById('captain-dialogue-close')]);
+}
+
+function openCaptainDialogue() {
+  captainDialogueOpen = true;
+  captainDialogueCurrentDir = null;
+  document.getElementById('captain-dialogue-overlay').classList.add('open');
+  renderCaptainDialogue();
+}
+function closeCaptainDialogue() {
+  captainDialogueOpen = false;
+  document.getElementById('captain-dialogue-overlay').classList.remove('open');
+}
+document.getElementById('captain-dialogue-close').addEventListener('click', closeCaptainDialogue);
+document.getElementById('captain-dialogue-close').addEventListener('touchstart', e => { e.preventDefault(); closeCaptainDialogue(); }, { passive: false });
+document.getElementById('captain-dialogue-back').addEventListener('touchstart', e => { e.preventDefault(); if (document.getElementById('captain-dialogue-back').onclick) document.getElementById('captain-dialogue-back').onclick(); }, { passive: false });
+document.getElementById('captain-dialogue-next').addEventListener('touchstart', e => { e.preventDefault(); if (document.getElementById('captain-dialogue-next').onclick) document.getElementById('captain-dialogue-next').onclick(); }, { passive: false });
+
 // Punto fisso di attracco: le coordinate di riferimento sono state rilevate
 // in gioco da Salvo (giocatore fermo sull'Isola di sabbia, vicino a un
 // punto pesca). Da lì si marcia verso il mare aperto (allontanandosi dal
@@ -5241,10 +6005,12 @@ let ferryOfferCake = null;     // quale torta casuale offre oggi in acquisto
 // esattamente il punto in cui la sabbia incontra l'acqua in quella zona.
 const FERRY_DOCK_REF = { x: 225.82, z: 123.00 };
 // Quanto scafo e molo vengono spinti al largo rispetto al bordo esatto
-// sabbia/acqua, lungo la normale alla riva. Alzato da 4 a 7 perché con 4 lo
-// scafo restava ancora visibilmente a metà sulla sabbia: la riva in quel
-// punto non è un bordo netto, quindi serve più margine di sicurezza.
-const FERRY_HULL_OFFSET = 7.0;
+// sabbia/acqua, lungo la normale alla riva. Era stato alzato da 4 a 7
+// perché con 4 lo scafo restava visibilmente a metà sulla sabbia; 7 però
+// si è rivelato eccessivo (troppo distacco visibile tra molo e nave) — 5.5
+// è un compromesso ragionevole, ma è un valore stimato: se in gioco risulta
+// ancora troppo vicino o troppo lontano, va rifinito ulteriormente.
+const FERRY_HULL_OFFSET = 5.5;
 function findFixedFerrySpot() {
   const dx0 = FERRY_DOCK_REF.x - ISLAND.cala.cx;
   const dz0 = FERRY_DOCK_REF.z - ISLAND.cala.cz;
@@ -5298,6 +6064,7 @@ function arriveFerry() {
   ferryOfferCake = CAKE_TYPES[Math.floor(Math.random() * CAKE_TYPES.length)];
   sfxFerrySiren();
   showToast('⛴️ Il traghetto postale è attraccato!');
+  processPendingDialogueUnlocks();
 }
 
 function departFerry() {
@@ -5313,8 +6080,20 @@ function departFerry() {
 function updateFerry() {
   const hour = clock.hour;
   const day = clock.dayIndex;
+  // Il controllo sulla spiaggia pulita viene fatto con un'ora di anticipo
+  // rispetto all'attracco (13:00 invece che esattamente alle 14:00): la
+  // decisione se attraccare o no è presa "prima di avvicinarsi", non
+  // all'ultimo istante.
+  if (hour === 13 && ferryDockCheckDay !== day) {
+    ferryDockCheckDay = day;
+    ferryWillDockToday = countTrash() <= 3;
+  }
   if (hour === 14 && ferryLastArrivalDay !== day) {
-    if (countTrash() <= 3) {
+    // Ripiego: se per qualche motivo il controllo delle 13:00 non fosse mai
+    // scattato oggi (es. dopo un salto di orario da debug), si valuta la
+    // pulizia della spiaggia comunque, adesso.
+    const willDock = ferryDockCheckDay === day ? ferryWillDockToday : countTrash() <= 3;
+    if (willDock) {
       ferryLastArrivalDay = day;
       arriveFerry();
     }
@@ -5323,7 +6102,7 @@ function updateFerry() {
     // i 3 pezzi entro la stessa ora)
   }
   if (hour === 14) checkGradimento1400(); // stessa "istantanea" oraria del traghetto
-  if (ferryPresent && hour >= 17) {
+  if (ferryPresent && hour >= ferryDepartureHour()) {
     departFerry();
   }
 }
@@ -7735,6 +8514,7 @@ const WRECK_LOOT_POOL = [
   { key: 'strisceMetallo', amount: 1, label: 'Striscia di metallo' },
   { key: 'strisceMetallo', amount: 1, label: 'Striscia di metallo' },
   { key: 'cordaFibra', amount: 5, label: 'Corda di fibra vegetale' },
+  { key: 'cordaFibra', amount: 5, label: 'Corda di fibra vegetale' },
   { key: 'resina', amount: 1, label: 'Resina trasparente' },
   { key: 'frigoriferoRelitto', amount: 1, label: 'Vecchio frigorifero' },
   { key: 'coperta', amount: 1, label: 'Coperta' },
@@ -9841,6 +10621,7 @@ function blockedByObstacles(x, z) {
     if ((it.type === 'woodTree' || it.type === 'rock') && it.obj.userData.felled) continue;
     if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < radius) return true;
   }
+  if (insideAnyBeachBench(x, z)) return true;
   return false;
 }
 
@@ -10072,7 +10853,7 @@ function updateMenuGamepadNav(dt) {
   const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
   const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen || tutorialOverlayOpen || diaryOpen ||
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen || tutorialOverlayOpen || diaryOpen || captainDialogueOpen ||
     mainMenuOverlay.classList.contains('open') || optionsOverlay.classList.contains('open') ||
     newGameConfirmOverlay.classList.contains('open') || returnMenuConfirmOverlay.classList.contains('open');
   if (!anyMenuOpen || !pad) {
@@ -10117,6 +10898,10 @@ function updateMenuGamepadNav(dt) {
     if (messageOverlayOpen) closeMessageOverlay();
     if (inventoryMenuOpen) closeInventoryMenu();
     if (diaryOpen) closeDiary();
+    if (captainDialogueOpen) {
+      if (captainDialogueCurrentDir) { captainDialogueCurrentDir = null; renderCaptainDialogue(); }
+      else closeCaptainDialogue();
+    }
   }
   prevPadConfirm = confirmNow;
   prevPadCancel = cancelNow;
@@ -10392,6 +11177,436 @@ const FERRY_SELL_BUNDLES = [
   { key: 'conchiglia', amount: 1, payout: 10, label: 'Conchiglia' },
 ];
 
+/* =========================================================================
+   PANCHINE DA SPIAGGIA A NOLEGGIO: acquistabili una tantum al traghetto,
+   compaiono da sole su un tratto di spiaggia libero qualche metro a
+   sinistra e a destra del molo (non attaccate ad esso). Il noleggio dura
+   10 giorni di gioco, pagati subito; scaduti i 10 giorni spariscono da
+   sole. Finché sono attive, l'opzione di noleggio sparisce dal menu del
+   traghetto (non si può noleggiarne un altro paio sopra alle esistenti).
+   ========================================================================= */
+let beachBenchesRentUntilDay = -1; // -1 = non noleggiate
+let beachBenchesRentSeasonIdx = -1; // stagione in cui è iniziato l'ultimo periodo di noleggio
+let beachBenchMeshes = [];
+const BEACH_BENCH_RENT_COST = 10;
+const BEACH_BENCH_RENT_DAYS = 10;
+const BEACH_BENCH_CANCEL_REFUND = 2;
+
+// Panchina lunga, per farci sedere almeno 3 personaggi grandi come il
+// giocatore (torso ~1.2 unità di larghezza ciascuno): seduta di 4.4 unità,
+// con schienale e 6 gambe (3 coppie) a reggerla lungo tutta la lunghezza.
+function makeBeachBench(x, z, yaw) {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a5b29, roughness: 0.7 });
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.6 });
+
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.16, 0.85), woodMat);
+  seat.position.y = 0.58;
+  seat.castShadow = true;
+  seat.receiveShadow = true;
+  group.add(seat);
+
+  // Doghe in rilievo sulla seduta, per non farla sembrare un blocco unico
+  for (let lx = -1.8; lx <= 1.8; lx += 0.55) {
+    const gap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.85), legMat);
+    gap.position.set(lx, 0.58 + 0.09, 0);
+    group.add(gap);
+  }
+
+  const backrest = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.85, 0.12), woodMat);
+  backrest.position.set(0, 1.05, -0.36);
+  backrest.rotation.x = -0.12;
+  backrest.castShadow = true;
+  group.add(backrest);
+
+  // 3 coppie di gambe robuste lungo tutta la lunghezza
+  [-1.75, 0, 1.75].forEach(lx => {
+    [-0.32, 0.32].forEach(lz => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.58, 0.14), legMat);
+      leg.position.set(lx, 0.29, lz);
+      leg.castShadow = true;
+      group.add(leg);
+    });
+  });
+
+  const support = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.1, 0.12), legMat);
+  support.position.set(0, 0.38, -0.24);
+  group.add(support);
+
+  const terrainY = typeof terrainHeightAt === 'function' ? terrainHeightAt(x, z) : 0;
+  group.position.set(x, terrainY, z);
+  group.rotation.y = yaw;
+  scene.add(group);
+  return group;
+}
+
+// side: -1 = a sinistra del molo, +1 = a destra (perpendicolare alla
+// normale riva/mare già usata per il molo stesso e per il Capitano).
+// Prova diverse combinazioni di distanza laterale e leggero arretramento
+// verso l'interno, così anche se il lato "puro" perpendicolare finisce
+// subito in acqua da un lato, trova comunque un punto valido su entrambi.
+function findBenchSpot(side) {
+  const spot = findFixedFerrySpot();
+  if (!spot) return null;
+  const perpX = -spot.uz, perpZ = spot.ux;
+  const candidates = [
+    [14, 3], [16, 4], [18, 5], [12, 2], [20, 6], [14, 6], [16, 8], [10, 2], [22, 7], [12, 8],
+  ];
+  for (const [lat, inland] of candidates) {
+    const x = spot.x + perpX * lat * side - spot.ux * inland;
+    const z = spot.z + perpZ * lat * side - spot.uz * inland;
+    if (!isWalkable(x, z)) continue;
+    const { lx, lz } = bridgeLocalCoords(x, z);
+    if (Math.abs(lx) <= ISLAND.bridge.halfWidth + 1.5 && Math.abs(lz) <= ISLAND.bridge.halfLength + 1.5) continue;
+    if (Math.hypot(x - TENT_POS.x, z - TENT_POS.z) < 6) continue;
+    if (isSpotBuiltOver(x, z)) continue;
+    let tooClose = false;
+    for (const it of interactables) {
+      if (it.type === 'placedItem') continue;
+      const radius = TRASH_AVOID_RADIUS[it.type];
+      if (radius === undefined) continue;
+      if (Math.hypot(x - it.obj.position.x, z - it.obj.position.z) < radius) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
+    return { x, z };
+  }
+  return null;
+}
+
+function removeBeachBenches() {
+  for (const m of beachBenchMeshes) scene.remove(m);
+  beachBenchMeshes = [];
+  // Se il noleggio finisce mentre qualcuno è ancora in spiaggia/in
+  // cammino, non ha più senso farli restare (le panchine sono sparite):
+  // torna tutti a bordo puliti.
+  if (typeof removeAllBeachVisitors === 'function') removeAllBeachVisitors();
+}
+
+function placeBeachBenches() {
+  removeBeachBenches();
+  const spot = findFixedFerrySpot();
+  if (!spot) return;
+  [-1, 1].forEach(side => {
+    const s = findBenchSpot(side);
+    if (!s) return;
+    // Rivolta verso il mare (stessa direzione normale riva→mare usata per
+    // il molo), non verso il molo: chi si siede guarda l'acqua.
+    const yaw = Math.atan2(spot.ux, spot.uz);
+    beachBenchMeshes.push(makeBeachBench(s.x, s.z, yaw));
+  });
+}
+
+function rentBeachBenches() {
+  placeBeachBenches();
+  beachBenchesRentUntilDay = clock.dayIndex + BEACH_BENCH_RENT_DAYS;
+  beachBenchesRentSeasonIdx = clock.seasonIndex;
+  showToast(`🏖️ Panchine da spiaggia noleggiate per ${BEACH_BENCH_RENT_DAYS} giorni!`);
+}
+
+function cancelBeachBenchRental() {
+  if (beachBenchesRentUntilDay < 0) return;
+  removeBeachBenches();
+  beachBenchesRentUntilDay = -1;
+  beachBenchesRentSeasonIdx = -1;
+  inventory.moneta += BEACH_BENCH_CANCEL_REFUND;
+  sfxSell();
+  showToast(`🏖️ Noleggio panchine annullato: rimborsate ${BEACH_BENCH_CANCEL_REFUND} 🪙`);
+  refreshInventoryHud();
+}
+
+// Il rinnovo è TACITO: allo scadere dei 10 giorni si rinnova da solo per
+// altri 10, pagando di nuovo il costo del noleggio — a meno che sia
+// cambiata la stagione rispetto a quando è iniziato l'ultimo periodo, o il
+// giocatore non abbia abbastanza monete: in quel caso il noleggio termina
+// e le panchine spariscono (senza alcun rimborso, a differenza
+// dell'annullamento volontario).
+clock.on('day', () => {
+  if (beachBenchesRentUntilDay >= 0 && clock.dayIndex >= beachBenchesRentUntilDay) {
+    const seasonChanged = clock.seasonIndex !== beachBenchesRentSeasonIdx;
+    const canAfford = inventory.moneta >= BEACH_BENCH_RENT_COST;
+    if (!seasonChanged && canAfford) {
+      inventory.moneta -= BEACH_BENCH_RENT_COST;
+      beachBenchesRentUntilDay = clock.dayIndex + BEACH_BENCH_RENT_DAYS;
+      showToast(`🏖️ Noleggio delle panchine rinnovato per altri ${BEACH_BENCH_RENT_DAYS} giorni (-${BEACH_BENCH_RENT_COST} 🪙)`);
+      refreshInventoryHud();
+    } else {
+      removeBeachBenches();
+      beachBenchesRentUntilDay = -1;
+      beachBenchesRentSeasonIdx = -1;
+      showToast(seasonChanged
+        ? '🏖️ Il noleggio delle panchine è scaduto: è cambiata la stagione'
+        : '🏖️ Il noleggio delle panchine è scaduto: fondi insufficienti per il rinnovo');
+    }
+  }
+});
+
+// Ostacolo fisico: un rettangolo orientato (non un semplice cerchio, data
+// la lunghezza) attorno a ciascuna panchina noleggiata, così il giocatore
+// non può attraversarle camminando.
+const BEACH_BENCH_HALF_LENGTH = 2.3;
+const BEACH_BENCH_HALF_DEPTH = 0.55;
+function insideAnyBeachBench(x, z) {
+  for (const mesh of beachBenchMeshes) {
+    const dx = x - mesh.position.x, dz = z - mesh.position.z;
+    const cos = Math.cos(mesh.rotation.y), sin = Math.sin(mesh.rotation.y);
+    const lx = dx * cos - dz * sin;
+    const lz = dx * sin + dz * cos;
+    if (Math.abs(lx) <= BEACH_BENCH_HALF_LENGTH && Math.abs(lz) <= BEACH_BENCH_HALF_DEPTH) return true;
+  }
+  return false;
+}
+
+/* =========================================================================
+   VISITATORI DELLA SPIAGGIA: se ci sono entrambe le panchine noleggiate e
+   non piove, dopo che il Capitano si è seduto possono scendere dal
+   traghetto — uno alla volta, come lui — da 1 a 2 turisti casuali (aspetto
+   maschile o femminile), per sedersi sulle panchine a guardare il mare.
+   Se ne vanno 45 minuti di gioco prima della partenza del traghetto,
+   ripercorrendo lo stesso tragitto al contrario. Riusa lo stesso sistema
+   di tappe (tavolato→scale→spiaggia) già calcolato per il Capitano
+   (captainWaypoints), quindi cammina esattamente sopra gli scalini veri.
+   ========================================================================= */
+const NPC_WALK_SPEED = 1.5;
+
+function makeBeachVisitorMesh(gender) {
+  const group = new THREE.Group();
+  const isFemale = gender === 'female';
+  const skinTones = [0xd8a878, 0xc68a5e, 0xecc19c, 0x8d5a3c];
+  const skinMat = new THREE.MeshStandardMaterial({ color: skinTones[Math.floor(Math.random() * skinTones.length)], roughness: 0.85 });
+  const shirtColors = isFemale ? [0xe0507a, 0xf2a65a, 0x5aa0d8, 0x8a5ac2] : [0x3d7a4a, 0x2f5a8a, 0xc25a3d, 0x6b6b6b];
+  const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColors[Math.floor(Math.random() * shirtColors.length)], roughness: 0.7 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: isFemale ? 0xf0e6d8 : 0x3a3f4a, roughness: 0.75 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf2f2f0, roughness: 0.5 });
+  const hairColors = [0x2b1c12, 0x1a1a1a, 0x6b4326, 0xb89060];
+  const hairMat = new THREE.MeshStandardMaterial({ color: hairColors[Math.floor(Math.random() * hairColors.length)], roughness: 0.9 });
+
+  const HIP_Y = 0.82; // stessa altezza bacino del player/Capitano
+  const SIT_HIP_Y = 0.58; // altezza seduta della panchina
+  const SIT_DROP = HIP_Y - SIT_HIP_Y;
+  const legMat = isFemale ? skinMat : pantsMat; // gambe nude (gonna/vestito) o pantaloni
+
+  const standingLegs = new THREE.Group();
+  const legPivots = {};
+  [-0.18, 0.18].forEach(lx => {
+    const legPivot = new THREE.Group();
+    legPivot.position.set(lx, HIP_Y, 0);
+    standingLegs.add(legPivot);
+    legPivots[lx < 0 ? 'left' : 'right'] = legPivot;
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.44), shoeMat);
+    shoe.position.set(0, 0.08 - HIP_Y, 0.04);
+    shoe.castShadow = true;
+    legPivot.add(shoe);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.5, 0.32), legMat);
+    leg.position.set(0, 0.5 - HIP_Y, 0);
+    leg.castShadow = true;
+    legPivot.add(leg);
+  });
+  group.add(standingLegs);
+
+  const sittingLegs = new THREE.Group();
+  [-0.18, 0.18].forEach(lx => {
+    const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.48), legMat);
+    thigh.position.set(lx, SIT_HIP_Y, 0.18);
+    thigh.rotation.x = -1.35;
+    thigh.castShadow = true;
+    sittingLegs.add(thigh);
+    const shin = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.32), legMat);
+    shin.position.set(lx, SIT_HIP_Y / 2 - 0.02, 0.36);
+    shin.castShadow = true;
+    sittingLegs.add(shin);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.16, 0.42), shoeMat);
+    shoe.position.set(lx, 0.1, 0.42);
+    shoe.castShadow = true;
+    sittingLegs.add(shoe);
+  });
+  sittingLegs.visible = false;
+  group.add(sittingLegs);
+
+  const bodyGroup = new THREE.Group();
+  group.add(bodyGroup);
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.68, 0.56), shirtMat);
+  torso.position.y = HIP_Y + 0.34;
+  torso.castShadow = true;
+  bodyGroup.add(torso);
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.14, 8), skinMat);
+  neck.position.y = HIP_Y + 0.72;
+  bodyGroup.add(neck);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.84, 0.84), skinMat);
+  head.position.y = HIP_Y + 1.2;
+  head.castShadow = true;
+  bodyGroup.add(head);
+
+  // Capelli: lunghi (ai lati e sopra) per lei, solo un ciuffo sopra per lui
+  if (isFemale) {
+    const hairSide = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.94), hairMat);
+    hairSide.position.set(0, HIP_Y + 1.05, -0.05);
+    bodyGroup.add(hairSide);
+  }
+  const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.96, isFemale ? 0.2 : 0.16, 0.88), hairMat);
+  hairTop.position.set(0, HIP_Y + (isFemale ? 1.52 : 1.5), 0);
+  bodyGroup.add(hairTop);
+
+  ['left', 'right'].forEach(side => {
+    const ax = side === 'left' ? -0.68 : 0.68;
+    const arm = new THREE.Group();
+    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.3), shirtMat);
+    sleeve.position.set(0, -0.3, 0);
+    sleeve.castShadow = true;
+    arm.add(sleeve);
+    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), skinMat);
+    hand.position.set(0, -0.68, 0);
+    arm.add(hand);
+    arm.position.set(ax, HIP_Y + 0.66, 0);
+    bodyGroup.add(arm);
+  });
+
+  group.userData.standingLegs = standingLegs;
+  group.userData.sittingLegs = sittingLegs;
+  group.userData.bodyGroup = bodyGroup;
+  group.userData.sitDrop = SIT_DROP;
+  group.userData.legL = legPivots.left;
+  group.userData.legR = legPivots.right;
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+
+let beachVisitors = []; // { mesh, gender, benchIndex, state, path, sitSpot, sitYaw, walkPhase }
+let beachVisitorsPlannedDay = -1; // giorno per cui è già stato deciso quanti visitatori arriveranno
+let beachVisitorsToSpawn = 0;     // quanti restano da far scendere (staggered) in questa visita
+let beachVisitorsSpawnTimer = 0;
+let beachVisitorsReturnStarted = false;
+
+function walkerSetPose(walker, sitting) {
+  walker.mesh.userData.standingLegs.visible = !sitting;
+  walker.mesh.userData.sittingLegs.visible = sitting;
+  walker.mesh.userData.bodyGroup.position.y = sitting ? -walker.mesh.userData.sitDrop : 0;
+  walker.mesh.userData.legL.rotation.x = 0;
+  walker.mesh.userData.legR.rotation.x = 0;
+  walker.walkPhase = 0;
+}
+
+function walkerStartDisembark(walker) {
+  const w = captainWaypoints;
+  if (!w) return;
+  walker.mesh.position.set(w.board.x, pierHeightAt(w.board.x, w.board.z), w.board.z);
+  walker.mesh.visible = true;
+  walkerSetPose(walker, false);
+  const benchMesh = beachBenchMeshes[walker.benchIndex];
+  if (!benchMesh) return;
+  walker.sitSpot = { x: benchMesh.position.x, z: benchMesh.position.z };
+  walker.sitYaw = benchMesh.rotation.y;
+  walker.path = [w.stairTop, w.stairBottom, walker.sitSpot];
+  walker.state = 'walkingOut';
+}
+
+function walkerStartReturn(walker) {
+  if (walker.state !== 'sitting') return;
+  walkerSetPose(walker, false);
+  const w = captainWaypoints;
+  if (!w) return;
+  walker.path = [w.stairBottom, w.stairTop, w.board];
+  walker.state = 'walkingBack';
+}
+
+function updateWalkerMovement(walker, dt) {
+  if (walker.state !== 'walkingOut' && walker.state !== 'walkingBack') return;
+  if (walker.path.length === 0) return;
+  const target = walker.path[0];
+  const dx = target.x - walker.mesh.position.x;
+  const dz = target.z - walker.mesh.position.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist < 0.2) {
+    walker.mesh.position.x = target.x;
+    walker.mesh.position.z = target.z;
+    walker.path.shift();
+    if (walker.path.length > 0) return;
+    if (walker.state === 'walkingOut') {
+      walker.state = 'sitting';
+      walkerSetPose(walker, true);
+      walker.mesh.rotation.y = walker.sitYaw;
+    } else {
+      walker.state = 'hidden';
+      walker.mesh.visible = false;
+    }
+    return;
+  }
+  const yaw = Math.atan2(dx, dz);
+  walker.mesh.rotation.y = yaw;
+  walker.mesh.position.x += Math.sin(yaw) * NPC_WALK_SPEED * dt;
+  walker.mesh.position.z += Math.cos(yaw) * NPC_WALK_SPEED * dt;
+  walker.mesh.position.y = pierHeightAt(walker.mesh.position.x, walker.mesh.position.z);
+
+  walker.walkPhase += dt * CAPTAIN_WALK_CYCLE_SPEED;
+  const swing = Math.sin(walker.walkPhase) * CAPTAIN_LEG_SWING_AMPLITUDE;
+  walker.mesh.userData.legL.rotation.x = swing;
+  walker.mesh.userData.legR.rotation.x = -swing;
+}
+
+function removeAllBeachVisitors() {
+  for (const w of beachVisitors) scene.remove(w.mesh);
+  beachVisitors = [];
+  beachVisitorsToSpawn = 0;
+}
+
+function updateBeachVisitorsSchedule(dt) {
+  const day = clock.dayIndex;
+  const hour = clock.hour;
+  const minute = clock.minuteOfHour;
+
+  // Decisione presa UNA VOLTA al giorno, appena il Capitano si è seduto
+  // (cioè è davvero sceso ed è arrivato in spiaggia).
+  if (ferryPresent && captainState === 'sitting' && beachVisitorsPlannedDay !== day) {
+    beachVisitorsPlannedDay = day;
+    const canHaveVisitors = beachBenchMeshes.length === 2 && currentWeather !== 'pioggia';
+    beachVisitorsToSpawn = canHaveVisitors ? (Math.random() < 0.5 ? 1 : 2) : 0;
+    beachVisitorsSpawnTimer = 2 + Math.random() * 2;
+    beachVisitorsReturnStarted = false;
+  }
+
+  // Li fa scendere uno alla volta, con un piccolo intervallo tra l'uno e l'altro.
+  if (beachVisitorsToSpawn > 0) {
+    beachVisitorsSpawnTimer -= dt;
+    if (beachVisitorsSpawnTimer <= 0) {
+      const benchIndex = beachVisitors.length;
+      const gender = Math.random() < 0.5 ? 'male' : 'female';
+      const walker = { mesh: makeBeachVisitorMesh(gender), gender, benchIndex, state: 'hidden', path: [], walkPhase: Math.random() * Math.PI * 2 };
+      walkerStartDisembark(walker);
+      beachVisitors.push(walker);
+      beachVisitorsToSpawn--;
+      beachVisitorsSpawnTimer = 4 + Math.random() * 3;
+    }
+  }
+
+  // Rientro: 45 minuti di gioco prima della partenza del traghetto.
+  const depMinutes = ferryDepartureHour() * 60 - 45;
+  const nowMinutes = hour * 60 + minute;
+  if (!beachVisitorsReturnStarted && nowMinutes >= depMinutes && beachVisitors.some(w => w.state === 'sitting')) {
+    beachVisitorsReturnStarted = true;
+    beachVisitors.forEach(w => { if (w.state === 'sitting') walkerStartReturn(w); });
+  }
+
+  // Se il traghetto è già ripartito e qualcuno non ha fatto in tempo (es.
+  // salto orario da debug), lo si rimette pulito a bordo.
+  if (!ferryPresent) {
+    for (const w of beachVisitors) {
+      if (w.state !== 'hidden') { w.state = 'hidden'; w.mesh.visible = false; }
+    }
+  }
+
+  for (const w of beachVisitors) updateWalkerMovement(w, dt);
+
+  // Ripulisce l'elenco (tutti tornati a bordo/nascosti) a fine visita,
+  // pronto per la prossima.
+  if (!ferryPresent && beachVisitors.length > 0 && beachVisitors.every(w => w.state === 'hidden')) {
+    for (const w of beachVisitors) scene.remove(w.mesh);
+    beachVisitors = [];
+  }
+}
+
 const FERRY_BUY_ITEMS = [
   { id: 'buy_legna', label: 'Legna x10', cost: 10, key: 'legna', give: () => { inventory.legna += 10; } },
   { id: 'buy_viti', label: 'Viti x25', cost: 5, key: 'viti', give: () => { inventory.viti += 25; } },
@@ -10414,6 +11629,21 @@ const FERRY_BUY_ITEMS = [
   { id: 'buy_farina', label: 'Farina x5', cost: 3, key: 'farina', give: () => { inventory.farina += 5; } },
   { id: 'buy_grano', label: 'Grano x5', cost: 10, key: 'grano', give: () => { inventory.grano += 5; } },
   { id: 'buy_rullino', label: 'Rullino fotografico (20 foto)', cost: 10, key: 'pellicola', visible: () => hasCamera, give: () => { inventory.pellicola += 20; } },
+  {
+    id: 'rent_benches',
+    label: 'Noleggia 2 panchine da spiaggia (10 giorni)',
+    cost: 10,
+    key: 'moneta',
+    visible: () => beachBenchesRentUntilDay < 0,
+    subtitle: () => '[si pagano subito, compaiono vicino al molo]',
+    give: () => rentBeachBenches(),
+  },
+  { id: 'buy_carta_lettera', label: 'Carta da lettera x3', cost: 5, key: 'cartaDaLettera', visible: () => letterSuppliesUnlocked, give: () => { inventory.cartaDaLettera += 3; } },
+  {
+    id: 'buy_penna', label: 'Penna', cost: 2, key: 'penna', visible: () => letterSuppliesUnlocked,
+    subtitle: () => `[In inv: ${inventory.penna || 0}${inventory.penna > 0 ? `, ${pennaUsesRemaining} usi rimasti` : ''}]`,
+    give: () => { inventory.penna += 1; pennaUsesRemaining = 10; },
+  },
 ];
 
 const ferryOverlay = document.getElementById('ferry-overlay');
@@ -10468,6 +11698,22 @@ function renderFerryMenu() {
         sfxBuy();
         showToast('🎸 Chitarra acquistata! Puoi suonarla sulla sedia a dondolo.');
         refreshInventoryHud();
+        renderFerryMenu();
+      });
+      ferryListEl.appendChild(row);
+    }
+    // Panchine da spiaggia già noleggiate: mostra lo stato (si rinnovano da
+    // sole) e l'opzione per annullare il noleggio in qualsiasi momento.
+    if (beachBenchesRentUntilDay >= 0) {
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      const daysLeft = Math.max(0, beachBenchesRentUntilDay - clock.dayIndex);
+      row.innerHTML = `
+        <div class="recipe-info">🏖️ Panchine da spiaggia noleggiate<div class="recipe-cost">Si rinnovano da sole ogni ${BEACH_BENCH_RENT_DAYS} giorni (se hai fondi e non cambia stagione) — tra ${daysLeft} giorni tocca al prossimo rinnovo</div></div>
+        <button class="recipe-btn">annulla (+${BEACH_BENCH_CANCEL_REFUND} 🪙)</button>
+      `;
+      row.querySelector('.recipe-btn').addEventListener('click', () => {
+        cancelBeachBenchRental();
         renderFerryMenu();
       });
       ferryListEl.appendChild(row);
@@ -11010,7 +12256,7 @@ const inventory = {
   casetteScoiattoli: 0, noci: 0, nocciole: 0, pigne: 0,
   granolaBoschi: 0, biscottiNocciole: 0, snackFruttaSecca: 0, pignaGlassata: 0,
   fondamentaCasetta: 0,
-  viti: 0, strisceMetallo: 0, cordaFibra: 0, resina: 0, frigoriferoRelitto: 0, coperta: 0, cuscino: 0,
+  viti: 0, strisceMetallo: 0, cordaFibra: 0, resina: 0, frigoriferoRelitto: 0, coperta: 0, cuscino: 0, cartaDaLettera: 0, penna: 0,
 };
 const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
@@ -11050,7 +12296,7 @@ const INVENTORY_LABELS = {
   viti: ['🔩', 'Viti di metallo'], strisceMetallo: ['🔗', 'Strisce di metallo'],
   cordaFibra: ['🧵', 'Corda di fibra vegetale'], resina: ['🟠', 'Resina trasparente'],
   frigoriferoRelitto: ['🧊', 'Vecchio frigorifero (dal relitto)'],
-  coperta: ['🧶', 'Coperta'], cuscino: ['🛏️', 'Cuscino'],
+  coperta: ['🧶', 'Coperta'], cuscino: ['🛏️', 'Cuscino'], cartaDaLettera: ['📄', 'Carta da lettera'], penna: ['🖊️', 'Penna'],
 };
 // Categorie per i tab dell'Inventario: raggruppano i tanti oggetti che si
 // accumulano in partita per tipo, così è più facile trovare quello cercato.
@@ -11073,7 +12319,7 @@ const INVENTORY_CATEGORY_BY_KEY = {
   fondamentaCasetta: 'Da piazzare',
   viti: 'Materiali da Relitto', strisceMetallo: 'Materiali da Relitto', cordaFibra: 'Materiali da Relitto',
   resina: 'Materiali da Relitto', frigoriferoRelitto: 'Materiali da Relitto',
-  coperta: 'Materiali da Relitto', cuscino: 'Materiali da Relitto',
+  coperta: 'Materiali da Relitto', cuscino: 'Materiali da Relitto', cartaDaLettera: 'Risorse', penna: 'Risorse',
   bottiglia: 'Oggetti speciali', lucciole: 'Oggetti speciali', pellicola: 'Oggetti speciali',
   stellaMarina: 'Oggetti speciali', medusa: 'Oggetti speciali', conchiglia: 'Oggetti speciali',
 };
@@ -11397,6 +12643,7 @@ function findNearestInteractable() {
   let best = null, bestDist = Infinity;
   for (const it of interactables) {
     if (it.type === 'fireflySwarm' && !(fireflySeasonActive() && (clock.hour >= 20 || clock.hour < 5))) continue;
+    if (it.type === 'captain' && captainState !== 'sitting') continue; // interagibile solo mentre è seduto sulla spiaggia
     const range = INTERACT_RANGE_OVERRIDE[it.type] || INTERACT_RANGE;
     const d = Math.hypot(player.position.x - it.obj.position.x, player.position.z - it.obj.position.z);
     if (d < range && d < bestDist) { best = it; bestDist = d; }
@@ -11619,6 +12866,8 @@ function handleAction(target) {
       sfxTrash();
       refreshInventoryHud();
     }
+  } else if (target.type === 'captain') {
+    talkToCaptain();
   }
 }
 
@@ -11642,12 +12891,14 @@ const INTERACT_HINTS = {
   noceGround: 'Una noce\n[E] per raccoglierla',
   nocciolaGround: 'Una nocciola\n[E] per raccoglierla',
   pignaGround: 'Una pigna\n[E] per raccoglierla',
+  captain: 'Il Capitano\n[E] per salutarlo',
 };
 
 const MESSAGE_TEXT = "A chiunque legga questo messaggio: quest'isola ora è tua. Divertiti ma tienila pulita. PS: attento alle lucciole... con qualcosa che luccica possono illuminarti la via!";
 let messageOverlayOpen = false;
-function openMessageOverlay(text) {
+function openMessageOverlay(text, title) {
   messageOverlayOpen = true;
+  document.getElementById('message-title').textContent = title || 'Un messaggio nella bottiglia';
   document.getElementById('message-text').textContent = text || MESSAGE_TEXT;
   document.getElementById('message-overlay').classList.add('open');
   setMenuButtons([document.getElementById('message-close')]);
@@ -11717,7 +12968,7 @@ const TUTORIAL_CONTENT = {
   },
   traghetto: {
     pages: [
-      "Il traghetto postale attracca ogni giorno alle 14:00 e riparte alle 17:00. Mentre è qui puoi comprare materiali e oggetti utili, oppure vendergli le tue risorse in cambio di monete.",
+      "Il traghetto postale attracca ogni giorno alle 14:00 e riparte in tarda giornata (l'orario esatto di partenza cambia un po' con le stagioni). Mentre è qui puoi comprare materiali e oggetti utili, oppure vendergli le tue risorse in cambio di monete.",
       "Attenzione: ha un budget giornaliero limitato per gli acquisti da te, e un acquisto al giorno per articolo dal suo lato. Se lasci troppa spazzatura in giro, potrebbe anche saltare la visita! ⛴️",
       "Hai anche notato il 🌟 sotto la tua salute? È \"3Vago\", l'indice di gradimento dell'isola, mostrato in stelline da 1 a 5. Cresce se tieni l'isola pulita, curata e in ordine — anche il traghetto stesso conta!",
       "Cala invece se lasci spazzatura in giro, esaurisci troppo le risorse, trascuri i tuoi campi, dormi poco o (se hai attivato la Sete) resti troppo a lungo senza bere. Un'isola felice è un'isola che si prende cura di sé. ⋆",
@@ -12693,6 +13944,40 @@ document.getElementById('storage-close').addEventListener('click', closeStorageM
 let diaryOpen = false;
 let diaryPage = 1;
 
+// Voci del diario con "novità" (per adesso: i racconti del Capitano),
+// salvate una per giorno — a differenza della pagina "Oggi" (sempre
+// generata al volo) e di quella di 3Vago (sempre lo stato attuale), queste
+// restano fisse così come erano quel giorno, e si possono sfogliare.
+let diaryEntries = []; // [{ day, summaries: [testo, ...] }], in ordine di comparsa
+let diaryLoggedSteps = new Set(); // 'A3', 'B7', ecc: già registrati, non si ripete la stessa voce due volte
+
+function addDiaryEntry(text) {
+  const day = clock.dayIndex;
+  let entry = diaryEntries.find(e => e.day === day);
+  if (!entry) {
+    entry = { day, summaries: [] };
+    diaryEntries.push(entry);
+  }
+  entry.summaries.push(text);
+}
+
+// Da richiamare quando il giocatore LEGGE per la prima volta uno step di
+// dialogo col Capitano: registra un piccolo riassunto nel diario di oggi.
+// Idempotente: rivisitare lo stesso step non lo registra una seconda volta.
+function maybeLogDialogueStepToDiary(dirKey, stepIdx) {
+  const key = `${dirKey}${stepIdx}`;
+  if (diaryLoggedSteps.has(key)) return;
+  diaryLoggedSteps.add(key);
+  const content = getDialogueDisplayContent(dirKey, stepIdx);
+  addDiaryEntry(`Dal Capitano ho saputo: "${content.a}"`);
+}
+
+// Voci passate (escluso oggi, che ha sempre la sua pagina dedicata),
+// dalla più recente alla più vecchia.
+function diaryPastEntriesSorted() {
+  return diaryEntries.filter(e => e.day !== clock.dayIndex).sort((a, b) => b.day - a.day);
+}
+
 // Il mondo di gioco parte sempre dal 21° giorno di Primavera (dayIndex 20,
 // vedi inizializzazione di "clock" più sopra) — è solo la data del calendario
 // dell'isola, non i giorni che il personaggio ci ha davvero passato: per
@@ -12709,16 +13994,30 @@ function diaryPage1Text() {
   else if (hasGrano) campiText = 'dei miei campi di grano';
   else if (hasFiori) campiText = 'dei miei campi di fiori';
   else campiText = 'del mio piccolo angolo di isola';
-  return `Caro Diario, sono già ${days} giorni che vivo su quest'isola. Siamo già in ${season} e devo prendermi cura ${campiText}.`;
+  let text = `Caro Diario, sono già ${days} giorni che vivo su quest'isola. Siamo già in ${season} e devo prendermi cura ${campiText}.`;
+  const todayEntry = diaryEntries.find(e => e.day === clock.dayIndex);
+  if (todayEntry) text += '\n\n' + todayEntry.summaries.join('\n\n');
+  return text;
 }
 
 function renderDiary() {
-  document.getElementById('diary-page-1').style.display = diaryPage === 1 ? 'block' : 'none';
+  const pastEntries = diaryPastEntriesSorted();
+  const totalPages = 2 + pastEntries.length;
+  if (diaryPage > totalPages) diaryPage = totalPages;
+  if (diaryPage < 1) diaryPage = 1;
+
+  const showEntryPage = diaryPage === 1 || diaryPage > 2;
+  document.getElementById('diary-page-1').style.display = showEntryPage ? 'block' : 'none';
   document.getElementById('diary-page-2').style.display = diaryPage === 2 ? 'block' : 'none';
-  document.getElementById('diary-page-indicator').textContent = `${diaryPage} / 2`;
+  document.getElementById('diary-page-indicator').textContent = `${diaryPage} / ${totalPages}`;
 
   if (diaryPage === 1) {
     document.getElementById('diary-entry-text').textContent = diaryPage1Text();
+  } else if (diaryPage > 2) {
+    const entry = pastEntries[diaryPage - 3];
+    const daysAgo = clock.dayIndex - entry.day;
+    const header = daysAgo === 1 ? '— ieri —' : `— ${daysAgo} giorni fa —`;
+    document.getElementById('diary-entry-text').textContent = `${header}\n\n${entry.summaries.join('\n\n')}`;
   } else {
     const stelle = gradimentoStelle();
     document.getElementById('diary-stars').textContent = '⭐'.repeat(stelle) + '☆'.repeat(5 - stelle);
@@ -12742,13 +14041,13 @@ function renderDiary() {
 
   const buttons = [document.getElementById('diary-prev-btn'), document.getElementById('diary-next-btn'), document.getElementById('diary-close')];
   document.getElementById('diary-prev-btn').disabled = diaryPage === 1;
-  document.getElementById('diary-next-btn').disabled = diaryPage === 2;
+  document.getElementById('diary-next-btn').disabled = diaryPage === totalPages;
   setMenuButtons(buttons.filter(b => !b.disabled));
 }
 
 function openDiary() {
   diaryOpen = true;
-  diaryPage = 1;
+  diaryPage = 1; // si entra sempre sulla pagina di oggi
   renderDiary();
   document.getElementById('diary-overlay').classList.add('open');
 }
@@ -12756,12 +14055,13 @@ function closeDiary() {
   diaryOpen = false;
   document.getElementById('diary-overlay').classList.remove('open');
 }
-document.getElementById('diary-prev-btn').addEventListener('click', () => { if (diaryPage > 1) { diaryPage--; renderDiary(); } });
-document.getElementById('diary-next-btn').addEventListener('click', () => { if (diaryPage < 2) { diaryPage++; renderDiary(); } });
+document.getElementById('diary-prev-btn').addEventListener('click', () => { diaryPage--; renderDiary(); });
+document.getElementById('diary-next-btn').addEventListener('click', () => { diaryPage++; renderDiary(); });
 document.getElementById('diary-close').addEventListener('click', closeDiary);
-document.getElementById('diary-prev-btn').addEventListener('touchstart', e => { e.preventDefault(); if (diaryPage > 1) { diaryPage--; renderDiary(); } }, { passive: false });
-document.getElementById('diary-next-btn').addEventListener('touchstart', e => { e.preventDefault(); if (diaryPage < 2) { diaryPage++; renderDiary(); } }, { passive: false });
+document.getElementById('diary-prev-btn').addEventListener('touchstart', e => { e.preventDefault(); diaryPage--; renderDiary(); }, { passive: false });
+document.getElementById('diary-next-btn').addEventListener('touchstart', e => { e.preventDefault(); diaryPage++; renderDiary(); }, { passive: false });
 document.getElementById('diary-close').addEventListener('touchstart', e => { e.preventDefault(); closeDiary(); }, { passive: false });
+
 
 /* =========================================================================
    SALVATAGGIO
@@ -12771,6 +14071,7 @@ document.getElementById('diary-close').addEventListener('touchstart', e => { e.p
    ordine in cui vengono creati, e ritrovarli per indice al caricamento.
    ========================================================================= */
 const SAVE_KEY = 'isola-cozy-save-v1';
+const AUTO_CONTINUE_KEY = 'cozyIslandAutoContinueAfterImport';
 
 function serializeGame() {
   const fruitTrees = interactables.filter(it => it.type === 'fruitTree');
@@ -12790,6 +14091,14 @@ function serializeGame() {
     messageBottleCollected,
     hasHoe,
     hasAxe, hasHammer, hasSaw,
+    captainMetBefore,
+    dialogueState,
+    robinsonFlowersDelivered, hasThankYouLetter, paperPenPromised, letterSuppliesUnlocked,
+    pennaUsesRemaining, hasWrittenLetterForRobinsonsFather, robinsonLetterDelivered,
+    pendingDialogueUnlocks,
+    captainLastDisembarkDay,
+    beachVisitorsPlannedDay,
+    beachVisitorsSnapshot: beachVisitors.filter(w => w.state !== 'hidden').map(w => ({ gender: w.gender, benchIndex: w.benchIndex })),
     stoveBuilt,
     stairsBuilt,
     stufettaBuilt,
@@ -12816,6 +14125,9 @@ function serializeGame() {
     fishingRod,
     mieleEverCollected,
     ferryLastArrivalDay,
+    ferryDockCheckDay, ferryWillDockToday,
+    beachBenchesRentUntilDay,
+    beachBenchesRentSeasonIdx,
     ferryPresent,
     ferryBudget,
     ferryPurchasedToday: [...ferryPurchasedToday],
@@ -12882,6 +14194,18 @@ function serializeGame() {
     wrecks: interactables.filter(it => it.type === 'wreck').map(it => ({
       loot: it.obj.userData.loot, searched: it.obj.userData.searched,
     })),
+    // --- Campi aggiunti per completare il salvataggio (in precedenza andavano
+    // persi con l'esportazione/reimportazione o ricaricando la pagina) ---
+    cans: interactables.filter(it => it.type === 'can').map(it => ({ x: it.obj.position.x, z: it.obj.position.z })),
+    forestMarkers: interactables
+      .filter(it => it.type === 'noceGround' || it.type === 'nocciolaGround' || it.type === 'pignaGround')
+      .map(it => ({ type: it.type, x: it.obj.position.x, z: it.obj.position.z })),
+    gradimentoLog,
+    diaryEntries,
+    diaryLoggedSteps: [...diaryLoggedSteps],
+    squirrelHouseEverBuilt,
+    lastWeather,
+    forestSpawnTimerMinutes,
   };
 }
 
@@ -12911,13 +14235,42 @@ function hasSavedGame() {
    ========================================================================= */
 function exportSaveToFile() {
   let saveData;
-  try {
-    saveData = serializeGame();
-  } catch (e) {
-    showToast('⚠️ Impossibile preparare il salvataggio da esportare');
-    return;
+  let saveDataPhotos = photos;
+  if (gameLoopStarted) {
+    // La partita è davvero in corso in questa pagina: lo stato "live" in
+    // memoria è quello più aggiornato possibile (anche più recente
+    // dell'ultimo salvataggio automatico), quindi si esporta direttamente da lì.
+    try {
+      saveData = serializeGame();
+    } catch (e) {
+      showToast('⚠️ Impossibile preparare il salvataggio da esportare');
+      return;
+    }
+  } else {
+    // Si è ancora al menu principale, senza aver premuto "Continua" in
+    // questa sessione di pagina: lo stato "live" (player/inventario/orologio)
+    // è solo quello vergine di una partita mai iniziata, NON i progressi
+    // salvati — quelli vanno letti direttamente da dove sono davvero
+    // conservati (localStorage), altrimenti si esporterebbe una partita
+    // vuota anche avendo ore di progressi già salvati.
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      saveData = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      saveData = null;
+    }
+    if (!saveData) {
+      showToast('⚠️ Nessun salvataggio trovato: premi "Continua" prima di esportare');
+      return;
+    }
+    try {
+      const rawPhotos = localStorage.getItem(PHOTO_STORAGE_KEY);
+      saveDataPhotos = rawPhotos ? JSON.parse(rawPhotos) : [];
+    } catch (e) {
+      saveDataPhotos = [];
+    }
   }
-  const payload = { app: 'cozy-island', formatVersion: 1, exportedAt: Date.now(), save: saveData, photos };
+  const payload = { app: 'cozy-island', formatVersion: 1, exportedAt: Date.now(), save: saveData, photos: saveDataPhotos };
   let json;
   try {
     json = JSON.stringify(payload);
@@ -12965,6 +14318,10 @@ function importSaveFromFile(file) {
       showToast('⚠️ Spazio locale insufficiente per importare questo salvataggio');
       return;
     }
+    // Non critico: se anche questo fallisse (es. modalità privata), l'import
+    // resta comunque riuscito — semplicemente al riavvio bisognerà cliccare
+    // "Continua" a mano invece che venire portati dentro in automatico.
+    try { sessionStorage.setItem(AUTO_CONTINUE_KEY, 'true'); } catch (e) { /* ignora */ }
     showToast('✅ Salvataggio importato: ricarico la partita...');
     // Si ricarica davvero la pagina (non solo "riavviare" via JS): è l'unico
     // modo per ripartire da un mondo rigenerato da zero senza mescolarlo con
@@ -12995,6 +14352,13 @@ function loadGame() {
   player.rotation.y = data.player.yaw;
 
   clock.totalMinutes = data.totalMinutes;
+  // Senza questo, al primo clock.update(dt) dopo il caricamento il giorno
+  // "precedente" resterebbe quello di partenza di una partita nuova (20):
+  // se il salvataggio è su un giorno diverso (praticamente sempre), scatta
+  // un falso evento 'day' che rifà scattare TUTTO quello che dipende dal
+  // cambio giorno (spawnDailyCans, crescita dei campi, valutazione di
+  // 3Vago, semi degli uccelli...) una volta di troppo appena si ricarica.
+  clock._prevDay = clock.dayIndex;
   currentWeather = data.weather || currentWeather;
   toolTier = data.toolTier || 1;
   if (data.bridgeBuilt) buildRealBridge();
@@ -13006,6 +14370,21 @@ function loadGame() {
   hasAxe = !!data.hasAxe;
   hasHammer = !!data.hasHammer;
   hasSaw = !!data.hasSaw;
+  captainMetBefore = !!data.captainMetBefore;
+  if (data.dialogueState) {
+    for (const key of Object.keys(dialogueState)) {
+      if (data.dialogueState[key]) Object.assign(dialogueState[key], data.dialogueState[key]);
+    }
+  }
+  robinsonFlowersDelivered = !!data.robinsonFlowersDelivered;
+  hasThankYouLetter = !!data.hasThankYouLetter;
+  paperPenPromised = !!data.paperPenPromised;
+  letterSuppliesUnlocked = !!data.letterSuppliesUnlocked;
+  pennaUsesRemaining = data.pennaUsesRemaining !== undefined ? data.pennaUsesRemaining : 0;
+  hasWrittenLetterForRobinsonsFather = !!data.hasWrittenLetterForRobinsonsFather;
+  robinsonLetterDelivered = !!data.robinsonLetterDelivered;
+  pendingDialogueUnlocks = data.pendingDialogueUnlocks || [];
+  captainLastDisembarkDay = data.captainLastDisembarkDay !== undefined ? data.captainLastDisembarkDay : -1;
   stoveBuilt = !!data.stoveBuilt;
   stoveMesh.visible = stoveBuilt;
   stairsBuilt = !!data.stairsBuilt;
@@ -13043,6 +14422,16 @@ function loadGame() {
   fishingRod = data.fishingRod || null;
   mieleEverCollected = !!data.mieleEverCollected;
   ferryLastArrivalDay = data.ferryLastArrivalDay !== undefined ? data.ferryLastArrivalDay : -1;
+  ferryDockCheckDay = data.ferryDockCheckDay !== undefined ? data.ferryDockCheckDay : -1;
+  ferryWillDockToday = data.ferryWillDockToday !== undefined ? data.ferryWillDockToday : true;
+  beachBenchesRentUntilDay = data.beachBenchesRentUntilDay !== undefined ? data.beachBenchesRentUntilDay : -1;
+  beachBenchesRentSeasonIdx = data.beachBenchesRentSeasonIdx !== undefined ? data.beachBenchesRentSeasonIdx : -1;
+  if (beachBenchesRentUntilDay >= 0 && clock.dayIndex < beachBenchesRentUntilDay) {
+    placeBeachBenches(); // ancora nel periodo di noleggio: ricompare esattamente dove sarebbe comparsa
+  } else {
+    beachBenchesRentUntilDay = -1;
+    beachBenchesRentSeasonIdx = -1;
+  }
   ferryBudget = data.ferryBudget || 0;
   ferryPurchasedToday = new Set(data.ferryPurchasedToday || []);
   ferryOfferFishDish = data.ferryOfferFishDish || null;
@@ -13054,6 +14443,58 @@ function loadGame() {
   ferryBoat.visible = false;
   ferryPresent = false;
   if (data.ferryPresent) positionAndShowFerry();
+
+  // Ricostruisce lo stato VISIVO del Capitano (e dei visitatori della
+  // spiaggia) se il salvataggio è stato fatto mentre erano già fuori
+  // durante la visita del traghetto: senza questo, captainState/beachVisitors
+  // ripartono da "hidden" (i valori iniziali di una pagina nuova) e il
+  // paletto anti-doppio-sbarco (captainLastDisembarkDay, già uguale al
+  // giorno corrente) impedirebbe comunque un nuovo sbarco per il resto
+  // della giornata: risultato, "spariscono" fino al giorno dopo.
+  // Non conosciamo la posizione ESATTA in cui si trovavano (a metà di una
+  // camminata, seduti, ecc.): la semplificazione più ragionevole è
+  // rimetterli seduti al loro posto abituale, se siamo ancora prima
+  // dell'orario di rientro; altrimenti restano nascosti (dovrebbero
+  // comunque essere già rientrati o quasi).
+  captainState = 'hidden';
+  captainMesh.visible = false;
+  captainStool.visible = false;
+  removeAllBeachVisitors();
+  if (data.ferryPresent && captainLastDisembarkDay === clock.dayIndex) {
+    captainWaypoints = computeCaptainWaypoints();
+    const returnHour = ferryDepartureHour() - 1;
+    const alreadyReturning = clock.hour > returnHour || (clock.hour === returnHour && clock.minuteOfHour >= 45);
+    if (captainWaypoints && !alreadyReturning) {
+      const beach = captainWaypoints.beach, stairBottom = captainWaypoints.stairBottom;
+      captainMesh.position.set(beach.x, terrainHeightAt(beach.x, beach.z), beach.z);
+      captainMesh.rotation.y = Math.atan2(beach.x - stairBottom.x, beach.z - stairBottom.z);
+      captainMesh.visible = true;
+      captainSetPose(true);
+      captainState = 'sitting';
+      captainReturnStartedThisVisit = false;
+      captainStool.position.set(beach.x, terrainHeightAt(beach.x, beach.z), beach.z);
+      captainStool.rotation.y = captainMesh.rotation.y;
+      captainStool.visible = true;
+
+      // Stessa idea per eventuali visitatori della spiaggia: se erano
+      // pianificati per oggi e le panchine sono ancora lì, li rimette
+      // seduti al loro posto.
+      beachVisitorsPlannedDay = data.beachVisitorsPlannedDay !== undefined ? data.beachVisitorsPlannedDay : -1;
+      if (beachVisitorsPlannedDay === clock.dayIndex && Array.isArray(data.beachVisitorsSnapshot)) {
+        for (const snap of data.beachVisitorsSnapshot) {
+          const benchMesh = beachBenchMeshes[snap.benchIndex];
+          if (!benchMesh) continue;
+          const walker = { mesh: makeBeachVisitorMesh(snap.gender), gender: snap.gender, benchIndex: snap.benchIndex, state: 'sitting', path: [], walkPhase: 0 };
+          walker.mesh.position.set(benchMesh.position.x, terrainHeightAt(benchMesh.position.x, benchMesh.position.z), benchMesh.position.z);
+          walker.mesh.rotation.y = benchMesh.rotation.y;
+          walker.mesh.visible = true;
+          walkerSetPose(walker, true);
+          beachVisitors.push(walker);
+        }
+        beachVisitorsReturnStarted = false;
+      }
+    }
+  }
   for (const it of [...interactables]) {
     if (it.type !== 'semeGrano' && it.type !== 'semeFiore') continue;
     scene.remove(it.obj);
@@ -13168,6 +14609,35 @@ function loadGame() {
   // subito, visto che con la casa finita non servono più comunque.
   if (casettaBuilt) removeAllWrecks();
 
+  // --- Ripristino dei campi aggiunti per completare il salvataggio ---
+  // Lattine: quelle già presenti nel mondo appena generato (spawnDailyCans()
+  // gira comunque all'avvio, con posizioni casuali) non corrispondono a
+  // quelle davvero presenti nel salvataggio: si sostituiscono con l'elenco
+  // esatto salvato, così niente compare/sparisce a sproposito.
+  for (const it of [...interactables]) {
+    if (it.type !== 'can') continue;
+    scene.remove(it.obj);
+    const idx = interactables.indexOf(it);
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+  for (const c of data.cans || []) makeCan(c.x, c.z);
+
+  // Noci/nocciole/pigne ancora a terra vicino alle casette per scoiattoli
+  for (const it of [...interactables]) {
+    if (it.type !== 'noceGround' && it.type !== 'nocciolaGround' && it.type !== 'pignaGround') continue;
+    scene.remove(it.obj);
+    const idx = interactables.indexOf(it);
+    if (idx !== -1) interactables.splice(idx, 1);
+  }
+  for (const m of data.forestMarkers || []) makeForestMarker(m.x, m.z, m.type.replace('Ground', ''));
+
+  gradimentoLog = data.gradimentoLog || [];
+  diaryEntries = data.diaryEntries || [];
+  diaryLoggedSteps = new Set(data.diaryLoggedSteps || []);
+  squirrelHouseEverBuilt = !!data.squirrelHouseEverBuilt;
+  lastWeather = data.lastWeather || null;
+  forestSpawnTimerMinutes = data.forestSpawnTimerMinutes || 0;
+
   foodItems = data.foodItems || [];
   healthIndex = data.healthIndex !== undefined ? data.healthIndex : 3;
   minutesSinceMeal = data.minutesSinceMeal || 0;
@@ -13199,7 +14669,7 @@ function animate() {
   elapsedTime += dt;
 
   const minutesBefore = clock.totalMinutes;
-  if (!tutorialOverlayOpen) clock.update(dt); // il tempo di gioco si ferma mentre il Tutorial è aperto
+  if (!tutorialOverlayOpen && !messageOverlayOpen && !captainDialogueOpen) clock.update(dt); // il tempo di gioco si ferma mentre il Tutorial o un dialogo sono aperti
   const gameMinutesElapsed = clock.totalMinutes - minutesBefore;
   updateFoodDecay(gameMinutesElapsed);
   updateHealth(gameMinutesElapsed);
@@ -13231,6 +14701,8 @@ function animate() {
   updateResources(dt);
   updateFishing(dt, elapsedTime);
   updateFerry();
+  updateCaptain(dt);
+  updateBeachVisitorsSchedule(dt);
   updateMenuGamepadNav(dt); // serve anche per i menu della casa/stoccaggio
   updatePauseInput();
   updateAutosave(dt);
@@ -13337,6 +14809,19 @@ mainMenuContinueBtn.addEventListener('click', () => {
   mainMenuOverlay.classList.remove('open');
   beginGameLoop();
 });
+
+// Se questo avvio arriva subito dopo un'importazione da file, si riprende
+// IN AUTOMATICO invece di fermarsi al menu principale — vedi importSaveFromFile().
+// Così non c'è modo di premere per sbaglio "Nuova Partita" e perdere
+// immediatamente il salvataggio appena importato.
+if ((() => { try { return sessionStorage.getItem(AUTO_CONTINUE_KEY) === 'true'; } catch (e) { return false; } })()) {
+  try { sessionStorage.removeItem(AUTO_CONTINUE_KEY); } catch (e) { /* ignora */ }
+  if (hasSavedGame()) {
+    loadGame();
+    mainMenuOverlay.classList.remove('open');
+    beginGameLoop();
+  }
+}
 mainMenuNewBtn.addEventListener('click', () => {
   if (hasSavedGame()) {
     newGameConfirmOverlay.classList.add('open');
@@ -13565,7 +15050,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnT
 document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
 
 function isAnyOverlayOpen() {
-  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || tutorialOverlayOpen || diaryOpen ||
+  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || tutorialOverlayOpen || diaryOpen || captainDialogueOpen ||
     optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
     returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
 }
