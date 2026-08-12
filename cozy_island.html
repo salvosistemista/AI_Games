@@ -5911,7 +5911,7 @@ const DIALOGUE_DIRECTIONS = {
     title: 'La vita del Capitano',
     steps: [
       { q: "È la prima volta che vieni su quest'isola?", a: "No, ci ero già stato da giovane. All'epoca qui viveva un uomo chiamato Robinson.", unlocks: [['A', 2], ['B', 1]] },
-      { q: 'Che fine ha fatto questo Robinson?', a: "Alla fine si è costruito una barca e ha abbandonato l'isola, lasciando tutto quello che aveva in una buca segreta, pensando di tornare. Ma non è mai tornato.", unlocks: [['A', 3], ['B', 5]] },
+      { q: 'Che fine ha fatto questo Robinson?', a: "Alla fine si è costruito una barca e ha abbandonato l'isola, lasciando tutto quello che aveva in una buca segreta, pensando di tornare. Ma non è mai tornato.", unlocks: [['A', 3], ['B', 7]] },
       { q: 'Hai mai pensato di venire a vivere su questa splendida isola?', a: 'Il mio lavoro mi porta a vivere sul mare.', unlocks: [['A', 4]] },
       { q: 'Vuoi raccontarmi qualcosa della tua vita?', a: "Ho conosciuto l'amore per il mare da piccolo: mio papà mi portava sempre cartoline con disegnato il mare.", unlocks: [] },
       { q: 'Che lavoro faceva tuo papà?', a: 'Faceva il postino, proprio come faccio io adesso con il mio traghetto postale.', unlocks: [] },
@@ -5928,7 +5928,7 @@ const DIALOGUE_DIRECTIONS = {
       { q: "Per quanto tempo ha vissuto su quest'isola?", a: 'Probabilmente almeno 4 anni.', unlocks: [['B', 4]] },
       { q: 'Robinson ha vissuto da solo per tutto quel tempo?', a: "Non del tutto. Quando arrivò sull'isola trovò un cane abbandonato e lo chiamò Charlie. È stato il suo compagno inseparabile per anni.", unlocks: [['B', 5]] },
       { q: 'Che fine ha fatto Charlie quando Robinson è salpato?', a: "Robinson non poteva portarlo sulla sua piccola barca. Lo lasciò al molo con una nota per suo padre Thomas, che lo accolse a casa. Charlie è arrivato fino a tarda età ed è venuto a mancare molti anni fa.", unlocks: [['B', 6]] },
-      { q: "Stare tanto tempo su un'isola fa perdere la testa?", a: 'Stare sempre nello stesso posto fa sempre perdere un po\u2019 la testa.', unlocks: [] },
+      { q: "Stare tanto tempo su un'isola fa perdere la testa?", a: 'Stare sempre nello stesso posto fa sempre perdere un po\u2019 la testa.', unlocks: [['B', 7]] },
       { q: 'Sai dove è stato nascosto il tesoro?', a: '(ridendo) Non ne ho la minima idea.', unlocks: [['C', 1], ['B', 8]] },
       { q: 'Pensi che Robinson sia tornato dalla sua famiglia?', a: "Molto probabilmente sì, ma senza farsi vedere. Dev'essere ripartito subito.", unlocks: [['B', 9], ['D', 1]] },
       { q: 'Sai se la sua famiglia lo ha cercato in tutto questo tempo?', a: 'Il padre di Robinson ha chiesto a tutti, per mesi e mesi, se avevano visto suo figlio. Anche a mio padre.', unlocks: [['B', 10], ['A', 5]] },
@@ -6200,9 +6200,7 @@ function getDialogueDisplayContent(dirKey, stepIdx) {
 
   if (dirKey === 'C') {
     if (stepIdx === 1) {
-      return dialogueState.C.maxUnlocked >= 2
-        ? { q: 'Ecco 5 rottami di alluminio per il crivello.', a: 'Perfetto, dammi solo un momento per sistemarlo.' }
-        : { q: 'Hai un metal detector?', a: "No, non ce l\u2019ho, ma nella stiva ho un vecchio crivello per sabbia che usava mio padre. Se mi porti 5 pezzi di alluminio presi dalla spiaggia, te lo sistemo volentieri!" };
+      return { q: 'Hai un metal detector?', a: "No, non ce l\u2019ho, ma nella stiva ho un vecchio crivello per sabbia che usava mio padre. Se mi porti 5 pezzi di alluminio presi dalla spiaggia, te lo sistemo volentieri!" };
     }
     if (stepIdx === 2) return { q: 'Ecco i rottami di alluminio per il crivello.', a: "Perfetto! Ecco a te il Crivello. Usalo lungo le spiagge e vicino ai grandi alberi: potresti trovare vecchi oggetti lasciati da chi viveva qui." };
   }
@@ -13453,6 +13451,7 @@ function makeCuccioloMesh() {
   group.userData.legBR = legPivots.BR;
   group.userData.headPivot = headPivot;
   group.userData.tailPivot = tailPivot;
+  group.scale.setScalar(1.6); // +60% di dimensione
   group.visible = false;
   scene.add(group);
   return group;
