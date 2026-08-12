@@ -240,7 +240,7 @@
   }
   #storage-overlay.open { display: flex; }
   #message-overlay {
-    position: fixed; inset: 0; z-index: 30; display: none;
+    position: fixed; inset: 0; z-index: 33; display: none;
     align-items: center; justify-content: center;
     background: rgba(5, 10, 25, 0.55); pointer-events: auto;
   }
@@ -287,6 +287,32 @@
   #letter-write-close, #music-player-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 10px 0 2px; }
   .cassette-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
   #music-now-playing { text-align: center; font-size: 12px; color: #ffd166; padding: 8px 0; }
+  #letter-drawer-overlay {
+    position: fixed; inset: 0; z-index: 31; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.6); pointer-events: auto;
+  }
+  #letter-drawer-overlay.open { display: flex; }
+  #letter-drawer-panel {
+    background: rgba(20, 24, 38, 0.96); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
+    font-family: -apple-system, sans-serif; max-height: 82vh; max-height: 82dvh; overflow-y: auto;
+  }
+  #letter-drawer-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 12px; }
+  #letter-drawer-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 10px 0 2px; }
+  #nightstand-hub-overlay, #letters-hub-overlay {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 10, 25, 0.55); pointer-events: auto;
+  }
+  #nightstand-hub-overlay.open, #letters-hub-overlay.open { display: flex; }
+  #nightstand-hub-panel, #letters-hub-panel {
+    background: rgba(20, 24, 38, 0.96); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px; padding: 20px 22px; color: #fff; width: 300px;
+    font-family: -apple-system, sans-serif;
+  }
+  #nightstand-hub-panel h3, #letters-hub-panel h3 { font-weight: 500; font-size: 16px; margin-bottom: 14px; }
+  #nightstand-hub-close, #letters-hub-close { text-align: center; font-size: 12px; color: rgba(255,255,255,0.6); padding: 10px 0 2px; }
   .diary-page { font-size: 13px; line-height: 1.65; color: rgba(255,255,255,0.9); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
   #diary-entry-text { white-space: pre-line; }
   #diary-stars { font-size: 24px; letter-spacing: 4px; margin-bottom: 10px; text-align: center; color: #ffd166; }
@@ -753,17 +779,31 @@
       <div id="diary-score"></div>
       <div id="diary-events"></div>
     </div>
-    <div id="diary-actions">
-      <button class="recipe-btn" id="diary-write-letter-btn" style="display:none;">✍️ Scrivi la lettera</button>
-      <button class="recipe-btn" id="diary-listen-music-btn" style="display:none;">📻 Ascolta musica</button>
-    </div>
     <div id="diary-nav">
       <button class="recipe-btn" id="diary-prev-btn">‹</button>
       <span id="diary-page-indicator">1 / 2</span>
       <button class="recipe-btn" id="diary-next-btn">›</button>
     </div>
-    <div id="diary-close">chiudi</div>
+    <div id="diary-close">‹ torna al cassetto</div>
   </div>
+</div>
+
+<div id="nightstand-hub-overlay">
+  <div id="nightstand-hub-panel">
+    <h3>🗄️ Cassetto del comodino</h3>
+    <div id="nightstand-hub-list"></div>
+    <div id="nightstand-hub-close">chiudi</div>
+  </div>
+</div>
+
+<div id="letters-hub-overlay">
+  <div id="letters-hub-panel">
+    <h3>✉️ Lettere</h3>
+    <div id="letters-hub-list"></div>
+    <div id="letters-hub-close">‹ torna al cassetto</div>
+  </div>
+</div>
+
 </div>
 
 <div id="letter-write-overlay">
@@ -774,11 +814,11 @@
       <div id="letter-preview-recipient"></div>
       <p id="letter-preview-text"></p>
       <div id="letter-preview-buttons">
-        <button class="recipe-btn" id="letter-send-btn">Invia</button>
+        <button class="recipe-btn" id="letter-send-btn">Firma</button>
         <button class="recipe-btn" id="letter-cancel-btn">Annulla</button>
       </div>
     </div>
-    <div id="letter-write-close">chiudi</div>
+    <div id="letter-write-close">‹ torna a Lettere</div>
   </div>
 </div>
 
@@ -787,7 +827,15 @@
     <h3>📻 Lettore di Musicassette</h3>
     <div id="music-cassette-list"></div>
     <div id="music-now-playing" style="display:none;"></div>
-    <div id="music-player-close">chiudi</div>
+    <div id="music-player-close">‹ torna al cassetto</div>
+  </div>
+</div>
+
+<div id="letter-drawer-overlay">
+  <div id="letter-drawer-panel">
+    <h3>📬 Lettere ricevute</h3>
+    <div id="letter-drawer-list"></div>
+    <div id="letter-drawer-close">‹ torna a Lettere</div>
   </div>
 </div>
 
@@ -1270,6 +1318,7 @@ const MUSIC_SEASON_CONFIGS = {
 let musicGainNode = null, musicDelayNode = null, musicFeedbackGain = null;
 let musicPlaying = false;
 let musicTimerId = null;
+let cassetteGainNode = null; // percorso audio separato per il lettore di musicassette: così si può abbassare la musica ambientale (ducking) senza toccare il volume della cassetta
 
 function ensureMusicAudioGraph() {
   if (!audioCtx || musicGainNode) return;
@@ -1287,7 +1336,26 @@ function ensureMusicAudioGraph() {
   musicFeedbackGain.connect(musicDelayNode);
   musicDelayNode.connect(audioCtx.destination);
 
+  cassetteGainNode = audioCtx.createGain();
+  cassetteGainNode.gain.value = musicEnabled ? musicVolume : 0.0001;
+  cassetteGainNode.connect(audioCtx.destination);
+
   updateMusicGainTarget();
+}
+
+// Abbassa (o ripristina) il volume della SOLA musica ambientale stagionale,
+// lasciando intatto quello della musicassetta in riproduzione — usata da
+// togglePlayCassette()/stopCassette() nel lettore del Diario.
+const CASSETTE_DUCK_FACTOR = 0.15;
+let ambientMusicDucked = false;
+function setAmbientMusicDucked(ducked) {
+  ambientMusicDucked = ducked;
+  if (!musicGainNode || !audioCtx) return;
+  const target = musicEnabled ? (ducked ? musicVolume * CASSETTE_DUCK_FACTOR : musicVolume) : 0.0001;
+  const t0 = audioCtx.currentTime;
+  musicGainNode.gain.cancelScheduledValues(t0);
+  musicGainNode.gain.setValueAtTime(musicGainNode.gain.value, t0);
+  musicGainNode.gain.linearRampToValueAtTime(Math.max(0.0001, target), t0 + 0.6);
 }
 
 // Applica lo stato attivo/volume corrente al nodo di guadagno della musica,
@@ -1295,11 +1363,18 @@ function ensureMusicAudioGraph() {
 // slider o si spegne/accende dalle Opzioni.
 function updateMusicGainTarget() {
   if (!musicGainNode || !audioCtx) return;
-  const target = musicEnabled ? musicVolume : 0.0001;
+  const target = musicEnabled ? (ambientMusicDucked ? musicVolume * CASSETTE_DUCK_FACTOR : musicVolume) : 0.0001;
   const t0 = audioCtx.currentTime;
   musicGainNode.gain.cancelScheduledValues(t0);
   musicGainNode.gain.setValueAtTime(musicGainNode.gain.value, t0);
   musicGainNode.gain.linearRampToValueAtTime(Math.max(0.0001, target), t0 + 0.4);
+
+  if (cassetteGainNode) {
+    const cassetteTarget = musicEnabled ? musicVolume : 0.0001;
+    cassetteGainNode.gain.cancelScheduledValues(t0);
+    cassetteGainNode.gain.setValueAtTime(cassetteGainNode.gain.value, t0);
+    cassetteGainNode.gain.linearRampToValueAtTime(Math.max(0.0001, cassetteTarget), t0 + 0.4);
+  }
 }
 
 // Sintesi a doppio oscillatore (fondamentale + armonica di colore), stessa
@@ -3967,7 +4042,7 @@ const FILTER_AVAILABLE_TAB = '✅ Disponibili';
 const RECIPE_CATEGORY_BY_ID = {
   attrezzo_rinforzato: 'Strumenti', lampada: 'Strumenti', zappa: 'Strumenti', canna_pesca: 'Strumenti', borraccia: 'Strumenti', annaffiatoio: 'Strumenti',
   ponte: 'Costruzioni', recinto: 'Costruzioni', recinto_angolo: 'Costruzioni', muro: 'Costruzioni', muro_angolo: 'Costruzioni', casetta: 'Costruzioni', fornellino: 'Costruzioni', scala: 'Costruzioni', stufetta: 'Costruzioni',
-  casetta_scoiattoli: 'Arredo e Decorazioni', torcia: 'Arredo e Decorazioni', sedia_dondolo: 'Arredo e Decorazioni', fontana: 'Arredo e Decorazioni', pipa_legno: 'Arredo e Decorazioni',
+  casetta_scoiattoli: 'Arredo e Decorazioni', torcia: 'Arredo e Decorazioni', sedia_dondolo: 'Arredo e Decorazioni', fontana: 'Arredo e Decorazioni', pipa_legno: 'Arredo e Decorazioni', pallina_legno: 'Arredo e Decorazioni', cuccia_legno: 'Arredo e Decorazioni',
   campo_grano: 'Coltivazione', aiuola_fiori: 'Coltivazione',
   lavora_lattina: 'Materiali', farina: 'Materiali',
 };
@@ -3980,6 +4055,24 @@ const RECIPES = [
     isDone: () => false,
     visible: () => pipeProjectUnlocked,
     craft: () => { inventory.pipaLegno++; },
+  },
+  {
+    id: 'pallina_legno',
+    name: 'Pallina in legno intagliato',
+    cost: { legna: 1 },
+    once: false,
+    isDone: () => false,
+    visible: () => pallinaLegnoUnlocked,
+    craft: () => { inventory.pallinaLegno++; },
+  },
+  {
+    id: 'cuccia_legno',
+    name: 'Cuccia in legno',
+    cost: { legna: 3, alluminio: 2 },
+    once: false,
+    isDone: () => false,
+    visible: () => cucciaLegnoUnlocked,
+    craft: () => { inventory.cucciaLegno++; },
   },
   {
     id: 'casetta_scoiattoli',
@@ -5822,7 +5915,7 @@ const DIALOGUE_DIRECTIONS = {
       { q: 'Hai mai pensato di venire a vivere su questa splendida isola?', a: 'Il mio lavoro mi porta a vivere sul mare.', unlocks: [['A', 4]] },
       { q: 'Vuoi raccontarmi qualcosa della tua vita?', a: "Ho conosciuto l'amore per il mare da piccolo: mio papà mi portava sempre cartoline con disegnato il mare.", unlocks: [] },
       { q: 'Che lavoro faceva tuo papà?', a: 'Faceva il postino, proprio come faccio io adesso con il mio traghetto postale.', unlocks: [] },
-      { q: 'Ho ricevuto in dono il progetto per costruire una pipa.', a: 'La pipa che sto fumando in questo momento è stata intagliata proprio dal padre di Robinson.', unlocks: [['A', 7]] }, // sbloccato da E3
+      { q: 'Ho ricevuto in dono il progetto per costruire una pipa.', a: 'La pipa che sto fumando in questo momento è stata intagliata proprio dal padre di Robinson.', unlocks: [['A', 7]] }, // sbloccato da E3 (lettura lettera)
       { q: 'Parlami del padre di Robinson: che lavoro faceva?', a: 'Era un bravissimo carpentiere.', unlocks: [['A', 8]] },
       { q: 'Fa ancora il carpentiere?', a: 'Da quando sono scomparsi suo figlio e sua moglie ha smesso di lavorare: si occupa solo di sua figlia.', unlocks: [['F', 1]] },
     ],
@@ -5833,19 +5926,22 @@ const DIALOGUE_DIRECTIONS = {
       { q: 'Chi è questo Robinson? Di cognome faceva Crusoe?', a: '(ridendo) No, non si chiamava Crusoe. Si chiamava Defoe.', unlocks: [['B', 2]] },
       { q: "Mi sento un po' confuso...", a: 'Forse leggi troppo, o hai troppa immaginazione.', unlocks: [['B', 3]] },
       { q: "Per quanto tempo ha vissuto su quest'isola?", a: 'Probabilmente almeno 4 anni.', unlocks: [['B', 4]] },
+      { q: 'Robinson ha vissuto da solo per tutto quel tempo?', a: "Non del tutto. Quando arrivò sull'isola trovò un cane abbandonato e lo chiamò Charlie. È stato il suo compagno inseparabile per anni.", unlocks: [['B', 5]] },
+      { q: 'Che fine ha fatto Charlie quando Robinson è salpato?', a: "Robinson non poteva portarlo sulla sua piccola barca. Lo lasciò al molo con una nota per suo padre Thomas, che lo accolse a casa. Charlie è arrivato fino a tarda età ed è venuto a mancare molti anni fa.", unlocks: [['B', 6]] },
       { q: "Stare tanto tempo su un'isola fa perdere la testa?", a: 'Stare sempre nello stesso posto fa sempre perdere un po\u2019 la testa.', unlocks: [] },
-      { q: 'Sai dove è stato nascosto il tesoro?', a: '(ridendo) Non ne ho la minima idea.', unlocks: [['C', 1], ['B', 6]] },
-      { q: 'Pensi che Robinson sia tornato dalla sua famiglia?', a: "Molto probabilmente sì, ma senza farsi vedere. Dev'essere ripartito subito.", unlocks: [['B', 7], ['D', 1]] },
-      { q: 'Sai se la sua famiglia lo ha cercato in tutto questo tempo?', a: 'Il padre di Robinson ha chiesto a tutti, per mesi e mesi, se avevano visto suo figlio. Anche a mio padre.', unlocks: [['B', 8], ['A', 5]] },
-      { q: 'Spero che il padre si sia fatto una ragione...', a: "Il padre forse sì, ma la madre è impazzita di dolore ed è morta poco tempo dopo.", unlocks: [['B', 9]] },
-      { q: 'Vedi ancora il padre di Robinson?', a: 'Sì, ogni tanto lo vedo al cimitero. Piange perché non ha fiori da portare sulla tomba della moglie.', unlocks: [['B', 10]] },
+      { q: 'Sai dove è stato nascosto il tesoro?', a: '(ridendo) Non ne ho la minima idea.', unlocks: [['C', 1], ['B', 8]] },
+      { q: 'Pensi che Robinson sia tornato dalla sua famiglia?', a: "Molto probabilmente sì, ma senza farsi vedere. Dev'essere ripartito subito.", unlocks: [['B', 9], ['D', 1]] },
+      { q: 'Sai se la sua famiglia lo ha cercato in tutto questo tempo?', a: 'Il padre di Robinson ha chiesto a tutti, per mesi e mesi, se avevano visto suo figlio. Anche a mio padre.', unlocks: [['B', 10], ['A', 5]] },
+      { q: 'Spero che il padre si sia fatto una ragione...', a: "Il padre forse sì, ma la madre è impazzita di dolore ed è morta poco tempo dopo.", unlocks: [['B', 11]] },
+      { q: 'Vedi ancora il padre di Robinson?', a: 'Sì, ogni tanto lo vedo al cimitero. Piange perché non ha fiori da portare sulla tomba della moglie.', unlocks: [['B', 12]] },
       { q: 'Posso regalargli ogni tanto dei fiori da portare al padre, così che possa metterli sulla tomba della moglie?', a: 'Sono onorato di aiutarti con questo nobile gesto.', unlocks: [['E', 1]] },
     ],
   },
   C: {
     title: 'Il tesoro',
     steps: [
-      { q: 'Hai un metal detector?', a: 'No, non ce l\u2019ho.', unlocks: [] },
+      { special: true, unlocks: [] }, // 1: chiede metal detector -> propone scambio 5x alluminio per un crivello -> sblocco C2 quando consegnati
+      { special: true, unlocks: [] }, // 2: consegna 5x alluminio, riceve il Crivello (placeholder: meccanica di scavo da progettare a parte)
     ],
   },
   D: {
@@ -5858,23 +5954,34 @@ const DIALOGUE_DIRECTIONS = {
     title: 'Il padre di Robinson',
     steps: [
       { special: true, unlocks: [] },                    // 1: consegna fiori (condizionale) -> sblocco E2 al prossimo arrivo
-      { special: true, unlocks: [['E', 3]] },             // 2: lettera di ringraziamento -> sblocca subito E3
-      { special: true, unlocks: [['E', 4], ['A', 6]] },  // 3: apre la lettera, riceve il progetto della pipa -> sblocca subito E4 e (in A) lo step 6; abilita la 1a lettera dal Diario
-      { special: true, unlocks: [['E', 5]] },             // 4: chiede e riceve carta e penna, sblocca gli articoli al traghetto -> sblocca subito E5
-      { special: true, unlocks: [] },                    // 5: consegna lettera scritta (condizionale) -> sblocco E6 al prossimo arrivo
-      { special: true, unlocks: [] },                    // 6: chiede se ha una lettera -> per ora nessuno sblocco (in attesa di sviluppi)
-      { special: true, unlocks: [] },                    // 7: consegna nuova lettera (richiesta notizie famiglia) -> sblocco E8 al prossimo arrivo. Raggiungibile solo dopo la catena F1
-      { special: true, unlocks: [['E', 9]] },            // 8: riceve lettera del padre (richiesta foto casa) -> sblocca subito E9
-      { special: true, unlocks: [] },                    // 9: consegna lettera con foto -> sblocco F2 al prossimo arrivo
+      { special: true, unlocks: [] },                    // 2: riceve lettera di ringraziamento (va letta dall'inventario: sblocca lì E3, il progetto pipa e A6)
+      { special: true, unlocks: [] },                    // 3: chiede carta e penna -> sblocco E4 al prossimo arrivo
+      { special: true, unlocks: [['E', 5]] },            // 4: riceve carta e penna, sblocca gli articoli al traghetto -> sblocca subito E5
+      { special: true, unlocks: [] },                    // 5: consegna lettera scritta e firmata (condizionale) -> sblocco E6 al prossimo arrivo
+      { special: true, unlocks: [] },                    // 6: riceve notizie/lettera sul cane Charlie (va letta dall'inventario: sblocca lì il progetto Pallina in legno)
+      { special: true, unlocks: [] },                    // 7: consegna nuova lettera firmata (richiesta notizie famiglia) -> sblocco E8 al prossimo arrivo. Raggiungibile solo dopo la catena F1
+      { special: true, unlocks: [] },                    // 8: riceve lettera del padre (va letta dall'inventario: sblocca lì E9 e la possibilità di scrivere con foto allegata)
+      { special: true, unlocks: [] },                    // 9: consegna lettera firmata con foto -> sblocco F2 al prossimo arrivo
     ],
   },
   F: {
     title: 'La sorella di Robinson',
     steps: [
-      { special: true, unlocks: [] },                    // 1: chiede della figlia del carpentiere -> abilita nel Diario la lettera "notizie famiglia"
-      { special: true, unlocks: [['F', 3]] },            // 2: riceve lettera di Elizabeth + musicassetta -> sblocca subito F3
+      { special: true, unlocks: [] },                    // 1: chiede della figlia del carpentiere -> Elizabeth; abilita nel menu Lettere la lettera "notizie famiglia"
+      { special: true, unlocks: [] },                    // 2: riceve lettera di Elizabeth (va letta dall'inventario: sblocca lì F3 e consegna la musicassetta)
       { special: true, unlocks: [] },                    // 3: chiede il lettore di musicassette -> sblocco negozio al prossimo arrivo
-      { special: true, unlocks: [] },                    // 4: consegna lettera di ringraziamento per Elizabeth (in attesa di sviluppi futuri)
+      { special: true, unlocks: [] },                    // 4: consegna lettera firmata di ringraziamento per Elizabeth -> sblocco F5 al prossimo arrivo
+      { special: true, unlocks: [] },                    // 5: riceve lettera sul cucciolo (va letta dall'inventario: sblocca lì la ricetta Cuccia in legno e la lettera di adozione)
+      { special: true, unlocks: [] },                    // 6: consegna lettera di adozione firmata -> sblocco G1 al prossimo arrivo
+    ],
+  },
+  G: {
+    title: 'Compagni',
+    steps: [
+      { special: true, unlocks: [['G', 2]] },            // 1: arriva il Cucciolo, posizionato vicino a casa -> sblocca subito G2
+      { special: true, unlocks: [] },                    // 2: vuole scrivere un'ultima lettera di ringraziamento -> abilita la firma nel menu Lettere
+      { special: true, unlocks: [] },                    // 3: consegna lettera firmata di ultimo ringraziamento -> sblocco G4 al prossimo arrivo
+      { special: true, unlocks: [] },                    // 4: riceve la musicassetta "Custode dell'Isola"
     ],
   },
 };
@@ -5886,30 +5993,41 @@ const dialogueState = {
   D: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
   E: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
   F: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
+  G: { unlocked: false, maxUnlocked: 0, lastViewed: 0 },
 };
 
 // Stato dei fatti/oggetti legati alla trama del padre di Robinson e della
-// sorella di Robinson (Direzioni E ed F).
+// sorella di Robinson (Direzioni E ed F). Le lettere SCRITTE dal giocatore
+// e quelle RICEVUTE dal Capitano sono vari e propri oggetti fisici
+// nell'inventario (non semplici flag): "consegnare" una lettera al
+// Capitano significa che lui la prende (sparisce dall'inventario), e
+// "leggere" una lettera ricevuta è un'azione separata, fatta
+// dall'inventario stesso, mai dentro al dialogo — vedi RECEIVED_LETTERS/
+// readLetter() più sotto.
 let robinsonFlowersDelivered = false;       // E1 completato (fiori consegnati)
-let hasThankYouLetter = false;              // E2 completato (lettera di ringraziamento ricevuta)
-let pipeProjectUnlocked = false;            // E3 completato (progetto Pipa in legno ricevuto -> sblocca anche A6 e la ricetta)
+let pipeProjectUnlocked = false;            // impostato leggendo la lettera di ringraziamento (sblocca anche A6, E3 e la ricetta)
+let paperPenRequested = false;              // E3 completato (carta e penna richieste, in attesa del prossimo arrivo)
 let letterSuppliesUnlocked = false;         // E4 completato (carta/penna ricevute, sblocca gli articoli al traghetto)
 let pennaUsesRemaining = 0;                 // usi rimasti della penna (0-10)
-let firstReplyLetterWritten = false;        // scritta dal Diario, consumata da E5
-let firstReplyLetterDelivered = false;      // E5 completato
+let firstReplyLetterDelivered = false;      // E5 completato (lettera firmata consegnata)
 let familyInquiryLetterAvailable = false;   // abilitata dalla Direzione F, step 1
-let familyInquiryLetterWritten = false;     // scritta dal Diario -> sblocca subito E7
 let familyInquiryLetterDelivered = false;   // E7 completato
-let housePhotoLetterAvailable = false;      // abilitata da E8
-let housePhotoLetterWritten = false;        // scritta dal Diario (richiede una foto della casa già scattata)
+let housePhotoLetterAvailable = false;      // impostato leggendo la lettera del padre ricevuta a E8 (sblocca anche E9)
 let housePhotoLetterDelivered = false;      // E9 completato
-let elizabethLetterReceived = false;        // F2 completato (lettera di Elizabeth + musicassetta)
 let cassettePlayerShopUnlocked = false;     // effetto di F3, al prossimo arrivo del traghetto
 let cassettePlayerOwned = false;            // acquistato dal negozio del traghetto
 let songListenedCasettaIsola = false;       // tracciato dal lettore musicale nel Diario
 let elizabethThankYouLetterAvailable = false; // abilitata dall'ascolto del brano (F3)
-let elizabethThankYouLetterWritten = false;   // scritta dal Diario, consumata da F4
 let elizabethThankYouLetterDelivered = false; // F4 completato
+let hasCrivello = false;                      // C2 completato: strumento "assimilato" per lo scavo (meccanica vera e propria da progettare a parte)
+let pallinaLegnoUnlocked = false;             // impostato leggendo la lettera sui ricordi di Charlie (E6): sblocca la ricetta
+let cucciaLegnoUnlocked = false;              // impostato leggendo la lettera sul cucciolo (F5): sblocca la ricetta
+let cuccioloAdoptionLetterAvailable = false;  // abilitata leggendo la lettera sul cucciolo (F5)
+let cuccioloAdoptionLetterDelivered = false;  // F6 completato
+let hasCucciolo = false;                      // G1 completato: il compagno animato vero e proprio è un mini-progetto a parte
+let ultimoRingraziamentoLetterAvailable = false; // abilitata da G2
+let ultimoRingraziamentoLetterDelivered = false; // G3 completato
+let custodeIsolaCassetteGiven = false;        // G4 completato (evita di ridare la musicassetta se rivisitato dopo che è stata consumata nel lettore)
 
 // Sblocchi che scattano solo al PROSSIMO attracco del traghetto (non subito)
 let pendingDialogueUnlocks = [];  // [[dir, step], ...]
@@ -5939,11 +6057,24 @@ function processPendingDialogueUnlocks() {
 
 // Alcuni step (nelle Direzioni E ed F) hanno testo ed effetti che dipendono
 // da oggetti/stato del gioco invece che essere fissi: qui si applicano gli
-// EFFETTI (consumo oggetti, sblocchi), pensata per essere richiamata una
-// volta ogni volta che si arriva su quello step (idempotente: i flag
-// impediscono che si ripeta l'effetto rientrando più volte sullo stesso step).
+// EFFETTI (consegna/consumo di oggetti fisici, sblocchi), pensata per
+// essere richiamata una volta ogni volta che si arriva su quello step
+// (idempotente: usare "=" invece di "+=" per dare le lettere ricevute fa sì
+// che rientrare più volte sullo stesso step non ne dia mai una copia in
+// più; i "delivered" impediscono che una consegna scatti due volte).
 function applyDialogueStepSideEffects(dirKey, stepIdx) {
-  if (dirKey === 'E') {
+  if (dirKey === 'C') {
+    if (stepIdx === 1 && !hasCrivello) {
+      if ((inventory.alluminio || 0) >= 5) {
+        inventory.alluminio -= 5;
+        unlockDialogueStep('C', 2);
+        refreshInventoryHud();
+      }
+    } else if (stepIdx === 2 && !hasCrivello) {
+      hasCrivello = true;
+      showToast('🔨 Hai ricevuto il Crivello da Sabbia!');
+    }
+  } else if (dirKey === 'E') {
     if (stepIdx === 1 && !robinsonFlowersDelivered) {
       if ((inventory.fiori || 0) >= 5) {
         inventory.fiori -= 5;
@@ -5951,16 +6082,16 @@ function applyDialogueStepSideEffects(dirKey, stepIdx) {
         pendingDialogueUnlocks.push(['E', 2]);
         refreshInventoryHud();
       }
-    } else if (stepIdx === 2 && !hasThankYouLetter) {
-      hasThankYouLetter = true;
-      inventory.letteraRingraziamentoRobinson = (inventory.letteraRingraziamentoRobinson || 0) + 1;
-      unlockDialogueStep('E', 3);
-      refreshInventoryHud();
-    } else if (stepIdx === 3 && !pipeProjectUnlocked) {
-      pipeProjectUnlocked = true;
-      unlockDialogueStep('A', 6);
-      unlockDialogueStep('E', 4);
-      showToast('📜 Hai ricevuto il progetto: Pipa in legno! (Banco da Lavoro: 1 legna)');
+    } else if (stepIdx === 2) {
+      // Consegna la lettera di ringraziamento nell'inventario (va letta lì,
+      // non qui, per sbloccare E3 + il progetto pipa + A6).
+      if (!pipeProjectUnlocked) {
+        inventory.letteraRingraziamentoRobinson = 1;
+        refreshInventoryHud();
+      }
+    } else if (stepIdx === 3 && !paperPenRequested) {
+      paperPenRequested = true;
+      pendingDialogueUnlocks.push(['E', 4]);
     } else if (stepIdx === 4 && !letterSuppliesUnlocked) {
       inventory.cartaDaLettera = (inventory.cartaDaLettera || 0) + 3;
       inventory.penna = (inventory.penna || 0) + 1;
@@ -5969,90 +6100,232 @@ function applyDialogueStepSideEffects(dirKey, stepIdx) {
       unlockDialogueStep('E', 5);
       refreshInventoryHud();
     } else if (stepIdx === 5 && !firstReplyLetterDelivered) {
-      if (firstReplyLetterWritten) {
+      if ((inventory.letteraFirmataRispostaPadre || 0) > 0) {
+        inventory.letteraFirmataRispostaPadre--;
         firstReplyLetterDelivered = true;
         pendingDialogueUnlocks.push(['E', 6]);
+        refreshInventoryHud();
+      }
+    } else if (stepIdx === 6) {
+      // Consegna la lettera sui ricordi di Charlie nell'inventario (va
+      // letta lì per sbloccare la ricetta Pallina in legno intagliato).
+      if (!pallinaLegnoUnlocked) {
+        inventory.letteraRicordoCharlie = 1;
+        refreshInventoryHud();
       }
     } else if (stepIdx === 7 && !familyInquiryLetterDelivered) {
-      if (familyInquiryLetterWritten) {
+      if ((inventory.letteraFirmataNotizieFamiglia || 0) > 0) {
+        inventory.letteraFirmataNotizieFamiglia--;
         familyInquiryLetterDelivered = true;
         pendingDialogueUnlocks.push(['E', 8]);
+        refreshInventoryHud();
       }
-    } else if (stepIdx === 8 && !housePhotoLetterAvailable) {
-      housePhotoLetterAvailable = true;
-      inventory.letteraPadreRobinson = (inventory.letteraPadreRobinson || 0) + 1;
-      unlockDialogueStep('E', 9);
-      refreshInventoryHud();
+    } else if (stepIdx === 8) {
+      // Consegna la lettera del padre nell'inventario (va letta lì per
+      // sbloccare E9 + la possibilità di scrivere con foto allegata).
+      if (!housePhotoLetterAvailable) {
+        inventory.letteraPadreRobinson = 1;
+        refreshInventoryHud();
+      }
     } else if (stepIdx === 9 && !housePhotoLetterDelivered) {
-      if (housePhotoLetterWritten) {
+      if ((inventory.letteraFirmataFotoCasa || 0) > 0) {
+        inventory.letteraFirmataFotoCasa--;
         housePhotoLetterDelivered = true;
         pendingDialogueUnlocks.push(['F', 2]);
+        refreshInventoryHud();
       }
     }
   } else if (dirKey === 'F') {
     if (stepIdx === 1 && !familyInquiryLetterAvailable) {
       familyInquiryLetterAvailable = true;
-    } else if (stepIdx === 2 && !elizabethLetterReceived) {
-      elizabethLetterReceived = true;
-      inventory.musicassettaCasettaIsola = (inventory.musicassettaCasettaIsola || 0) + 1;
-      inventory.letteraElizabeth = (inventory.letteraElizabeth || 0) + 1;
-      refreshInventoryHud();
+    } else if (stepIdx === 2) {
+      // Consegna la lettera di Elizabeth nell'inventario (va letta lì per
+      // sbloccare F3 e ricevere la musicassetta).
+      if (dialogueState.F.maxUnlocked < 3) {
+        inventory.letteraElizabeth = 1;
+        refreshInventoryHud();
+      }
     } else if (stepIdx === 3 && !cassettePlayerShopUnlocked && !pendingShopUnlocks.includes('cassettePlayer')) {
       pendingShopUnlocks.push('cassettePlayer');
     } else if (stepIdx === 4 && !elizabethThankYouLetterDelivered) {
-      if (elizabethThankYouLetterWritten) {
+      if ((inventory.letteraFirmataElizabeth || 0) > 0) {
+        inventory.letteraFirmataElizabeth--;
         elizabethThankYouLetterDelivered = true;
-        // hook per sviluppi futuri (nuovi nastri, progetti dal banco da lavoro): per ora nessun altro effetto
+        pendingDialogueUnlocks.push(['F', 5]);
+        refreshInventoryHud();
       }
+    } else if (stepIdx === 5) {
+      // Consegna la lettera sul cucciolo nell'inventario (va letta lì per
+      // sbloccare la ricetta Cuccia in legno e la lettera di adozione).
+      if (!cuccioloAdoptionLetterAvailable) {
+        inventory.letteraCuccioloElizabeth = 1;
+        refreshInventoryHud();
+      }
+    } else if (stepIdx === 6 && !cuccioloAdoptionLetterDelivered) {
+      if ((inventory.letteraFirmataAdozioneCucciolo || 0) > 0) {
+        inventory.letteraFirmataAdozioneCucciolo--;
+        cuccioloAdoptionLetterDelivered = true;
+        pendingDialogueUnlocks.push(['G', 1]);
+        refreshInventoryHud();
+      }
+    }
+  } else if (dirKey === 'G') {
+    if (stepIdx === 1 && !hasCucciolo) {
+      hasCucciolo = true;
+      spawnCucciolo();
+      showToast('🐶 Il cucciolo è arrivato sull\'isola! Ti seguirà ovunque tu vada.');
+    } else if (stepIdx === 2 && !ultimoRingraziamentoLetterAvailable) {
+      ultimoRingraziamentoLetterAvailable = true;
+    } else if (stepIdx === 3 && !ultimoRingraziamentoLetterDelivered) {
+      if ((inventory.letteraFirmataUltimoRingraziamento || 0) > 0) {
+        inventory.letteraFirmataUltimoRingraziamento--;
+        ultimoRingraziamentoLetterDelivered = true;
+        pendingDialogueUnlocks.push(['G', 4]);
+        refreshInventoryHud();
+      }
+    } else if (stepIdx === 4 && !custodeIsolaCassetteGiven) {
+      custodeIsolaCassetteGiven = true;
+      inventory.musicassettaCustodeIsola = (inventory.musicassettaCustodeIsola || 0) + 1;
+      refreshInventoryHud();
     }
   }
 }
 
 // Testo effettivo da mostrare per lo step corrente: per gli step "normali"
 // (data-driven) è semplicemente quello scritto in DIALOGUE_DIRECTIONS; per
-// quelli speciali (Direzioni E ed F) dipende dallo stato/oggetti attuali.
+// quelli speciali (Direzioni C, E, F, G) dipende dallo stato/oggetti attuali.
 function getDialogueDisplayContent(dirKey, stepIdx) {
   const stepDef = DIALOGUE_DIRECTIONS[dirKey].steps[stepIdx - 1];
   if (!stepDef.special) return { q: stepDef.q, a: stepDef.a };
 
+  if (dirKey === 'C') {
+    if (stepIdx === 1) {
+      return dialogueState.C.maxUnlocked >= 2
+        ? { q: 'Ecco 5 rottami di alluminio per il crivello.', a: 'Perfetto, dammi solo un momento per sistemarlo.' }
+        : { q: 'Hai un metal detector?', a: "No, non ce l\u2019ho, ma nella stiva ho un vecchio crivello per sabbia che usava mio padre. Se mi porti 5 pezzi di alluminio presi dalla spiaggia, te lo sistemo volentieri!" };
+    }
+    if (stepIdx === 2) return { q: 'Ecco i rottami di alluminio per il crivello.', a: "Perfetto! Ecco a te il Crivello. Usalo lungo le spiagge e vicino ai grandi alberi: potresti trovare vecchi oggetti lasciati da chi viveva qui." };
+  }
   if (dirKey === 'E') {
     if (stepIdx === 1) {
       return robinsonFlowersDelivered
         ? { q: 'Ecco 5 fiori per il padre di Robinson.', a: 'Grazie di cuore. Glieli porterò al più presto.' }
         : { q: 'Vorrei darti dei fiori da portare al padre di Robinson...', a: 'Non li hai ancora pronti? Nessun problema, posso aspettare.' };
     }
-    if (stepIdx === 2) return { q: 'Come sta il padre di Robinson?', a: 'Eccoti una lettera di ringraziamento da parte sua, per i fiori.' };
-    if (stepIdx === 3) return { q: 'Apro la lettera del padre di Robinson...', a: 'Dentro trovo un caloroso ringraziamento e, in allegato, uno schema che suo figlio usava per intagliare il legno: il progetto per una Pipa in legno.' };
+    if (stepIdx === 2) return { q: 'Come sta il padre di Robinson?', a: 'Eccoti una lettera di ringraziamento da parte sua, per i fiori. (La trovi nell\u2019inventario: aprila per leggerla.)' };
+    if (stepIdx === 3) return { q: 'Posso avere carta e penna per rispondere alla lettera del padre di Robinson?', a: 'La prossima volta che torno sull\u2019isola te li porto.' };
     if (stepIdx === 4) return { q: 'Ti sei ricordato di carta e penna?', a: 'Certo! Eccoti 3 fogli di carta da lettera e una penna.' };
     if (stepIdx === 5) {
-      return firstReplyLetterWritten
+      return firstReplyLetterDelivered
         ? { q: 'Ecco la lettera che ho scritto per il padre di Robinson.', a: 'La consegnerò di persona, te lo prometto.' }
         : { q: 'Vorrei darti la lettera che ho scritto per il padre di Robinson...', a: 'Non l\u2019hai ancora scritta? Nessun problema, posso aspettare.' };
     }
-    if (stepIdx === 6) return { q: 'Hai una lettera del padre di Robinson?', a: 'Sì.' };
+    if (stepIdx === 6) return { q: 'Hai notizie del padre di Robinson?', a: "Sì, mi ha raccontato alcuni ricordi del suo vecchio cane Charlie. Ti ha mandato anche una lettera. (La trovi nell\u2019inventario: aprila per leggerla.)" };
     if (stepIdx === 7) {
-      return familyInquiryLetterWritten
+      return familyInquiryLetterDelivered
         ? { q: 'Puoi consegnare questa lettera al padre di Robinson? Chiedo sue notizie e ringrazio ancora per il progetto.', a: 'Certo, gliela porterò io stesso.' }
         : { q: 'Vorrei scrivere al padre di Robinson per avere notizie della famiglia...', a: 'Fammi sapere quando l\u2019avrai scritta.' };
     }
-    if (stepIdx === 8) return { q: 'Hai una lettera del padre di Robinson?', a: 'Sì: dentro chiede se puoi scattare una foto della casa sull\u2019isola e mandargliela.' };
+    if (stepIdx === 8) return { q: 'Hai una lettera del padre di Robinson?', a: 'Sì: dentro chiede se puoi scattare una foto della casa sull\u2019isola e mandargliela. (La trovi nell\u2019inventario: aprila per leggerla.)' };
     if (stepIdx === 9) {
-      return housePhotoLetterWritten
+      return housePhotoLetterDelivered
         ? { q: 'Ecco la lettera con la foto della casa per il padre di Robinson.', a: 'Gliela consegnerò di persona.' }
         : { q: 'Vorrei mandare una foto della casa al padre di Robinson...', a: 'Fammi sapere quando avrai preparato tutto.' };
     }
   }
   if (dirKey === 'F') {
-    if (stepIdx === 1) return { q: 'Puoi parlarmi della figlia del carpentiere?', a: 'Non la conosco.' };
-    if (stepIdx === 2) return { q: 'Hai notizie da parte di Elizabeth?', a: 'Eccoti una sua lettera... e una musicassetta che ti manda in dono.' };
+    if (stepIdx === 1) return { q: 'Puoi parlarmi della figlia del carpentiere?', a: 'Si chiama Elizabeth. È una ragazza meravigliosa, adora la musica e si prende cura del vecchio Thomas.' };
+    if (stepIdx === 2) return { q: 'Hai notizie da parte di Elizabeth?', a: 'Eccoti una sua lettera. (La trovi nell\u2019inventario: aprila per leggerla.)' };
     if (stepIdx === 3) return { q: 'Sarebbe possibile avere un lettore di musicassette?', a: 'Te lo porto la prossima volta che torno sull\u2019isola.' };
     if (stepIdx === 4) {
-      return elizabethThankYouLetterWritten
-        ? { q: 'Puoi consegnare questa lettera di ringraziamento a Elizabeth?', a: 'Con piacere, gliela porterò io stesso.' }
+      return elizabethThankYouLetterDelivered
+        ? { q: 'Puoi consegnare questa lettera di ringraziamento a Elizabeth?', a: 'Ne sarò lieto.' }
         : { q: 'Vorrei scrivere una lettera di ringraziamento a Elizabeth...', a: 'Fammi sapere quando l\u2019avrai scritta.' };
     }
+    if (stepIdx === 5) return { q: 'Ci sono novità dal porto?', a: "Al porto una cagnolina randagia ha partorito dei cuccioli. Elizabeth ne sta accudendo uno, ma cerca una casa tranquilla sull\u2019isola dove farlo crescere felice... Ti ha inviato una lettera. (La trovi nell\u2019inventario: aprila per leggerla.)" };
+    if (stepIdx === 6) {
+      return cuccioloAdoptionLetterDelivered
+        ? { q: 'Ecco la risposta per Elizabeth: sarei felice di accogliere il cucciolo.', a: 'Fantastico! Al mio prossimo viaggio lo porterò a bordo con me.' }
+        : { q: 'Vorrei rispondere a Elizabeth riguardo al cucciolo...', a: 'Fammi sapere quando avrai scritto la risposta.' };
+    }
+  }
+  if (dirKey === 'G') {
+    if (stepIdx === 1) return { q: 'È arrivato il cucciolo?', a: 'Eccolo qui! Ha la stessa vivacità che aveva Charlie da piccolo. Trattalo bene, gli ho già fatto fare amicizia con il ponte del traghetto!' };
+    if (stepIdx === 2) return { q: "Vorrei inviare un'ultima lettera a Thomas ed Elizabeth per ringraziarli.", a: 'Prepara la lettera, sarò felice di portargliela!' };
+    if (stepIdx === 3) {
+      return ultimoRingraziamentoLetterDelivered
+        ? { q: 'Ecco la lettera.', a: 'Sarò felice di portargliela!' }
+        : { q: 'Vorrei consegnarti la mia ultima lettera di ringraziamento...', a: 'Fammi sapere quando l\u2019avrai scritta.' };
+    }
+    if (stepIdx === 4) return { q: 'Novità?', a: 'Elizabeth mi ha detto di consegnarti questa musicassetta. Sia Thomas che Elizabeth ti mandano i loro saluti.' };
   }
   return { q: '...', a: '...' };
+}
+
+/* =========================================================================
+   LETTERE RICEVUTE: appaiono nell'inventario come oggetti fisici e vanno
+   LETTE da lì (mai dentro al dialogo col Capitano). Leggerle applica i loro
+   effetti narrativi (sblocchi, oggetti allegati) e le sposta nel
+   "cassetto" — un archivio permanente consultabile dal Diario, per
+   rileggerle quando si vuole.
+   ========================================================================= */
+const RECEIVED_LETTERS = {
+  letteraRingraziamentoRobinson: {
+    label: 'Lettera di ringraziamento (padre di Robinson)',
+    text: "Caro amico dell'isola, il Capitano mi ha consegnato i bellissimi fiori che hai mandato. Sapere che qualcuno vive in quel luogo che mio figlio ha chiamato casa mi scalda il cuore. Il Capitano mi ha detto quanto sei curioso riguardo alla storia di Robinson... In segno di gratitudine, ti allego uno schema che mio figlio usava per intagliare il legno. Se dovessi avere altri fiori, sappi che io e mia figlia saremmo felici di inviarti altri vecchi progetti di famiglia.",
+    onRead: () => {
+      pipeProjectUnlocked = true;
+      unlockDialogueStep('A', 6);
+      unlockDialogueStep('E', 3);
+      showToast('📜 Hai ricevuto il progetto: Pipa in legno! (Banco da Lavoro: 1 legna)');
+    },
+  },
+  letteraPadreRobinson: {
+    label: 'Lettera del padre di Robinson',
+    text: "Caro amico, le tue parole ci portano grande conforto. Io e mia figlia Elizabeth stiamo bene. Lei ha adorato i fiori! Mi chiedeva proprio l'altro giorno: chissà com'è la casa sull'isola oggi? Se ne hai la possibilità, ti andrebbe di scattare una fotografia alla casa e inviarcela? Ci farebbe sentire un po' più vicini a quel luogo.",
+    onRead: () => {
+      housePhotoLetterAvailable = true;
+      unlockDialogueStep('E', 9);
+    },
+  },
+  letteraElizabeth: {
+    label: 'Lettera di Elizabeth',
+    text: "Ciao! Mi presento, sono Elizabeth, la sorella di Robinson. La foto della tua casa sull'isola è meravigliosa, sembra un luogo magico ed essenziale. Per sdebitarmi del sorriso che hai regalato a me e a mio padre con i tuoi fiori e le tue parole, ti invio una musicassetta. Contiene un brano a cui sono affezionatissima, intitolato 'La casetta sull'isola'. Spero ti faccia compagnia nelle tue giornate!",
+    onRead: () => {
+      inventory.musicassettaCasettaIsola = (inventory.musicassettaCasettaIsola || 0) + 1;
+      unlockDialogueStep('F', 3);
+      refreshInventoryHud();
+    },
+  },
+  letteraRicordoCharlie: {
+    label: 'Ricordi di Charlie',
+    text: "Caro amico, il Capitano mi ha detto che chiedevi del nostro cane Charlie. È stato il nostro grande conforto per anni. Ricordo quando Robinson gli intagliò una pallina di legno per farlo giocare tra le dune dell'isola... Ti allego lo schema per intagliarla.",
+    onRead: () => {
+      pallinaLegnoUnlocked = true;
+      showToast('📜 Hai ricevuto il progetto: Pallina in legno intagliato!');
+    },
+  },
+  letteraCuccioloElizabeth: {
+    label: "Un nuovo amico per l'isola",
+    text: "Caro amico, al porto c'è un cucciolo rimasto solo. Pensiamo che non ci sia posto migliore per lui della nostra vecchia isola. Se ti andrebbe di adottarlo, faccelo sapere!",
+    onRead: () => {
+      cucciaLegnoUnlocked = true;
+      cuccioloAdoptionLetterAvailable = true;
+      showToast('📜 Hai ricevuto il progetto: Cuccia in legno! Ora puoi scrivere la lettera di adozione dal menu Lettere.');
+    },
+  },
+};
+
+let letterArchive = []; // "il cassetto": [{ key, label, text, readDay }], le lettere già lette
+
+function readLetter(key) {
+  const def = RECEIVED_LETTERS[key];
+  if (!def || (inventory[key] || 0) <= 0) return;
+  inventory[key]--;
+  letterArchive.push({ key, label: def.label, text: def.text, readDay: clock.dayIndex });
+  def.onRead();
+  refreshInventoryHud();
+  openMessageOverlay(def.text, def.label);
 }
 
 let captainDialogueOpen = false;
@@ -6098,8 +6371,12 @@ function renderCaptainDialogueDirections() {
     row.innerHTML = `<div class="recipe-info">${titleHtml}</div><button class="recipe-btn">apri</button>`;
     const btn = row.querySelector('.recipe-btn');
     btn.addEventListener('click', () => {
-      if (dialogueState[key].lastViewed === 0) dialogueState[key].lastViewed = 1;
-      goToDialogueStep(key, dialogueState[key].lastViewed);
+      const st = dialogueState[key];
+      // Se c'è contenuto nuovo non ancora letto, apre la direzione mostrando
+      // SUBITO il prossimo step non letto (di uno alla volta), invece di
+      // fermarsi sull'ultimo step già visto in precedenza.
+      const nextStep = st.lastViewed === 0 ? 1 : (st.maxUnlocked > st.lastViewed ? st.lastViewed + 1 : st.lastViewed);
+      goToDialogueStep(key, nextStep);
     });
     container.appendChild(row);
     buttons.push(btn);
@@ -11006,7 +11283,7 @@ function updateMenuGamepadNav(dt) {
   const confirmNow = !!(pad && pad.buttons[0] && pad.buttons[0].pressed); // A / Cross
   const cancelNow = !!(pad && pad.buttons[1] && pad.buttons[1].pressed);  // B / Circle
 
-  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen || tutorialOverlayOpen || diaryOpen || captainDialogueOpen || letterWriteOpen || musicPlayerOpen ||
+  const anyMenuOpen = sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || inventoryMenuOpen || tutorialOverlayOpen || diaryOpen || captainDialogueOpen || letterWriteOpen || musicPlayerOpen || letterDrawerOpen || nightstandHubOpen || lettersHubOpen ||
     mainMenuOverlay.classList.contains('open') || optionsOverlay.classList.contains('open') ||
     newGameConfirmOverlay.classList.contains('open') || returnMenuConfirmOverlay.classList.contains('open');
   if (!anyMenuOpen || !pad) {
@@ -11057,6 +11334,9 @@ function updateMenuGamepadNav(dt) {
       else closeLetterWrite();
     }
     if (musicPlayerOpen) closeMusicPlayer();
+    if (letterDrawerOpen) closeLetterDrawer();
+    if (lettersHubOpen) closeLettersHub();
+    if (nightstandHubOpen) closeNightstandHub();
     if (captainDialogueOpen) {
       if (captainDialogueCurrentDir) { captainDialogueCurrentDir = null; renderCaptainDialogue(); }
       else closeCaptainDialogue();
@@ -11807,7 +12087,22 @@ const FERRY_BUY_ITEMS = [
     id: 'buy_lettore_musicassette', label: 'Lettore di Musicassette', cost: 50, key: 'lettoreMusicassette',
     visible: () => cassettePlayerShopUnlocked && !cassettePlayerOwned,
     subtitle: () => '[si attiva nel Diario il tasto "Ascolta musica"]',
-    give: () => { cassettePlayerOwned = true; sfxBuy(); showToast('📻 Lettore di Musicassette acquistato! Ora puoi ascoltare musica dal Diario.'); },
+    give: () => {
+      cassettePlayerOwned = true;
+      // Le musicassette già possedute passano dall'inventario "fisico" alla
+      // libreria del lettore: da qui in poi si ascoltano dal Diario, non
+      // stanno più occupando spazio nell'inventario.
+      for (const ck of Object.keys(CASSETTES)) {
+        const invKey = CASSETTES[ck].key;
+        if ((inventory[invKey] || 0) > 0) {
+          inventory[invKey] = 0;
+          ownedCassettes.add(ck);
+        }
+      }
+      sfxBuy();
+      showToast('📻 Lettore di Musicassette acquistato! Ora puoi ascoltare musica dal Diario.');
+      refreshInventoryHud();
+    },
   },
 ];
 
@@ -12423,6 +12718,9 @@ const inventory = {
   fondamentaCasetta: 0,
   viti: 0, strisceMetallo: 0, cordaFibra: 0, resina: 0, frigoriferoRelitto: 0, coperta: 0, cuscino: 0, cartaDaLettera: 0, penna: 0,
   pipaLegno: 0, musicassettaCasettaIsola: 0, letteraRingraziamentoRobinson: 0, letteraElizabeth: 0, letteraPadreRobinson: 0,
+  letteraFirmataRispostaPadre: 0, letteraFirmataNotizieFamiglia: 0, letteraFirmataFotoCasa: 0, letteraFirmataElizabeth: 0,
+  letteraRicordoCharlie: 0, letteraCuccioloElizabeth: 0, letteraFirmataAdozioneCucciolo: 0, letteraFirmataUltimoRingraziamento: 0,
+  pallinaLegno: 0, cucciaLegno: 0, musicassettaCustodeIsola: 0,
 };
 const INVENTORY_LABELS = {
   legna: ['🪵', 'Legna'], pietra: ['🪨', 'Pietra'],
@@ -12464,6 +12762,15 @@ const INVENTORY_LABELS = {
   frigoriferoRelitto: ['🧊', 'Vecchio frigorifero (dal relitto)'],
   coperta: ['🧶', 'Coperta'], cuscino: ['🛏️', 'Cuscino'], cartaDaLettera: ['📄', 'Carta da lettera'], penna: ['🖊️', 'Penna'],
   pipaLegno: ['🚬', 'Pipa in legno'], musicassettaCasettaIsola: ['📼', 'Musicassetta: "La casetta sull\'isola"'],
+  letteraFirmataRispostaPadre: ['✉️', 'Lettera firmata: risposta al padre di Robinson'],
+  letteraFirmataNotizieFamiglia: ['✉️', 'Lettera firmata: notizie della famiglia'],
+  letteraFirmataFotoCasa: ['✉️', 'Lettera firmata: foto della casa allegata'],
+  letteraFirmataElizabeth: ['✉️', 'Lettera firmata: ringraziamento per Elizabeth'],
+  letteraRicordoCharlie: ['✉️', 'Ricordi di Charlie'], letteraCuccioloElizabeth: ['✉️', "Un nuovo amico per l'isola"],
+  letteraFirmataAdozioneCucciolo: ['✉️', 'Lettera firmata: adozione del cucciolo'],
+  letteraFirmataUltimoRingraziamento: ['✉️', 'Lettera firmata: ultimo ringraziamento'],
+  pallinaLegno: ['🎾', 'Pallina in legno intagliato'], cucciaLegno: ['🏠', 'Cuccia in legno'],
+  musicassettaCustodeIsola: ['📼', 'Musicassetta: "Custode dell\'Isola"'],
   letteraRingraziamentoRobinson: ['✉️', 'Lettera di ringraziamento (padre di Robinson)'],
   letteraPadreRobinson: ['✉️', 'Lettera del padre di Robinson'], letteraElizabeth: ['✉️', 'Lettera di Elizabeth'],
 };
@@ -12490,6 +12797,11 @@ const INVENTORY_CATEGORY_BY_KEY = {
   resina: 'Materiali da Relitto', frigoriferoRelitto: 'Materiali da Relitto',
   coperta: 'Materiali da Relitto', cuscino: 'Materiali da Relitto', cartaDaLettera: 'Risorse', penna: 'Risorse',
   pipaLegno: 'Oggetti speciali', musicassettaCasettaIsola: 'Oggetti speciali',
+  letteraFirmataRispostaPadre: 'Oggetti speciali', letteraFirmataNotizieFamiglia: 'Oggetti speciali',
+  letteraFirmataFotoCasa: 'Oggetti speciali', letteraFirmataElizabeth: 'Oggetti speciali',
+  letteraRicordoCharlie: 'Oggetti speciali', letteraCuccioloElizabeth: 'Oggetti speciali',
+  letteraFirmataAdozioneCucciolo: 'Oggetti speciali', letteraFirmataUltimoRingraziamento: 'Oggetti speciali',
+  pallinaLegno: 'Oggetti speciali', cucciaLegno: 'Oggetti speciali', musicassettaCustodeIsola: 'Oggetti speciali',
   letteraRingraziamentoRobinson: 'Oggetti speciali', letteraPadreRobinson: 'Oggetti speciali', letteraElizabeth: 'Oggetti speciali',
   bottiglia: 'Oggetti speciali', lucciole: 'Oggetti speciali', pellicola: 'Oggetti speciali',
   stellaMarina: 'Oggetti speciali', medusa: 'Oggetti speciali', conchiglia: 'Oggetti speciali',
@@ -13039,6 +13351,201 @@ function handleAction(target) {
     }
   } else if (target.type === 'captain') {
     talkToCaptain();
+  } else if (target.type === 'cucciolo') {
+    interactWithCucciolo();
+  }
+}
+
+/* =========================================================================
+   IL CUCCIOLO: compagno animato che segue il giocatore in giro per l'isola,
+   con zampe e coda animate. Compare vicino a casa quando arriva (Direzione
+   G, step 1) e da lì in avanti resta sempre con il giocatore. Regalargli
+   la Pallina in legno intagliato (una volta sola: gliela si "regala" per
+   davvero, non è un giocattolo condiviso) lo fa giocare quando gli si
+   interagisce vicino.
+   ========================================================================= */
+let dogHasBall = false; // gli è stata regalata la pallina (una tantum)
+let cucciolo = null; // { mesh, legFL, legFR, legBL, legBR, tailPivot, headPivot, walkPhase, playTimer }
+
+function makeCuccioloMesh() {
+  const group = new THREE.Group();
+  const furMat = new THREE.MeshStandardMaterial({ color: 0xc8894a, roughness: 0.85 });
+  const furMat2 = new THREE.MeshStandardMaterial({ color: 0xf0e0c0, roughness: 0.85 }); // pancia/musetto più chiari
+  const noseMat = new THREE.MeshStandardMaterial({ color: 0x2a1f18, roughness: 0.6 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a140f });
+  const collarMat = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.6 });
+
+  const BODY_Y = 0.26; // altezza del dorso da terra
+
+  // --- ZAMPE, ognuna col proprio "pivot" all'altezza della spalla/anca ---
+  const legDefs = [
+    { name: 'FL', x: -0.11, z: 0.17 },
+    { name: 'FR', x: 0.11, z: 0.17 },
+    { name: 'BL', x: -0.11, z: -0.17 },
+    { name: 'BR', x: 0.11, z: -0.17 },
+  ];
+  const legPivots = {};
+  legDefs.forEach(def => {
+    const pivot = new THREE.Group();
+    pivot.position.set(def.x, BODY_Y, def.z);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, BODY_Y, 6), furMat);
+    leg.position.set(0, -BODY_Y / 2, 0);
+    leg.castShadow = true;
+    pivot.add(leg);
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), furMat2);
+    paw.position.set(0, -BODY_Y, 0);
+    pivot.add(paw);
+    group.add(pivot);
+    legPivots[def.name] = pivot;
+  });
+
+  // --- CORPO ---
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, 0.46), furMat);
+  body.position.set(0, BODY_Y + 0.1, 0);
+  body.castShadow = true;
+  group.add(body);
+  const belly = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.4), furMat2);
+  belly.position.set(0, BODY_Y + 0.02, 0);
+  group.add(belly);
+
+  // Collarino
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.02, 6, 12), collarMat);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.set(0, BODY_Y + 0.16, 0.24);
+  group.add(collar);
+
+  // --- TESTA (con pivot per un leggero movimento indipendente) ---
+  const headPivot = new THREE.Group();
+  headPivot.position.set(0, BODY_Y + 0.16, 0.27);
+  group.add(headPivot);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 0.2), furMat);
+  head.position.set(0, 0.06, 0.06);
+  head.castShadow = true;
+  headPivot.add(head);
+  const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.1, 0.14), furMat2);
+  muzzle.position.set(0, 0.01, 0.19);
+  headPivot.add(muzzle);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 6), noseMat);
+  nose.position.set(0, 0.03, 0.26);
+  headPivot.add(nose);
+  [-0.08, 0.08].forEach(ex => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), eyeMat);
+    eye.position.set(ex, 0.09, 0.16);
+    headPivot.add(eye);
+    const ear = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.03), furMat);
+    ear.position.set(ex * 1.3, 0.17, 0.02);
+    ear.rotation.z = ex < 0 ? 0.3 : -0.3;
+    headPivot.add(ear);
+  });
+
+  // --- CODA (pivot alla base per l'oscillazione) ---
+  const tailPivot = new THREE.Group();
+  tailPivot.position.set(0, BODY_Y + 0.14, -0.22);
+  group.add(tailPivot);
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.22, 6), furMat);
+  tail.position.set(0, 0.08, -0.04);
+  tail.rotation.x = -0.9;
+  tailPivot.add(tail);
+
+  group.userData.legFL = legPivots.FL;
+  group.userData.legFR = legPivots.FR;
+  group.userData.legBL = legPivots.BL;
+  group.userData.legBR = legPivots.BR;
+  group.userData.headPivot = headPivot;
+  group.userData.tailPivot = tailPivot;
+  group.visible = false;
+  scene.add(group);
+  return group;
+}
+
+const CUCCIOLO_FOLLOW_DIST = 3.0;   // oltre questa distanza inizia a corrergli dietro
+const CUCCIOLO_CLOSE_DIST = 1.3;    // sotto questa distanza si considera "arrivato", si ferma
+const CUCCIOLO_SPEED = 2.4;
+const CUCCIOLO_WALK_CYCLE = 11;
+const CUCCIOLO_LEG_SWING = 0.55;
+
+function spawnCucciolo() {
+  if (cucciolo) return; // già presente, non se ne crea un secondo
+  const mesh = makeCuccioloMesh();
+  const house = placedItems.find(it => it.itemType === 'casetta');
+  const spawnX = house ? house.mesh.position.x + 2.5 : player.position.x + 2;
+  const spawnZ = house ? house.mesh.position.z + 1.5 : player.position.z + 2;
+  mesh.position.set(spawnX, terrainHeightAt(spawnX, spawnZ), spawnZ);
+  mesh.visible = true;
+  cucciolo = { mesh, walkPhase: Math.random() * Math.PI * 2, playTimer: 0 };
+  interactables.push({ obj: mesh, type: 'cucciolo' });
+}
+
+function updateCucciolo(dt) {
+  if (!cucciolo) return;
+  const mesh = cucciolo.mesh;
+  const dx = player.position.x - mesh.position.x;
+  const dz = player.position.z - mesh.position.z;
+  const dist = Math.hypot(dx, dz);
+
+  let moving = false;
+  if (cucciolo.playTimer > 0) {
+    // Sta giocando con la pallina: un piccolo saltello sul posto, non si sposta.
+    cucciolo.playTimer -= dt;
+    const bounce = Math.abs(Math.sin(cucciolo.walkPhase * 2.2)) * 0.12;
+    mesh.position.y = terrainHeightAt(mesh.position.x, mesh.position.z) + bounce;
+    moving = true; // fa comunque agitare zampe/coda durante il gioco
+  } else if (dist > CUCCIOLO_FOLLOW_DIST) {
+    const yaw = Math.atan2(dx, dz);
+    mesh.rotation.y = yaw;
+    // Corre un po' più veloce di quanto cammina il giocatore per raggiungerlo
+    const speed = CUCCIOLO_SPEED * (dist > CUCCIOLO_FOLLOW_DIST * 2 ? 1.6 : 1.2);
+    mesh.position.x += Math.sin(yaw) * speed * dt;
+    mesh.position.z += Math.cos(yaw) * speed * dt;
+    mesh.position.y = terrainHeightAt(mesh.position.x, mesh.position.z);
+    moving = true;
+  } else if (dist > CUCCIOLO_CLOSE_DIST) {
+    const yaw = Math.atan2(dx, dz);
+    mesh.rotation.y = yaw;
+    mesh.position.x += Math.sin(yaw) * CUCCIOLO_SPEED * dt;
+    mesh.position.z += Math.cos(yaw) * CUCCIOLO_SPEED * dt;
+    mesh.position.y = terrainHeightAt(mesh.position.x, mesh.position.z);
+    moving = true;
+  } else {
+    mesh.position.y = terrainHeightAt(mesh.position.x, mesh.position.z);
+  }
+
+  // Zampe: si muovono solo mentre cammina/corre/gioca
+  if (moving) {
+    cucciolo.walkPhase += dt * CUCCIOLO_WALK_CYCLE;
+    const swing = Math.sin(cucciolo.walkPhase) * CUCCIOLO_LEG_SWING;
+    mesh.userData.legFL.rotation.x = swing;
+    mesh.userData.legBR.rotation.x = swing;
+    mesh.userData.legFR.rotation.x = -swing;
+    mesh.userData.legBL.rotation.x = -swing;
+  } else {
+    mesh.userData.legFL.rotation.x *= 0.85;
+    mesh.userData.legFR.rotation.x *= 0.85;
+    mesh.userData.legBL.rotation.x *= 0.85;
+    mesh.userData.legBR.rotation.x *= 0.85;
+  }
+
+  // Coda: oscilla sempre, più veloce e ampia quando è vicino al giocatore
+  // o sta giocando (felice), più piano quando è fermo lontano.
+  const tailSpeed = (cucciolo.playTimer > 0 || dist < CUCCIOLO_FOLLOW_DIST) ? 9 : 3.5;
+  const tailAmp = (cucciolo.playTimer > 0 || dist < CUCCIOLO_FOLLOW_DIST) ? 0.7 : 0.35;
+  mesh.userData.tailPivot.rotation.y = Math.sin(cucciolo.walkPhase * (tailSpeed / CUCCIOLO_WALK_CYCLE) * CUCCIOLO_WALK_CYCLE) * tailAmp;
+  // Testa: piccola oscillazione per dare vita anche da fermo
+  mesh.userData.headPivot.rotation.z = Math.sin(cucciolo.walkPhase * 0.6) * 0.06;
+}
+
+function interactWithCucciolo() {
+  if (!dogHasBall && (inventory.pallinaLegno || 0) > 0) {
+    inventory.pallinaLegno--;
+    dogHasBall = true;
+    refreshInventoryHud();
+    showToast('🎾 Hai regalato la pallina al cucciolo! Ora scodinzola felice.');
+    if (cucciolo) cucciolo.playTimer = 3;
+  } else if (dogHasBall) {
+    if (cucciolo) cucciolo.playTimer = 3;
+    showToast('🐶 Il cucciolo gioca felice con la sua pallina!');
+  } else {
+    showToast('🐶 Il cucciolo scodinzola, ma sembra volere un giocattolo...');
   }
 }
 
@@ -13063,6 +13570,7 @@ const INTERACT_HINTS = {
   nocciolaGround: 'Una nocciola\n[E] per raccoglierla',
   pignaGround: 'Una pigna\n[E] per raccoglierla',
   captain: 'Il Capitano\n[E] per salutarlo',
+  cucciolo: 'Il cucciolo\n[E] per giocare con lui',
 };
 
 const MESSAGE_TEXT = "A chiunque legga questo messaggio: quest'isola ora è tua. Divertiti ma tienila pulita. PS: attento alle lucciole... con qualcosa che luccica possono illuminarti la via!";
@@ -13811,7 +14319,7 @@ let savedPlayerYaw = 0;
    voce finché una condizione non è vera (es. il fornellino va costruito). */
 const HOUSE_FURNITURE_ALL = [
   { mesh: bedGroup, label: 'Letto', action: () => openSleepMenu() },
-  { mesh: nightstandGroup, label: 'Diario', action: () => openDiary() },
+  { mesh: nightstandGroup, label: 'Cassetto del comodino', action: () => openNightstandHub() },
   { mesh: chestGroup, label: 'Cassa', action: () => openStorageMenu('cassa') },
   { mesh: fridgeGroup, label: 'Frigorifero', action: () => openStorageMenu('frigorifero') },
   { mesh: stoveMesh, label: 'Fornellino', visible: () => stoveBuilt, action: () => openCookMenu() },
@@ -14210,23 +14718,10 @@ function renderDiary() {
     }
   }
 
-  // Tasto "Scrivi la lettera": visibile solo se c'è carta+penna con
-  // inchiostro E almeno un destinatario disponibile in questo momento.
-  const writeLetterBtn = document.getElementById('diary-write-letter-btn');
-  const canWriteAnyLetter = hasWritingSupplies() && availableLetterRecipients().length > 0;
-  writeLetterBtn.style.display = canWriteAnyLetter ? '' : 'none';
-
-  // Tasto "Ascolta musica": visibile solo se si possiede il lettore.
-  const listenBtn = document.getElementById('diary-listen-music-btn');
-  listenBtn.style.display = cassettePlayerOwned ? '' : 'none';
-
   const buttons = [document.getElementById('diary-prev-btn'), document.getElementById('diary-next-btn'), document.getElementById('diary-close')];
   document.getElementById('diary-prev-btn').disabled = diaryPage === 1;
   document.getElementById('diary-next-btn').disabled = diaryPage === totalPages;
-  const extraButtons = [];
-  if (canWriteAnyLetter) extraButtons.push(writeLetterBtn);
-  if (cassettePlayerOwned) extraButtons.push(listenBtn);
-  setMenuButtons([...extraButtons, ...buttons.filter(b => !b.disabled)]);
+  setMenuButtons(buttons.filter(b => !b.disabled));
 }
 
 function openDiary() {
@@ -14238,6 +14733,7 @@ function openDiary() {
 function closeDiary() {
   diaryOpen = false;
   document.getElementById('diary-overlay').classList.remove('open');
+  openNightstandHub(); // torna al menu del cassetto, non chiude direttamente
 }
 document.getElementById('diary-prev-btn').addEventListener('click', () => { diaryPage--; renderDiary(); });
 document.getElementById('diary-next-btn').addEventListener('click', () => { diaryPage++; renderDiary(); });
@@ -14245,6 +14741,120 @@ document.getElementById('diary-close').addEventListener('click', closeDiary);
 document.getElementById('diary-prev-btn').addEventListener('touchstart', e => { e.preventDefault(); diaryPage--; renderDiary(); }, { passive: false });
 document.getElementById('diary-next-btn').addEventListener('touchstart', e => { e.preventDefault(); diaryPage++; renderDiary(); }, { passive: false });
 document.getElementById('diary-close').addEventListener('touchstart', e => { e.preventDefault(); closeDiary(); }, { passive: false });
+
+/* =========================================================================
+   IL CASSETTO DEL COMODINO: hub principale raggiunto interagendo col
+   comodino in casa. Da qui si sceglie se aprire il Diario, il menu delle
+   Lettere, o il Lettore di Musicassette (quest'ultimo solo se posseduto).
+   ========================================================================= */
+let nightstandHubOpen = false;
+function renderNightstandHub() {
+  const listEl = document.getElementById('nightstand-hub-list');
+  listEl.innerHTML = '';
+  const buttons = [];
+
+  const diaryRow = document.createElement('div');
+  diaryRow.className = 'recipe-row';
+  diaryRow.innerHTML = `<div class="recipe-info">📔 Diario</div><button class="recipe-btn">apri</button>`;
+  diaryRow.querySelector('.recipe-btn').addEventListener('click', () => {
+    document.getElementById('nightstand-hub-overlay').classList.remove('open');
+    nightstandHubOpen = false;
+    openDiary();
+  });
+  listEl.appendChild(diaryRow);
+  buttons.push(diaryRow.querySelector('.recipe-btn'));
+
+  const lettersRow = document.createElement('div');
+  lettersRow.className = 'recipe-row';
+  lettersRow.innerHTML = `<div class="recipe-info">✉️ Lettere</div><button class="recipe-btn">apri</button>`;
+  lettersRow.querySelector('.recipe-btn').addEventListener('click', () => {
+    document.getElementById('nightstand-hub-overlay').classList.remove('open');
+    nightstandHubOpen = false;
+    openLettersHub();
+  });
+  listEl.appendChild(lettersRow);
+  buttons.push(lettersRow.querySelector('.recipe-btn'));
+
+  if (cassettePlayerOwned) {
+    const musicRow = document.createElement('div');
+    musicRow.className = 'recipe-row';
+    musicRow.innerHTML = `<div class="recipe-info">📻 Lettore di Musicassette</div><button class="recipe-btn">apri</button>`;
+    musicRow.querySelector('.recipe-btn').addEventListener('click', () => {
+      document.getElementById('nightstand-hub-overlay').classList.remove('open');
+      nightstandHubOpen = false;
+      openMusicPlayer();
+    });
+    listEl.appendChild(musicRow);
+    buttons.push(musicRow.querySelector('.recipe-btn'));
+  }
+
+  setMenuButtons([...buttons, document.getElementById('nightstand-hub-close')]);
+}
+function openNightstandHub() {
+  nightstandHubOpen = true;
+  document.getElementById('nightstand-hub-overlay').classList.add('open');
+  renderNightstandHub();
+}
+function closeNightstandHub() {
+  nightstandHubOpen = false;
+  document.getElementById('nightstand-hub-overlay').classList.remove('open');
+}
+document.getElementById('nightstand-hub-close').addEventListener('click', closeNightstandHub);
+document.getElementById('nightstand-hub-close').addEventListener('touchstart', e => { e.preventDefault(); closeNightstandHub(); }, { passive: false });
+
+/* ---------- MENU LETTERE (scrivi / lettere ricevute) ---------- */
+let lettersHubOpen = false;
+function renderLettersHub() {
+  const listEl = document.getElementById('letters-hub-list');
+  listEl.innerHTML = '';
+  const buttons = [];
+
+  const canWrite = hasWritingSupplies() && availableLetterRecipients().length > 0;
+  if (canWrite) {
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `<div class="recipe-info">✍️ Scrivi lettera</div><button class="recipe-btn">apri</button>`;
+    row.querySelector('.recipe-btn').addEventListener('click', () => {
+      document.getElementById('letters-hub-overlay').classList.remove('open');
+      lettersHubOpen = false;
+      openLetterWrite();
+    });
+    listEl.appendChild(row);
+    buttons.push(row.querySelector('.recipe-btn'));
+  }
+
+  const hasReceivedLetters = Object.keys(RECEIVED_LETTERS).some(k => (inventory[k] || 0) > 0) || letterArchive.length > 0;
+  if (hasReceivedLetters) {
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `<div class="recipe-info">📬 Lettere ricevute</div><button class="recipe-btn">apri</button>`;
+    row.querySelector('.recipe-btn').addEventListener('click', () => {
+      document.getElementById('letters-hub-overlay').classList.remove('open');
+      lettersHubOpen = false;
+      openLetterDrawer();
+    });
+    listEl.appendChild(row);
+    buttons.push(row.querySelector('.recipe-btn'));
+  }
+
+  if (!canWrite && !hasReceivedLetters) {
+    listEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Non hai lettere da scrivere o da leggere per ora.</div></div>';
+  }
+
+  setMenuButtons([...buttons, document.getElementById('letters-hub-close')]);
+}
+function openLettersHub() {
+  lettersHubOpen = true;
+  document.getElementById('letters-hub-overlay').classList.add('open');
+  renderLettersHub();
+}
+function closeLettersHub() {
+  lettersHubOpen = false;
+  document.getElementById('letters-hub-overlay').classList.remove('open');
+  openNightstandHub();
+}
+document.getElementById('letters-hub-close').addEventListener('click', closeLettersHub);
+document.getElementById('letters-hub-close').addEventListener('touchstart', e => { e.preventDefault(); closeLettersHub(); }, { passive: false });
 
 /* =========================================================================
    SCRITTURA LETTERE (dal Diario): ogni "destinatario" è disponibile solo in
@@ -14260,27 +14870,50 @@ function hasWritingSupplies() {
 const LETTER_RECIPIENTS = {
   fatherReply: {
     label: 'Padre di Robinson — prima risposta',
-    available: () => pipeProjectUnlocked && !firstReplyLetterWritten,
+    invKey: 'letteraFirmataRispostaPadre',
+    available: () => pipeProjectUnlocked && !firstReplyLetterDelivered && (inventory.letteraFirmataRispostaPadre || 0) === 0,
     compose: () => "Caro amico, grazie di cuore per il progetto della pipa di tuo figlio: la custodirò con cura. Se avessi altri fiori da mandarti, sarei felice di farlo ancora.",
-    onSend: () => { firstReplyLetterWritten = true; },
+    onSign: () => {},
   },
   familyInquiry: {
     label: 'Padre di Robinson — notizie della famiglia',
-    available: () => familyInquiryLetterAvailable && !familyInquiryLetterWritten,
+    invKey: 'letteraFirmataNotizieFamiglia',
+    available: () => familyInquiryLetterAvailable && !familyInquiryLetterDelivered && (inventory.letteraFirmataNotizieFamiglia || 0) === 0,
     compose: () => "Caro amico, come state tu ed Elizabeth? Grazie ancora per lo splendido progetto che mi avete mandato: lo custodisco con grande cura.",
-    onSend: () => { familyInquiryLetterWritten = true; unlockDialogueStep('E', 7); },
+    onSign: () => { unlockDialogueStep('E', 7); },
   },
   housePhoto: {
     label: 'Padre di Robinson — foto della casa',
-    available: () => housePhotoLetterAvailable && !housePhotoLetterWritten && hasHousePhoto(),
+    invKey: 'letteraFirmataFotoCasa',
+    available: () => housePhotoLetterAvailable && !housePhotoLetterDelivered && (inventory.letteraFirmataFotoCasa || 0) === 0 && hasHousePhoto(),
     compose: () => "Ecco la foto della casa che mi avete chiesto: spero possa farvi sentire un po' più vicini a quest'isola e a chi l'ha abitata.",
-    onSend: () => { housePhotoLetterWritten = true; },
+    onSign: () => {
+      // La foto è fisicamente unica: parte insieme alla lettera, quindi
+      // sparisce dall'album nello stesso istante in cui si firma.
+      const idx = photos.findIndex(p => p.subjectLabel === 'La casetta');
+      if (idx !== -1) { photos.splice(idx, 1); savePhotosToStorage(); }
+    },
   },
   elizabethThankYou: {
     label: 'Elizabeth — ringraziamento',
-    available: () => elizabethThankYouLetterAvailable && !elizabethThankYouLetterWritten,
+    invKey: 'letteraFirmataElizabeth',
+    available: () => elizabethThankYouLetterAvailable && !elizabethThankYouLetterDelivered && (inventory.letteraFirmataElizabeth || 0) === 0,
     compose: () => "Cara Elizabeth, grazie di cuore per la musicassetta: la sto ascoltando spesso, mi tiene compagnia sull'isola. È davvero una bella melodia.",
-    onSend: () => { elizabethThankYouLetterWritten = true; },
+    onSign: () => { unlockDialogueStep('F', 4); },
+  },
+  cuccioloAdoption: {
+    label: 'Elizabeth — adozione del cucciolo',
+    invKey: 'letteraFirmataAdozioneCucciolo',
+    available: () => cuccioloAdoptionLetterAvailable && !cuccioloAdoptionLetterDelivered && (inventory.letteraFirmataAdozioneCucciolo || 0) === 0,
+    compose: () => "Cara Elizabeth, grazie di cuore. Non vedo l'ora di accogliere il nostro comune amico.",
+    onSign: () => { unlockDialogueStep('F', 6); },
+  },
+  ultimoRingraziamento: {
+    label: 'Thomas ed Elizabeth — ultimo ringraziamento',
+    invKey: 'letteraFirmataUltimoRingraziamento',
+    available: () => ultimoRingraziamentoLetterAvailable && !ultimoRingraziamentoLetterDelivered && (inventory.letteraFirmataUltimoRingraziamento || 0) === 0,
+    compose: () => "Cari Elizabeth e Thomas, non vi ringrazierò mai abbastanza per tutti i regali che mi avete fatto. Sappiate che se un giorno volete venire a trovarmi mi troverete a braccia aperte.",
+    onSign: () => { unlockDialogueStep('G', 3); },
   },
 };
 
@@ -14330,7 +14963,7 @@ function showLetterPreview(key) {
   setMenuButtons([document.getElementById('letter-send-btn'), document.getElementById('letter-cancel-btn')]);
 }
 
-function sendCurrentLetter() {
+function signCurrentLetter() {
   const key = letterWriteSelectedKey;
   if (!key || !LETTER_RECIPIENTS[key] || !LETTER_RECIPIENTS[key].available()) { closeLetterWrite(); return; }
   if (!hasWritingSupplies()) {
@@ -14345,9 +14978,14 @@ function sendCurrentLetter() {
     inventory.spazzatura = (inventory.spazzatura || 0) + 1;
     showToast('🖊️ La penna si è esaurita ed è diventata spazzatura');
   }
-  LETTER_RECIPIENTS[key].onSend();
+  const def = LETTER_RECIPIENTS[key];
+  // La lettera firmata finisce fisicamente nell'inventario: NON viene
+  // consegnata subito al Capitano (non è un'email!) — bisognerà portargliela
+  // di persona al molo.
+  inventory[def.invKey] = (inventory[def.invKey] || 0) + 1;
+  def.onSign();
   refreshInventoryHud();
-  showToast(`✉️ Lettera per "${LETTER_RECIPIENTS[key].label}" scritta: consegnala al Capitano al molo`);
+  showToast(`✉️ Lettera per "${def.label}" firmata: portala al Capitano al molo per farla consegnare`);
   closeLetterWrite();
   if (diaryOpen) renderDiary();
 }
@@ -14361,13 +14999,11 @@ function openLetterWrite() {
 function closeLetterWrite() {
   letterWriteOpen = false;
   document.getElementById('letter-write-overlay').classList.remove('open');
-  if (diaryOpen) { renderDiary(); setMenuButtons([document.getElementById('diary-write-letter-btn'), document.getElementById('diary-listen-music-btn'), document.getElementById('diary-prev-btn'), document.getElementById('diary-next-btn'), document.getElementById('diary-close')].filter(b => b.style.display !== 'none' && !b.disabled)); }
+  openLettersHub(); // torna al menu Lettere, non chiude direttamente
 }
 
-document.getElementById('diary-write-letter-btn').addEventListener('click', openLetterWrite);
-document.getElementById('diary-write-letter-btn').addEventListener('touchstart', e => { e.preventDefault(); openLetterWrite(); }, { passive: false });
-document.getElementById('letter-send-btn').addEventListener('click', sendCurrentLetter);
-document.getElementById('letter-send-btn').addEventListener('touchstart', e => { e.preventDefault(); sendCurrentLetter(); }, { passive: false });
+document.getElementById('letter-send-btn').addEventListener('click', signCurrentLetter);
+document.getElementById('letter-send-btn').addEventListener('touchstart', e => { e.preventDefault(); signCurrentLetter(); }, { passive: false });
 document.getElementById('letter-cancel-btn').addEventListener('click', renderLetterWriteList);
 document.getElementById('letter-cancel-btn').addEventListener('touchstart', e => { e.preventDefault(); renderLetterWriteList(); }, { passive: false });
 document.getElementById('letter-write-close').addEventListener('click', closeLetterWrite);
@@ -14389,8 +15025,14 @@ const CASSETTES = {
     label: 'La casetta sull\u2019isola',
     play: () => playCasettaSullIsola(),
   },
+  custodeIsola: {
+    key: 'musicassettaCustodeIsola',
+    label: 'Custode dell\u2019Isola',
+    play: () => playCustodeDellIsola(),
+  },
 };
 
+let ownedCassettes = new Set(); // musicassette passate nella libreria del lettore (non più nell'inventario "fisico")
 let musicPlayerOpen = false;
 let cassettePlaying = false;
 let cassettePlayTimer = null;
@@ -14401,7 +15043,7 @@ function renderMusicPlayer() {
   const nowPlayingEl = document.getElementById('music-now-playing');
   nowPlayingEl.style.display = cassettePlaying ? 'block' : 'none';
   const buttons = [];
-  const owned = Object.keys(CASSETTES).filter(k => (inventory[CASSETTES[k].key] || 0) > 0);
+  const owned = Object.keys(CASSETTES).filter(k => ownedCassettes.has(k));
   for (const key of owned) {
     const cassette = CASSETTES[key];
     const row = document.createElement('div');
@@ -14425,11 +15067,13 @@ function togglePlayCassette(key) {
   }
   stopCassette();
   cassettePlaying = key;
+  setAmbientMusicDucked(true); // la musica ambientale si abbassa finché la cassetta suona
   document.getElementById('music-now-playing').textContent = `🎵 In riproduzione: ${CASSETTES[key].label}...`;
   document.getElementById('music-now-playing').style.display = 'block';
   const durationMs = CASSETTES[key].play();
   cassettePlayTimer = setTimeout(() => {
     cassettePlaying = false;
+    setAmbientMusicDucked(false);
     if (musicPlayerOpen) renderMusicPlayer();
     document.getElementById('music-now-playing').style.display = 'none';
   }, durationMs);
@@ -14437,6 +15081,7 @@ function togglePlayCassette(key) {
 }
 function stopCassette() {
   if (cassettePlayTimer) { clearTimeout(cassettePlayTimer); cassettePlayTimer = null; }
+  if (cassettePlaying) setAmbientMusicDucked(false); // torna al volume normale se si interrompe a metà
   cassettePlaying = false;
   document.getElementById('music-now-playing').style.display = 'none';
 }
@@ -14450,16 +15095,70 @@ function closeMusicPlayer() {
   musicPlayerOpen = false;
   stopCassette();
   document.getElementById('music-player-overlay').classList.remove('open');
+  openNightstandHub(); // torna al menu del cassetto, non chiude direttamente
 }
-document.getElementById('diary-listen-music-btn').addEventListener('click', openMusicPlayer);
-document.getElementById('diary-listen-music-btn').addEventListener('touchstart', e => { e.preventDefault(); openMusicPlayer(); }, { passive: false });
 document.getElementById('music-player-close').addEventListener('click', closeMusicPlayer);
 document.getElementById('music-player-close').addEventListener('touchstart', e => { e.preventDefault(); closeMusicPlayer(); }, { passive: false });
+
+/* =========================================================================
+   IL CASSETTO: archivio permanente delle lettere già lette, consultabile
+   dal Diario in qualsiasi momento per rileggerle.
+   ========================================================================= */
+let letterDrawerOpen = false;
+function renderLetterDrawer() {
+  const listEl = document.getElementById('letter-drawer-list');
+  listEl.innerHTML = '';
+  const buttons = [];
+
+  // Lettere appena ricevute, non ancora lette: leggerle applica i loro
+  // effetti narrativi (sblocchi, oggetti allegati) e le sposta di sotto,
+  // tra quelle archiviate.
+  const unreadKeys = Object.keys(RECEIVED_LETTERS).filter(k => (inventory[k] || 0) > 0);
+  for (const key of unreadKeys) {
+    const def = RECEIVED_LETTERS[key];
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `<div class="recipe-info">🆕 ${def.label}</div><button class="recipe-btn">leggi</button>`;
+    const btn = row.querySelector('.recipe-btn');
+    btn.addEventListener('click', () => { readLetter(key); renderLetterDrawer(); });
+    listEl.appendChild(row);
+    buttons.push(btn);
+  }
+
+  // Lettere già lette in precedenza (archiviate), più recenti per prime.
+  const sorted = [...letterArchive].sort((a, b) => b.readDay - a.readDay);
+  for (const entry of sorted) {
+    const row = document.createElement('div');
+    row.className = 'recipe-row';
+    row.innerHTML = `<div class="recipe-info">${entry.label}</div><button class="recipe-btn">rileggi</button>`;
+    const btn = row.querySelector('.recipe-btn');
+    btn.addEventListener('click', () => openMessageOverlay(entry.text, entry.label));
+    listEl.appendChild(row);
+    buttons.push(btn);
+  }
+
+  if (unreadKeys.length === 0 && sorted.length === 0) {
+    listEl.innerHTML = '<div class="recipe-row"><div class="recipe-info">Non hai ancora ricevuto nessuna lettera.</div></div>';
+  }
+  setMenuButtons([...buttons, document.getElementById('letter-drawer-close')]);
+}
+function openLetterDrawer() {
+  letterDrawerOpen = true;
+  document.getElementById('letter-drawer-overlay').classList.add('open');
+  renderLetterDrawer();
+}
+function closeLetterDrawer() {
+  letterDrawerOpen = false;
+  document.getElementById('letter-drawer-overlay').classList.remove('open');
+  openLettersHub(); // torna al menu Lettere, non chiude direttamente
+}
+document.getElementById('letter-drawer-close').addEventListener('click', closeLetterDrawer);
+document.getElementById('letter-drawer-close').addEventListener('touchstart', e => { e.preventDefault(); closeLetterDrawer(); }, { passive: false });
 
 // Piccola nota "pizzicata" (ukulele/chitarra): attacco rapido, decadimento
 // esponenziale, onda triangolare per un timbro morbido ma con corpo.
 function playPluckNote(freq, t0, dur, gainPeak) {
-  if (!audioCtx || !musicGainNode) return;
+  if (!audioCtx || !cassetteGainNode) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'triangle';
@@ -14468,14 +15167,14 @@ function playPluckNote(freq, t0, dur, gainPeak) {
   gain.gain.linearRampToValueAtTime(gainPeak, t0 + 0.012);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   osc.connect(gain);
-  gain.connect(musicGainNode);
+  gain.connect(cassetteGainNode);
   osc.start(t0);
   osc.stop(t0 + dur + 0.05);
 }
 // Nota lunga e leggermente vibrata (fisarmonica): onda sawtooth attenuata,
 // con un LFO di frequenza che le dà quel respiro caratteristico.
 function playAccordionNote(freq, t0, dur, gainPeak) {
-  if (!audioCtx || !musicGainNode) return;
+  if (!audioCtx || !cassetteGainNode) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sawtooth';
@@ -14491,7 +15190,7 @@ function playAccordionNote(freq, t0, dur, gainPeak) {
   gain.gain.setValueAtTime(gainPeak, t0 + dur - 0.15);
   gain.gain.linearRampToValueAtTime(0.0001, t0 + dur);
   osc.connect(gain);
-  gain.connect(musicGainNode);
+  gain.connect(cassetteGainNode);
   osc.start(t0);
   lfo.start(t0);
   osc.stop(t0 + dur + 0.05);
@@ -14499,7 +15198,7 @@ function playAccordionNote(freq, t0, dur, gainPeak) {
 }
 // Un fischio spensierato: tono puro (sine), leggero glissando in entrata.
 function playWhistleNote(freq, t0, dur, gainPeak) {
-  if (!audioCtx || !musicGainNode) return;
+  if (!audioCtx || !cassetteGainNode) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
@@ -14509,7 +15208,7 @@ function playWhistleNote(freq, t0, dur, gainPeak) {
   gain.gain.linearRampToValueAtTime(gainPeak, t0 + 0.05);
   gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   osc.connect(gain);
-  gain.connect(musicGainNode);
+  gain.connect(cassetteGainNode);
   osc.start(t0);
   osc.stop(t0 + dur + 0.05);
 }
@@ -14558,6 +15257,42 @@ function playCasettaSullIsola() {
   return totalDurMs;
 }
 
+// "Custode dell'Isola": brano allegro e veloce (~1 minuto), stesso trio di
+// timbri del primo brano ma con un giro più mosso e note più brevi, per
+// dare quel senso di energia/velocità richiesto — niente sblocchi legati
+// all'ascolto per questo secondo brano, è puro "sottofondo".
+function playCustodeDellIsola() {
+  ensureAudioCtx();
+  ensureMusicAudioGraph();
+  if (!audioCtx) return 60000;
+  const N = MUSIC_NOTE_FREQ;
+  const melody = [
+    N.D4, N.F4, N.A4, N.D5, N.A4, N.F4, N.G4, N.A4,
+    N.E4, N.G4, N.B4, N.E5, N.B4, N.G4, N.A4, N.B4,
+    N.D4, N.F4, N.A4, N.D5, N.C5, N.A4, N.F4, N.G4,
+    N.A4, N.G4, N.F4, N.D4, N.E4, N.F4, N.G4, N.A4,
+  ];
+  const chordRoots = [N.D3, N.A3 / 2, N.B3 / 2, N.G3];
+  const noteDur = 0.26; // più corta del primo brano: ritmo veloce
+  const t0 = audioCtx.currentTime + 0.05;
+  const loops = 3; // note più brevi -> più giri per arrivare a circa un minuto
+  let idx = 0;
+  for (let loop = 0; loop < loops; loop++) {
+    for (let i = 0; i < melody.length; i++) {
+      const tt = t0 + idx * noteDur;
+      playPluckNote(melody[i], tt, noteDur * 0.85, 0.1);
+      if (idx % 8 === 0) {
+        playAccordionNote(chordRoots[Math.floor(idx / 8) % chordRoots.length], tt, noteDur * 8, 0.03);
+      }
+      if (idx % 3 === 1) {
+        playWhistleNote(melody[i] * 2, tt, noteDur * 0.9, 0.025);
+      }
+      idx++;
+    }
+  }
+  return melody.length * loops * noteDur * 1000;
+}
+
 
 /* =========================================================================
    SALVATAGGIO
@@ -14589,7 +15324,7 @@ function serializeGame() {
     hasAxe, hasHammer, hasSaw,
     captainMetBefore,
     dialogueState,
-    robinsonFlowersDelivered, hasThankYouLetter,
+    robinsonFlowersDelivered,
     pendingDialogueUnlocks,
     captainLastDisembarkDay,
     beachVisitorsPlannedDay,
@@ -14698,12 +15433,18 @@ function serializeGame() {
     gradimentoLog,
     diaryEntries,
     diaryLoggedSteps: [...diaryLoggedSteps],
-    pipeProjectUnlocked, letterSuppliesUnlocked, pennaUsesRemaining,
-    firstReplyLetterWritten, firstReplyLetterDelivered,
-    familyInquiryLetterAvailable, familyInquiryLetterWritten, familyInquiryLetterDelivered,
-    housePhotoLetterAvailable, housePhotoLetterWritten, housePhotoLetterDelivered,
-    elizabethLetterReceived, cassettePlayerShopUnlocked, cassettePlayerOwned,
-    songListenedCasettaIsola, elizabethThankYouLetterAvailable, elizabethThankYouLetterWritten, elizabethThankYouLetterDelivered,
+    pipeProjectUnlocked, paperPenRequested, letterSuppliesUnlocked, pennaUsesRemaining,
+    firstReplyLetterDelivered,
+    familyInquiryLetterAvailable, familyInquiryLetterDelivered,
+    housePhotoLetterAvailable, housePhotoLetterDelivered,
+    cassettePlayerShopUnlocked, cassettePlayerOwned,
+    ownedCassettes: [...ownedCassettes],
+    songListenedCasettaIsola, elizabethThankYouLetterAvailable, elizabethThankYouLetterDelivered,
+    hasCrivello, pallinaLegnoUnlocked, cucciaLegnoUnlocked,
+    cuccioloAdoptionLetterAvailable, cuccioloAdoptionLetterDelivered, hasCucciolo,
+    ultimoRingraziamentoLetterAvailable, ultimoRingraziamentoLetterDelivered, custodeIsolaCassetteGiven,
+    dogHasBall,
+    letterArchive,
     pendingShopUnlocks,
     squirrelHouseEverBuilt,
     lastWeather,
@@ -14879,25 +15620,33 @@ function loadGame() {
     }
   }
   robinsonFlowersDelivered = !!data.robinsonFlowersDelivered;
-  hasThankYouLetter = !!data.hasThankYouLetter;
   pipeProjectUnlocked = !!data.pipeProjectUnlocked;
+  paperPenRequested = !!data.paperPenRequested;
   letterSuppliesUnlocked = !!data.letterSuppliesUnlocked;
   pennaUsesRemaining = data.pennaUsesRemaining !== undefined ? data.pennaUsesRemaining : 0;
-  firstReplyLetterWritten = !!data.firstReplyLetterWritten;
   firstReplyLetterDelivered = !!data.firstReplyLetterDelivered;
   familyInquiryLetterAvailable = !!data.familyInquiryLetterAvailable;
-  familyInquiryLetterWritten = !!data.familyInquiryLetterWritten;
   familyInquiryLetterDelivered = !!data.familyInquiryLetterDelivered;
   housePhotoLetterAvailable = !!data.housePhotoLetterAvailable;
-  housePhotoLetterWritten = !!data.housePhotoLetterWritten;
   housePhotoLetterDelivered = !!data.housePhotoLetterDelivered;
-  elizabethLetterReceived = !!data.elizabethLetterReceived;
   cassettePlayerShopUnlocked = !!data.cassettePlayerShopUnlocked;
   cassettePlayerOwned = !!data.cassettePlayerOwned;
+  ownedCassettes = new Set(data.ownedCassettes || []);
   songListenedCasettaIsola = !!data.songListenedCasettaIsola;
   elizabethThankYouLetterAvailable = !!data.elizabethThankYouLetterAvailable;
-  elizabethThankYouLetterWritten = !!data.elizabethThankYouLetterWritten;
   elizabethThankYouLetterDelivered = !!data.elizabethThankYouLetterDelivered;
+  hasCrivello = !!data.hasCrivello;
+  pallinaLegnoUnlocked = !!data.pallinaLegnoUnlocked;
+  cucciaLegnoUnlocked = !!data.cucciaLegnoUnlocked;
+  cuccioloAdoptionLetterAvailable = !!data.cuccioloAdoptionLetterAvailable;
+  cuccioloAdoptionLetterDelivered = !!data.cuccioloAdoptionLetterDelivered;
+  hasCucciolo = !!data.hasCucciolo;
+  ultimoRingraziamentoLetterAvailable = !!data.ultimoRingraziamentoLetterAvailable;
+  ultimoRingraziamentoLetterDelivered = !!data.ultimoRingraziamentoLetterDelivered;
+  custodeIsolaCassetteGiven = !!data.custodeIsolaCassetteGiven;
+  dogHasBall = !!data.dogHasBall;
+  if (hasCucciolo) spawnCucciolo(); // ricrea il compagno se già adottato in precedenza
+  letterArchive = data.letterArchive || [];
   pendingShopUnlocks = data.pendingShopUnlocks || [];
   pendingDialogueUnlocks = data.pendingDialogueUnlocks || [];
   captainLastDisembarkDay = data.captainLastDisembarkDay !== undefined ? data.captainLastDisembarkDay : -1;
@@ -15185,7 +15934,7 @@ function animate() {
   elapsedTime += dt;
 
   const minutesBefore = clock.totalMinutes;
-  if (!tutorialOverlayOpen && !messageOverlayOpen && !captainDialogueOpen && !diaryOpen) clock.update(dt); // il tempo di gioco si ferma mentre il Tutorial, un dialogo o il Diario sono aperti
+  if (!tutorialOverlayOpen && !messageOverlayOpen && !captainDialogueOpen && !diaryOpen && !letterDrawerOpen && !nightstandHubOpen && !lettersHubOpen && !letterWriteOpen && !musicPlayerOpen) clock.update(dt); // il tempo di gioco si ferma mentre il Tutorial, un dialogo, o uno qualsiasi dei menu del comodino sono aperti
   const gameMinutesElapsed = clock.totalMinutes - minutesBefore;
   updateFoodDecay(gameMinutesElapsed);
   updateHealth(gameMinutesElapsed);
@@ -15219,6 +15968,7 @@ function animate() {
   updateFerry();
   updateCaptain(dt);
   updateBeachVisitorsSchedule(dt);
+  updateCucciolo(dt);
   updateMenuGamepadNav(dt); // serve anche per i menu della casa/stoccaggio
   updatePauseInput();
   updateAutosave(dt);
@@ -15566,7 +16316,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', requestReturnT
 document.getElementById('pauseMenuBtn').addEventListener('touchstart', e => { e.preventDefault(); requestReturnToMenu(); }, { passive: false });
 
 function isAnyOverlayOpen() {
-  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || tutorialOverlayOpen || diaryOpen || captainDialogueOpen || letterWriteOpen || musicPlayerOpen ||
+  return sleepMenuOpen || craftMenuOpen || cookMenuOpen || ferryMenuOpen || photoAlbumOpen || photoViewerOpen || fenceEditMenuOpen || inventoryMenuOpen || buildMenuOpen || storageMenuOpen || messageOverlayOpen || tutorialOverlayOpen || diaryOpen || captainDialogueOpen || letterWriteOpen || musicPlayerOpen || letterDrawerOpen || nightstandHubOpen || lettersHubOpen ||
     optionsOverlay.classList.contains('open') || newGameConfirmOverlay.classList.contains('open') ||
     returnMenuConfirmOverlay.classList.contains('open') || mainMenuOverlay.classList.contains('open');
 }
