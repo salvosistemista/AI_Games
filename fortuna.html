@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>FORTUNA — un roguelike di poker</title>
+<style>
+  :root{
+    --bg-deep:#1b0f2e;
+    --bg-mid:#2a1748;
+    --gold:#f2c94c;
+    --gold-dim:#c9a227;
+    --red:#e0555f;
+    --green:#4caf7d;
+    --panel:#241537;
+    --panel-light:#33204e;
+    --text:#f2ecff;
+    --text-dim:#b6a9d1;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:radial-gradient(ellipse at top, var(--bg-mid), var(--bg-deep) 70%);
+    color:var(--text);
+    font-family:'Georgia', 'Times New Roman', serif;
+    overflow:hidden;
+    touch-action:manipulation;
+  }
+  #app{
+    display:flex; flex-direction:column;
+    height:100vh; height:100dvh;
+    max-width:520px; margin:0 auto;
+    position:relative;
+    overflow:hidden;
+  }
+  #app::before{
+    content:'';
+    position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(242,201,76,0.08), transparent 40%),
+      radial-gradient(circle at 80% 85%, rgba(224,85,95,0.07), transparent 45%);
+    animation:ambientShift 14s ease-in-out infinite alternate;
+  }
+  @keyframes ambientShift{
+    0%{ opacity:0.6; transform:scale(1); }
+    100%{ opacity:1; transform:scale(1.08); }
+  }
+  #app.shake{ animation:shakeFX 0.4s ease; }
+  @keyframes shakeFX{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px) rotate(-0.4deg); }
+    40%{ transform:translateX(5px) rotate(0.4deg); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(3px); }
+  }
+
+  /* ---------- TOP BAR ---------- */
+  #topbar, #scorebar, #jokerrow, #handzone, #actionbar, #handinfo, #bossbanner{
+    position:relative; z-index:1;
+  }
+  #topbar{
+    display:flex; justify-content:space-between; align-items:stretch;
+    padding:8px 8px 4px 8px; gap:6px; flex-shrink:0;
+  }
+  .stat-box{
+    background:linear-gradient(160deg, var(--panel-light), var(--panel));
+    border:1px solid rgba(242,201,76,0.25);
+    border-radius:10px;
+    padding:6px 10px;
+    flex:1;
+    text-align:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3);
+    transition:box-shadow .2s ease;
+  }
+  .stat-box.money{ position:relative; overflow:visible; }
+  .stat-box.pulse{ box-shadow:0 0 0 2px var(--gold), 0 0 12px rgba(242,201,76,0.5); }
+  .stat-box .label{ font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); }
+  .stat-box .value{ font-size:16px; font-weight:bold; color:var(--gold); }
+  .stat-box.money .value{ color:var(--green); }
+  .stat-box.blindname{ flex:1.6; }
+  .stat-box.blindname .value{ font-size:13px; color:var(--text); }
+
+  .coinfloat{
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    color:var(--green); font-weight:bold; font-size:13px;
+    pointer-events:none;
+    animation:coinRise 0.9s ease forwards;
+  }
+  @keyframes coinRise{
+    0%{ opacity:0; transform:translate(-50%,4px) scale(0.8); }
+    20%{ opacity:1; transform:translate(-50%,-6px) scale(1.1); }
+    100%{ opacity:0; transform:translate(-50%,-34px) scale(1); }
+  }
+
+  #scorebar{
+    margin:2px 8px 4px 8px; flex-shrink:0;
+    background:var(--panel);
+    border:1px solid rgba(242,201,76,0.25);
+    border-radius:10px;
+    padding:6px 12px;
+  }
+  #scorebar .row{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:3px;}
+  #scorebar .row b{ color:var(--gold); font-size:14px; }
+  #scorebar .bar-track{ height:8px; border-radius:5px; background:#150a24; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+  #scorebar .bar-fill{ height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); width:0%; transition:width .35s ease; }
+
+  /* ---------- JOKER ROW ---------- */
+  #jokerrow{
+    display:flex; gap:6px; padding:4px 8px; overflow-x:auto;
+    flex-shrink:0; min-height:64px;
+  }
+  .joker-card{
+    flex-shrink:0; width:52px; height:56px;
+    background:linear-gradient(160deg,var(--panel-light),var(--panel));
+    border:1.5px solid var(--gold-dim);
+    border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:9px; text-align:center; padding:3px;
+    position:relative;
+    box-shadow:0 2px 5px rgba(0,0,0,0.35);
+    transition:transform .15s ease;
+  }
+  .joker-card:active{ transform:scale(0.93); }
+  .joker-card.joker-new{ animation:jokerPop .5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes jokerPop{
+    0%{ transform:scale(0) rotate(-20deg); opacity:0; }
+    60%{ transform:scale(1.15) rotate(6deg); opacity:1; }
+    100%{ transform:scale(1) rotate(0); }
+  }
+  .joker-card .jicon{ font-size:18px; line-height:1; }
+  .joker-card .jname{ font-size:7.5px; color:var(--text-dim); margin-top:2px; line-height:1.1;}
+  .joker-empty{
+    flex-shrink:0; width:52px; height:56px;
+    border:1.5px dashed rgba(242,201,76,0.2);
+    border-radius:8px;
+  }
+
+  /* ---------- MESSAGE / FLOATER ---------- */
+  #floater{
+    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(0.7);
+    background:rgba(20,10,35,0.96);
+    border:2px solid var(--gold);
+    border-radius:14px;
+    padding:14px 26px;
+    text-align:center;
+    z-index:50;
+    opacity:0; pointer-events:none;
+    box-shadow:0 0 0 rgba(242,201,76,0);
+    transition:opacity .25s ease, transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;
+  }
+  #floater.show{
+    opacity:1; transform:translate(-50%,-50%) scale(1);
+    box-shadow:0 0 30px rgba(242,201,76,0.35);
+  }
+  #floater .htype{ font-size:18px; color:var(--gold); font-weight:bold; letter-spacing:0.5px; }
+  #floater .calc{ font-size:16px; color:var(--text); margin-top:4px; font-variant-numeric:tabular-nums; }
+
+  /* ---------- HAND AREA ---------- */
+  #handzone{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    position:relative; padding:4px 2px;
+    min-height:0;
+  }
+  #handcards{
+    display:flex; justify-content:center; align-items:flex-end;
+    width:100%; height:100%;
+    position:relative;
+  }
+  .card{
+    width:46px; height:64px;
+    background:linear-gradient(160deg,#ffffff,#efe9da);
+    border-radius:7px;
+    border:1px solid #00000022;
+    box-shadow:0 3px 6px rgba(0,0,0,0.4);
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:3px 4px;
+    position:absolute;
+    transition:transform .18s ease, box-shadow .18s ease, bottom .18s ease;
+    cursor:pointer;
+  }
+  .card.red{ color:#c23142; }
+  .card.black{ color:#20202a; }
+  .card .rk{ font-size:13px; font-weight:bold; line-height:1; }
+  .card .st{ font-size:16px; align-self:center; }
+  .card .rk.bottom{ align-self:flex-end; transform:rotate(180deg); }
+  .card.selected{ transform:translateY(-16px) scale(1.06); box-shadow:0 0 0 2px var(--gold), 0 6px 10px rgba(0,0,0,0.5); }
+  .card.scoring-pulse{
+    animation:cardScorePulse .26s ease-in-out 2;
+    box-shadow:0 0 0 2px var(--gold), 0 0 16px 4px rgba(242,201,76,0.85);
+    z-index:5;
+  }
+  @keyframes cardScorePulse{
+    0%,100%{ transform:translateY(-16px) scale(1.06); }
+    50%{ transform:translateY(-22px) scale(1.14); }
+  }
+  .card.playedfx{ opacity:0; transform:translateY(-100px) scale(0.5) rotate(15deg) !important; transition:all .28s ease-in; }
+  .card.disc-fx{ opacity:0; transform:translateY(70px) scale(0.6) rotate(-10deg) !important; transition:all .22s ease-in; }
+  .card.deal-in{ animation:dealIn .3s ease; }
+  @keyframes dealIn{
+    0%{ opacity:0; transform:translateY(40px) scale(0.7) rotate(-8deg); }
+    100%{ opacity:1; transform:translateY(0) scale(1) rotate(0); }
+  }
+
+  /* ---------- ACTION BAR ---------- */
+  #actionbar{
+    display:flex; gap:8px; padding:8px 10px; flex-shrink:0;
+  }
+  .btn{
+    flex:1; padding:12px 6px; border-radius:12px; border:none;
+    font-family:inherit; font-size:14px; font-weight:bold; letter-spacing:0.5px;
+    text-transform:uppercase; text-align:center;
+    box-shadow:0 3px 0 rgba(0,0,0,0.35);
+  }
+  .btn:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,0.35); }
+  .btn.play{ background:linear-gradient(180deg,#5fd497,var(--green)); color:#0b3320; }
+  .btn.discard{ background:linear-gradient(180deg,#e97a82,var(--red)); color:#3a0d10; }
+  .btn:disabled{ opacity:0.35; }
+  .btn.small{ flex:none; padding:12px 14px; }
+  .btn.gold{ background:linear-gradient(180deg,#ffe28a,var(--gold)); color:#3a2a00; }
+  .btn.ghost{ background:var(--panel-light); color:var(--text); border:1px solid rgba(242,201,76,0.3); }
+
+  #handinfo{ text-align:center; font-size:11px; color:var(--text-dim); padding-bottom:2px;}
+  #handinfo b{ color:var(--text); }
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{
+    position:absolute; inset:0; background:rgba(10,5,20,0.94);
+    display:flex; flex-direction:column; z-index:100;
+    padding:16px; overflow-y:auto;
+    opacity:1; visibility:visible;
+    transition:opacity .22s ease;
+  }
+  .overlay.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .overlay h2{ text-align:center; color:var(--gold); margin:6px 0 2px 0; letter-spacing:1px; }
+  .overlay .sub{ text-align:center; color:var(--text-dim); font-size:12px; margin-bottom:10px;}
+
+  .shop-item{
+    background:var(--panel); border:1px solid rgba(242,201,76,0.25); border-radius:12px;
+    padding:10px; margin-bottom:8px; display:flex; align-items:center; gap:10px;
+  }
+  .shop-item .icon{ font-size:26px; width:40px; text-align:center; flex-shrink:0;}
+  .shop-item .info{ flex:1; }
+  .shop-item .info .nm{ font-weight:bold; color:var(--gold); font-size:13.5px;}
+  .shop-item .info .ds{ font-size:11px; color:var(--text-dim); margin-top:2px; line-height:1.3;}
+  .shop-item .buy{
+    background:var(--green); color:#0b3320; border:none; border-radius:8px;
+    padding:8px 10px; font-weight:bold; font-size:12px; font-family:inherit; flex-shrink:0;
+  }
+  .shop-item .buy:disabled{ background:#555; color:#999; }
+
+  #shopbottom{ display:flex; gap:8px; margin-top:auto; padding-top:10px; }
+
+  .owned-joker-row{ display:flex; gap:6px; overflow-x:auto; padding:6px 0 12px 0; }
+
+  #startscreen, #gameoverscreen, #victoryscreen{
+    align-items:center; justify-content:center; text-align:center;
+  }
+  #startscreen h1{ color:var(--gold); font-size:34px; margin-bottom:0; letter-spacing:2px;}
+  #startscreen .tagline{ color:var(--text-dim); margin-bottom:26px; font-style:italic;}
+  #gameoverscreen h1{ color:var(--red); font-size:28px;}
+  #victoryscreen h1{ color:var(--gold); font-size:28px;}
+
+  .rules-box{ background:var(--panel); border-radius:12px; padding:14px; margin:10px 0; font-size:12px; color:var(--text-dim); line-height:1.6; text-align:left; }
+  .rules-box b{ color:var(--text); }
+
+  .info-section{ margin-bottom:16px; }
+  .info-section h3{ color:var(--gold); font-size:14px; margin:0 0 6px 0; border-bottom:1px solid rgba(242,201,76,0.25); padding-bottom:4px; }
+  .hand-row{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    background:var(--panel); border-radius:8px; padding:7px 10px; margin-bottom:5px;
+  }
+  .hand-row .hn{ font-size:12.5px; color:var(--text); font-weight:bold; }
+  .hand-row .hd{ font-size:10.5px; color:var(--text-dim); }
+  .hand-row .hv{ font-size:11px; color:var(--gold); white-space:nowrap; text-align:right; }
+  .joker-info-row{
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border-radius:8px; padding:7px 10px; margin-bottom:5px;
+  }
+  .joker-info-row .icon{ font-size:18px; width:24px; text-align:center; flex-shrink:0; }
+  .joker-info-row .nm{ font-size:12px; color:var(--gold); font-weight:bold; }
+  .joker-info-row .ds{ font-size:10.5px; color:var(--text-dim); }
+  .boss-info-row{ background:linear-gradient(180deg,#4a1f2e,#2b0f1a); border:1px solid var(--red); border-radius:8px; padding:7px 10px; margin-bottom:5px; }
+  .boss-info-row .nm{ color:#ff8a94; font-weight:bold; font-size:12px; }
+  .boss-info-row .ds{ color:#e0b8bc; font-size:10.5px; }
+
+  #infobtn-start, #infobtn-pause{ margin-top:8px; }
+
+  #bossbanner{
+    background:linear-gradient(180deg,#4a1f2e,#2b0f1a);
+    border:1px solid var(--red);
+    border-radius:10px; padding:6px 10px; margin:0 8px 4px 8px;
+    font-size:11px; text-align:center; color:#ffb3ba; flex-shrink:0;
+  }
+  #bossbanner b{ color:#ff8a94; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div id="startscreen" class="overlay">
+    <h1>FORTUNA</h1>
+    <div class="tagline">un roguelike di mani di poker</div>
+    <div class="rules-box">
+      Componi mani di poker con le carte in mano per fare punti.<br><br>
+      <b>Punteggio = Chip × Moltiplicatore.</b><br>
+      Ogni mano giocata deve raggiungere il bersaglio del Blind prima di esaurire le mani a disposizione.<br><br>
+      Tra un Blind e l'altro visita il <b>Banco</b> per comprare Jolly (effetti passivi) e Cristalli (potenziano le mani di poker).<br><br>
+      Attenzione ai <b>Blind Boss</b>: impongono una regola speciale sfavorevole.
+    </div>
+    <button class="btn gold" id="continuebtn" style="width:100%;padding:16px;display:none;" onclick="continueGame()">Continua Partita</button>
+    <button class="btn ghost" id="newgamebtn" style="width:100%;padding:16px;margin-top:8px;" onclick="requestNewGame()">Nuova Partita</button>
+    <button class="btn ghost" id="infobtn-start" style="width:100%;padding:14px;" onclick="openInfo()">ℹ️ Regole del Gioco</button>
+    <button class="btn ghost" id="fullscreenbtn-start" style="width:100%;padding:14px;margin-top:8px;" onclick="toggleFullscreenBtn()">⛶ Schermo Intero</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameoverscreen" class="overlay hidden">
+    <h1>SEI STATO SBANCATO</h1>
+    <div id="gostats" class="rules-box"></div>
+    <button class="btn gold" style="width:100%;padding:16px;" onclick="startGame()">Riprova</button>
+    <button class="btn ghost" style="width:100%;padding:14px;margin-top:8px;" onclick="goToMenu()">Torna al Menù</button>
+  </div>
+
+  <!-- VICTORY -->
+  <div id="victoryscreen" class="overlay hidden">
+    <h1>🏆 HAI SBANCATO IL CASINÒ 🏆</h1>
+    <div id="vicstats" class="rules-box"></div>
+    <button class="btn gold" style="width:100%;padding:16px;" onclick="startGame()">Gioca ancora</button>
+    <button class="btn ghost" style="width:100%;padding:14px;margin-top:8px;" onclick="goToMenu()">Torna al Menù</button>
+  </div>
+
+  <!-- SHOP -->
+  <div id="shopscreen" class="overlay hidden">
+    <h2>IL BANCO</h2>
+    <div class="sub" id="shopmoney"></div>
+    <div class="owned-joker-row" id="shopownedjokers"></div>
+    <div id="shopitems"></div>
+    <div id="shopbottom">
+      <button class="btn ghost" id="rerollbtn" onclick="rerollShop()">🎲 Rimescola</button>
+      <button class="btn gold" onclick="leaveShop()">Prossimo Blind →</button>
+    </div>
+  </div>
+
+  <!-- PAUSE MENU -->
+  <div id="pausemenu" class="overlay hidden" style="align-items:center;justify-content:center;text-align:center;">
+    <h2>IN PAUSA</h2>
+    <div class="sub" id="pauseinfo"></div>
+    <button class="btn gold" style="width:80%;padding:14px;margin-top:14px;" onclick="closePauseMenu()">Riprendi Partita</button>
+    <button class="btn ghost" id="mutebtn" style="width:80%;padding:14px;margin-top:10px;" onclick="toggleMuteBtn()">🔊 Audio: Attivo</button>
+    <button class="btn ghost" id="fullscreenbtn" style="width:80%;padding:14px;margin-top:10px;" onclick="toggleFullscreenBtn()">⛶ Schermo Intero</button>
+    <button class="btn ghost" id="infobtn-pause" style="width:80%;padding:14px;margin-top:10px;" onclick="openInfo()">ℹ️ Regole del Gioco</button>
+    <button class="btn ghost" style="width:80%;padding:14px;margin-top:10px;" onclick="pauseNewGame()">Abbandona e Inizia Nuova Partita</button>
+  </div>
+
+  <!-- INFO / REGOLE -->
+  <div id="infoscreen" class="overlay hidden">
+    <h2>REGOLE DEL GIOCO</h2>
+    <div class="sub">Tutto quello che serve sapere per giocare a Fortuna</div>
+    <div id="infocontent"></div>
+    <button class="btn gold" style="width:100%;padding:16px;margin-top:6px;" onclick="closeInfo()">Chiudi</button>
+  </div>
+
+  <!-- MAIN GAME -->
+  <div id="topbar">
+    <button class="btn ghost" id="pausebtn" style="flex:none;padding:6px 10px;font-size:16px;" onclick="openPauseMenu()">☰</button>
+    <div class="stat-box">
+      <div class="label">Ante</div>
+      <div class="value" id="stat-ante">1/8</div>
+    </div>
+    <div class="stat-box blindname">
+      <div class="label" id="stat-blindlabel">Blind</div>
+      <div class="value" id="stat-blindname">Piccolo</div>
+    </div>
+    <div class="stat-box money">
+      <div class="label">Fiches</div>
+      <div class="value" id="stat-money">$4</div>
+    </div>
+  </div>
+
+  <div id="bossbanner" style="display:none;"></div>
+
+  <div id="scorebar">
+    <div class="row"><span>Punteggio</span><b id="stat-score">0</b></div>
+    <div class="bar-track"><div class="bar-fill" id="scorefill"></div></div>
+    <div class="row" style="margin-top:3px;"><span>Bersaglio</span><b id="stat-target">100</b></div>
+  </div>
+
+  <div id="jokerrow"></div>
+
+  <div id="handzone">
+    <div id="floater"><div class="htype" id="floater-htype"></div><div class="calc" id="floater-calc"></div></div>
+    <div id="handcards"></div>
+  </div>
+
+  <div id="handinfo">Mani: <b id="stat-hands">4</b> &nbsp;·&nbsp; Scarti: <b id="stat-discards">3</b> &nbsp;·&nbsp; Selezionate: <b id="stat-selected">0</b>/5</div>
+
+  <div id="actionbar">
+    <button class="btn discard" id="btn-discard" onclick="doDiscard()">Scarta</button>
+    <button class="btn play" id="btn-play" onclick="doPlay()">Gioca Mano</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   FORTUNA — motore di gioco
+   ============================================================ */
+
+const SUITS = [
+  {sym:'♠', color:'black'}, {sym:'♥', color:'red'},
+  {sym:'♦', color:'red'}, {sym:'♣', color:'black'}
+];
+const RANKS = [
+  {rk:'2', order:2, chip:2},{rk:'3', order:3, chip:3},{rk:'4', order:4, chip:4},
+  {rk:'5', order:5, chip:5},{rk:'6', order:6, chip:6},{rk:'7', order:7, chip:7},
+  {rk:'8', order:8, chip:8},{rk:'9', order:9, chip:9},{rk:'10', order:10, chip:10},
+  {rk:'J', order:11, chip:10},{rk:'Q', order:12, chip:10},{rk:'K', order:13, chip:10},
+  {rk:'A', order:14, chip:11}
+];
+
+const HAND_DEFS = {
+  highcard:   {name:'Carta Alta',      baseChips:5,  baseMult:1, perLvl:{chips:10, mult:1}},
+  pair:       {name:'Coppia',          baseChips:10, baseMult:2, perLvl:{chips:15, mult:1}},
+  twopair:    {name:'Doppia Coppia',   baseChips:20, baseMult:2, perLvl:{chips:20, mult:1}},
+  tris:       {name:'Tris',            baseChips:30, baseMult:3, perLvl:{chips:20, mult:2}},
+  straight:   {name:'Scala',           baseChips:30, baseMult:4, perLvl:{chips:30, mult:1}},
+  flush:      {name:'Colore',          baseChips:35, baseMult:4, perLvl:{chips:15, mult:2}},
+  fullhouse:  {name:'Full',            baseChips:40, baseMult:4, perLvl:{chips:25, mult:2}},
+  fourkind:   {name:'Poker',           baseChips:60, baseMult:7, perLvl:{chips:30, mult:3}},
+  straightflush:{name:'Scala Colore',  baseChips:100,baseMult:8, perLvl:{chips:40, mult:3}}
+};
+
+const HAND_ORDER = ['straightflush','fourkind','fullhouse','flush','straight','tris','twopair','pair','highcard'];
+const HAND_DESCRIPTIONS = {
+  highcard:   'Nessuna combinazione: conta solo la carta più alta selezionata.',
+  pair:       'Due carte dello stesso valore (es. due Re).',
+  twopair:    'Due coppie diverse tra le 5 carte giocate.',
+  tris:       'Tre carte dello stesso valore.',
+  straight:   'Cinque carte con valori consecutivi, semi qualsiasi (es. 5-6-7-8-9).',
+  flush:      'Cinque carte dello stesso seme, valori qualsiasi.',
+  fullhouse:  'Un Tris più una Coppia, per un totale di 5 carte.',
+  fourkind:   'Quattro carte dello stesso valore.',
+  straightflush:'Cinque carte consecutive dello stesso seme: la mano più forte.'
+};
+
+const JOKER_POOL = [
+  {id:'buffone', icon:'🃏', name:'Il Buffone', cost:5,
+    desc:'+4 Moltiplicatore su ogni mano.',
+    onScore:()=>({mult:4})},
+  {id:'forziere', icon:'🗝️', name:'Forziere', cost:5,
+    desc:'+40 Chip su ogni mano.',
+    onScore:()=>({chips:40})},
+  {id:'falco', icon:'🦅', name:'Occhio di Falco', cost:6,
+    desc:'+3 Mult per ogni Picche che segna punti.',
+    onScore:(ctx)=>({mult: 3*ctx.scoringCards.filter(c=>c.suit==='♠').length})},
+  {id:'cuoricino', icon:'❤️', name:'Cuore Impavido', cost:6,
+    desc:'+3 Mult per ogni Cuori che segna punti.',
+    onScore:(ctx)=>({mult: 3*ctx.scoringCards.filter(c=>c.suit==='♥').length})},
+  {id:'fortunato', icon:'🍀', name:'Mano Fortunata', cost:7,
+    desc:'x1.5 Mult se giochi una Coppia.',
+    onScore:(ctx)=>ctx.handType==='pair' ? {xmult:1.5} : {}},
+  {id:'collezionista', icon:'🎩', name:'Collezionista', cost:8,
+    desc:'+2 Mult per ogni altro Jolly posseduto.',
+    onScore:(ctx)=>({mult: 2*(ctx.jokersOwned.length-1)})},
+  {id:'banchiere', icon:'💰', name:'Il Banchiere', cost:6,
+    desc:'+$2 ogni volta che giochi una mano.',
+    onPlay:()=>({money:2})},
+  {id:'assonellamanica', icon:'🂡', name:'Asso nella Manica', cost:7,
+    desc:'+20 Chip per ogni Asso che segna punti.',
+    onScore:(ctx)=>({chips: 20*ctx.scoringCards.filter(c=>c.rk==='A').length})},
+  {id:'domatore', icon:'🎯', name:'Domatore di Scale', cost:6,
+    desc:'+5 Mult se giochi Scala o Scala Colore.',
+    onScore:(ctx)=>(ctx.handType==='straight'||ctx.handType==='straightflush') ? {mult:5} : {}},
+  {id:'specialista', icon:'🏠', name:'Specialista del Full', cost:7,
+    desc:'+25 Chip e x1.5 Mult se giochi Full.',
+    onScore:(ctx)=>ctx.handType==='fullhouse' ? {chips:25, xmult:1.5} : {}},
+  {id:'fantasma', icon:'👻', name:'Fantasma degli Scarti', cost:7,
+    desc:'+1 Mult permanente (per il round) ogni carta scartata.',
+    onDiscardCard:()=>({roundMult:1})},
+  {id:'predatore', icon:'🐺', name:'Predatore', cost:8,
+    desc:'x2 Mult su ogni mano, ma -1 mano giocabile a inizio Blind.',
+    onScore:()=>({xmult:2}), onBlindStart:()=>({handsDelta:-1})},
+  {id:'moltiplicatore', icon:'✖️', name:"Moltiplicatore d'Oro", cost:9,
+    desc:'x1.2 Mult su ogni mano.',
+    onScore:()=>({xmult:1.2})},
+  {id:'ultimoscarto', icon:'♻️', name:'Ultimo Respiro', cost:6,
+    desc:'+15 Chip per ogni scarto rimasto quando giochi una mano.',
+    onScore:(ctx)=>({chips: 15*ctx.discardsLeft})}
+];
+
+const BOSS_EFFECTS = [
+  {id:'cuorinero', name:'Cuori Spenti', desc:'Le carte di Cuori non danno Chip.'},
+  {id:'manocorta', name:'Mano Corta', desc:'La mano ha una carta in meno del solito.'},
+  {id:'rischiodoppio', name:'Rischio Doppio', desc:'Un scarto in meno a disposizione.'},
+  {id:'murodighiaccio', name:'Muro di Ghiaccio', desc:'Carta Alta e Coppia valgono Mult dimezzato.'}
+];
+
+/* ============================================================
+   AUDIO — effetti sonori sintetizzati (Web Audio API)
+   ============================================================ */
+const AudioEngine = (function(){
+  let ctx = null;
+  let muted = false;
+  try{ muted = localStorage.getItem('fortuna_mute') === '1'; }catch(e){}
+
+  function getCtx(){
+    if (!ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) ctx = new AC();
+    }
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(freq, dur, type, vol, delay){
+    const c = getCtx();
+    if (!c) return;
+    const t0 = c.currentTime + (delay||0);
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type||'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(vol||0.2, t0+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.connect(gain).connect(c.destination);
+    osc.start(t0);
+    osc.stop(t0+dur+0.03);
+  }
+
+  function sfx(name){
+    if (muted) return;
+    switch(name){
+      case 'select':   tone(640,0.06,'triangle',0.14); break;
+      case 'deselect': tone(420,0.06,'triangle',0.10); break;
+      case 'play':
+        tone(300,0.09,'sawtooth',0.13);
+        tone(520,0.12,'sine',0.16,0.05);
+        tone(760,0.16,'sine',0.18,0.11);
+        break;
+      case 'discard':
+        tone(260,0.14,'sawtooth',0.12);
+        tone(160,0.2,'sawtooth',0.1,0.06);
+        break;
+      case 'coin':
+        tone(900,0.08,'square',0.10);
+        tone(1300,0.1,'square',0.10,0.06);
+        break;
+      case 'win':
+        [523,659,784,1046].forEach((f,i)=>tone(f,0.28,'triangle',0.18,i*0.11));
+        break;
+      case 'lose':
+        tone(320,0.3,'sawtooth',0.14);
+        tone(220,0.4,'sawtooth',0.14,0.15);
+        tone(130,0.55,'sawtooth',0.14,0.32);
+        break;
+      case 'buy':
+        tone(700,0.08,'sine',0.15);
+        tone(1000,0.1,'sine',0.15,0.06);
+        break;
+      case 'click':
+        tone(520,0.05,'square',0.07); break;
+      case 'shop':
+        tone(440,0.1,'sine',0.12); tone(660,0.12,'sine',0.12,0.08); break;
+      case 'boss':
+        tone(150,0.32,'sawtooth',0.18); tone(100,0.42,'sawtooth',0.18,0.2); break;
+    }
+  }
+
+  function toggleMute(){
+    muted = !muted;
+    try{ localStorage.setItem('fortuna_mute', muted?'1':'0'); }catch(e){}
+    return muted;
+  }
+  function isMuted(){ return muted; }
+
+  return { sfx, toggleMute, isMuted };
+})();
+
+function toggleMuteBtn(){
+  const nowMuted = AudioEngine.toggleMute();
+  document.getElementById('mutebtn').textContent = nowMuted ? '🔇 Audio: Disattivo' : '🔊 Audio: Attivo';
+  if (!nowMuted) AudioEngine.sfx('click');
+}
+
+/* ============================================================
+   SCHERMO INTERO
+   ============================================================ */
+function fsElement(){
+  return document.fullscreenElement || document.webkitFullscreenElement ||
+         document.msFullscreenElement || null;
+}
+function fsSupported(){
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen);
+}
+function requestFS(){
+  const el = document.documentElement;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (fn) return fn.call(el);
+  return Promise.reject();
+}
+function exitFS(){
+  const fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  if (fn) return fn.call(document);
+  return Promise.reject();
+}
+function toggleFullscreenBtn(){
+  AudioEngine.sfx('click');
+  if (!fsSupported()){
+    alert('Il tuo browser non supporta lo schermo intero. Su iPhone puoi comunque aggiungere questa pagina alla schermata Home per un\'esperienza a schermo pieno.');
+    return;
+  }
+  if (fsElement()){
+    exitFS().catch(()=>{});
+  } else {
+    requestFS().catch(()=>{});
+  }
+}
+function updateFullscreenLabels(){
+  const on = !!fsElement();
+  const label = on ? '⛶ Esci da Schermo Intero' : '⛶ Schermo Intero';
+  const b1 = document.getElementById('fullscreenbtn');
+  const b2 = document.getElementById('fullscreenbtn-start');
+  if (b1) b1.textContent = label;
+  if (b2) b2.textContent = label;
+}
+document.addEventListener('fullscreenchange', updateFullscreenLabels);
+document.addEventListener('webkitfullscreenchange', updateFullscreenLabels);
+document.addEventListener('msfullscreenchange', updateFullscreenLabels);
+
+let state = {};
+let lastRenderedIds = new Set();
+
+function freshHandLevels(){
+  const o = {};
+  for (const k in HAND_DEFS) o[k] = 0;
+  return o;
+}
+
+function buildDeck(){
+  const d = [];
+  for (const s of SUITS) for (const r of RANKS){
+    d.push({suit:s.sym, color:s.color, rk:r.rk, order:r.order, chip:r.chip, id: s.sym+r.rk});
+  }
+  return shuffle(d);
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function baseHandSize(){
+  let n = 8;
+  if (state.bossEffect === 'manocorta') n -= 1;
+  return n;
+}
+function baseDiscards(){
+  let n = 3;
+  if (state.bossEffect === 'rischiodoppio') n -= 1;
+  return n;
+}
+
+function newRun(){
+  state = {
+    money: 4,
+    ante: 1,
+    blindIndex: 0, // 0 piccolo, 1 grande, 2 boss
+    deck: [],
+    hand: [],
+    selected: [],
+    handsLeft: 4,
+    discardsLeft: 3,
+    roundScore: 0,
+    target: 0,
+    jokers: [],
+    handLevels: freshHandLevels(),
+    bossEffect: null,
+    roundBonusMult: 0,
+    rerollCost: 2,
+    shopOffers: null,
+    shopOpen: false,
+    over: false
+  };
+}
+
+const BLIND_LABELS = ['Piccolo','Grande','Boss'];
+function targetForBlind(ante, blindIdx){
+  const table = [
+    [100,150,200],[200,300,400],[350,525,700],[550,825,1100],
+    [800,1200,1600],[1200,1800,2400],[1800,2700,3600],[2700,4000,5400]
+  ];
+  const row = table[Math.min(ante,8)-1] || table[7];
+  return row[blindIdx];
+}
+
+const SAVE_KEY = 'fortuna_save_v1';
+
+function saveGame(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+  catch(e){ /* storage non disponibile: si prosegue senza salvare */ }
+}
+function loadSavedState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function clearSave(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+}
+function hasResumableSave(){
+  const s = loadSavedState();
+  return !!(s && !s.over);
+}
+
+function startGame(){
+  newRun();
+  show('startscreen', false);
+  show('gameoverscreen', false);
+  show('victoryscreen', false);
+  show('shopscreen', false);
+  show('pausemenu', false);
+  startBlind();
+  render();
+  saveGame();
+}
+
+function requestNewGame(){
+  AudioEngine.sfx('click');
+  if (hasResumableSave()){
+    if (!confirm('C\'è una partita in corso. Iniziarne una nuova la cancellerà definitivamente. Continuare?')) return;
+  }
+  clearSave();
+  startGame();
+}
+
+function continueGame(){
+  AudioEngine.sfx('click');
+  const saved = loadSavedState();
+  if (!saved){ startGame(); return; }
+  state = saved;
+  lastRenderedIds = new Set(state.hand.map(c=>c.id));
+  show('startscreen', false);
+  show('gameoverscreen', false);
+  show('victoryscreen', false);
+  show('pausemenu', false);
+  if (state.shopOpen){
+    show('shopscreen', true);
+    renderShop();
+  } else {
+    show('shopscreen', false);
+  }
+  render();
+}
+
+function goToMenu(){
+  show('gameoverscreen', false);
+  show('victoryscreen', false);
+  show('shopscreen', false);
+  show('pausemenu', false);
+  setupStartScreen();
+  show('startscreen', true);
+}
+
+function openPauseMenu(){
+  AudioEngine.sfx('click');
+  document.getElementById('pauseinfo').innerHTML =
+    `Ante <b>${state.ante}/8</b> — Blind ${BLIND_LABELS[state.blindIndex]}<br>Fiches: <b>$${state.money}</b> — Jolly: <b>${state.jokers.length}</b>`;
+  document.getElementById('mutebtn').textContent = AudioEngine.isMuted() ? '🔇 Audio: Disattivo' : '🔊 Audio: Attivo';
+  updateFullscreenLabels();
+  show('pausemenu', true);
+}
+function closePauseMenu(){
+  AudioEngine.sfx('click');
+  show('pausemenu', false);
+}
+function pauseNewGame(){
+  if (!confirm('Abbandonare la partita in corso e iniziarne una nuova?')) return;
+  AudioEngine.sfx('click');
+  show('pausemenu', false);
+  clearSave();
+  startGame();
+}
+
+function setupStartScreen(){
+  const saved = loadSavedState();
+  const btn = document.getElementById('continuebtn');
+  if (saved && !saved.over){
+    btn.style.display = 'block';
+    btn.textContent = `Continua Partita — Ante ${saved.ante}/8, $${saved.money}`;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function openInfo(){
+  AudioEngine.sfx('click');
+  document.getElementById('infocontent').innerHTML = buildInfoHTML();
+  show('infoscreen', true);
+}
+function closeInfo(){
+  AudioEngine.sfx('click');
+  show('infoscreen', false);
+}
+
+function buildInfoHTML(){
+  const lvl = (state && state.handLevels) ? state.handLevels : freshHandLevels();
+
+  let handsHTML = '';
+  for (const key of HAND_ORDER){
+    const def = HAND_DEFS[key];
+    const l = lvl[key] || 0;
+    const chips = def.baseChips + def.perLvl.chips*l;
+    const mult = def.baseMult + def.perLvl.mult*l;
+    handsHTML += `<div class="hand-row">
+      <div style="flex:1;">
+        <div class="hn">${def.name}</div>
+        <div class="hd">${HAND_DESCRIPTIONS[key]}</div>
+      </div>
+      <div class="hv">${chips} Chip<br>× ${mult} Mult${l>0?`<br><span style="color:var(--green)">Liv.${l}</span>`:''}</div>
+    </div>`;
+  }
+
+  let jokersHTML = '';
+  for (const j of JOKER_POOL){
+    jokersHTML += `<div class="joker-info-row">
+      <div class="icon">${j.icon}</div>
+      <div><div class="nm">${j.name} <span style="color:var(--text-dim);font-weight:normal;">($${j.cost})</span></div>
+      <div class="ds">${j.desc}</div></div>
+    </div>`;
+  }
+
+  let bossHTML = '';
+  for (const b of BOSS_EFFECTS){
+    bossHTML += `<div class="boss-info-row"><div class="nm">${b.name}</div><div class="ds">${b.desc}</div></div>`;
+  }
+
+  return `
+    <div class="info-section">
+      <h3>Obiettivo</h3>
+      <div class="hd" style="font-size:12px;line-height:1.6;">
+        Ad ogni Blind selezioni fino a 5 carte dalla tua mano e le giochi per formare una combinazione di poker.
+        Ogni combinazione vale <b style="color:var(--text)">Chip × Moltiplicatore = Punti</b>.
+        Devi raggiungere il bersaglio del Blind entro le mani a disposizione (di solito 4), oppure la partita finisce.
+        Puoi scartare carte che non ti servono (di solito 3 scarti) per pescarne di nuove, senza fare punti.
+      </div>
+    </div>
+    <div class="info-section">
+      <h3>Struttura della partita</h3>
+      <div class="hd" style="font-size:12px;line-height:1.6;">
+        La partita è divisa in 8 <b style="color:var(--text)">Ante</b>. Ogni Ante ha 3 Blind in sequenza:
+        <b style="color:var(--text)">Piccolo</b>, <b style="color:var(--text)">Grande</b> e <b style="color:var(--text)">Boss</b> (bersaglio via via più alto).
+        Il Blind Boss impone anche una regola speciale sfavorevole, diversa ogni volta. Dopo ogni Blind superato visiti il Banco.
+      </div>
+    </div>
+    <div class="info-section">
+      <h3>Le mani di poker</h3>
+      ${handsHTML}
+      <div class="hd" style="margin-top:4px;">I valori Chip/Mult mostrati includono i livelli attuali delle tue mani (potenziate con i Cristalli al Banco).</div>
+    </div>
+    <div class="info-section">
+      <h3>Il Banco</h3>
+      <div class="hd" style="font-size:12px;line-height:1.6;">
+        Dopo ogni Blind superato incassi Fiches (base + interesse su quanto possiedi, fino a $5, + $1 per ogni mano rimasta) e visiti il Banco, dove puoi:<br>
+        • Comprare <b style="color:var(--text)">Jolly</b>: carte con effetti passivi permanenti, fino a 5 contemporaneamente.<br>
+        • Comprare <b style="color:var(--text)">Cristalli</b>: potenziano permanentemente una mano di poker (più Chip e Mult).<br>
+        • Rimescolare le offerte a pagamento (il costo aumenta ad ogni uso).<br>
+        • Rivendere un Jolly posseduto per metà del suo prezzo.
+      </div>
+    </div>
+    <div class="info-section">
+      <h3>Jolly disponibili</h3>
+      ${jokersHTML}
+    </div>
+    <div class="info-section">
+      <h3>Regole speciali dei Blind Boss</h3>
+      ${bossHTML}
+    </div>
+  `;
+}
+
+function startBlind(){
+  lastRenderedIds = new Set();
+  state.deck = buildDeck();
+  state.hand = [];
+  state.selected = [];
+  state.handsLeft = 4;
+  state.discardsLeft = baseDiscards();
+  state.roundScore = 0;
+  state.roundBonusMult = 0;
+  state.target = targetForBlind(state.ante, state.blindIndex);
+  state.bossEffect = state.blindIndex===2 ? BOSS_EFFECTS[Math.floor(Math.random()*BOSS_EFFECTS.length)].id : null;
+
+  // predatore joker effect at blind start
+  for (const j of state.jokers){
+    const def = JOKER_POOL.find(p=>p.id===j);
+    if (def && def.onBlindStart){
+      const r = def.onBlindStart();
+      if (r.handsDelta) state.handsLeft += r.handsDelta;
+    }
+  }
+  if (state.bossEffect === 'manocorta'){ /* handled in baseHandSize */ }
+  if (state.bossEffect) AudioEngine.sfx('boss');
+
+  drawToFull();
+}
+
+function drawToFull(){
+  const need = baseHandSize() - state.hand.length;
+  for (let i=0;i<need;i++){
+    if (state.deck.length===0) break;
+    state.hand.push(state.deck.pop());
+  }
+}
+
+/* ---------- HAND EVALUATION ---------- */
+function evaluate(cards){
+  const n = cards.length;
+  const byRank = {};
+  for (const c of cards){
+    byRank[c.rk] = byRank[c.rk] || [];
+    byRank[c.rk].push(c);
+  }
+  const groups = Object.values(byRank).sort((a,b)=> b.length - a.length || b[0].order - a[0].order);
+  const counts = groups.map(g=>g.length);
+
+  let isFlush = n===5 && cards.every(c=>c.suit===cards[0].suit);
+  let isStraight = false;
+  let straightCards = null;
+  if (n===5){
+    const orders = [...new Set(cards.map(c=>c.order))].sort((a,b)=>a-b);
+    if (orders.length===5){
+      if (orders[4]-orders[0]===4){ isStraight = true; }
+      // Ace-low: A,2,3,4,5
+      const lowSet = [14,2,3,4,5].sort((a,b)=>a-b);
+      if (JSON.stringify(orders)===JSON.stringify(lowSet)){ isStraight = true; }
+    }
+  }
+
+  let type, scoring;
+  if (isStraight && isFlush){ type='straightflush'; scoring=cards; }
+  else if (counts[0]===4){ type='fourkind'; scoring=groups[0]; }
+  else if (counts[0]===3 && counts[1]===2){ type='fullhouse'; scoring=cards; }
+  else if (isFlush){ type='flush'; scoring=cards; }
+  else if (isStraight){ type='straight'; scoring=cards; }
+  else if (counts[0]===3){ type='tris'; scoring=groups[0]; }
+  else if (counts[0]===2 && counts[1]===2){ type='twopair'; scoring=[...groups[0],...groups[1]]; }
+  else if (counts[0]===2){ type='pair'; scoring=groups[0]; }
+  else {
+    type='highcard';
+    const best = cards.slice().sort((a,b)=>b.order-a.order)[0];
+    scoring=[best];
+  }
+  return {type, scoring};
+}
+
+/* ---------- SELECTION ---------- */
+function toggleSelect(cardId){
+  const idx = state.selected.indexOf(cardId);
+  if (idx>=0){ state.selected.splice(idx,1); AudioEngine.sfx('deselect'); }
+  else {
+    if (state.selected.length>=5) return;
+    state.selected.push(cardId);
+    AudioEngine.sfx('select');
+  }
+  render();
+}
+
+/* ---------- PLAY / DISCARD ---------- */
+function doPlay(){
+  if (state.selected.length===0 || state.handsLeft<=0) return;
+  const btnPlay = document.getElementById('btn-play');
+  const btnDiscard = document.getElementById('btn-discard');
+  btnPlay.disabled = true; btnDiscard.disabled = true;
+
+  const playedCards = state.hand.filter(c=>state.selected.includes(c.id));
+  const {type, scoring} = evaluate(playedCards);
+
+  const def = HAND_DEFS[type];
+  const lvl = state.handLevels[type];
+  let chips = def.baseChips + def.perLvl.chips*lvl;
+  let mult = def.baseMult + def.perLvl.mult*lvl + state.roundBonusMult;
+
+  for (const c of scoring){
+    let v = c.chip;
+    if (state.bossEffect==='cuorinero' && c.suit==='♥') v = 0;
+    chips += v;
+  }
+  if (state.bossEffect==='murodighiaccio' && (type==='highcard'||type==='pair')){
+    mult = Math.floor(mult/2);
+  }
+
+  let xmultTotal = 1;
+  const ctx = {handType:type, scoringCards:scoring, playedCards, discardsLeft:state.discardsLeft, jokersOwned:state.jokers};
+  let moneyGain = 0;
+  for (const jid of state.jokers){
+    const jdef = JOKER_POOL.find(p=>p.id===jid);
+    if (jdef && jdef.onScore){
+      const r = jdef.onScore(ctx);
+      if (r.chips) chips += r.chips;
+      if (r.mult) mult += r.mult;
+      if (r.xmult) xmultTotal *= r.xmult;
+    }
+    if (jdef && jdef.onPlay){
+      const r = jdef.onPlay(ctx);
+      if (r.money) moneyGain += r.money;
+    }
+  }
+  mult = mult * xmultTotal;
+
+  const scoreGain = Math.floor(chips*mult);
+  const scoringIds = scoring.map(c=>c.id);
+  const removeIds = state.selected.slice();
+
+  AudioEngine.sfx('play');
+  showFloater(def.name, Math.floor(chips), mult, scoreGain);
+  pulseCards(scoringIds);
+  if (scoreGain >= state.target*0.5 || type==='fourkind' || type==='straightflush'){
+    shakeApp();
+  }
+
+  setTimeout(()=>{
+    state.roundScore += scoreGain;
+    state.money += moneyGain;
+    if (moneyGain>0){ floatCoin(moneyGain); AudioEngine.sfx('coin'); }
+
+    animateAndRemove(removeIds, 'playedfx', ()=>{
+      state.hand = state.hand.filter(c=>!removeIds.includes(c.id));
+      state.selected = [];
+      state.handsLeft -= 1;
+      drawToFull();
+      checkRoundEnd();
+      render();
+    });
+  }, 300);
+}
+
+function doDiscard(){
+  if (state.selected.length===0 || state.discardsLeft<=0) return;
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('btn-discard').disabled = true;
+  AudioEngine.sfx('discard');
+  for (const jid of state.jokers){
+    const jdef = JOKER_POOL.find(p=>p.id===jid);
+    if (jdef && jdef.onDiscardCard){
+      const r = jdef.onDiscardCard();
+      if (r.roundMult) state.roundBonusMult += r.roundMult*state.selected.length;
+    }
+  }
+  const removeIds = state.selected.slice();
+  animateAndRemove(removeIds, 'disc-fx', ()=>{
+    state.hand = state.hand.filter(c=>!removeIds.includes(c.id));
+    state.selected = [];
+    state.discardsLeft -= 1;
+    drawToFull();
+    render();
+  });
+}
+
+function pulseCards(ids){
+  for (const id of ids){
+    const el = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+    if (el) el.classList.add('scoring-pulse');
+  }
+}
+
+function shakeApp(){
+  const app = document.getElementById('app');
+  app.classList.remove('shake'); void app.offsetWidth;
+  app.classList.add('shake');
+}
+
+function floatCoin(amount){
+  const box = document.querySelector('.stat-box.money');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'coinfloat';
+  el.textContent = '+$'+amount;
+  box.appendChild(el);
+  setTimeout(()=>el.remove(), 950);
+}
+
+function animateAndRemove(ids, cls, done){
+  for (const id of ids){
+    const el = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+    if (el) el.classList.add(cls);
+  }
+  setTimeout(done, 260);
+}
+
+function checkRoundEnd(){
+  if (state.roundScore >= state.target){
+    winBlind();
+  } else if (state.handsLeft<=0){
+    loseRun();
+  }
+}
+
+function winBlind(){
+  AudioEngine.sfx('win');
+  const rewardBase = [3,4,5][state.blindIndex];
+  const interest = Math.min(5, Math.floor(state.money/5));
+  const handBonus = state.handsLeft;
+  const total = rewardBase + interest + handBonus;
+  state.money += total;
+  openShop(total, rewardBase, interest, handBonus);
+}
+
+function loseRun(){
+  AudioEngine.sfx('lose');
+  state.over = true;
+  clearSave();
+  document.getElementById('gostats').innerHTML =
+    `Sei arrivato all'<b>Ante ${state.ante}</b>, Blind <b>${BLIND_LABELS[state.blindIndex]}</b>.<br>
+     Bersaglio: <b>${state.target}</b> — Punteggio: <b>${state.roundScore}</b><br>
+     Jolly posseduti: <b>${state.jokers.length}</b>`;
+  show('gameoverscreen', true);
+}
+
+function nextBlind(){
+  state.blindIndex += 1;
+  if (state.blindIndex>2){
+    state.blindIndex = 0;
+    state.ante += 1;
+    if (state.ante>8){
+      winGame();
+      return;
+    }
+  }
+  startBlind();
+  render();
+}
+
+function winGame(){
+  AudioEngine.sfx('win');
+  state.over = true;
+  clearSave();
+  document.getElementById('vicstats').innerHTML =
+    `Hai battuto tutte le 8 Ante!<br>Fiches finali: <b>$${state.money}</b><br>Jolly raccolti: <b>${state.jokers.length}</b>`;
+  show('victoryscreen', true);
+}
+
+/* ---------- SHOP ---------- */
+function openShop(total, rewardBase, interest, handBonus){
+  AudioEngine.sfx('shop');
+  state.shopOpen = true;
+  state.shopOffers = rollShopOffers();
+  document.getElementById('shopmoney').innerHTML =
+    `Hai incassato <b style="color:var(--green)">$${total}</b> (base $${rewardBase} + interesse $${interest} + $${handBonus} per mani rimaste)`;
+  renderShop();
+  show('shopscreen', true);
+}
+
+function rollShopOffers(){
+  const jokersAvail = JOKER_POOL.filter(j=>!state.jokers.includes(j.id));
+  const jokerOffers = shuffle(jokersAvail).slice(0,2);
+  const handTypes = Object.keys(HAND_DEFS);
+  const crystalOffers = shuffle(handTypes).slice(0,2).map(ht=>({type:'crystal', hand:ht, cost:3}));
+  return { jokers: jokerOffers.map(j=>({type:'joker', joker:j})), crystals: crystalOffers };
+}
+
+function rerollShop(){
+  if (state.money < state.rerollCost) return;
+  AudioEngine.sfx('click');
+  state.money -= state.rerollCost;
+  state.rerollCost += 1;
+  state.shopOffers = rollShopOffers();
+  renderShop();
+}
+
+function buyJoker(jid){
+  const off = state.shopOffers.jokers.find(o=>o.joker.id===jid);
+  if (!off || state.money < off.joker.cost || state.jokers.length>=5) return;
+  AudioEngine.sfx('buy');
+  state.money -= off.joker.cost;
+  state.jokers.push(jid);
+  state.shopOffers.jokers = state.shopOffers.jokers.filter(o=>o.joker.id!==jid);
+  renderShop();
+  const row = document.getElementById('shopownedjokers');
+  const last = row && row.lastElementChild;
+  if (last) last.classList.add('joker-new');
+}
+
+function buyCrystal(hand){
+  const off = state.shopOffers.crystals.find(o=>o.hand===hand);
+  if (!off || state.money < off.cost) return;
+  AudioEngine.sfx('buy');
+  state.money -= off.cost;
+  state.handLevels[hand] += 1;
+  state.shopOffers.crystals = state.shopOffers.crystals.filter(o=>o.hand!==hand);
+  renderShop();
+}
+
+function sellJoker(jid){
+  const idx = state.jokers.indexOf(jid);
+  if (idx<0) return;
+  AudioEngine.sfx('coin');
+  state.jokers.splice(idx,1);
+  const def = JOKER_POOL.find(p=>p.id===jid);
+  state.money += Math.max(1, Math.floor(def.cost/2));
+  renderShop();
+}
+
+function leaveShop(){
+  AudioEngine.sfx('click');
+  state.shopOpen = false;
+  show('shopscreen', false);
+  nextBlind();
+}
+
+function renderShop(){
+  document.getElementById('shopmoney').querySelector ? null : null;
+  const moneyLine = document.getElementById('shopmoney');
+  const container = document.getElementById('shopitems');
+  container.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'sub';
+  header.style.marginTop = '4px';
+  header.innerHTML = `Fiches disponibili: <b style="color:var(--green)">$${state.money}</b>`;
+  container.appendChild(header);
+
+  const ownedRow = document.getElementById('shopownedjokers');
+  ownedRow.innerHTML = '';
+  if (state.jokers.length===0){
+    ownedRow.innerHTML = '<div class="sub" style="width:100%;">Nessun Jolly posseduto ancora.</div>';
+  }
+  for (const jid of state.jokers){
+    const def = JOKER_POOL.find(p=>p.id===jid);
+    const el = document.createElement('div');
+    el.className = 'joker-card';
+    el.title = def.desc;
+    el.innerHTML = `<div class="jicon">${def.icon}</div><div class="jname">${def.name}</div>`;
+    el.onclick = ()=>{ if(confirm(`Vendere ${def.name} per $${Math.max(1,Math.floor(def.cost/2))}?`)) sellJoker(jid); };
+    ownedRow.appendChild(el);
+  }
+
+  const sect1 = document.createElement('div');
+  sect1.className = 'sub';
+  sect1.style.textAlign = 'left';
+  sect1.textContent = '— Jolly in vendita —';
+  container.appendChild(sect1);
+
+  if (state.shopOffers.jokers.length===0){
+    const p = document.createElement('div'); p.className='sub'; p.textContent='(esauriti)';
+    container.appendChild(p);
+  }
+  for (const off of state.shopOffers.jokers){
+    const j = off.joker;
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    const full = state.jokers.length>=5;
+    div.innerHTML = `<div class="icon">${j.icon}</div>
+      <div class="info"><div class="nm">${j.name}</div><div class="ds">${j.desc}</div></div>
+      <button class="buy" ${(state.money<j.cost||full)?'disabled':''} onclick="buyJoker('${j.id}')">$${j.cost}</button>`;
+    container.appendChild(div);
+  }
+
+  const sect2 = document.createElement('div');
+  sect2.className = 'sub';
+  sect2.style.textAlign = 'left';
+  sect2.style.marginTop = '10px';
+  sect2.textContent = '— Cristalli (potenziano una mano) —';
+  container.appendChild(sect2);
+
+  if (state.shopOffers.crystals.length===0){
+    const p = document.createElement('div'); p.className='sub'; p.textContent='(esauriti)';
+    container.appendChild(p);
+  }
+  for (const off of state.shopOffers.crystals){
+    const def = HAND_DEFS[off.hand];
+    const lvl = state.handLevels[off.hand];
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.innerHTML = `<div class="icon">🔮</div>
+      <div class="info"><div class="nm">Cristallo — ${def.name}</div>
+      <div class="ds">Attuale: Liv.${lvl} (${def.baseChips+def.perLvl.chips*lvl} Chip / Mult ${def.baseMult+def.perLvl.mult*lvl}). +1 livello.</div></div>
+      <button class="buy" ${state.money<off.cost?'disabled':''} onclick="buyCrystal('${off.hand}')">$${off.cost}</button>`;
+    container.appendChild(div);
+  }
+
+  document.getElementById('rerollbtn').textContent = `🎲 Rimescola ($${state.rerollCost})`;
+  document.getElementById('rerollbtn').disabled = state.money < state.rerollCost;
+
+  if (!state.over) saveGame();
+}
+
+/* ---------- RENDER ---------- */
+function round1(n){ return Math.round(n*10)/10; }
+
+function showFloater(htype, chips, mult, total){
+  const f = document.getElementById('floater');
+  const calcEl = document.getElementById('floater-calc');
+  document.getElementById('floater-htype').textContent = htype;
+  calcEl.textContent = `0 Chip × 0 Mult = 0`;
+  f.classList.remove('show');
+  void f.offsetWidth;
+  f.classList.add('show');
+
+  const dur = 420;
+  const start = performance.now();
+  function step(now){
+    const p = Math.min(1, (now-start)/dur);
+    const c = Math.floor(chips*p);
+    const m = round1(mult*p);
+    const t = Math.floor(total*p);
+    calcEl.textContent = `${c} Chip × ${m} Mult = ${t}`;
+    if (p<1) requestAnimationFrame(step);
+    else calcEl.textContent = `${Math.floor(chips)} Chip × ${round1(mult)} Mult = ${total}`;
+  }
+  requestAnimationFrame(step);
+
+  clearTimeout(f._t);
+  f._t = setTimeout(()=>f.classList.remove('show'), dur+650);
+}
+
+function show(id, on){
+  document.getElementById(id).classList.toggle('hidden', !on);
+}
+
+function render(){
+  document.getElementById('stat-ante').textContent = `${state.ante}/8`;
+  document.getElementById('stat-blindname').textContent = BLIND_LABELS[state.blindIndex];
+  document.getElementById('stat-blindlabel').textContent = state.blindIndex===2 ? 'Blind Boss' : 'Blind';
+  document.getElementById('stat-money').textContent = `$${state.money}`;
+  document.getElementById('stat-score').textContent = state.roundScore;
+  document.getElementById('stat-target').textContent = state.target;
+  document.getElementById('stat-hands').textContent = state.handsLeft;
+  document.getElementById('stat-discards').textContent = state.discardsLeft;
+  document.getElementById('stat-selected').textContent = state.selected.length;
+
+  const pct = Math.min(100, Math.floor(100*state.roundScore/Math.max(1,state.target)));
+  document.getElementById('scorefill').style.width = pct+'%';
+
+  const banner = document.getElementById('bossbanner');
+  if (state.bossEffect){
+    const b = BOSS_EFFECTS.find(x=>x.id===state.bossEffect);
+    banner.style.display = 'block';
+    banner.innerHTML = `<b>${b.name}</b> — ${b.desc}`;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // jokers
+  const jrow = document.getElementById('jokerrow');
+  jrow.innerHTML = '';
+  for (const jid of state.jokers){
+    const def = JOKER_POOL.find(p=>p.id===jid);
+    const el = document.createElement('div');
+    el.className = 'joker-card';
+    el.title = def.desc;
+    el.innerHTML = `<div class="jicon">${def.icon}</div><div class="jname">${def.name}</div>`;
+    jrow.appendChild(el);
+  }
+  for (let i=state.jokers.length;i<5;i++){
+    const el = document.createElement('div');
+    el.className = 'joker-empty';
+    jrow.appendChild(el);
+  }
+
+  // hand cards
+  const hz = document.getElementById('handcards');
+  hz.innerHTML = '';
+  const n = state.hand.length;
+  const spread = Math.min(46, 300/Math.max(1,n));
+  const totalWidth = spread*(n-1) + 46;
+  const startX = -totalWidth/2;
+  state.hand.forEach((c, i)=>{
+    const el = document.createElement('div');
+    const sel = state.selected.includes(c.id);
+    const isNew = !lastRenderedIds.has(c.id);
+    el.className = 'card ' + c.color + (sel?' selected':'') + (isNew?' deal-in':'');
+    el.dataset.id = c.id;
+    el.style.left = `calc(50% + ${startX + i*spread}px)`;
+    el.style.bottom = sel ? '26px' : '10px';
+    el.innerHTML = `<div class="rk">${c.rk}</div><div class="st">${c.suit}</div><div class="rk bottom">${c.rk}</div>`;
+    el.onclick = ()=>toggleSelect(c.id);
+    hz.appendChild(el);
+  });
+  lastRenderedIds = new Set(state.hand.map(c=>c.id));
+
+  document.getElementById('btn-play').disabled = state.selected.length===0 || state.handsLeft<=0;
+  document.getElementById('btn-discard').disabled = state.selected.length===0 || state.discardsLeft<=0;
+
+  if (!state.over) saveGame();
+  else clearSave();
+}
+
+/* ---------- AVVIO ---------- */
+setupStartScreen();
+updateFullscreenLabels();
+if (!fsSupported()){
+  const b1 = document.getElementById('fullscreenbtn');
+  const b2 = document.getElementById('fullscreenbtn-start');
+  if (b1) b1.style.display = 'none';
+  if (b2) b2.style.display = 'none';
+}
+</script>
+</body>
+</html>
