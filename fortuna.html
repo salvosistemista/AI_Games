@@ -62,7 +62,7 @@
   }
 
   /* ---------- TOP BAR ---------- */
-  #topbar, #scorebar, #jokerrow, #handzone, #actionbar, #handinfo, #bossbanner{
+  #topbar, #scorebar, #skipbar, #jokerrow, #handzone, #actionbar, #handinfo, #bossbanner{
     position:relative; z-index:1;
   }
   #topbar{
@@ -110,6 +110,9 @@
   #scorebar .row b{ color:var(--gold); font-size:14px; }
   #scorebar .bar-track{ height:8px; border-radius:5px; background:#150a24; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
   #scorebar .bar-fill{ height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); width:0%; transition:width .35s ease; }
+
+  #skipbar{ margin:0 8px 4px 8px; flex-shrink:0; }
+  #skipbar .btn{ width:100%; padding:6px; font-size:10.5px; letter-spacing:0.3px; }
 
   /* ---------- JOKER ROW ---------- */
   #jokerrow{
@@ -207,6 +210,25 @@
   .card.suppressed::after{
     content:'∅'; position:absolute; top:1px; right:3px;
     font-size:11px; font-weight:bold; color:var(--red);
+  }
+  .card.edition-foil{
+    border:1.5px solid var(--gold);
+    box-shadow:0 3px 6px rgba(0,0,0,0.4), 0 0 8px rgba(242,201,76,0.55);
+  }
+  .card.edition-foil::before{
+    content:'F'; position:absolute; bottom:1px; right:3px;
+    font-size:8px; font-weight:bold; color:var(--gold-dim);
+  }
+  .card.edition-holo{
+    border:1.5px solid transparent;
+    background:
+      linear-gradient(160deg,#ffffff,#efe9da) padding-box,
+      linear-gradient(120deg,#f2c94c,#e0555f,#4caf7d,#f2c94c) border-box;
+    box-shadow:0 3px 6px rgba(0,0,0,0.4), 0 0 10px rgba(224,85,95,0.4);
+  }
+  .card.edition-holo::before{
+    content:'H'; position:absolute; bottom:1px; right:3px;
+    font-size:8px; font-weight:bold; color:var(--red);
   }
   @keyframes dealIn{
     0%{ opacity:0; transform:translateY(40px) scale(0.7) rotate(-8deg); }
@@ -419,6 +441,10 @@
     <div class="row" style="margin-top:3px;"><span>Bersaglio</span><b id="stat-target">100</b></div>
   </div>
 
+  <div id="skipbar" style="display:none;">
+    <button class="btn ghost" onclick="skipBlind()">⏭ Salta Blind (+$<span id="skipreward">0</span>)</button>
+  </div>
+
   <div id="jokerrow"></div>
 
   <div id="handzone">
@@ -517,7 +543,7 @@ const JOKER_POOL = [
   {id:'fantasma', icon:'👻', name:'Fantasma degli Scarti', cost:7,
     desc:'+1 Mult permanente (per il round) ogni carta scartata.',
     onDiscardCard:()=>({roundMult:1})},
-  {id:'predatore', icon:'🐺', name:'Predatore', cost:8,
+  {id:'predatore', icon:'🐺', name:'Predatore', cost:11,
     desc:'x2 Mult su ogni mano, ma -1 mano giocabile a inizio Blind.',
     onScore:()=>({xmult:2}), onBlindStart:()=>({handsDelta:-1})},
   {id:'moltiplicatore', icon:'✖️', name:"Moltiplicatore d'Oro", cost:9,
@@ -528,11 +554,26 @@ const JOKER_POOL = [
     onScore:(ctx)=>({chips: 15*ctx.discardsLeft})}
 ];
 
+const VOUCHER_DEFS = [
+  {key:'handSlot', icon:'🖐️', name:'Mano Extra', cost:10,
+    desc:'+1 mano giocabile per Blind, per tutta la partita.'},
+  {key:'discardSlot', icon:'🔄', name:'Scarto Extra', cost:8,
+    desc:'+1 scarto per Blind, per tutta la partita.'},
+  {key:'jokerSlot', icon:'🎴', name:'Slot Jolly', cost:14,
+    desc:'+1 slot per i Jolly (da 5 a 6), per tutta la partita.'}
+];
+
 const BOSS_EFFECTS = [
-  {id:'cuorinero', name:'Cuori Spenti', desc:'Le carte di Cuori non danno Chip.'},
-  {id:'manocorta', name:'Mano Corta', desc:'La mano ha una carta in meno del solito.'},
+  {id:'cuorinero',     name:'Cuori Spenti',   desc:'Le carte di Cuori non danno Chip.', suitOff:'♥'},
+  {id:'picchenere',    name:'Picche Spente',  desc:'Le carte di Picche non danno Chip.', suitOff:'♠'},
+  {id:'quadrispenti',  name:'Quadri Spenti',  desc:'Le carte di Quadri non danno Chip.', suitOff:'♦'},
+  {id:'fiorispenti',   name:'Fiori Spenti',   desc:'Le carte di Fiori non danno Chip.', suitOff:'♣'},
+  {id:'manocorta',     name:'Mano Corta',     desc:'La mano ha una carta in meno del solito.'},
   {id:'rischiodoppio', name:'Rischio Doppio', desc:'Un scarto in meno a disposizione.'},
-  {id:'murodighiaccio', name:'Muro di Ghiaccio', desc:'Carta Alta e Coppia valgono Mult dimezzato.'}
+  {id:'murodighiaccio',name:'Muro di Ghiaccio', desc:'Carta Alta e Coppia valgono Mult dimezzato.'},
+  {id:'manominima',    name:'Mano Minima',    desc:'Devi giocare almeno 4 carte per formare una mano.'},
+  {id:'scartobloccato',name:'Scarto Bloccato', desc:'Non puoi scartare carte in questo Blind.'},
+  {id:'manoferrea',    name:'Presa Ferrea',   desc:'Hai una mano giocabile in meno del solito.'}
 ];
 
 /* ============================================================
@@ -678,10 +719,16 @@ function freshHandLevels(){
   return o;
 }
 
+function rollEdition(){
+  const r = Math.random();
+  if (r < 0.035) return 'foil';  // +30 Chip quando la carta segna punti
+  if (r < 0.06) return 'holo';   // +10 Mult quando la carta segna punti
+  return null;
+}
 function buildDeck(){
   const d = [];
   for (const s of SUITS) for (const r of RANKS){
-    d.push({suit:s.sym, color:s.color, rk:r.rk, order:r.order, chip:r.chip, id: s.sym+r.rk});
+    d.push({suit:s.sym, color:s.color, rk:r.rk, order:r.order, chip:r.chip, id: s.sym+r.rk, edition: rollEdition()});
   }
   return shuffle(d);
 }
@@ -702,7 +749,23 @@ function baseHandSize(){
 function baseDiscards(){
   let n = 3;
   if (state.bossEffect === 'rischiodoppio') n -= 1;
-  return n;
+  if (state.vouchers && state.vouchers.discardSlot) n += 1;
+  if (state.bossEffect === 'scartobloccato') n = 0;
+  return Math.max(0, n);
+}
+function baseHands(){
+  let n = 4;
+  if (state.bossEffect === 'manoferrea') n -= 1;
+  if (state.vouchers && state.vouchers.handSlot) n += 1;
+  return Math.max(1, n);
+}
+function maxJokers(){
+  return 5 + (state.vouchers && state.vouchers.jokerSlot ? 1 : 0);
+}
+function isSuitOff(suit){
+  if (!state.bossEffect) return false;
+  const b = BOSS_EFFECTS.find(x=>x.id===state.bossEffect);
+  return !!(b && b.suitOff === suit);
 }
 
 function newRun(){
@@ -721,10 +784,12 @@ function newRun(){
     handLevels: freshHandLevels(),
     bossEffect: null,
     upcomingBossEffect: null,
+    usedBossEffects: [],
     roundBonusMult: 0,
     rerollCost: 2,
     shopOffers: null,
     shopOpen: false,
+    vouchers: {handSlot:false, discardSlot:false, jokerSlot:false},
     over: false
   };
 }
@@ -791,6 +856,8 @@ function continueGame(){
   if (!saved){ startGame(); return; }
   state = saved;
   if (state.upcomingBossEffect === undefined) state.upcomingBossEffect = null;
+  if (!state.usedBossEffects) state.usedBossEffects = [];
+  if (!state.vouchers) state.vouchers = {handSlot:false, discardSlot:false, jokerSlot:false};
   lastRenderedIds = new Set(state.hand.map(c=>c.id));
   show('startscreen', false);
   show('gameoverscreen', false);
@@ -882,6 +949,15 @@ function buildInfoHTML(){
     </div>`;
   }
 
+  let voucherHTML = '';
+  for (const v of VOUCHER_DEFS){
+    voucherHTML += `<div class="joker-info-row">
+      <div class="icon">${v.icon}</div>
+      <div><div class="nm">${v.name} <span style="color:var(--text-dim);font-weight:normal;">($${v.cost})</span></div>
+      <div class="ds">${v.desc}</div></div>
+    </div>`;
+  }
+
   let bossHTML = '';
   for (const b of BOSS_EFFECTS){
     bossHTML += `<div class="boss-info-row"><div class="nm">${b.name}</div><div class="ds">${b.desc}</div></div>`;
@@ -902,7 +978,9 @@ function buildInfoHTML(){
       <div class="hd" style="font-size:12px;line-height:1.6;">
         La partita è divisa in 8 <b style="color:var(--text)">Ante</b>. Ogni Ante ha 3 Blind in sequenza:
         <b style="color:var(--text)">Piccolo</b>, <b style="color:var(--text)">Grande</b> e <b style="color:var(--text)">Boss</b> (bersaglio via via più alto).
-        Il Blind Boss impone anche una regola speciale sfavorevole, diversa ogni volta. Dopo ogni Blind superato visiti il Banco.
+        La regola del Boss viene svelata già al Blind Piccolo, così puoi prepararti al Banco. Il Blind Boss non si può saltare;
+        Piccolo e Grande invece si possono <b style="color:var(--text)">saltare</b> per un piccolo incasso immediato, se preferisci non rischiare.
+        Dopo ogni Blind superato (o saltato) visiti il Banco.
       </div>
     </div>
     <div class="info-section">
@@ -911,14 +989,27 @@ function buildInfoHTML(){
       <div class="hd" style="margin-top:4px;">I valori Chip/Mult mostrati includono i livelli attuali delle tue mani (potenziate con i Cristalli al Banco).</div>
     </div>
     <div class="info-section">
+      <h3>Edizioni delle carte</h3>
+      <div class="hd" style="font-size:12px;line-height:1.6;">
+        Alcune carte del mazzo nascono con un'edizione speciale, riconoscibile dal bordo dorato o cangiante:<br>
+        • <b style="color:var(--text)">Foil</b>: +30 Chip quando la carta segna punti.<br>
+        • <b style="color:var(--text)">Olografica</b>: +10 Mult quando la carta segna punti.
+      </div>
+    </div>
+    <div class="info-section">
       <h3>Il Banco</h3>
       <div class="hd" style="font-size:12px;line-height:1.6;">
         Dopo ogni Blind superato incassi Fiches (base + interesse su quanto possiedi, fino a $5, + $1 per ogni mano rimasta) e visiti il Banco, dove puoi:<br>
-        • Comprare <b style="color:var(--text)">Jolly</b>: carte con effetti passivi permanenti, fino a 5 contemporaneamente.<br>
+        • Comprare <b style="color:var(--text)">Jolly</b>: carte con effetti passivi permanenti, fino a ${maxJokers()} contemporaneamente.<br>
         • Comprare <b style="color:var(--text)">Cristalli</b>: potenziano permanentemente una mano di poker (più Chip e Mult).<br>
-        • Rimescolare le offerte a pagamento (il costo aumenta ad ogni uso).<br>
+        • Comprare <b style="color:var(--text)">Potenziamenti Permanenti</b>: acquistabili una sola volta a partita, restano per tutta la run.<br>
+        • Rimescolare le offerte a pagamento (il costo aumenta a ogni uso, si resetta alla prossima visita).<br>
         • Rivendere un Jolly posseduto per metà del suo prezzo.
       </div>
+    </div>
+    <div class="info-section">
+      <h3>Potenziamenti Permanenti</h3>
+      ${voucherHTML}
     </div>
     <div class="info-section">
       <h3>Jolly disponibili</h3>
@@ -931,13 +1022,22 @@ function buildInfoHTML(){
   `;
 }
 
+function rollBossEffect(){
+  let pool = BOSS_EFFECTS.filter(b => !state.usedBossEffects.includes(b.id));
+  if (pool.length === 0){
+    state.usedBossEffects = [];
+    pool = BOSS_EFFECTS.slice();
+  }
+  const chosen = pool[Math.floor(Math.random()*pool.length)];
+  state.usedBossEffects.push(chosen.id);
+  return chosen.id;
+}
+
 function startBlind(){
   lastRenderedIds = new Set();
   state.deck = buildDeck();
   state.hand = [];
   state.selected = [];
-  state.handsLeft = 4;
-  state.discardsLeft = baseDiscards();
   state.roundScore = 0;
   state.roundBonusMult = 0;
   state.target = targetForBlind(state.ante, state.blindIndex);
@@ -946,9 +1046,14 @@ function startBlind(){
   // visibile in anticipo (banner "Prossimo Boss") e il giocatore può
   // prepararsi con acquisti mirati al Banco prima di incontrarlo.
   if (state.blindIndex===0 || !state.upcomingBossEffect){
-    state.upcomingBossEffect = BOSS_EFFECTS[Math.floor(Math.random()*BOSS_EFFECTS.length)].id;
+    state.upcomingBossEffect = rollBossEffect();
   }
   state.bossEffect = state.blindIndex===2 ? state.upcomingBossEffect : null;
+
+  // handsLeft/discardsLeft vanno calcolati DOPO aver fissato bossEffect,
+  // perché dipendono da eventuali regole del Boss (es. Scarto Bloccato).
+  state.handsLeft = baseHands();
+  state.discardsLeft = baseDiscards();
 
   // predatore joker effect at blind start
   for (const j of state.jokers){
@@ -1049,6 +1154,10 @@ function toggleSelect(cardId){
 /* ---------- PLAY / DISCARD ---------- */
 function doPlay(){
   if (state.selected.length===0 || state.handsLeft<=0) return;
+  if (state.bossEffect==='manominima' && state.selected.length < 4){
+    showAlert('Il Boss "Mano Minima" richiede di giocare almeno 4 carte.');
+    return;
+  }
   const btnPlay = document.getElementById('btn-play');
   const btnDiscard = document.getElementById('btn-discard');
   btnPlay.disabled = true; btnDiscard.disabled = true;
@@ -1062,9 +1171,10 @@ function doPlay(){
   let mult = def.baseMult + def.perLvl.mult*lvl + state.roundBonusMult;
 
   for (const c of scoring){
-    let v = c.chip;
-    if (state.bossEffect==='cuorinero' && c.suit==='♥') v = 0;
+    let v = isSuitOff(c.suit) ? 0 : c.chip;
     chips += v;
+    if (c.edition === 'foil') chips += 30;
+    if (c.edition === 'holo') mult += 10;
   }
   if (state.bossEffect==='murodighiaccio' && (type==='highcard'||type==='pair')){
     mult = Math.floor(mult/2);
@@ -1226,15 +1336,26 @@ function winGame(){
 }
 
 /* ---------- SHOP ---------- */
-function openShop(total, rewardBase, interest, handBonus){
+function openShop(total, rewardBase, interest, handBonus, skipped){
   AudioEngine.sfx('shop');
   state.shopOpen = true;
   state.rerollCost = 2; // il costo di rimescolamento si resetta a ogni nuova visita al Banco
   state.shopOffers = rollShopOffers();
-  document.getElementById('shopmoney').innerHTML =
-    `Hai incassato <b style="color:var(--green)">$${total}</b> (base $${rewardBase} + interesse $${interest} + $${handBonus} per mani rimaste)`;
+  document.getElementById('shopmoney').innerHTML = skipped
+    ? `Hai saltato il Blind e incassato <b style="color:var(--green)">$${total}</b> (nessun interesse né bonus mani)`
+    : `Hai incassato <b style="color:var(--green)">$${total}</b> (base $${rewardBase} + interesse $${interest} + $${handBonus} per mani rimaste)`;
   renderShop();
   show('shopscreen', true);
+}
+
+function skipBlind(){
+  if (state.blindIndex === 2 || state.shopOpen || state.over) return;
+  const reward = 2 + state.ante;
+  showConfirm(`Saltare questo Blind? Guadagnerai $${reward} ma niente interesse né bonus mani rimaste.`, ()=>{
+    AudioEngine.sfx('coin');
+    state.money += reward;
+    openShop(reward, reward, 0, 0, true);
+  });
 }
 
 function rollShopOffers(){
@@ -1256,7 +1377,7 @@ function rerollShop(){
 
 function buyJoker(jid){
   const off = state.shopOffers.jokers.find(o=>o.joker.id===jid);
-  if (!off || state.money < off.joker.cost || state.jokers.length>=5) return;
+  if (!off || state.money < off.joker.cost || state.jokers.length>=maxJokers()) return;
   AudioEngine.sfx('buy');
   state.money -= off.joker.cost;
   state.jokers.push(jid);
@@ -1274,6 +1395,16 @@ function buyCrystal(hand){
   state.money -= off.cost;
   state.handLevels[hand] += 1;
   state.shopOffers.crystals = state.shopOffers.crystals.filter(o=>o.hand!==hand);
+  renderShop();
+}
+
+function buyVoucher(key){
+  if (state.vouchers[key]) return;
+  const def = VOUCHER_DEFS.find(v=>v.key===key);
+  if (!def || state.money < def.cost) return;
+  AudioEngine.sfx('buy');
+  state.money -= def.cost;
+  state.vouchers[key] = true;
   renderShop();
 }
 
@@ -1333,7 +1464,7 @@ function renderShop(){
     const j = off.joker;
     const div = document.createElement('div');
     div.className = 'shop-item';
-    const full = state.jokers.length>=5;
+    const full = state.jokers.length>=maxJokers();
     div.innerHTML = `<div class="icon">${j.icon}</div>
       <div class="info"><div class="nm">${j.name}</div><div class="ds">${j.desc}</div></div>
       <button class="buy" ${(state.money<j.cost||full)?'disabled':''} onclick="buyJoker('${j.id}')">$${j.cost}</button>`;
@@ -1360,6 +1491,27 @@ function renderShop(){
       <div class="info"><div class="nm">Cristallo — ${def.name}</div>
       <div class="ds">Attuale: Liv.${lvl} (${def.baseChips+def.perLvl.chips*lvl} Chip / Mult ${def.baseMult+def.perLvl.mult*lvl}). +1 livello.</div></div>
       <button class="buy" ${state.money<off.cost?'disabled':''} onclick="buyCrystal('${off.hand}')">$${off.cost}</button>`;
+    container.appendChild(div);
+  }
+
+  const sect3 = document.createElement('div');
+  sect3.className = 'sub';
+  sect3.style.textAlign = 'left';
+  sect3.style.marginTop = '10px';
+  sect3.textContent = '— Potenziamenti Permanenti —';
+  container.appendChild(sect3);
+
+  const availableVouchers = VOUCHER_DEFS.filter(v=>!state.vouchers[v.key]);
+  if (availableVouchers.length===0){
+    const p = document.createElement('div'); p.className='sub'; p.textContent='(tutti acquistati)';
+    container.appendChild(p);
+  }
+  for (const v of availableVouchers){
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.innerHTML = `<div class="icon">${v.icon}</div>
+      <div class="info"><div class="nm">${v.name}</div><div class="ds">${v.desc}</div></div>
+      <button class="buy" ${state.money<v.cost?'disabled':''} onclick="buyVoucher('${v.key}')">$${v.cost}</button>`;
     container.appendChild(div);
   }
 
@@ -1459,6 +1611,14 @@ function render(){
     banner.style.display = 'none';
   }
 
+  const skipbar = document.getElementById('skipbar');
+  if (state.blindIndex !== 2 && !state.over && !state.shopOpen){
+    skipbar.style.display = 'block';
+    document.getElementById('skipreward').textContent = (2 + state.ante);
+  } else {
+    skipbar.style.display = 'none';
+  }
+
   // jokers
   const jrow = document.getElementById('jokerrow');
   jrow.innerHTML = '';
@@ -1470,7 +1630,7 @@ function render(){
     el.innerHTML = `<div class="jicon">${def.icon}</div><div class="jname">${def.name}</div>`;
     jrow.appendChild(el);
   }
-  for (let i=state.jokers.length;i<5;i++){
+  for (let i=state.jokers.length;i<maxJokers();i++){
     const el = document.createElement('div');
     el.className = 'joker-empty';
     jrow.appendChild(el);
@@ -1487,9 +1647,12 @@ function render(){
     const el = document.createElement('div');
     const sel = state.selected.includes(c.id);
     const isNew = !lastRenderedIds.has(c.id);
-    const suppressed = state.bossEffect==='cuorinero' && c.suit==='♥';
-    el.className = 'card ' + c.color + (sel?' selected':'') + (isNew?' deal-in':'') + (suppressed?' suppressed':'');
-    if (suppressed) el.title = 'Cuori Spenti: questa carta non dà Chip';
+    const suppressed = isSuitOff(c.suit);
+    const editionCls = c.edition ? ` edition-${c.edition}` : '';
+    el.className = 'card ' + c.color + (sel?' selected':'') + (isNew?' deal-in':'') + (suppressed?' suppressed':'') + editionCls;
+    if (suppressed) el.title = 'Questo seme non dà Chip con questo Boss';
+    else if (c.edition==='foil') el.title = 'Foil: +30 Chip quando segna punti';
+    else if (c.edition==='holo') el.title = 'Olografica: +10 Mult quando segna punti';
     el.dataset.id = c.id;
     el.style.left = `calc(50% + ${startX + i*spread}px)`;
     el.style.bottom = sel ? '26px' : '10px';
