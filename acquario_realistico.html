@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulatore Acquario 50L — Edizione Realistica</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    /* Container Principale */
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    /* Vasca Acquario (Proporzione 30cm x 30cm x 60cm - Aspect Ratio 1:2) */
+    .aquarium-frame {
+      position: relative;
+      width: 300px;
+      height: 550px;
+      border: 8px solid #334155;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5), 0 0 15px rgba(56, 189, 248, 0.2);
+      overflow: hidden;
+      background: #020617;
+      touch-action: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Info Bar Integrata */
+    .top-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 10;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .top-bar span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Pannello di Controllo in Basso */
+    .control-panel {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #1e293b, #334155);
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 12px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, #334155, #475569);
+      transform: translateY(-2px);
+      border-color: #38bdf8;
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      grid-column: span 3;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border-color: #38bdf8;
+      font-size: 15px;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+    }
+
+    /* Finestre Modali */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: #1e293b;
+      border: 1px solid #475569;
+      width: 90%;
+      max-width: 420px;
+      max-height: 80vh;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .close-btn:hover { color: #fff; }
+
+    .modal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      padding: 10px 14px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .item-name {
+      font-weight: bold;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .item-desc {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .edit-name-input {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      width: 100px;
+    }
+
+    .buy-btn, .sell-btn, .danger-btn, .cure-btn {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .sell-btn, .danger-btn { background: #dc2626; }
+    .cure-btn { background: #7c3aed; }
+    .buy-btn:hover { background: #10b981; }
+    .sell-btn:hover, .danger-btn:hover { background: #ef4444; }
+    .cure-btn:hover { background: #8b5cf6; }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #334155;
+    }
+
+    .bg-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .bg-opt {
+      border: 2px solid #334155;
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      font-size: 11px;
+      cursor: pointer;
+      background: #0f172a;
+    }
+
+    .bg-opt.selected {
+      border-color: #38bdf8;
+      background: #1e293b;
+    }
+
+    .warn-badge {
+      display: inline-block;
+      background: #7c2d12;
+      color: #fed7aa;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+
+    .ok-badge {
+      display: inline-block;
+      background: #14532d;
+      color: #bbf7d0;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+
+    .danger-badge {
+      display: inline-block;
+      background: #7f1d1d;
+      color: #fecaca;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+
+    .mini-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mini-btn {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #f8fafc;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .mini-btn:hover { background: #475569; }
+
+    .toast-container {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      pointer-events: none;
+      width: 90%;
+      max-width: 380px;
+    }
+
+    .toast {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #38bdf8;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4);
+      text-align: center;
+      animation: toast-in 0.2s ease;
+    }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <div class="game-container">
+    <div class="aquarium-frame">
+      <div class="top-bar">
+        <span id="money-display">💰 80€</span>
+        <span id="cycle-display">☀️</span>
+        <span id="clean-display">💧 100%</span>
+      </div>
+      <canvas id="aquariumCanvas"></canvas>
+    </div>
+
+    <div class="control-panel">
+      <button class="btn btn-primary" onclick="addFood()">🍞 Cibo +</button>
+      <button class="btn" onclick="openModal('modal-pesci')">🐟 Pesci</button>
+      <button class="btn" onclick="openModal('modal-acquario')">🫧 Acquario</button>
+      <button class="btn" onclick="openModal('modal-negozio')">🏪 Negozio</button>
+      <button class="btn" onclick="openModal('modal-opzioni')" style="grid-column: span 3;">⚙️ Opzioni</button>
+    </div>
+  </div>
+
+  <!-- MODALE PESCI -->
+  <div class="modal-overlay" id="modal-pesci">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">I Tuoi Pesci</div>
+        <button class="close-btn" onclick="closeModal('modal-pesci')">&times;</button>
+      </div>
+      <div class="modal-list" id="fish-list-container"></div>
+    </div>
+  </div>
+
+  <!-- MODALE ACQUARIO -->
+  <div class="modal-overlay" id="modal-acquario">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Stato Acquario</div>
+        <button class="close-btn" onclick="closeModal('modal-acquario')">&times;</button>
+      </div>
+      <div class="modal-list">
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Dimensioni Vasca</span>
+            <span class="item-desc">30 cm (L) x 30 cm (P) x 60 cm (A) — 50 Litri</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Carico Biologico</span>
+            <span class="item-desc" id="bioload-text">0.0 / 5.0</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Temperatura</span>
+            <span class="item-desc" id="temp-display">21.0 °C</span>
+          </div>
+          <div class="mini-controls" id="heater-controls"></div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Ossigeno Disciolto</span>
+            <span class="item-desc" id="o2-display">95%</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Ammoniaca (NH₃)</span>
+            <span class="item-desc" id="ammonia-display">0.00 ppm</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Nitriti (NO₂)</span>
+            <span class="item-desc" id="nitrite-display">0.00 ppm</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Nitrati (NO₃)</span>
+            <span class="item-desc" id="nitrate-display">5.0 ppm</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">pH</span>
+            <span class="item-desc" id="ph-display">7.4</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Colonia Batterica (ciclo dell'azoto)</span>
+            <span class="item-desc" id="bacteria-display">Ammoniaca 0% · Nitriti 0%</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Efficienza Filtro</span>
+            <span class="item-desc" id="filter-status-text">Assente</span>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-info">
+            <span class="item-name">Cambio Acqua Parziale</span>
+            <span class="item-desc">Riduce ammoniaca/nitriti/nitrati (~50%). Unico modo per abbassare i nitrati.</span>
+          </div>
+          <button class="buy-btn" onclick="doWaterChange()">5€</button>
+        </div>
+
+        <div style="margin-top: 5px;">
+          <label style="font-size: 13px; font-weight: bold;">Sfondo e Scenario:</label>
+          <div class="bg-selector">
+            <div class="bg-opt selected" id="bg-0" onclick="changeBackground(0)">Oceano Profondo</div>
+            <div class="bg-opt" id="bg-1" onclick="changeBackground(1)">Barriera Corallina</div>
+            <div class="bg-opt" id="bg-2" onclick="changeBackground(2)">Abissi Notturni</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE NEGOZIO -->
+  <div class="modal-overlay" id="modal-negozio">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Negozio Acquario</div>
+        <button class="close-btn" onclick="closeModal('modal-negozio')">&times;</button>
+      </div>
+      <div style="font-size: 11px; color: #94a3b8; text-align: center;">I prezzi variano ogni giorno (+/- 30%)</div>
+      <div class="modal-list" id="shop-list-container"></div>
+    </div>
+  </div>
+
+  <!-- MODALE OPZIONI -->
+  <div class="modal-overlay" id="modal-opzioni">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Opzioni</div>
+        <button class="close-btn" onclick="closeModal('modal-opzioni')">&times;</button>
+      </div>
+      <div class="setting-row">
+        <span>Audio Ambiente & SFX</span>
+        <button class="buy-btn" id="audio-toggle-btn" onclick="toggleAudio()">Muto</button>
+      </div>
+      <div class="setting-row">
+        <span>Schermo Intero</span>
+        <button class="buy-btn" onclick="toggleFullscreen()">Fullscreen</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <span>Aggiungi Fondi</span>
+          <div style="font-size: 10px; color: #94a3b8;">Aggiunge 10€ alla cassa</div>
+        </div>
+        <button class="buy-btn" onclick="addMoney()">+10€</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <span>Resetta Simulazione</span>
+          <div style="font-size: 10px; color: #94a3b8;">Cancella tutti i dati e ricomincia</div>
+        </div>
+        <button class="danger-btn" onclick="resetGame()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===================================================
+       1. COSTANTI DI TEMPO ED EQUAZIONI DI SIMULAZIONE
+       =================================================== */
+    const DAY_IN_SECONDS = 86400;
+    const HOUR_IN_SECONDS = 3600;
+    const CYCLE_SECONDS = 600; // ciclo giorno/notte "estetico" (10 minuti reali), influenza luce, piante e O2
+
+    const FRY_STAGE_TIME = 5 * DAY_IN_SECONDS;
+    const JUVENILE_STAGE_TIME = 7 * DAY_IN_SECONDS;
+    const ADULT_STAGE_TIME = 10 * DAY_IN_SECONDS;
+
+    const AGE_JUVENILE_THRESHOLD = FRY_STAGE_TIME;
+    const AGE_ADULT_THRESHOLD = FRY_STAGE_TIME + JUVENILE_STAGE_TIME;
+    const AGE_MAX_THRESHOLD = FRY_STAGE_TIME + JUVENILE_STAGE_TIME + ADULT_STAGE_TIME;
+    const SENIOR_LIFESPAN_SECONDS = 20 * DAY_IN_SECONDS; // tempo da "Anziano" prima che scatti il rischio di morte naturale
+
+    const MAX_STRESS_HOURS = 4;
+
+    const FILTER_DRAIN_PER_SEC = 100 / (168 * HOUR_IN_SECONDS); // il filtro va risciacquato ogni ~7 giorni continui
+    const TRASH_CLEAN_PER_SEC_BY_FILTER = 100 / (48 * HOUR_IN_SECONDS);
+
+    // Ciclo dell'azoto: quanto ammoniaca produce il carico biologico / la spazzatura non mangiata
+    const AMMONIA_PER_BIOLOAD_PER_SEC = 0.000007;
+    const AMMONIA_PER_TRASH_PER_SEC = 0.00002;
+    const NITROGEN_CYCLE_DAYS = 14; // tempo indicativo perché i batteri nitrificanti maturino del tutto
+    const AMMONIA_CONV_MAX_RATE = 0.12; // frazione massima di ammoniaca convertita in nitriti al secondo (batteri maturi)
+    const NITRITE_CONV_MAX_RATE = 0.10; // frazione massima di nitriti convertita in nitrati al secondo (batteri maturi)
+
+    const TANK_CAPACITY_BIOLOAD = 5.0; // carico biologico "confortevole" per 50L
+    const TANK_MAX_FISH = 12;
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    /* ===================================================
+       2. SISTEMA AUDIO WEB AUDIO API
+       =================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        this.ambientGain = null;
+        this.ambientSource = null;
+        this.initialized = false;
+      }
+
+      init() {
+        if (this.initialized) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+
+        const bufferSize = this.ctx.sampleRate * 2;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = output[i];
+        }
+
+        this.ambientSource = this.ctx.createBufferSource();
+        this.ambientSource.buffer = noiseBuffer;
+        this.ambientSource.loop = true;
+
+        const lfo = this.ctx.createOscillator();
+        lfo.frequency.value = 0.2;
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 0.03;
+        lfo.connect(lfoGain);
+
+        this.ambientGain = this.ctx.createGain();
+        this.ambientGain.gain.value = 0.05;
+
+        lfoGain.connect(this.ambientGain.gain);
+        this.ambientSource.connect(this.ambientGain);
+        this.ambientGain.connect(this.ctx.destination);
+
+        this.ambientSource.start();
+        lfo.start();
+        this.initialized = true;
+      }
+
+      playPop() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.08);
+      }
+
+      playFood() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.05);
+      }
+
+      playClean() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      playAlert() {
+        if (this.isMuted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+      }
+
+      toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.ambientGain) {
+          this.ambientGain.gain.value = this.isMuted ? 0 : 0.05;
+        }
+        return this.isMuted;
+      }
+    }
+
+    const audio = new SoundEngine();
+    document.addEventListener('click', () => audio.init(), { once: true });
+
+    /* ===================================================
+       3. NOTIFICHE (EVENTI DI VITA: NASCITE, MALATTIE, MORTI)
+       =================================================== */
+    function notify(msg) {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerText = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 400);
+      }, 3600);
+    }
+
+    /* ===================================================
+       4. CONFIGURAZIONI SPECIE E STATO DI GIOCO
+       =================================================== */
+    // social:
+    //   'schooling'               -> soffre da solo, sta meglio in gruppo
+    //   'pair'                    -> ideale in coppia, soffre da solo o in gruppi numerosi
+    //   'territorial-conspecific' -> aggressivo/stressato verso i propri simili, tollera altre specie
+    //   'territorial'             -> da adulto rivendica un territorio e infastidisce chi vi entra
+    const SPECIES_CONFIG = {
+      'Pesce Rosso': {
+        basePrice: 25, maxHungerHours: 12, color: '#ff6b35', shape: 'standard',
+        tempMin: 16, tempMax: 24, bioload: 1.3, social: 'schooling',
+        desc: 'Acqua fredda, molto resistente. Sta meglio in gruppo, produce molti rifiuti.'
+      },
+      'Pesce Pagliaccio': {
+        basePrice: 35, maxHungerHours: 8, color: '#ff4500', stripes: '#ffffff', shape: 'standard',
+        tempMin: 24, tempMax: 28, bioload: 0.8, social: 'pair',
+        desc: 'Tropicale. Ideale in coppia: soffre da solo e con più di due esemplari.'
+      },
+      'Pesce Chirurgo': {
+        basePrice: 45, maxHungerHours: 10, color: '#2980b9', detail: '#f1c40f', shape: 'standard',
+        tempMin: 24, tempMax: 27, bioload: 1.0, social: 'territorial-conspecific',
+        desc: 'Tropicale. Litiga con i propri simili: meglio un solo esemplare per vasca.'
+      },
+      'Pesce Angelo': {
+        basePrice: 60, maxHungerHours: 18, color: '#f39c12', detail: '#34495e', shape: 'tall',
+        tempMin: 24, tempMax: 28, bioload: 1.4, social: 'territorial',
+        desc: 'Tropicale. Da adulto diventa territoriale e può infastidire pesci più piccoli.'
+      },
+      'Pesce Palla': {
+        basePrice: 85, maxHungerHours: 24, color: '#d4ac0d', detail: '#f9e79f', shape: 'round',
+        tempMin: 24, tempMax: 27, bioload: 1.8, social: 'territorial',
+        desc: 'Tropicale. Molto territoriale e con un carico biologico elevato: richiede spazio.'
+      }
+    };
+
+    let gameState = {
+      money: 80,
+      water: {
+        ammonia: 0,
+        nitrite: 0,
+        nitrate: 5,
+        bacteriaAmmonia: 0,
+        bacteriaNitrite: 0,
+        temp: 21,
+        o2: 95
+      },
+      waterQuality: 100, // punteggio derivato, usato solo per UI e overlay grafico
+      roomTempPhase: Math.random() * 1000,
+      cycleTime: 0,
+      simClock: 0,
+      breedCooldowns: {},
+      hasFilter: false,
+      filterHealth: 0,
+      hasHeater: false,
+      heaterTarget: 26,
+      bgIndex: 0,
+      fishes: [],
+      foods: [], // Oggetti food: {x, y, isTrash: false, amount: 100}
+      lastUpdate: Date.now(),
+      marketModifiers: {}
+    };
+
+    let touchPointer = {
+      active: false,
+      x: 0,
+      y: 0
+    };
+
+    function randomizeMarket() {
+      for (let key in SPECIES_CONFIG) {
+        gameState.marketModifiers[key] = 0.7 + Math.random() * 0.6;
+      }
+    }
+
+    /* ===================================================
+       5. CHIMICA DELL'ACQUA (CICLO DELL'AZOTO)
+       =================================================== */
+    function getWaterQualityScore(w) {
+      let score = 100;
+      score -= Math.min(60, w.ammonia * 40);
+      score -= Math.min(30, w.nitrite * 25);
+      score -= Math.min(20, Math.max(0, w.nitrate - 20) * 0.4);
+      if (w.o2 < 50) score -= (50 - w.o2) * 0.6;
+      return clamp(score, 0, 100);
+    }
+
+    function getPH(w) {
+      return clamp(7.6 - w.nitrate * 0.012 - (w.ammonia > 1 ? 0.15 : 0), 5.8, 7.6);
+    }
+
+    function getTotalBioload() {
+      let total = 0;
+      gameState.fishes.forEach(f => {
+        const spec = SPECIES_CONFIG[f.species];
+        const sizeMul = f.growthSeconds >= AGE_ADULT_THRESHOLD ? 1.0 : (f.growthSeconds >= AGE_JUVENILE_THRESHOLD ? 0.65 : 0.35);
+        total += spec.bioload * sizeMul;
+      });
+      return total;
+    }
+
+    /* ===================================================
+       6. SALVATAGGIO E CARICAMENTO
+       =================================================== */
+    function saveGame() {
+      gameState.lastUpdate = Date.now();
+      localStorage.setItem('aquarium_save_50l', JSON.stringify(gameState));
+    }
+
+    function loadGame() {
+      const saved = localStorage.getItem('aquarium_save_50l');
+      randomizeMarket();
+
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const now = Date.now();
+          const elapsedSeconds = (now - parsed.lastUpdate) / 1000;
+
+          gameState = { ...gameState, ...parsed };
+          gameState.water = { ...gameState.water, ...(parsed.water || {}) };
+          simulateOfflineTime(elapsedSeconds);
+        } catch (e) {
+          console.error("Errore nel caricamento del salvataggio", e);
+          initDefaultGame();
+        }
+      } else {
+        initDefaultGame();
+      }
+    }
+
+    function initDefaultGame() {
+      gameState.money = 80;
+      gameState.fishes = [];
+      gameState.foods = [];
+      gameState.water = { ammonia: 0, nitrite: 0, nitrate: 5, bacteriaAmmonia: 0, bacteriaNitrite: 0, temp: 21, o2: 95 };
+      gameState.waterQuality = 100;
+      gameState.hasFilter = false;
+      gameState.filterHealth = 0;
+      gameState.hasHeater = false;
+      gameState.heaterTarget = 26;
+      gameState.bgIndex = 0;
+      gameState.cycleTime = 0;
+      gameState.simClock = 0;
+      gameState.breedCooldowns = {};
+      addNewFish('Pesce Rosso', 'Goldy');
+    }
+
+    function resetGame() {
+      if (confirm("Sei sicuro di voler resettare l'acquario? Perderai tutti i pesci e i progressi.")) {
+        localStorage.removeItem('aquarium_save_50l');
+        initDefaultGame();
+        closeModal('modal-opzioni');
+        audio.playClean();
+      }
+    }
+
+    /* ===================================================
+       7. MOTORE DI SIMULAZIONE UNIFICATO (LIVE + OFFLINE)
+       =================================================== */
+    // waterTop === null  -> passo "offline" (nessuna fisica di posizione/canvas)
+    function stepSimulation(dt, waterTop, opts) {
+      opts = opts || {};
+      gameState.simClock += dt;
+
+      const w = gameState.water;
+
+      // --- 1. FILTRO (usura meccanica) ---
+      if (gameState.hasFilter && gameState.filterHealth > 0) {
+        gameState.filterHealth = Math.max(0, gameState.filterHealth - FILTER_DRAIN_PER_SEC * dt);
+      }
+      const filterActive = gameState.hasFilter && gameState.filterHealth > 0;
+
+      // --- 2. CIBO / SPAZZATURA SUL FONDO ---
+      let trashCount = 0;
+      for (let i = gameState.foods.length - 1; i >= 0; i--) {
+        const f = gameState.foods[i];
+        if (f.isTrash) {
+          if (filterActive) {
+            f.amount -= dt * TRASH_CLEAN_PER_SEC_BY_FILTER;
+            if (f.amount <= 0) {
+              gameState.foods.splice(i, 1);
+              continue;
+            }
+          }
+          trashCount++;
+        }
+      }
+
+      // --- 3. CARICO BIOLOGICO ---
+      const totalBioload = getTotalBioload();
+
+      // --- 4. CICLO DELL'AZOTO ---
+      const ammoniaCap = filterActive ? 100 : 40;
+      const nitriteCap = filterActive ? 100 : 35;
+
+      const ammoniaProduced = (totalBioload * AMMONIA_PER_BIOLOAD_PER_SEC + trashCount * AMMONIA_PER_TRASH_PER_SEC) * dt;
+      w.ammonia += ammoniaProduced;
+
+      // La crescita è ancorata alla presenza di un carico biologico continuativo (fonte di ammoniaca),
+      // non a una soglia sulla concentrazione istantanea: quest'ultima tende a un equilibrio vicino a
+      // zero non appena i batteri iniziano a lavorare, e una soglia rigida ci oscillerebbe attorno
+      // impedendo alla colonia di maturare mai.
+      const ammBacteriaGrowRate = ammoniaCap / (NITROGEN_CYCLE_DAYS * DAY_IN_SECONDS);
+      if (totalBioload > 0.05 || trashCount > 0) {
+        w.bacteriaAmmonia = Math.min(ammoniaCap, w.bacteriaAmmonia + ammBacteriaGrowRate * dt);
+      } else {
+        w.bacteriaAmmonia = Math.max(0, w.bacteriaAmmonia - ammBacteriaGrowRate * 0.3 * dt);
+      }
+
+      const nitriteBacteriaGrowRate = nitriteCap / ((NITROGEN_CYCLE_DAYS + 7) * DAY_IN_SECONDS);
+      if ((totalBioload > 0.05 || trashCount > 0) && w.bacteriaAmmonia > 5) {
+        w.bacteriaNitrite = Math.min(nitriteCap, w.bacteriaNitrite + nitriteBacteriaGrowRate * dt);
+      } else {
+        w.bacteriaNitrite = Math.max(0, w.bacteriaNitrite - nitriteBacteriaGrowRate * 0.3 * dt);
+      }
+
+      const ammoniaConvRate = AMMONIA_CONV_MAX_RATE * (w.bacteriaAmmonia / 100);
+      const ammoniaConverted = Math.min(w.ammonia, w.ammonia * ammoniaConvRate * dt);
+      w.ammonia -= ammoniaConverted;
+      w.nitrite += ammoniaConverted;
+
+      const nitriteConvRate = NITRITE_CONV_MAX_RATE * (w.bacteriaNitrite / 100);
+      const nitriteConverted = Math.min(w.nitrite, w.nitrite * nitriteConvRate * dt);
+      w.nitrite -= nitriteConverted;
+      w.nitrate += nitriteConverted * 0.8;
+
+      w.nitrate = clamp(w.nitrate, 0, 160);
+      w.ammonia = Math.max(0, w.ammonia);
+      w.nitrite = Math.max(0, w.nitrite);
+
+      // --- 5. TEMPERATURA ---
+      gameState.roomTempPhase += dt;
+      const roomTemp = 21 + Math.sin((gameState.roomTempPhase / (3 * DAY_IN_SECONDS)) * Math.PI * 2) * 1.5;
+      if (gameState.hasHeater) {
+        w.temp += (gameState.heaterTarget - w.temp) * Math.min(1, dt * 0.02);
+      } else {
+        w.temp += (roomTemp - w.temp) * Math.min(1, dt * 0.0006);
+      }
+
+      // --- 6. CICLO GIORNO/NOTTE ---
+      gameState.cycleTime = (gameState.cycleTime + dt) % CYCLE_SECONDS;
+      const isDay = gameState.cycleTime < CYCLE_SECONDS * 0.55;
+
+      // --- 7. OSSIGENO DISCIOLTO ---
+      const o2Max = clamp(108 - Math.max(0, w.temp - 20) * 2.2, 55, 100);
+      const aeration = filterActive ? 6 : 2;
+      const plantEffect = isDay ? 2.5 : -1.5;
+      const consumption = totalBioload * 1.8 + (nitriteConverted + ammoniaConverted) * 400;
+      w.o2 = clamp(w.o2 + (aeration + plantEffect - consumption) * 0.02 * dt, 5, o2Max);
+
+      gameState.waterQuality = getWaterQualityScore(w);
+      const ph = getPH(w);
+
+      // --- 8. BIOLOGIA E COMPORTAMENTO DEI PESCI ---
+      gameState.fishes.forEach(fish => {
+        const spec = SPECIES_CONFIG[fish.species];
+
+        // Fame
+        const hungerDepletionRate = (100 / (spec.maxHungerHours * 3600)) * dt;
+        fish.hunger = Math.max(0, fish.hunger - hungerDepletionRate);
+        fish.ageSeconds = (fish.ageSeconds || 0) + dt;
+
+        // Crescita (separata dall'età: rallenta se denutrito o vasca sovraffollata)
+        let growthRate = 1;
+        if (fish.hunger < 30) growthRate *= 0.4;
+        if (totalBioload > TANK_CAPACITY_BIOLOAD) growthRate *= 0.6;
+        fish.growthSeconds = (fish.growthSeconds || 0) + dt * growthRate;
+
+        // Umore: acqua e ambiente
+        let happinessChange = 0;
+        if (gameState.waterQuality < 40) happinessChange -= 3 * dt;
+        if (w.ammonia > 0.5) happinessChange -= 4 * dt;
+        if (w.nitrite > 0.5) happinessChange -= 4 * dt;
+        if (w.o2 < 40) happinessChange -= 5 * dt;
+        if (w.temp < spec.tempMin || w.temp > spec.tempMax) happinessChange -= 2.5 * dt;
+        if (gameState.waterQuality > 70 && w.temp >= spec.tempMin && w.temp <= spec.tempMax) happinessChange += 0.5 * dt;
+
+        // Umore: socialità e compatibilità
+        const sameSpeciesCount = gameState.fishes.filter(f2 => f2.species === fish.species).length;
+        if (spec.social === 'schooling') {
+          happinessChange += sameSpeciesCount === 1 ? -1.5 * dt : 0.8 * dt;
+        } else if (spec.social === 'pair') {
+          if (sameSpeciesCount === 1) happinessChange -= 1.2 * dt;
+          else if (sameSpeciesCount === 2) happinessChange += 1.0 * dt;
+          else happinessChange -= 1.0 * dt * (sameSpeciesCount - 2);
+        } else if (spec.social === 'territorial-conspecific') {
+          if (sameSpeciesCount > 1) happinessChange -= 2.0 * dt * (sameSpeciesCount - 1);
+        }
+        if (gameState.fishes.length === 1 && spec.social !== 'territorial') happinessChange -= 1.0 * dt;
+
+        // Interazione con il dito/puntatore (solo live)
+        let isFollowingFinger = false;
+        if (waterTop !== null && opts.applyPointer && touchPointer.active && touchPointer.y > waterTop) {
+          const fdx = touchPointer.x - fish.x;
+          const fdy = touchPointer.y - fish.y;
+          const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
+          if (fdist < 120) {
+            isFollowingFinger = true;
+            fish.vx = (fdx / fdist) * 65;
+            fish.vy = (fdy / fdist) * 65;
+            happinessChange += 12 * dt;
+          }
+        }
+
+        fish.happiness = clamp((fish.happiness || 80) + happinessChange, 0, 100);
+
+        if (fish.happiness < 20) {
+          fish.stressedSeconds = (fish.stressedSeconds || 0) + dt;
+        } else {
+          fish.stressedSeconds = Math.max(0, (fish.stressedSeconds || 0) - dt * 0.5);
+        }
+        const isOverStressed = fish.stressedSeconds > (MAX_STRESS_HOURS * 3600);
+
+        // Malattia (rischio cresce con acqua sporca, stress e ammoniaca/nitriti alti)
+        if (!fish.diseased) {
+          let diseaseRiskPerSec = gameState.waterQuality < 40 ? 0.0000018 : 0.00000015;
+          if (isOverStressed) diseaseRiskPerSec += 0.0000015;
+          if (w.ammonia > 1 || w.nitrite > 1) diseaseRiskPerSec += 0.000003;
+          if (Math.random() < diseaseRiskPerSec * dt) {
+            fish.diseased = true;
+            notify(`🦠 ${fish.name} si è ammalato (puntini bianchi)`);
+          }
+        }
+
+        // Salute (tassi pensati per un decorso di minuti/ore, non di secondi)
+        let healthDelta = 0.15 * dt;
+        if (fish.hunger <= 0) healthDelta -= 0.3 * dt;
+        if (w.ammonia > 1 || w.nitrite > 1) healthDelta -= 0.5 * dt;
+        else if (w.ammonia > 0.25 || w.nitrite > 0.25) healthDelta -= 0.05 * dt;
+        if (w.o2 < 30) healthDelta -= 0.4 * dt;
+        if (isOverStressed) healthDelta -= 0.15 * dt;
+        if (fish.diseased) healthDelta -= 0.1 * dt;
+        fish.health = clamp(fish.health + healthDelta, 0, 100);
+
+        // Morte naturale per vecchiaia (indipendente dalla salute)
+        if (fish.ageSeconds > AGE_MAX_THRESHOLD + SENIOR_LIFESPAN_SECONDS) {
+          if (Math.random() < 0.000003 * dt) {
+            fish.health = 0;
+            notify(`🕊️ ${fish.name} è morto di vecchiaia`);
+          }
+        }
+
+        // Aggressione territoriale verso altri pesci
+        if (waterTop !== null && (spec.social === 'territorial' || spec.social === 'territorial-conspecific')) {
+          const isAdult = fish.growthSeconds >= AGE_ADULT_THRESHOLD;
+          if (isAdult) {
+            gameState.fishes.forEach(other => {
+              if (other.id === fish.id) return;
+              if (spec.social === 'territorial-conspecific' && other.species !== fish.species) return;
+              const dist = Math.hypot(other.x - fish.x, other.y - fish.y);
+              if (dist < 45) {
+                other.happiness = Math.max(0, other.happiness - 6 * dt);
+                other.stressedSeconds = (other.stressedSeconds || 0) + dt;
+                if (Math.random() < 0.002) other.health = Math.max(0, other.health - 1);
+              }
+            });
+          }
+        }
+
+        // --- Movimento (solo live) ---
+        if (waterTop !== null) {
+          if (!isFollowingFinger) {
+            const targetFood = gameState.foods.find(f => !f.isTrash);
+            const isAdult = fish.growthSeconds >= AGE_ADULT_THRESHOLD;
+
+            if (w.o2 < 35) {
+              // pesce in affanno: risale verso la superficie in cerca di ossigeno
+              const dy = (waterTop + 20) - fish.y;
+              fish.vx *= 0.9;
+              fish.vy = dy >= 0 ? 30 : -30;
+            } else if (targetFood && fish.hunger < 99) {
+              const dx = targetFood.x - fish.x;
+              const dy = targetFood.y - fish.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist < 15) {
+                fish.hunger = 100;
+                fish.happiness = Math.min(100, fish.happiness + 10);
+                audio.playFood();
+                const foodIdx = gameState.foods.indexOf(targetFood);
+                if (foodIdx > -1) gameState.foods.splice(foodIdx, 1);
+              } else {
+                fish.vx = (dx / dist) * 55;
+                fish.vy = (dy / dist) * 55;
+              }
+            } else if (spec.social === 'territorial' && isAdult) {
+              // pattuglia/insegue il pesce non-conspecifico più vicino
+              let nearest = null, nearestDist = Infinity;
+              gameState.fishes.forEach(other => {
+                if (other.id === fish.id || other.species === fish.species) return;
+                const d = Math.hypot(other.x - fish.x, other.y - fish.y);
+                if (d < nearestDist) { nearestDist = d; nearest = other; }
+              });
+              if (nearest && nearestDist < 160) {
+                const dx = nearest.x - fish.x, dy = nearest.y - fish.y;
+                const dist = Math.max(1, Math.hypot(dx, dy));
+                fish.vx = (dx / dist) * 40;
+                fish.vy = (dy / dist) * 40;
+              } else {
+                fish.changeDirTimer = (fish.changeDirTimer || 0) - dt;
+                if (fish.changeDirTimer <= 0) {
+                  fish.vx = (Math.random() - 0.5) * 50;
+                  fish.vy = (Math.random() - 0.5) * 30;
+                  fish.changeDirTimer = 2 + Math.random() * 3;
+                }
+              }
+            } else if (spec.social === 'schooling' && sameSpeciesCount > 1) {
+              // comportamento di banco semplificato: coesione + separazione
+              let avgX = 0, avgY = 0, avgVx = 0, avgVy = 0, n = 0;
+              let sepX = 0, sepY = 0;
+              gameState.fishes.forEach(other => {
+                if (other.id === fish.id || other.species !== fish.species) return;
+                avgX += other.x; avgY += other.y;
+                avgVx += other.vx; avgVy += other.vy;
+                n++;
+                const d = Math.hypot(other.x - fish.x, other.y - fish.y);
+                if (d < 30 && d > 0) {
+                  sepX -= (other.x - fish.x) / d;
+                  sepY -= (other.y - fish.y) / d;
+                }
+              });
+              if (n > 0) {
+                avgX /= n; avgY /= n; avgVx /= n; avgVy /= n;
+                const cohX = avgX - fish.x, cohY = avgY - fish.y;
+                fish.vx = fish.vx * 0.85 + (cohX * 0.02 + avgVx * 0.15 + sepX * 20);
+                fish.vy = fish.vy * 0.85 + (cohY * 0.02 + avgVy * 0.15 + sepY * 20);
+                const speed = Math.hypot(fish.vx, fish.vy);
+                if (speed > 55) { fish.vx = (fish.vx / speed) * 55; fish.vy = (fish.vy / speed) * 55; }
+              }
+            } else {
+              fish.changeDirTimer = (fish.changeDirTimer || 0) - dt;
+              if (fish.changeDirTimer <= 0) {
+                fish.vx = (Math.random() - 0.5) * 50;
+                fish.vy = (Math.random() - 0.5) * 30;
+                fish.changeDirTimer = 2 + Math.random() * 3;
+              }
+            }
+          }
+
+          fish.x += fish.vx * dt;
+          fish.y += fish.vy * dt;
+
+          const margin = 25;
+          if (fish.x < margin) { fish.x = margin; fish.vx *= -1; }
+          if (fish.x > canvas.width - margin) { fish.x = canvas.width - margin; fish.vx *= -1; }
+          if (fish.y < waterTop + margin) { fish.y = waterTop + margin; fish.vy *= -1; }
+          if (fish.y > canvas.height - margin) { fish.y = canvas.height - margin; fish.vy *= -1; }
+        }
+      });
+
+      gameState.fishes = gameState.fishes.filter(f => f.health > 0);
+
+      // --- 9. RIPRODUZIONE ---
+      maybeBreed(dt);
+    }
+
+    function maybeBreed(dt) {
+      if (gameState.waterQuality < 60) return;
+      if (gameState.fishes.length >= TANK_MAX_FISH) return;
+
+      const bySpecies = {};
+      gameState.fishes.forEach(f => { (bySpecies[f.species] = bySpecies[f.species] || []).push(f); });
+
+      Object.keys(bySpecies).forEach(species => {
+        const list = bySpecies[species];
+        const adults = list.filter(f => f.growthSeconds >= AGE_ADULT_THRESHOLD && f.happiness > 70 && f.health > 70);
+        if (adults.length < 2) return;
+
+        const key = 'breed_' + species;
+        const last = gameState.breedCooldowns[key] || 0;
+        const cooldown = 3 * DAY_IN_SECONDS;
+        if (gameState.simClock - last < cooldown) return;
+
+        const chance = 0.0000008 * dt;
+        if (Math.random() < chance) {
+          addNewFish(species);
+          const newFish = gameState.fishes[gameState.fishes.length - 1];
+          newFish.growthSeconds = 0;
+          newFish.ageSeconds = 0;
+          gameState.breedCooldowns[key] = gameState.simClock;
+          notify(`🐣 È nato un nuovo avannotto di ${species}!`);
+        }
+      });
+    }
+
+    function simulateOfflineTime(seconds) {
+      if (!(seconds > 0)) return;
+      const maxSteps = 300;
+      const stepSize = Math.max(30, seconds / maxSteps);
+      let remaining = seconds;
+      while (remaining > 0) {
+        const dt = Math.min(stepSize, remaining);
+        stepSimulation(dt, null, {});
+        remaining -= dt;
+      }
+    }
+
+    /* ===================================================
+       8. MOTORE GRAFICO CANVAS 2D
+       =================================================== */
+    const canvas = document.getElementById('aquariumCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function updatePointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      touchPointer.x = clientX - rect.left;
+      touchPointer.y = clientY - rect.top;
+      touchPointer.active = true;
+    }
+
+    canvas.addEventListener('mousedown', updatePointerPos);
+    canvas.addEventListener('mousemove', (e) => { if (touchPointer.active) updatePointerPos(e); });
+    window.addEventListener('mouseup', () => { touchPointer.active = false; });
+
+    canvas.addEventListener('touchstart', (e) => { updatePointerPos(e); }, { passive: true });
+    canvas.addEventListener('touchmove', (e) => { updatePointerPos(e); }, { passive: true });
+    window.addEventListener('touchend', () => { touchPointer.active = false; });
+
+    class Bubble {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = canvas.height + 10;
+        this.radius = Math.random() * 3 + 1;
+        this.speed = Math.random() * 1 + 0.5;
+        this.alpha = Math.random() * 0.5 + 0.2;
+      }
+      update(waterTop) {
+        this.y -= this.speed;
+        this.x += Math.sin(this.y * 0.05) * 0.3;
+        if (this.y < waterTop) this.reset();
+      }
+      draw() {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    const bubbles = Array.from({ length: 25 }, () => new Bubble());
+
+    function isDaytime() {
+      return gameState.cycleTime < CYCLE_SECONDS * 0.55;
+    }
+
+    function drawBackground(time, waterTop) {
+      const waterHeight = canvas.height - waterTop;
+      const night = !isDaytime();
+      const dim = night ? 0.55 : 1.0;
+
+      if (gameState.bgIndex === 0) {
+        let grad = ctx.createLinearGradient(0, waterTop, 0, canvas.height);
+        grad.addColorStop(0, night ? '#053355' : '#0284c7');
+        grad.addColorStop(1, '#030712');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, waterTop, canvas.width, waterHeight);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(canvas.width * 0.2, waterTop);
+        ctx.lineTo(canvas.width * 0.55, canvas.height);
+        ctx.lineTo(canvas.width * 0.05, canvas.height);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.06 * dim})`;
+        ctx.fill();
+        ctx.restore();
+
+      } else if (gameState.bgIndex === 1) {
+        let grad = ctx.createLinearGradient(0, waterTop, 0, canvas.height);
+        grad.addColorStop(0, night ? '#0e3a45' : '#06b6d4');
+        grad.addColorStop(1, '#1e1b4b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, waterTop, canvas.width, waterHeight);
+
+        ctx.save();
+        for (let i = 0; i < 3; i++) {
+          let shift = Math.sin(time * 0.001 + i) * 15;
+          ctx.beginPath();
+          ctx.moveTo(canvas.width * 0.25 + i * 40 + shift, waterTop);
+          ctx.lineTo(canvas.width * 0.45 + i * 50 + shift, canvas.height);
+          ctx.lineTo(canvas.width * 0.15 + i * 50 + shift, canvas.height);
+          ctx.fillStyle = `rgba(253, 224, 71, ${0.05 * dim})`;
+          ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(30, canvas.height, 45, Math.PI, 0);
+        ctx.arc(canvas.width - 40, canvas.height, 60, Math.PI, 0);
+        ctx.fill();
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(canvas.width - 40, canvas.height - 60, 12, 0, Math.PI * 2);
+        ctx.arc(canvas.width - 55, canvas.height - 45, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+      } else {
+        let grad = ctx.createLinearGradient(0, waterTop, 0, canvas.height);
+        grad.addColorStop(0, '#0f172a');
+        grad.addColorStop(1, '#020617');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, waterTop, canvas.width, waterHeight);
+
+        ctx.save();
+        ctx.fillStyle = '#090d16';
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+        ctx.lineTo(80, canvas.height - 40);
+        ctx.lineTo(160, canvas.height - 10);
+        ctx.lineTo(canvas.width, canvas.height - 50);
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.fill();
+
+        for (let i = 0; i < 6; i++) {
+          let bx = (Math.sin(time * 0.001 + i * 2) * 0.4 + 0.5) * canvas.width;
+          let by = waterTop + (Math.cos(time * 0.0015 + i) * 0.4 + 0.5) * waterHeight;
+          ctx.fillStyle = i % 2 === 0 ? 'rgba(6, 182, 212, 0.6)' : 'rgba(168, 85, 247, 0.6)';
+          ctx.beginPath();
+          ctx.arc(bx, by, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      if (night && gameState.bgIndex !== 2) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
+        ctx.fillRect(0, waterTop, canvas.width, waterHeight);
+        ctx.restore();
+      }
+    }
+
+    function drawWaterSurface(time, waterTop) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+      ctx.beginPath();
+      ctx.moveTo(0, waterTop);
+
+      for (let x = 0; x <= canvas.width; x += 10) {
+        let y = waterTop + Math.sin(time * 0.003 + x * 0.05) * 3;
+        ctx.lineTo(x, y);
+      }
+
+      ctx.lineTo(canvas.width, waterTop + 6);
+      ctx.lineTo(0, waterTop + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawSeaweed(time, depth) {
+      ctx.save();
+      const count = 5;
+      const step = canvas.width / count;
+
+      for (let i = 0; i < count; i++) {
+        let x = step * i + 25;
+        let height = 120 + Math.sin(i) * 40;
+
+        ctx.beginPath();
+        ctx.moveTo(x, canvas.height);
+
+        let controlX = x + Math.sin(time * 0.002 + i) * (depth === 'front' ? 20 : 10);
+        ctx.quadraticCurveTo(controlX, canvas.height - height / 2, x + Math.sin(time * 0.003 + i) * 15, canvas.height - height);
+
+        ctx.lineWidth = depth === 'front' ? 12 : 8;
+        ctx.strokeStyle = depth === 'front'
+          ? (gameState.bgIndex === 2 ? '#06b6d4' : '#15803d')
+          : (gameState.bgIndex === 2 ? 'rgba(139, 92, 246, 0.4)' : 'rgba(21, 128, 61, 0.4)');
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function getMood(fish) {
+      if (fish.diseased) return { text: 'Malato', emoji: '🤒' };
+      if (fish.happiness >= 75) return { text: 'Felice', emoji: '😊' };
+      if (fish.happiness >= 45) return { text: 'Contento', emoji: '🙂' };
+      if (fish.happiness >= 20) return { text: 'Agitato', emoji: '😰' };
+      return { text: 'Stressato', emoji: '😫' };
+    }
+
+    function drawFish(f, time) {
+      ctx.save();
+
+      let scale = 0.5;
+      if (f.growthSeconds >= AGE_ADULT_THRESHOLD) {
+        scale = 1.0;
+      } else if (f.growthSeconds >= AGE_JUVENILE_THRESHOLD) {
+        scale = 0.8;
+      }
+
+      ctx.translate(f.x, f.y);
+      if (f.vx < 0) ctx.scale(-1, 1);
+
+      const spec = SPECIES_CONFIG[f.species];
+      ctx.fillStyle = spec.color;
+
+      let tailWag = Math.sin(time * 0.01 + f.x) * 5;
+
+      if (spec.shape === 'standard') {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 20 * scale, 12 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-18 * scale, 0);
+        ctx.lineTo(-28 * scale, (-8 + tailWag) * scale);
+        ctx.lineTo(-28 * scale, (8 + tailWag) * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        if (spec.stripes) {
+          ctx.fillStyle = spec.stripes;
+          ctx.fillRect(-5 * scale, -10 * scale, 4 * scale, 20 * scale);
+          ctx.fillRect(5 * scale, -8 * scale, 4 * scale, 16 * scale);
+        }
+
+      } else if (spec.shape === 'tall') {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 14 * scale, 24 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(0, -20 * scale);
+        ctx.lineTo(-10 * scale, -35 * scale);
+        ctx.lineTo(5 * scale, -20 * scale);
+        ctx.fillStyle = spec.detail;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-12 * scale, 0);
+        ctx.lineTo(-22 * scale, (-10 + tailWag) * scale);
+        ctx.lineTo(-22 * scale, (10 + tailWag) * scale);
+        ctx.closePath();
+        ctx.fill();
+
+      } else if (spec.shape === 'round') {
+        ctx.beginPath();
+        ctx.arc(0, 0, 16 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = spec.detail;
+        ctx.beginPath();
+        ctx.arc(-4 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
+        ctx.arc(4 * scale, 4 * scale, 2 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-15 * scale, 0);
+        ctx.lineTo(-22 * scale, (-5 + tailWag) * scale);
+        ctx.lineTo(-22 * scale, (5 + tailWag) * scale);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (f.diseased) {
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        [[-6, -3], [2, 4], [-10, 5], [6, -6]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx * scale, sy * scale, 1.4 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(10 * scale, -4 * scale, 3 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.arc(11 * scale, -4 * scale, 1.5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      const mood = getMood(f);
+      ctx.font = `${12 * scale + 10}px sans-serif`;
+      ctx.fillText(mood.emoji, -8 * scale, -25 * scale);
+
+      ctx.restore();
+    }
+
+    /* ===================================================
+       9. LOOP DI SIMULAZIONE (LIVE)
+       =================================================== */
+    let lastFrameTime = performance.now();
+
+    function gameLoop(time) {
+      const dt = (time - lastFrameTime) / 1000;
+      lastFrameTime = time;
+
+      const waterTop = canvas.height * 0.10;
+
+      stepSimulation(Math.min(dt, 1), waterTop, { applyPointer: true });
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawBackground(time, waterTop);
+      drawWaterSurface(time, waterTop);
+      drawSeaweed(time, 'back');
+
+      bubbles.forEach(b => { b.update(waterTop); b.draw(); });
+
+      if (touchPointer.active && touchPointer.y > waterTop) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(touchPointer.x, touchPointer.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Render Cibo / Spazzatura
+      gameState.foods.forEach((food) => {
+        if (!food.isTrash) {
+          food.y += 35 * dt;
+          if (food.y >= canvas.height - 10) {
+            food.y = canvas.height - 10;
+            food.isTrash = true;
+          }
+        }
+
+        ctx.fillStyle = food.isTrash ? '#78350f' : '#d97706';
+        ctx.beginPath();
+        const r = Math.max(1, 3 * (food.amount / 100));
+        ctx.arc(food.x, food.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Render Pesci
+      gameState.fishes.forEach(f => drawFish(f, time));
+
+      drawSeaweed(time, 'front');
+
+      // Overlay Acqua Sporca
+      let dirtyOpacity = (100 - gameState.waterQuality) / 100 * 0.7;
+      if (dirtyOpacity > 0.05) {
+        ctx.fillStyle = `rgba(45, 26, 3, ${dirtyOpacity})`;
+        ctx.fillRect(0, waterTop, canvas.width, canvas.height - waterTop);
+      }
+
+      updateUI();
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* ===================================================
+       10. INTERFACCIA E AZIONI UTENTE
+       =================================================== */
+    function addFood() {
+      if (gameState.foods.length < 10) {
+        gameState.foods.push({
+          x: 40 + Math.random() * (canvas.width - 80),
+          y: canvas.height * 0.10 + 5,
+          isTrash: false,
+          amount: 100
+        });
+        audio.playPop();
+      }
+    }
+
+    function addNewFish(speciesName, customName) {
+      gameState.fishes.push({
+        id: Date.now() + Math.random(),
+        name: customName || speciesName,
+        species: speciesName,
+        hunger: 100,
+        health: 100,
+        happiness: 80,
+        stressedSeconds: 0,
+        ageSeconds: 0,
+        growthSeconds: 0,
+        diseased: false,
+        x: Math.random() * (canvas.width - 60) + 30,
+        y: Math.random() * (canvas.height * 0.7) + canvas.height * 0.2,
+        vx: 20,
+        vy: 10
+      });
+    }
+
+    function getStageName(growthSeconds) {
+      if (growthSeconds >= AGE_MAX_THRESHOLD) return 'Anziano 👴';
+      if (growthSeconds >= AGE_ADULT_THRESHOLD) return 'Adulto 🌟';
+      if (growthSeconds >= AGE_JUVENILE_THRESHOLD) return 'Giovane 🌿';
+      return 'Avannotto 🍼';
+    }
+
+    function getStageValueMultiplier(growthSeconds) {
+      if (growthSeconds >= AGE_ADULT_THRESHOLD) return 1.0;
+      if (growthSeconds >= AGE_JUVENILE_THRESHOLD) return 0.75;
+      return 0.50;
+    }
+
+    function formatAge(totalSeconds) {
+      const days = Math.floor(totalSeconds / DAY_IN_SECONDS);
+      const hours = Math.floor((totalSeconds % DAY_IN_SECONDS) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+      if (days > 0) return `${days}d ${hours}h`;
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      return `${minutes}m`;
+    }
+
+    function paramBadge(value, warnThreshold, dangerThreshold) {
+      if (value >= dangerThreshold) return '<span class="danger-badge">Pericoloso</span>';
+      if (value >= warnThreshold) return '<span class="warn-badge">Attenzione</span>';
+      return '<span class="ok-badge">OK</span>';
+    }
+
+    function updateUI() {
+      const w = gameState.water;
+      const ph = getPH(w);
+      const bioload = getTotalBioload();
+
+      document.getElementById('money-display').innerText = `💰 ${Math.floor(gameState.money)}€`;
+      document.getElementById('clean-display').innerText = `💧 ${Math.floor(gameState.waterQuality)}%`;
+      document.getElementById('cycle-display').innerText = isDaytime() ? '☀️' : '🌙';
+
+      document.getElementById('temp-display').innerText = `${w.temp.toFixed(1)} °C`;
+      document.getElementById('o2-display').innerHTML = `${Math.floor(w.o2)}%` + paramBadge(100 - w.o2, 55, 75);
+      document.getElementById('ammonia-display').innerHTML = `${w.ammonia.toFixed(2)} ppm` + paramBadge(w.ammonia, 0.25, 1.0);
+      document.getElementById('nitrite-display').innerHTML = `${w.nitrite.toFixed(2)} ppm` + paramBadge(w.nitrite, 0.25, 1.0);
+      document.getElementById('nitrate-display').innerHTML = `${w.nitrate.toFixed(1)} ppm` + paramBadge(w.nitrate, 40, 80);
+      document.getElementById('ph-display').innerText = ph.toFixed(2);
+      document.getElementById('bacteria-display').innerText = `Ammoniaca ${Math.floor(w.bacteriaAmmonia)}% · Nitriti ${Math.floor(w.bacteriaNitrite)}%`;
+      document.getElementById('bioload-text').innerText = `${bioload.toFixed(1)} / ${TANK_CAPACITY_BIOLOAD.toFixed(1)}` + (bioload > TANK_CAPACITY_BIOLOAD ? ' (sovraffollata)' : '');
+
+      if (!gameState.hasFilter) {
+        document.getElementById('filter-status-text').innerText = `Non Installato ❌`;
+      } else {
+        document.getElementById('filter-status-text').innerText = `${Math.floor(gameState.filterHealth)}% Efficienza`;
+      }
+
+      const heaterEl = document.getElementById('heater-controls');
+      if (gameState.hasHeater) {
+        heaterEl.innerHTML = `
+          <button class="mini-btn" onclick="adjustHeaterTarget(-1)">-</button>
+          <span style="font-size:12px;">🔥 ${gameState.heaterTarget}°C</span>
+          <button class="mini-btn" onclick="adjustHeaterTarget(1)">+</button>
+        `;
+      } else {
+        heaterEl.innerHTML = `<span class="item-desc">Nessun riscaldatore</span>`;
+      }
+    }
+
+    function adjustHeaterTarget(delta) {
+      gameState.heaterTarget = clamp(gameState.heaterTarget + delta, 20, 30);
+      audio.playPop();
+    }
+
+    function renderFishList() {
+      const container = document.getElementById('fish-list-container');
+      container.innerHTML = '';
+
+      if (gameState.fishes.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#94a3b8;">Nessun pesce nella vasca</div>';
+        return;
+      }
+
+      gameState.fishes.forEach(fish => {
+        const spec = SPECIES_CONFIG[fish.species];
+        const modifier = gameState.marketModifiers[fish.species] || 1;
+        const stageVal = getStageValueMultiplier(fish.growthSeconds);
+        const sellPrice = Math.floor(spec.basePrice * modifier * stageVal * (fish.health / 100));
+        const mood = getMood(fish);
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          <div class="item-info">
+            <div class="item-name">
+              <input type="text" class="edit-name-input" value="${fish.name}" onchange="renameFish(${fish.id}, this.value)">
+              <span style="font-size:10px; color:#38bdf8;">(${fish.species})</span>
+              ${fish.diseased ? '<span class="danger-badge">Malato</span>' : ''}
+            </div>
+            <div class="item-desc">
+              Umore: <b>${mood.text} ${mood.emoji}</b> (${Math.floor(fish.happiness)}%)<br>
+              Stadio: ${getStageName(fish.growthSeconds)} | Salute: ${Math.floor(fish.health)}%<br>
+              Fame: ${Math.floor(fish.hunger)}% | Età: ${formatAge(fish.ageSeconds)}<br>
+              <span style="color:#64748b;">${spec.desc}</span>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${fish.diseased ? `<button class="cure-btn" onclick="cureFish(${fish.id})">Cura 10€</button>` : ''}
+            <button class="sell-btn" onclick="sellFish(${fish.id}, ${sellPrice})">Vendi ${sellPrice}€</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renameFish(id, newName) {
+      const fish = gameState.fishes.find(f => f.id === id);
+      if (fish) fish.name = newName;
+    }
+
+    function sellFish(id, price) {
+      gameState.fishes = gameState.fishes.filter(f => f.id !== id);
+      gameState.money += price;
+      audio.playPop();
+      renderFishList();
+    }
+
+    function cureFish(id) {
+      const fish = gameState.fishes.find(f => f.id === id);
+      if (!fish) return;
+      if (gameState.money < 10) { alert("Fondi insufficienti per la medicina!"); return; }
+      gameState.money -= 10;
+      fish.diseased = false;
+      fish.health = Math.min(100, fish.health + 10);
+      audio.playClean();
+      notify(`💊 ${fish.name} è guarito`);
+      renderFishList();
+    }
+
+    function renderShopList() {
+      const container = document.getElementById('shop-list-container');
+      container.innerHTML = '';
+
+      const filterCard = document.createElement('div');
+      filterCard.className = 'item-card';
+
+      if (!gameState.hasFilter) {
+        filterCard.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">Acquista Filtro Acquario</span>
+            <span class="item-desc">Ospita i batteri nitrificanti e rimuove meccanicamente la spazzatura</span>
+          </div>
+          <button class="buy-btn" onclick="buyFilter()">20€</button>
+        `;
+      } else {
+        filterCard.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">Risciacquo Filtro</span>
+            <span class="item-desc">Ripristina l'efficienza meccanica al 100% (i batteri restano intatti)</span>
+          </div>
+          <button class="buy-btn" onclick="buyFilterMaintenance()">15€</button>
+        `;
+      }
+      container.appendChild(filterCard);
+
+      if (!gameState.hasHeater) {
+        const heaterCard = document.createElement('div');
+        heaterCard.className = 'item-card';
+        heaterCard.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">Riscaldatore Regolabile</span>
+            <span class="item-desc">Stabilizza la temperatura, essenziale per le specie tropicali</span>
+          </div>
+          <button class="buy-btn" onclick="buyHeater()">30€</button>
+        `;
+        container.appendChild(heaterCard);
+      }
+
+      Object.keys(SPECIES_CONFIG).forEach(speciesName => {
+        const spec = SPECIES_CONFIG[speciesName];
+        const modifier = gameState.marketModifiers[speciesName] || 1;
+        const currentBuyPrice = Math.floor(spec.basePrice * modifier);
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">${speciesName}</span>
+            <span class="item-desc">${spec.tempMin}-${spec.tempMax}°C | Fame Max: ${spec.maxHungerHours}h</span>
+            <span class="item-desc">${spec.desc}</span>
+          </div>
+          <button class="buy-btn" onclick="buyFish('${speciesName}', ${currentBuyPrice})">Acquista ${currentBuyPrice}€</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function buyFish(speciesName, price) {
+      if (gameState.fishes.length >= TANK_MAX_FISH) { alert("La vasca ha raggiunto la capacità massima!"); return; }
+      if (gameState.money >= price) {
+        gameState.money -= price;
+        addNewFish(speciesName);
+        audio.playPop();
+        renderShopList();
+      } else {
+        alert("Fondi insufficienti!");
+      }
+    }
+
+    function buyFilter() {
+      if (gameState.money >= 20) {
+        gameState.money -= 20;
+        gameState.hasFilter = true;
+        gameState.filterHealth = 100;
+        audio.playClean();
+        renderShopList();
+      } else {
+        alert("Fondi insufficienti per comprare il filtro!");
+      }
+    }
+
+    function buyFilterMaintenance() {
+      if (gameState.money >= 15) {
+        gameState.money -= 15;
+        gameState.filterHealth = 100;
+        audio.playClean();
+      } else {
+        alert("Fondi insufficienti!");
+      }
+    }
+
+    function buyHeater() {
+      if (gameState.money >= 30) {
+        gameState.money -= 30;
+        gameState.hasHeater = true;
+        gameState.heaterTarget = 26;
+        audio.playClean();
+        renderShopList();
+      } else {
+        alert("Fondi insufficienti per il riscaldatore!");
+      }
+    }
+
+    function doWaterChange() {
+      if (gameState.money < 5) { alert("Fondi insufficienti per il cambio d'acqua!"); return; }
+      gameState.money -= 5;
+      const w = gameState.water;
+      w.ammonia *= 0.45;
+      w.nitrite *= 0.45;
+      w.nitrate = Math.max(5, w.nitrate * 0.45);
+      gameState.fishes.forEach(f => { f.happiness = Math.max(0, f.happiness - 2); });
+      audio.playClean();
+      notify('💧 Cambio d\'acqua parziale effettuato');
+    }
+
+    function changeBackground(index) {
+      gameState.bgIndex = index;
+      document.querySelectorAll('.bg-opt').forEach((el, i) => {
+        el.classList.toggle('selected', i === index);
+      });
+      audio.playPop();
+    }
+
+    /* ===================================================
+       11. GESTIONE MODALI ED ESECUZIONE
+       =================================================== */
+    function openModal(id) {
+      if (id === 'modal-pesci') renderFishList();
+      if (id === 'modal-negozio') renderShopList();
+      document.getElementById(id).classList.add('active');
+      audio.playPop();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+      audio.playPop();
+    }
+
+    function toggleAudio() {
+      const isMuted = audio.toggleMute();
+      document.getElementById('audio-toggle-btn').innerText = isMuted ? 'Attiva' : 'Muto';
+    }
+
+    function addMoney() {
+      gameState.money += 10;
+      audio.playPop();
+      updateUI();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    window.addEventListener('beforeunload', saveGame);
+    setInterval(saveGame, 10000);
+
+    loadGame();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
