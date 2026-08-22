@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Frankenstein, di Mary Shelley — Un'Avventura</title>
+<style>
+:root{
+  --night:#0a0c0f;
+  --deep:#131820;
+  --ash:#2a3038;
+  --ash-light:#4a5460;
+  --parchment:#d6d2c4;
+  --parchment-dim:#a8a495;
+  --galvanic:#7ecb6b;
+  --galvanic-glow:#a8f296;
+  --ice:#5b93b0;
+  --ice-glow:#8ec3dc;
+  --blood:#9c2b2b;
+  font-size:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:var(--night);
+  color:var(--parchment);
+  font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
+  overscroll-behavior:none;
+}
+#app{
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  max-width:560px;margin:0 auto;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(126,203,107,0.06), transparent 60%),
+    linear-gradient(180deg, var(--deep) 0%, var(--night) 100%);
+  position:relative;
+  border-left:1px solid #000;border-right:1px solid #000;
+}
+header{
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--ash-light);
+  background:linear-gradient(180deg, rgba(91,147,176,0.06), transparent);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#roomTitle{
+  font-size:1.05rem;letter-spacing:.03em;color:var(--ice-glow);
+  text-shadow:0 0 12px rgba(91,147,176,0.3);
+  font-variant:small-caps;
+  margin:0;
+}
+#lampIndicator{
+  font-size:.72rem;color:var(--parchment-dim);display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.flame{
+  display:inline-block;width:8px;height:11px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 50% 70%, var(--galvanic-glow), var(--galvanic) 90%);
+  box-shadow:0 0 6px var(--galvanic-glow);
+}
+#log{
+  flex:1;overflow-y:auto;padding:16px 16px 8px;
+  font-size:1rem;line-height:1.55;
+}
+#log::-webkit-scrollbar{width:6px;}
+#log::-webkit-scrollbar-thumb{background:var(--ash-light);border-radius:3px;}
+.entry{margin-bottom:14px;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.entry.room-name{
+  color:var(--ice-glow);font-variant:small-caps;font-size:1.15rem;letter-spacing:.03em;
+  border-bottom:1px solid var(--ash-light);padding-bottom:6px;margin-bottom:8px;
+}
+.entry.desc{color:var(--parchment);}
+.entry.msg{color:var(--parchment-dim);font-style:italic;}
+.entry.system{color:var(--galvanic-glow);font-size:.85rem;text-align:center;}
+.entry.danger{color:var(--blood);font-weight:bold;}
+
+#actions{
+  padding:8px 12px 4px;border-top:1px solid var(--ash-light);flex-shrink:0;
+  max-height:38vh;overflow-y:auto;
+}
+.action-group-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--parchment-dim);opacity:.65;margin:6px 2px 3px;}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+button.opt{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(180deg,#2a3038,#181c22);
+  border:1px solid var(--ash-light);
+  color:var(--parchment);
+  padding:9px 12px;border-radius:6px;font-size:.86rem;
+  cursor:pointer;flex:1 1 auto;min-width:44%;
+  transition:background .15s, transform .1s;
+  text-align:center;
+}
+button.opt:active{transform:scale(.96);background:linear-gradient(180deg,#38414c,#1e232a);}
+button.opt.exit{border-color:var(--ice);color:#bfe0ec;}
+button.opt.special{border-color:var(--galvanic-glow);color:var(--galvanic-glow);}
+button.opt.magic{border-color:var(--ice-glow);color:var(--ice-glow);font-style:italic;}
+button.opt.danger{border-color:var(--blood);color:#f2a48f;}
+button.opt.wide{min-width:100%;}
+
+#bottombar{
+  display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--ash-light);background:var(--night);flex-shrink:0;
+}
+#bottombar button{
+  flex:1;font-family:'Segoe UI',system-ui,sans-serif;
+  background:#101418;border:1px solid var(--ash-light);color:var(--parchment-dim);
+  padding:10px 2px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+}
+#bottombar button .ic{font-size:1.35rem;}
+#bottombar button:active{background:#1c222a;}
+
+.modal-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;
+}
+.modal-backdrop.hidden{display:none;}
+.modal{
+  background:linear-gradient(180deg,#171c22,#0e1216);
+  border:1px solid var(--ash-light);border-bottom:none;
+  border-radius:14px 14px 0 0;
+  width:100%;max-width:560px;max-height:82vh;overflow-y:auto;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation:slideup .2s ease;
+}
+@keyframes slideup{from{transform:translateY(30px);opacity:0;}to{transform:none;opacity:1;}}
+.modal h2{
+  margin:0 0 10px;color:var(--ice-glow);font-variant:small-caps;font-size:1.2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.modal h2 .close{cursor:pointer;color:var(--parchment-dim);font-size:1.3rem;font-family:sans-serif;line-height:1;padding:2px 8px;}
+.inv-section-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--parchment-dim);margin:14px 0 6px;opacity:.7;}
+.inv-item{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.inv-item .name{flex:1;font-size:.95rem;}
+.inv-item .name .tag{font-size:.68rem;color:var(--ice-glow);display:block;opacity:.8;}
+.inv-item button{
+  background:#2a3038;border:1px solid var(--ash-light);color:var(--parchment);
+  padding:6px 10px;border-radius:5px;font-size:.78rem;font-family:'Segoe UI',system-ui,sans-serif;
+}
+.empty-note{color:var(--parchment-dim);font-style:italic;font-size:.88rem;padding:8px 4px;}
+textarea#notesArea{
+  width:100%;min-height:40vh;background:#0a0d10;color:var(--parchment);
+  border:1px solid var(--ash-light);border-radius:8px;padding:10px;font-family:inherit;font-size:.95rem;
+  resize:vertical;
+}
+.notes-hint{font-size:.75rem;color:var(--parchment-dim);margin-top:8px;opacity:.75;}
+#scoreModal .score-big{font-size:2.4rem;color:var(--ice-glow);text-align:center;margin:6px 0 2px;font-variant:small-caps;}
+#scoreModal .score-sub{text-align:center;color:var(--parchment-dim);margin-bottom:14px;}
+#scoreModal .treasure-row{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;}
+#scoreModal .treasure-row.got{color:var(--ice-glow);}
+#scoreModal .treasure-row.missing{color:#4a5460;}
+
+#winScreen{
+  position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 30%, #10201c, #0a0c0f 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
+}
+#winScreen.hidden{display:none;}
+#winScreen h1{color:var(--ice-glow);font-variant:small-caps;font-size:1.8rem;text-shadow:0 0 20px rgba(91,147,176,.5);margin-bottom:6px;}
+#winScreen p{color:var(--parchment);line-height:1.6;max-width:420px;}
+#winScreen button{margin-top:20px;}
+
+@media (min-width:601px){
+  body{background:#000;}
+  #app{border-left:1px solid var(--ash-light);border-right:1px solid var(--ash-light);box-shadow:0 0 60px rgba(0,0,0,.8);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="roomTitle">Frankenstein</h1>
+    <div id="lampIndicator"><span class="flame" id="flameIcon"></span><span id="lampText">Il racconto continua</span></div>
+  </header>
+
+  <div id="log"></div>
+
+  <div id="actions"></div>
+
+  <div id="bottombar">
+    <button id="btnInv" aria-label="Zaino"><span class="ic">🎒</span></button>
+    <button id="btnLook" aria-label="Guarda"><span class="ic">👁</span></button>
+    <button id="btnHint" aria-label="Aiuto"><span class="ic">💡</span></button>
+    <button id="btnScore" aria-label="Diario di Bordo"><span class="ic">📜</span></button>
+    <button id="btnNotes" aria-label="Appunti"><span class="ic">✎</span></button>
+    <button id="btnOptions" aria-label="Opzioni"><span class="ic">⚙️</span></button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="invModal">
+    <div class="modal">
+      <h2>Il tuo zaino <span class="close" data-close="invModal">✕</span></h2>
+      <div class="inv-section-title">Cosa porti con te</div>
+      <div id="invCarried"></div>
+      <div class="inv-section-title">Qui a terra</div>
+      <div id="invHere"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="notesModal">
+    <div class="modal">
+      <h2>I tuoi appunti <span class="close" data-close="notesModal">✕</span></h2>
+      <textarea id="notesArea" placeholder="Scrivi qui indizi, cose da ricordare..."></textarea>
+      <div class="notes-hint">Gli appunti restano salvati anche se chiudi il gioco o ricominci l'avventura.</div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scoreModal">
+    <div class="modal" id="scoreModalInner">
+      <h2>Diario di Bordo di R. Walton <span class="close" data-close="scoreModal">✕</span></h2>
+      <div id="scoreContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="optionsModal">
+    <div class="modal">
+      <h2>Opzioni <span class="close" data-close="optionsModal">✕</span></h2>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="opt wide" id="btnRestartOpt">🔄 Ricomincia l'avventura</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="opt wide" id="btnFullscreenOpt">⛶ Schermo intero</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal">
+    <div class="modal">
+      <h2 id="confirmTitle">Sei sicuro?</h2>
+      <p id="confirmText" style="color:var(--parchment-dim);line-height:1.5;"></p>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="opt danger wide" id="confirmYes">Sì, procedi</button>
+        <button class="opt wide" id="confirmNo">No, torna indietro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winScreen" class="hidden">
+    <h1>Il racconto è completo.</h1>
+    <p>Robert Walton chiude il suo diario di bordo, custodendo per sempre i sette ricordi che Victor Frankenstein gli ha affidato prima di morire. La Creatura, apparsa un'ultima volta sul corpo del suo creatore, si è allontanata sulla banchisa, verso il buio e la distanza, promettendo di consumarsi in un ultimo rogo dove nessuno la ritroverà mai. La storia, ora, appartiene a chi la leggerà.</p>
+    <button class="opt special wide" id="btnWinRestart">Ricomincia il racconto da capo</button>
+    <button class="opt wide" id="btnWinContinue" style="margin-top:8px;">Continua a esplorare comunque</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============== DATI DI GIOCO ============== */
+
+var TREASURES = {
+  medaglione_madre:{name:"il medaglione con il ritratto di tua madre", tag:"Ricordo"},
+  taccuino_appunti_waldman:{name:"il taccuino di appunti del professor Waldman", tag:"Ricordo"},
+  lettera_elizabeth:{name:"una lettera di Elizabeth, piena d'affetto e preoccupazione", tag:"Ricordo"},
+  fiore_pressato_giustine:{name:"un fiore pressato, dono di Justine", tag:"Ricordo"},
+  libro_paradiso_perduto:{name:"una copia consumata del Paradiso Perduto", tag:"Ricordo"},
+  bussola_padre:{name:"la bussola di tuo padre", tag:"Ricordo"},
+  ultimo_ritratto_elizabeth:{name:"l'ultimo ritratto di Elizabeth", tag:"Ricordo"}
+};
+var TREASURE_IDS = Object.keys(TREASURES);
+var POINTS_PER_TREASURE = 50;
+
+var ITEMS = {
+  pellicce_pesanti:{name:"pesanti pellicce da freddo artico"},
+  corda_alpinismo:{name:"una robusta corda da montagna"}
+};
+Object.keys(TREASURES).forEach(function(k){ ITEMS[k]=TREASURES[k]; });
+
+function isTreasure(id){ return !!TREASURES[id]; }
+
+var ROOMS = {
+
+/* ===== CORNICE: LA NAVE DI WALTON ===== */
+
+nave_walton:{
+  name:"La Nave di Robert Walton",
+  dark:false,
+  desc:function(s){
+    if(s.flags.victorSoccorso) return "Il ponte della nave, imprigionata nei ghiacci dell'Artico. L'uomo che avete tratto in salvo riposa nella cabina, ancora debole, ma vivo abbastanza da raccontare.";
+    return "Sei il capitano Robert Walton, in spedizione verso il Polo Nord. La tua nave è bloccata nei ghiacci. All'orizzonte, il tuo equipaggio scorge una figura umana, esausta e quasi assiderata, distesa su una slitta abbandonata sul pack.";
+  },
+  exits:[
+    {label:"Ascolta l'inizio del suo racconto", to:"casa_ginevra_infanzia", requires:function(s){ return s.flags.victorSoccorso; }}
+  ],
+  actions:[
+    {id:"soccorri", label:"Soccorri l'uomo esausto trovato sul pack di ghiaccio", cls:"special",
+      condition:function(s){ return !s.flags.victorSoccorso; },
+      run:function(s){
+        s.flags.victorSoccorso=true;
+        log("msg","Lo issate a bordo, avvolto in coperte, davanti al fuoco. Si chiama Victor Frankenstein. Quando riprende le forze a sufficienza per parlare, comincia a raccontarti una storia che difficilmente crederesti — se non fosse per l'orrore autentico nei suoi occhi.");
+      }
+    },
+    {id:"riprendi", label:"Riprendi il racconto da dove eri rimasto", cls:"special",
+      condition:function(s){ return s.flags.victorSoccorso && s.flashbackReturnRoom; },
+      run:function(s){
+        var target = s.flashbackReturnRoom;
+        go(target);
+      }
+    }
+  ]
+},
+
+/* ===== ATTO 1 — INGOLSTADT: LA CREAZIONE ===== */
+
+casa_ginevra_infanzia:{
+  name:"Casa Natale, Ginevra",
+  dark:false,
+  desc:function(s){ return "La casa della tua infanzia a Ginevra. Elizabeth, cresciuta con te come una sorella, e il tuo migliore amico Henry Clerval, riempiono questi ricordi di calore. Ma da quando tua madre è morta di scarlattina, qualcosa dentro di te si è ossessionato con l'idea di sconfiggere la morte stessa."; },
+  items:["medaglione_madre"],
+  exits:[{label:"Parti per l'Università di Ingolstadt", to:"viaggio_ingolstadt"}]
+},
+
+viaggio_ingolstadt:{
+  name:"Il Viaggio verso Ingolstadt",
+  dark:false,
+  desc:function(s){ return "Giorni di viaggio attraverso paesaggi che a stento noti, la mente già persa in calcoli, formule, possibilità proibite."; },
+  exits:[
+    {label:"Torna a casa, a Ginevra", to:"casa_ginevra_infanzia"},
+    {label:"Arriva a Ingolstadt", to:"universita_ingolstadt"}
+  ]
+},
+
+universita_ingolstadt:{
+  name:"Università di Ingolstadt",
+  dark:false,
+  desc:function(s){ return "Le aule severe dell'università. Il professor Waldman, affascinante e persuasivo, ti mostra come la chimica moderna possa realizzare ciò che gli antichi alchimisti sognavano soltanto: il dominio sulla materia vivente."; },
+  items:["taccuino_appunti_waldman"],
+  exits:[
+    {label:"Torna al viaggio", to:"viaggio_ingolstadt"},
+    {label:"Vai nella biblioteca di alchimia", to:"biblioteca_alchimia"}
+  ]
+},
+
+biblioteca_alchimia:{
+  name:"Biblioteca di Alchimia",
+  dark:false,
+  desc:function(s){ return "Volumi polverosi di Paracelso e Agrippa, affiancati ora dai tuoi appunti di chimica moderna. Notte dopo notte, la sintesi tra scienza antica e nuova comincia a delinearsi nella tua mente: hai scoperto il segreto per infondere la vita nella materia inerte."; },
+  exits:[
+    {label:"Torna all'università", to:"universita_ingolstadt"},
+    {label:"Allestisci un laboratorio segreto", to:"laboratorio_segreto"}
+  ]
+},
+
+laboratorio_segreto:{
+  name:"Il Tuo Laboratorio Segreto",
+  dark:false,
+  desc:function(s){
+    var n = [s.flags.materialeCimitero, s.flags.materialeObitorio, s.flags.materialeMercato].filter(Boolean).length;
+    if(n===0) return "Una stanza affittata in solaio, ormai irriconoscibile: strumenti, alambicchi, appunti ovunque. Ti servono ancora materiali da tre fonti diverse, in città, prima di poter tentare l'impresa.";
+    if(n<3) return "Il laboratorio si riempie lentamente di ciò che ti serve. Mancano ancora alcuni materiali prima di poter tentare l'impresa che ti ossessiona.";
+    return "Il laboratorio è pronto. Ogni componente necessario è stato raccolto. Non resta che l'atto finale, quello che nessun essere umano ha mai osato compiere prima di te.";
+  },
+  exits:[
+    {label:"Torna in biblioteca", to:"biblioteca_alchimia"},
+    {label:"Esci verso il cimitero, di notte", to:"cimitero_ingolstadt"},
+    {label:"Esci verso l'obitorio dell'ospedale", to:"obitorio_ospedale"},
+    {label:"Vai al mercato nero dei chimici", to:"mercato_nero_ossa"},
+    {label:"Assembla e anima la creatura", to:"notte_animazione", requires:function(s){ return s.flags.materialeCimitero && s.flags.materialeObitorio && s.flags.materialeMercato; }}
+  ]
+},
+
+cimitero_ingolstadt:{
+  name:"Il Cimitero, di Notte",
+  dark:false,
+  desc:function(s){ return "Lapidi coperte di brina, un guardiano notturno che gira con la sua lanterna a intervalli irregolari. Quello che stai per fare violerebbe ogni legge, umana e divina — ma la tua ossessione non conosce più esitazioni."; },
+  exits:[{label:"Torna al laboratorio", to:"laboratorio_segreto"}],
+  actions:[
+    {id:"muoviti_cimitero", label:"Muoviti in assoluto silenzio, evitando il guardiano", cls:"special",
+      condition:function(s){ return !s.flags.materialeCimitero; },
+      run:function(s){
+        if(s.inventory.length>2){
+          log("msg","Ogni oggetto che porti con te rischia di tintinnare nel silenzio assoluto del cimitero. Lascia qualcosa qui prima di riprovare — il minimo rumore potrebbe rovinare tutto.");
+          return;
+        }
+        s.flags.materialeCimitero=true;
+        log("msg","Ti muovi come un'ombra tra le tombe, il cuore che batte più forte del previsto. Il guardiano passa a pochi metri da te, senza accorgersi di nulla. Ottieni ciò che ti serve, disgustato da te stesso quanto determinato a proseguire.");
+      }
+    }
+  ]
+},
+
+obitorio_ospedale:{
+  name:"L'Obitorio dell'Ospedale",
+  dark:false,
+  desc:function(s){ return "Corridoi silenziosi, l'odore acre di disinfettante e morte. Un inserviente stanco fa il suo giro a orari quasi prevedibili, se solo si ha la pazienza di osservarlo."; },
+  exits:[{label:"Torna al laboratorio", to:"laboratorio_segreto"}],
+  actions:[
+    {id:"attendi_obitorio", label:"Attendi il momento giusto per intrufolarti", cls:"special",
+      condition:function(s){ return !s.flags.materialeObitorio; },
+      run:function(s){ s.flags.materialeObitorio=true; log("msg","Studi i movimenti dell'inserviente per quasi un'ora, poi colpisci nel momento perfetto. Ottieni ciò che ti serve senza essere visto, la coscienza sempre più pesante."); }
+    }
+  ]
+},
+
+mercato_nero_ossa:{
+  name:"Il Mercato Nero dei Chimici",
+  dark:false,
+  desc:function(s){ return "Un retrobottega mal illuminato, dove un uomo taciturno vende reagenti e sali che nessuna farmacia venderebbe apertamente. Non fa domande, se sei disposto a pagare bene."; },
+  exits:[{label:"Torna al laboratorio", to:"laboratorio_segreto"}],
+  actions:[
+    {id:"acquista_chimici", label:"Acquista i campioni chimici necessari", cls:"special",
+      condition:function(s){ return !s.flags.materialeMercato; },
+      run:function(s){ s.flags.materialeMercato=true; log("msg","Paghi senza contrattare, ansioso di andartene da quel luogo. L'uomo ti consegna un pacco avvolto in tela cerata, senza fare domande, come promesso."); }
+    }
+  ]
+},
+
+notte_animazione:{
+  name:"La Notte dell'Animazione",
+  dark:false,
+  desc:function(s){
+    if(s.flags.creaturaAnimata) return "Il laboratorio, ormai devastato dal terrore. Sei fuggito, e non hai il coraggio di voltarti indietro.";
+    return "Ogni componente è pronto. La forma che hai assemblato, alta quasi due metri, giace immobile sul tavolo. È ora di scoprire se la teoria che ti ha consumato per due anni interi funziona davvero.";
+  },
+  exits:[{label:"Fuggi terrorizzato, verso Ginevra", to:"ritorno_ginevra", requires:function(s){ return s.flags.creaturaAnimata; }}],
+  actions:[
+    {id:"anima_creatura", label:"Dai vita alla creatura", cls:"special",
+      condition:function(s){ return !s.flags.creaturaAnimata; },
+      run:function(s){
+        s.flags.creaturaAnimata=true;
+        log("danger","Un lampo di luce galvanica attraversa il corpo assemblato. Un respiro rauco, innaturale, riempie la stanza. Un occhio giallastro si apre, poi l'altro. La creatura si muove, si solleva verso di te con un gorgoglio che potrebbe essere un tentativo di parola — e tu, davanti alla realizzazione del tuo stesso sogno, provi solo un orrore assoluto. Fuggi dal laboratorio senza voltarti indietro, abbandonando la tua creazione nell'istante stesso in cui apre gli occhi.");
+      }
+    }
+  ]
+},
+
+/* ===== ATTO 2 — GINEVRA E LE ALPI: LA CONSEGUENZA ===== */
+
+ritorno_ginevra:{
+  name:"Ritorno a Ginevra",
+  dark:false,
+  desc:function(s){ return "Mesi di silenzio e febbre nervosa, poi un lento ritorno alla vita normale — o quasi. Non hai detto una parola a nessuno di ciò che hai fatto a Ingolstadt. Una lettera di Elizabeth ti aspetta, piena di un affetto che quasi non ti senti di meritare."; },
+  items:["lettera_elizabeth"],
+  exits:[
+    {label:"Torna alla notte della creazione", to:"notte_animazione"},
+    {label:"Ricevi una notizia terribile", to:"notizia_omicidio_william"}
+  ]
+},
+
+notizia_omicidio_william:{
+  name:"Una Notizia Terribile",
+  dark:false,
+  desc:function(s){ return "Una lettera urgente da casa: il tuo fratello minore, il piccolo William, è stato trovato strangolato nei boschi vicino a Ginevra. Torni immediatamente a casa, il cuore gelato da un sospetto che non osi ancora nominare."; },
+  exits:[
+    {label:"Torna al ritorno a Ginevra", to:"ritorno_ginevra"},
+    {label:"Recati sul luogo del delitto", to:"luogo_delitto"}
+  ]
+},
+
+luogo_delitto:{
+  name:"Il Luogo del Delitto",
+  dark:false,
+  desc:function(s){ return "Il punto esatto dove è stato trovato il corpo di William. Cerchi indizi, temendo già cosa potresti trovare."; },
+  exits:[
+    {label:"Torna alla notizia", to:"notizia_omicidio_william"},
+    {label:"Vai da Justine Moritz", to:"villa_giustine", requires:function(s){ return s.flags.delittoInvestigato; }}
+  ],
+  actions:[
+    {id:"investiga_delitto", label:"Investiga la scena del delitto", cls:"special",
+      condition:function(s){ return !s.flags.delittoInvestigato; },
+      run:function(s){
+        s.flags.delittoInvestigato=true;
+        log("msg","Le impronte nel terreno sono enormi, innaturalmente profonde — impronte che nessun uomo comune potrebbe lasciare. Un'ombra alta, forte, capace di simile violenza. Sai, con terrore crescente, esattamente cosa — o chi — potrebbe averlo fatto. Ma chi ti crederebbe?");
+      }
+    }
+  ]
+},
+
+villa_giustine:{
+  name:"Casa di Justine Moritz",
+  dark:false,
+  desc:function(s){ return "Justine, la fidata domestica di famiglia che ha praticamente cresciuto William, è sconvolta dalla notizia quanto te. È gentile, onesta, incapace di far male a una mosca — eppure il medaglione di tua madre, che William portava quella notte, è stato ritrovato tra le sue cose."; },
+  items:["fiore_pressato_giustine"],
+  exits:[
+    {label:"Torna al luogo del delitto", to:"luogo_delitto"},
+    {label:"Assisti al processo", to:"processo_giustine"}
+  ]
+},
+
+processo_giustine:{
+  name:"Il Processo di Justine",
+  dark:false,
+  desc:function(s){
+    if(s.flags.processoConcluso) return "L'aula del tribunale, ormai vuota. La sentenza è stata pronunciata.";
+    return "Justine siede sul banco degli imputati, accusata di un crimine che sai — con certezza quasi assoluta — di non aver commesso. La prova contro di lei è circostanziale, ma sufficiente. Tu conosci la verità. Potresti parlare."; 
+  },
+  exits:[{label:"Segui Justine verso il suo destino", to:"esecuzione_giustine", requires:function(s){ return s.flags.processoConcluso; }}],
+  actions:[
+    {id:"assisti_processo", label:"Assisti al processo, incapace di parlare", cls:"special",
+      condition:function(s){ return !s.flags.processoConcluso; },
+      run:function(s){
+        s.flags.processoConcluso=true;
+        log("danger","Ti alzi due volte, la verità sulla punta della lingua — una creatura mostruosa, animata dalla tua stessa mano, potrebbe essere la vera colpevole. Ma chi crederebbe a una storia simile, invece che condannarti come pazzo, o come complice? Il tuo silenzio, vigliacco e imperdonabile, pesa quanto qualsiasi azione. Justine viene dichiarata colpevole.");
+      }
+    }
+  ]
+},
+
+esecuzione_giustine:{
+  name:"L'Esecuzione di Justine",
+  dark:false,
+  desc:function(s){ return "Justine viene giustiziata per un crimine che non ha commesso. Il tuo silenzio l'ha condannata tanto quanto le prove false. Il peso di questa colpa non ti abbandonerà mai più — due vittime, ormai, pesano sulla tua coscienza."; },
+  exits:[{label:"Cerca solitudine tra le montagne", to:"sentiero_montagne"}]
+},
+
+sentiero_montagne:{
+  name:"Sentiero tra le Alpi Svizzere",
+  dark:false,
+  desc:function(s){ return "Ti allontani da Ginevra, cercando nella maestosità gelida delle Alpi un briciolo della pace che hai perso per sempre. Il ghiacciaio del Montanvert si apre davanti a te come un mare di ghiaccio immobile."; },
+  exits:[{label:"Sali sul ghiacciaio", to:"ghiacciaio_montanvert"}]
+},
+
+ghiacciaio_montanvert:{
+  name:"Il Ghiacciaio del Montanvert",
+  dark:false,
+  desc:function(s){
+    if(s.flags.creaturaIncontrata) return "Il ghiacciaio, immenso e silenzioso. La Creatura si è appena offerta di raccontarti tutto ciò che le è accaduto da quella notte terribile.";
+    return "Una figura enorme si muove con agilità sovrumana tra i crepacci, avvicinandosi con una velocità che nessun uomo potrebbe eguagliare. È lei. La tua creazione, due anni dopo, finalmente di fronte a te.";
+  },
+  exits:[{label:"Ascolta la sua storia", to:"racconto_creatura_bosco", requires:function(s){ return s.flags.creaturaIncontrata; }}],
+  actions:[
+    {id:"affronta_creatura", label:"Affronta la Creatura sul ghiacciaio", cls:"special",
+      condition:function(s){ return !s.flags.creaturaIncontrata; },
+      run:function(s){
+        s.flags.creaturaIncontrata=true;
+        log("msg","'Mi hai reso questo,' dice la Creatura, con una voce sorprendentemente eloquente, carica di dolore più che di rabbia. 'Ovunque vada, sono odiato e cacciato. Prima di giudicarmi, ascolta almeno cosa mi è accaduto da quella notte in cui mi hai abbandonato.' Contro ogni istinto, accetti di ascoltare.");
+      }
+    }
+  ]
+},
+
+racconto_creatura_bosco:{
+  name:"Il Racconto: i Primi Giorni",
+  dark:false,
+  desc:function(s){ return "La Creatura ti racconta i suoi primi giorni: la confusione dei sensi appena nati, la fame, il freddo, la scoperta dolorosa che ogni essere umano incontrato fuggiva urlando o lo attaccava a vista, semplicemente per il suo aspetto."; },
+  exits:[{label:"Continua ad ascoltare", to:"racconto_creatura_delacey", requires:function(s){ return s.flags.raccontoBoscoAscoltato; }}],
+  actions:[
+    {id:"ascolta_orrore", label:"Ascolta con orrore, senza interromperla", cls:"special",
+      condition:function(s){ return !s.flags.raccontoBoscoAscoltato; },
+      run:function(s){ s.flags.raccontoBoscoAscoltato=true; log("msg","Ascolti in silenzio, il disgusto e la pietà che si mescolano dentro di te in proporzioni che non sai più distinguere."); }
+    },
+    {id:"ascolta_empatia", label:"Ascolta cercando davvero di comprendere la sua sofferenza", cls:"special",
+      condition:function(s){ return !s.flags.raccontoBoscoAscoltato; },
+      run:function(s){ s.flags.raccontoBoscoAscoltato=true; s.discovered.empatia=true; log("msg","Per la prima volta, ti sforzi di vedere il mondo attraverso i suoi occhi — un essere senza nome, senza famiglia, gettato nel mondo da un creatore che lo ha immediatamente rinnegato. La pietà, per un istante, supera l'orrore."); }
+    }
+  ]
+},
+
+racconto_creatura_delacey:{
+  name:"Il Racconto: la Famiglia De Lacey",
+  dark:false,
+  desc:function(s){ return "La Creatura ti racconta di una famiglia povera ma gentile, osservata di nascosto per mesi da un piccolo casotto sul retro del loro cottage: da loro ha imparato a parlare, a leggere, persino ad amare la poesia — tra i libri, una copia consumata del Paradiso Perduto, in cui si è riconosciuto sia in Adamo che, più spesso, nel Satana caduto e rifiutato. Quando infine si è rivelato al vecchio cieco della famiglia, gentile e privo di pregiudizi, sembrava esserci speranza — finché gli altri, vedenti, non sono tornati a casa."; },
+  items:["libro_paradiso_perduto"],
+  exits:[{label:"Segui la Creatura verso una nuova, terribile richiesta", to:"officina_orcadi", requires:function(s){ return s.flags.raccontoDelaceyAscoltato; }}],
+  actions:[
+    {id:"rivivi_nascondiglio", label:"Rivivi il momento in cui si nascondeva nel casotto sul retro", cls:"special",
+      condition:function(s){ return !s.flags.raccontoDelaceyAscoltato; },
+      run:function(s){
+        if(s.inventory.length>1){
+          log("msg","Per comprendere davvero quello spazio angusto in cui la Creatura si è nascosta per mesi, dovresti portare con te il minimo indispensabile. Lascia qualcosa prima di continuare.");
+          return;
+        }
+        s.flags.raccontoDelaceyAscoltato=true;
+        log("msg","Immagini quello spazio minuscolo e buio, la solitudine di mesi interi passati a osservare una felicità che non gli sarebbe mai appartenuta. Quando la famiglia lo scopre, lo attaccano e fuggono per sempre, bruciando persino il cottage. 'Da quel giorno,' conclude la Creatura, 'ho giurato guerra eterna alla tua specie — a meno che tu non mi conceda un'unica cosa: crea per me una compagna, tanto orribile quanto me, così che io non sia più solo su questa terra.'");
+      }
+    }
+  ]
+},
+
+/* ===== ATTO 3 — L'ARTICO: LA CACCIA ===== */
+
+officina_orcadi:{
+  name:"Officina Remota, Isole Orcadi",
+  dark:false,
+  desc:function(s){ return "Hai accettato, contro ogni tuo istinto, di costruire una seconda creatura — una compagna per la prima, nella speranza disperata di liberare finalmente il mondo, e te stesso, da questo incubo. In un'isola remota e desolata, il lavoro macabro è quasi completo."; },
+  exits:[{label:"Affronta la decisione finale", to:"distruzione_compagna"}]
+},
+
+distruzione_compagna:{
+  name:"La Decisione Finale",
+  dark:false,
+  desc:function(s){
+    if(s.flags.compagnaDistrutta) return "L'officina, ormai devastata dalla furia della Creatura, che ti osserva dalla finestra con un odio che non avevi mai visto prima.";
+    return "La seconda creatura, quasi completa, giace sul tavolo. Ma un pensiero ti gela il sangue: cosa succederebbe se questa nuova creatura, dotata di volontà propria, rifiutasse il patto? O peggio: se insieme, lei e la Creatura, generassero un'intera stirpe capace di minacciare l'intera umanità? La Creatura stessa osserva da una finestra, in attesa.";
+  },
+  exits:[{label:"Fuggi, mentre la furia della Creatura esplode", to:"omicidio_clerval", requires:function(s){ return s.flags.compagnaDistrutta; }}],
+  actions:[
+    {id:"distruggi_compagna", label:"Distruggi la compagna semiterminata, vinto dalla paura", cls:"danger",
+      condition:function(s){ return !s.flags.compagnaDistrutta; },
+      run:function(s){
+        s.flags.compagnaDistrutta=true;
+        log("danger","Con le mani che ti tremano, fai a pezzi la creatura quasi completa davanti agli occhi inorriditi della prima. Il suo urlo di rabbia e disperazione scuote la piccola officina. 'Sarò con te,' sibila, con una calma più terrificante di qualsiasi minaccia urlata, 'nella tua notte di nozze.' Poi scompare nel buio.");
+      }
+    },
+    {id:"completa_comunque", label:"Completa comunque la compagna, sfidando ogni terrore", cls:"danger",
+      condition:function(s){ return !s.flags.compagnaDistrutta; },
+      run:function(s){
+        s.flags.compagnaDistrutta=true;
+        log("danger","Porti a termine il lavoro, contro ogni tuo istinto. Ma nel momento in cui la seconda creatura apre gli occhi, il suo primo sguardo è di puro terrore verso entrambi voi — e nella lotta furiosa che segue, prima che tu possa fermarla, la nuova creatura muore, distrutta dalla stessa Creatura che avrebbe dovuto amarla. 'Sarò con te,' ti sibila poi, devastata quanto furiosa, 'nella tua notte di nozze.' Poi scompare nel buio.");
+      }
+    }
+  ]
+},
+
+omicidio_clerval:{
+  name:"La Morte di Clerval",
+  dark:false,
+  desc:function(s){ return "Il tuo migliore amico, Henry Clerval, viene trovato strangolato poco dopo il tuo ritorno dalle Orcadi. Le stesse impronte innaturali, la stessa violenza sovrumana. Vieni persino accusato del delitto, prima che le prove ti scagionino — ma la vera colpa, sai bene, resta interamente tua."; },
+  exits:[{label:"Torna a Ginevra per il tuo matrimonio", to:"matrimonio_elizabeth"}]
+},
+
+matrimonio_elizabeth:{
+  name:"Il Matrimonio con Elizabeth",
+  dark:false,
+  desc:function(s){ return "Nonostante tutto, sposi finalmente Elizabeth, l'unica luce rimasta nella tua vita distrutta. La minaccia della Creatura — 'sarò con te nella tua notte di nozze' — ti pesa come un macigno."; },
+  exits:[{label:"Prepara le tue difese per la notte", to:"notte_di_nozze"}],
+  actions:[
+    {id:"prepara_difese", label:"Prepara le tue difese, temendo un attacco contro te stesso", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){ log("msg","Ti armi, monti la guardia, convinto che la minaccia sia rivolta a te stesso. Non ti sfiora nemmeno il pensiero che la vera vendetta della Creatura possa colpire chi ami, invece che te."); }
+    }
+  ]
+},
+
+notte_di_nozze:{
+  name:"La Notte di Nozze",
+  dark:false,
+  desc:function(s){
+    if(s.flags.elizabethUccisa) return "La camera nuziale, ormai un luogo di dolore indicibile. Nulla potrà mai restituirti ciò che hai perso questa notte.";
+    return "Monti la guardia fuori dalla camera, pistola in pugno, convinto di essere tu l'obiettivo. Un urlo squarcia il silenzio — mai avresti immaginato che provenisse dalla stanza alle tue spalle, non da fuori.";
+  },
+  exits:[{label:"Fuggi da Ginevra, verso l'inseguimento finale", to:"morte_padre", requires:function(s){ return s.flags.elizabethUccisa; }}],
+  actions:[
+    {id:"cerca_elizabeth", label:"Corri nella camera, temendo il peggio", cls:"special",
+      condition:function(s){ return !s.flags.elizabethUccisa; },
+      run:function(s){
+        s.flags.elizabethUccisa=true;
+        var items = getRoomItems("notte_di_nozze"); items.push("ultimo_ritratto_elizabeth"); setRoomItems("notte_di_nozze", items);
+        log("danger","Elizabeth giace immobile sul letto nuziale, la vita spezzata dalle stesse mani innaturalmente forti che hanno già ucciso William e Clerval. Attraverso la finestra aperta, scorgi per un istante la sagoma della Creatura, che ti osserva con un ghigno di vendetta compiuta prima di sparire nella notte. Hai perso tutto ciò che amavi.");
+      }
+    }
+  ]
+},
+
+morte_padre:{
+  name:"La Morte di Tuo Padre",
+  dark:false,
+  desc:function(s){ return "Il dolore per la perdita di Elizabeth è troppo, anche per il tuo anziano padre: muore poco dopo, il cuore spezzato dalla serie ininterrotta di tragedie familiari. Sei rimasto, ormai, completamente solo al mondo — nient'altro che la caccia, davanti a te."; },
+  items:["bussola_padre"],
+  exits:[{label:"Comincia la caccia alla Creatura", to:"inseguimento_artico_inizio"}]
+},
+
+inseguimento_artico_inizio:{
+  name:"L'Inizio della Caccia",
+  dark:false,
+  desc:function(s){ return "Non ti resta che un unico scopo: dare la caccia alla tua stessa creazione fino ai confini della terra, e distruggerla con le tue mani. Ti procuri l'attrezzatura necessaria per sopravvivere ai ghiacci più estremi."; },
+  items:["pellicce_pesanti","corda_alpinismo"],
+  exits:[{label:"Addentrati nella distesa di ghiaccio", to:"distesa_ghiaccio"}]
+},
+
+distesa_ghiaccio:{
+  name:"La Distesa di Ghiaccio",
+  dark:false,
+  desc:function(s){ return "Un mare di ghiaccio senza fine, il vento che taglia la pelle come lame. Le tracce della Creatura, visibili solo a tratti, proseguono verso nord, sempre più lontano da ogni traccia di civiltà."; },
+  exits:[
+    {label:"Torna verso l'inizio della caccia", to:"inseguimento_artico_inizio"},
+    {label:"Prosegui verso il crepaccio ghiacciato", to:"crepaccio_ghiacciato", requires:function(s){ return s.flags.ghiaccioAttraversato; }}
+  ],
+  actions:[
+    {id:"attraversa_ghiaccio_pellicce", label:"Avanza protetto dalle pellicce pesanti", cls:"special",
+      condition:function(s){ return !s.flags.ghiaccioAttraversato && s.inventory.indexOf("pellicce_pesanti")>-1; },
+      run:function(s){ s.flags.ghiaccioAttraversato=true; log("msg","Le pellicce ti proteggono a stento dal freddo omicida di questa landa. Avanzi per giorni, l'ossessione l'unica cosa che ti tiene in vita più del cibo stesso."); }
+    },
+    {id:"attraversa_ghiaccio_senza", label:"Avanza senza protezione adeguata dal freddo", cls:"danger",
+      condition:function(s){ return !s.flags.ghiaccioAttraversato; },
+      run:function(s){
+        confirmAction(
+          "Avanzare senza protezione adeguata dal freddo artico?",
+          "Le temperature qui possono uccidere in poche ore chiunque non sia adeguatamente equipaggiato.",
+          function(){ triggerDeath("Il freddo ti si insinua nelle ossa più in fretta di quanto tu riesca a reagire. Il tuo inseguimento — e la tua storia — finiscono qui, sperduto nella distesa di ghiaccio."); }
+        );
+      }
+    }
+  ]
+},
+
+crepaccio_ghiacciato:{
+  name:"Il Crepaccio Ghiacciato",
+  dark:false,
+  desc:function(s){ return "Un profondo crepaccio taglia il ghiaccio da un lato all'altro, troppo largo per saltarlo, il fondo perso nell'oscurità azzurrina."; },
+  exits:[
+    {label:"Torna sulla distesa di ghiaccio", to:"distesa_ghiaccio"},
+    {label:"Prosegui, ormai allo stremo", to:"nave_walton_epilogo", requires:function(s){ return s.flags.crepaccioSuperato; }}
+  ],
+  actions:[
+    {id:"attraversa_crepaccio_corda", label:"Usa la corda per assicurarti e attraversa con cautela", cls:"special",
+      condition:function(s){ return !s.flags.crepaccioSuperato && s.inventory.indexOf("corda_alpinismo")>-1; },
+      run:function(s){
+        if(s.inventory.length>2){
+          log("msg","Con troppo peso addosso, anche assicurato alla corda rischi di perdere l'equilibrio sul bordo instabile. Lascia qualcosa qui prima di riprovare.");
+          return;
+        }
+        s.flags.crepaccioSuperato=true;
+        log("msg","Assicurato alla corda, attraversi il crepaccio con cautela estrema, un passo alla volta, il fondo azzurrino che si perde sotto di te. Dall'altra parte, esausto oltre ogni limite umano, capisci che le tue forze stanno per abbandonarti definitivamente.");
+      }
+    },
+    {id:"attraversa_crepaccio_senza", label:"Prova ad attraversare senza alcuna sicurezza", cls:"danger",
+      condition:function(s){ return !s.flags.crepaccioSuperato; },
+      run:function(s){
+        confirmAction(
+          "Attraversare il crepaccio senza alcuna sicurezza?",
+          "Il bordo è instabile e il fondo del crepaccio è invisibile. Senza una corda che ti assicuri, un passo falso sarebbe fatale.",
+          function(){ triggerDeath("Il ghiaccio cede sotto il tuo peso proprio a metà dell'attraversata. Il tuo inseguimento — e la tua storia — finiscono qui, inghiottito dal crepaccio."); }
+        );
+      }
+    }
+  ]
+}
+
+};
+
+/* aggiunta separata per evitare un blocco troppo lungo sopra */
+ROOMS.nave_walton_epilogo = {
+  name:"Epilogo, a Bordo della Nave di Walton",
+  dark:false,
+  desc:function(s){
+    var t="Sei di nuovo Robert Walton. Victor Frankenstein, esausto oltre ogni limite umano, ha appena concluso il suo incredibile racconto. La sua voce si affievolisce sempre di più.";
+    if(s.deposited.length>0) t+=" Sul tuo diario di bordo, custodisci con cura i ricordi che ti ha affidato.";
+    return t;
+  },
+  exits:[],
+  actions:[
+    {id:"finale", label:"Ascolta le ultime parole di Victor", cls:"special",
+      condition:function(s){ return !s.flags.finaleCompletato; },
+      run:function(s){
+        s.flags.finaleCompletato=true;
+        var extra = s.discovered.empatia ? " 'Cerca la felicità nella tranquillità,' ti sussurra infine, 'ed evita l'ambizione — anche se so che nessuno può davvero comprendere ciò che ho vissuto, tranne forse chi ha ascoltato, come hai fatto tu, con vero cuore aperto.'" : " 'Cerca la felicità nella tranquillità,' ti sussurra infine, 'ed evita l'ambizione, anche quella che sembra innocente come voler conoscere ciò che l'uomo non dovrebbe conoscere.'";
+        log("danger","Victor Frankenstein muore tra le tue braccia, la sua ossessione finalmente spenta insieme alla vita."+extra+" Poche notti dopo, entri nella sua cabina e trovi, china sul suo corpo, la Creatura stessa — enorme, orribile, e straziata da un dolore che non avresti mai immaginato possibile in un essere simile. 'Anche lui è vittima quanto le sue vittime,' dice, quasi a se stessa. 'Il mio compito è finito. Mi consumerò su un rogo funebre, ai confini più remoti del ghiaccio, dove nessuno potrà mai trovare i miei resti.' Poi si getta dalla finestra della cabina sulla banchisa, e si allontana correndo finché non scompare, per sempre, nel buio e nella distanza.");
+      }
+    },
+    {id:"deposita", label:"Affida i ricordi di Victor al tuo diario di bordo", cls:"special",
+      condition:function(s){ return s.inventory.some(isTreasure); },
+      run:function(s){
+        var depositedNow=[];
+        s.inventory = s.inventory.filter(function(id){
+          if(isTreasure(id)){ s.deposited.push(id); depositedNow.push(id); return false; }
+          return true;
+        });
+        var names = depositedNow.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("msg", "Annoti con cura, nel tuo diario di bordo, l'esistenza di "+names+" — affinché il racconto di Victor Frankenstein non vada perduto, qualunque cosa accada ora.");
+        if(s.deposited.length >= TREASURE_IDS.length){
+          setTimeout(showWinScreen, 400);
+        }
+      }
+    }
+  ]
+};
+
+/* ============== SUGGERIMENTI CONTESTUALI ============== */
+function getHint(s){
+  var r=s.room;
+  if(r==="laboratorio_segreto"){
+    var n = [s.flags.materialeCimitero, s.flags.materialeObitorio, s.flags.materialeMercato].filter(Boolean).length;
+    if(n<3) return "Ti servono materiali da tre fonti diverse in città: il cimitero, l'obitorio, e il mercato nero dei chimici.";
+  }
+  if(r==="cimitero_ingolstadt" && !s.flags.materialeCimitero) return "Il minimo rumore potrebbe tradirti. Se porti troppo con te, lascia qualcosa prima di muoverti in silenzio.";
+  if(r==="processo_giustine" && !s.flags.processoConcluso) return "Questa è una delle scelte più dolorose del racconto di Victor. Ascolta cosa decide di fare.";
+  if(r==="racconto_creatura_delacey" && !s.flags.raccontoDelaceyAscoltato) return "Per comprendere davvero quel nascondiglio angusto, porta con te il minimo indispensabile.";
+  if(r==="distesa_ghiaccio" && !s.flags.ghiaccioAttraversato) return "Il freddo artico è letale senza una protezione adeguata. Hai qualcosa di caldo nello zaino?";
+  if(r==="crepaccio_ghiacciato" && !s.flags.crepaccioSuperato) return "Attraversare senza sicurezza sarebbe estremamente rischioso. Una corda, e uno zaino leggero, farebbero la differenza.";
+  if(s.inventory.some(isTreasure)) return "Porti con te dei ricordi preziosi legati alla storia di Victor. Ricorda di affidarli al diario di bordo, una volta tornato sulla nave di Walton.";
+  return "Se qualcosa sembra bloccato, ricorda che puoi sempre aprire lo zaino e posare a terra ciò che porti con te. E ricorda: da qualunque punto del racconto, puoi sempre fare una pausa e tornare sulla nave di Walton.";
+}
+
+/* ============== STATO E MOTORE ============== */
+var state = null;
+var STORAGE_KEY = "frankenstein_save_v1";
+var NOTES_KEY = "frankenstein_appunti_v1";
+var NO_PAUSE_ROOMS = ["nave_walton","nave_walton_epilogo"];
+
+function freshState(){
+  return {
+    room:"nave_walton",
+    previousRoom:"nave_walton",
+    flashbackReturnRoom:null,
+    inventory:[],
+    deposited:[],
+    flags:{
+      victorSoccorso:false, materialeCimitero:false, materialeObitorio:false, materialeMercato:false,
+      creaturaAnimata:false, delittoInvestigato:false, processoConcluso:false,
+      creaturaIncontrata:false, raccontoBoscoAscoltato:false, raccontoDelaceyAscoltato:false,
+      compagnaDistrutta:false, elizabethUccisa:false, ghiaccioAttraversato:false,
+      crepaccioSuperato:false, finaleCompletato:false
+    },
+    discovered:{ empatia:false },
+    roomItemsOverride:{}
+  };
+}
+
+function getRoomItems(roomId){
+  if(state.roomItemsOverride.hasOwnProperty(roomId)) return state.roomItemsOverride[roomId];
+  return (ROOMS[roomId].items || []).slice();
+}
+function setRoomItems(roomId, arr){
+  state.roomItemsOverride[roomId] = arr;
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ var loaded = JSON.parse(raw);
+      var fresh = freshState();
+      for(var k in fresh){ if(loaded[k]===undefined) loaded[k]=fresh[k]; }
+      return loaded;
+    }
+  }catch(e){}
+  return freshState();
+}
+
+function log(cls, text){
+  var d=document.createElement("div");
+  d.className="entry "+cls;
+  d.textContent=text;
+  document.getElementById("log").appendChild(d);
+  d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+function takeItem(id){
+  var items = getRoomItems(state.room);
+  var idx = items.indexOf(id);
+  if(idx>-1){
+    items.splice(idx,1);
+    setRoomItems(state.room, items);
+    state.inventory.push(id);
+    log("msg","Prendi "+ITEMS[id].name+".");
+    render();
+    saveState();
+  }
+}
+function dropItem(id){
+  var idx = state.inventory.indexOf(id);
+  if(idx>-1){
+    state.inventory.splice(idx,1);
+    var items = getRoomItems(state.room);
+    items.push(id);
+    setRoomItems(state.room, items);
+    log("msg","Lasci "+ITEMS[id].name+" a terra.");
+    render();
+    saveState();
+  }
+}
+
+function go(to){
+  state.previousRoom = state.room;
+  state.room = to;
+  render(true);
+  saveState();
+}
+
+function pauseToShip(){
+  if(NO_PAUSE_ROOMS.indexOf(state.room)>-1) return;
+  state.flashbackReturnRoom = state.room;
+  go("nave_walton");
+}
+
+function confirmAction(title, text, onYes){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").textContent = text;
+  openModal("confirmModal");
+  var yes = document.getElementById("confirmYes");
+  var no = document.getElementById("confirmNo");
+  function cleanup(){ yes.onclick=null; no.onclick=null; closeModal("confirmModal"); }
+  yes.onclick=function(){ cleanup(); onYes(); render(); saveState(); };
+  no.onclick=function(){ cleanup(); };
+}
+
+function triggerDeath(text){
+  log("danger", text);
+  setTimeout(function(){
+    confirmAction("Il racconto si interrompe qui.", text + "\n\nVuoi ricominciare l'avventura?", function(){
+      resetGame();
+    });
+  }, 200);
+}
+
+function resetGame(){
+  state = freshState();
+  document.getElementById("log").innerHTML="";
+  document.getElementById("winScreen").classList.add("hidden");
+  render(true);
+  saveState();
+  log("system","— Robert Walton apre un nuovo diario di bordo, la nave imprigionata nei ghiacci dell'Artico —");
+}
+
+/* ============== RENDER ============== */
+function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+
+function el(tag, cls, text){
+  var e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function makeBtn(label, cls, onclick){
+  var b=document.createElement("button");
+  b.className="opt"+(cls?" "+cls:"");
+  b.textContent=label;
+  b.onclick=onclick;
+  return b;
+}
+
+function render(isNewRoomEntry){
+  var room = ROOMS[state.room];
+  document.getElementById("roomTitle").textContent = room.name;
+
+  if(isNewRoomEntry){
+    log("room-name", room.name);
+    log("desc", room.desc(state));
+    var here = getRoomItems(state.room).filter(function(id){ return state.inventory.indexOf(id)===-1; });
+    if(here.length>0){
+      var names = here.map(function(id){return ITEMS[id].name;}).join(", ");
+      log("desc","Qui a terra noti: "+names+".");
+    }
+  }
+
+  var actionsDiv = document.getElementById("actions");
+  actionsDiv.innerHTML="";
+
+  var actions = (room.actions||[]).filter(function(a){ return a.condition(state); });
+  if(actions.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Cosa puoi fare qui"));
+    var arow = el("div","btn-row");
+    actions.forEach(function(a){
+      arow.appendChild(makeBtn(a.label, "opt "+(a.cls||""), function(act){
+        return function(){ act.run(state); render(); saveState(); };
+      }(a)));
+    });
+    actionsDiv.appendChild(arow);
+  }
+
+  var here = getRoomItems(state.room);
+  if(here.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Oggetti qui"));
+    var irow = el("div","btn-row");
+    here.forEach(function(id){
+      irow.appendChild(makeBtn("Prendi: "+ITEMS[id].name, "", function(itemId){
+        return function(){ takeItem(itemId); };
+      }(id)));
+    });
+    if(irow.children.length>0) actionsDiv.appendChild(irow);
+  }
+
+  var exits = (room.exits||[]).filter(function(ex){ return !ex.requires || ex.requires(state); });
+  var showPause = NO_PAUSE_ROOMS.indexOf(state.room)===-1;
+  if(exits.length>0 || showPause){
+    actionsDiv.appendChild(el("div","action-group-label","Dove vuoi andare"));
+    var erow = el("div","btn-row");
+    exits.forEach(function(ex){
+      erow.appendChild(makeBtn(ex.label,"exit",function(exit){
+        return function(){ go(exit.to); };
+      }(ex)));
+    });
+    if(showPause){
+      erow.appendChild(makeBtn("Fai una pausa nel racconto","magic",function(){ pauseToShip(); }));
+    }
+    actionsDiv.appendChild(erow);
+  }
+}
+
+/* ============== INVENTARIO / MODALI ============== */
+function renderInventoryModal(){
+  var carried = document.getElementById("invCarried");
+  var here = document.getElementById("invHere");
+  carried.innerHTML=""; here.innerHTML="";
+
+  if(state.inventory.length===0){
+    carried.appendChild(el("div","empty-note","Non porti nulla con te."));
+  } else {
+    state.inventory.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Ricordo"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var actionsWrap = document.createElement("div");
+      var btnDrop = document.createElement("button");
+      btnDrop.textContent="Lascia qui";
+      btnDrop.onclick=function(){ dropItem(id); renderInventoryModal(); };
+      actionsWrap.appendChild(btnDrop);
+      row.appendChild(actionsWrap);
+      carried.appendChild(row);
+    });
+  }
+
+  var roomItems = getRoomItems(state.room);
+  if(roomItems.length===0){
+    here.appendChild(el("div","empty-note","Non c'è nulla a terra qui."));
+  } else {
+    roomItems.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Ricordo"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var btnTake=document.createElement("button");
+      btnTake.textContent="Prendi";
+      btnTake.onclick=function(){ takeItem(id); renderInventoryModal(); };
+      row.appendChild(btnTake);
+      here.appendChild(row);
+    });
+  }
+}
+
+function renderScoreModal(){
+  var c = document.getElementById("scoreContent");
+  c.innerHTML="";
+  var score = state.deposited.length * POINTS_PER_TREASURE;
+  var big = el("div","score-big", score+" / "+(TREASURE_IDS.length*POINTS_PER_TREASURE));
+  c.appendChild(big);
+  c.appendChild(el("div","score-sub", state.deposited.length+" di "+TREASURE_IDS.length+" ricordi affidati al diario"));
+  TREASURE_IDS.forEach(function(id){
+    var got = state.deposited.indexOf(id)>-1;
+    var row = el("div","treasure-row "+(got?"got":"missing"));
+    row.appendChild(el("span","", got ? "✓ "+ITEMS[id].name : "? ricordo non ancora trovato"));
+    c.appendChild(row);
+  });
+}
+
+function showWinScreen(){
+  document.getElementById("winScreen").classList.remove("hidden");
+}
+
+/* ============== NOTE ============== */
+function loadNotes(){
+  try{ return localStorage.getItem(NOTES_KEY) || ""; }catch(e){ return ""; }
+}
+function saveNotes(){
+  try{ localStorage.setItem(NOTES_KEY, document.getElementById("notesArea").value); }catch(e){}
+}
+
+/* ============== OPZIONI (RICOMINCIA / SCHERMO INTERO) ============== */
+function doRestartConfirm(){
+  confirmAction(
+    "Ricominciare l'avventura?",
+    "Perderai la posizione attuale, l'inventario e i ricordi affidati al diario. I tuoi appunti restano salvati. Vuoi davvero ricominciare da capo?",
+    function(){ resetGame(); }
+  );
+}
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    var elFs = document.documentElement;
+    if(elFs.requestFullscreen){ elFs.requestFullscreen().catch(function(){}); }
+  } else {
+    if(document.exitFullscreen){ document.exitFullscreen().catch(function(){}); }
+  }
+}
+function updateFullscreenLabel(){
+  var btn = document.getElementById("btnFullscreenOpt");
+  if(!btn) return;
+  btn.textContent = document.fullscreenElement ? "⛶ Esci da schermo intero" : "⛶ Schermo intero";
+}
+document.addEventListener("fullscreenchange", updateFullscreenLabel);
+
+/* ============== EVENTI UI ============== */
+document.getElementById("btnInv").onclick=function(){ renderInventoryModal(); openModal("invModal"); };
+document.getElementById("btnLook").onclick=function(){ render(true); };
+document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
+document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
+document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
+document.getElementById("btnOptions").onclick=function(){ updateFullscreenLabel(); openModal("optionsModal"); };
+document.getElementById("btnRestartOpt").onclick=function(){ closeModal("optionsModal"); doRestartConfirm(); };
+document.getElementById("btnFullscreenOpt").onclick=function(){ toggleFullscreen(); };
+
+document.querySelectorAll("[data-close]").forEach(function(b){
+  b.onclick=function(){
+    var id=b.getAttribute("data-close");
+    if(id==="notesModal") saveNotes();
+    closeModal(id);
+  };
+});
+document.querySelectorAll(".modal-backdrop").forEach(function(bd){
+  bd.addEventListener("click", function(e){
+    if(e.target===bd){
+      if(bd.id==="notesModal") saveNotes();
+      closeModal(bd.id);
+    }
+  });
+});
+document.getElementById("notesArea").addEventListener("input", function(){
+  clearTimeout(window.__notesTimer);
+  window.__notesTimer=setTimeout(saveNotes, 400);
+});
+
+document.getElementById("btnWinRestart").onclick=function(){ resetGame(); };
+document.getElementById("btnWinContinue").onclick=function(){ document.getElementById("winScreen").classList.add("hidden"); };
+
+document.addEventListener("keydown", function(e){
+  if(e.key==="a" || e.key==="A"){
+    document.getElementById("notesArea").value = loadNotes();
+    openModal("notesModal");
+  }
+  if(e.key==="r" || e.key==="R"){
+    doRestartConfirm();
+  }
+});
+
+/* ============== AVVIO ============== */
+state = loadState();
+render(true);
+if(state.deposited.length===0 && state.inventory.length===0 && state.room==="nave_walton"){
+  log("system","Benvenuto in Frankenstein. Scegli sempre tra i pulsanti mostrati per muoverti ed agire — non serve digitare nulla. Da qualunque punto del racconto puoi sempre 'fare una pausa' e tornare sulla nave di Walton. Se qualcosa sembra bloccato, apri lo Zaino [🎒] e ricorda che puoi sempre posare ciò che porti con te.");
+}
+
+})();
+</script>
+</body>
+</html>
