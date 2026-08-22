@@ -34,8 +34,10 @@
         @keyframes pulse-green { from { box-shadow: 0 0 5px #2ecc71; } to { box-shadow: 0 0 20px #2ecc71; } }
 
         #melds-area { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;}
-        .meld-group { display: flex; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; }
+        .meld-group { display: flex; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; position: relative; }
         .meld-group .card { margin: 0 -10px; }
+        .card.joker-target { border: 2px dashed #f1c40f; cursor: pointer; animation: pulse-joker 1s infinite alternate; }
+        @keyframes pulse-joker { from { box-shadow: 0 0 2px #f1c40f; } to { box-shadow: 0 0 10px #f1c40f; } }
 
         #player-area { height: 160px; background: var(--ui-bg); padding: 10px; display: flex; flex-direction: column; align-items: center;}
         #player-hand { display: flex; gap: 5px; overflow-x: auto; max-width: 100%; padding: 10px 0; }
@@ -44,7 +46,7 @@
             width: var(--card-w); height: var(--card-h); background: white; border-radius: 5px; 
             color: black; display: flex; flex-direction: column; justify-content: space-between; 
             padding: 5px; font-weight: bold; font-size: 16px; box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
-            cursor: pointer; transition: transform 0.1s; flex-shrink: 0;
+            cursor: pointer; transition: transform 0.1s; flex-shrink: 0; position: relative;
         }
         .card.red { color: #d00; }
         .card.joker { color: #8e44ad; }
@@ -128,6 +130,7 @@ let state = {
 
 let selectedCards = [];
 let aiThinking = false;
+let pendingJoker = null; // Gestisce il jolly raccolto da riposizionare immediatamente
 
 function init() {
     const savedState = localStorage.getItem('scala40_save');
@@ -156,6 +159,7 @@ function verifyDeckComposition(deck) {
 
 function startNewGame() {
     aiThinking = false;
+    pendingJoker = null;
     state = { 
         deck: [], discard: [], hands: { player: [], ai: [] }, 
         melds: [], turn: 'player', hasOpened: { player: false, ai: false }, 
@@ -324,7 +328,7 @@ function sortSequenceMeld(meld) {
         let idxA = RANKS.indexOf(a.rank);
         let idxB = RANKS.indexOf(b.rank);
         if (a.rank === 'A' && useHighAce) idxA = 13;
-        if (b.rank === 'A' && useHighAce) idxB = 13;
+        if (a.rank === 'A' && useHighAce) idxB = 13;
         return idxA - idxB;
     });
 
@@ -353,6 +357,82 @@ function canAttachCardToMeld(card, meld) {
     if (isValidMeld([card, ...meld])) return 'start';
     if (isValidMeld([...meld, card])) return 'end';
     return false;
+}
+
+// Determina quale carta esatta il Jolly sta sostituendo all'interno di una combinazione
+function getJokerReplacementCard(meld, jokerIndex) {
+    if (!isSequenceMeld(meld)) {
+        // Se è un tris/quartetto, il Jolly rappresenta lo stesso rango ma di un seme mancante
+        const nonJokers = meld.filter(c => c.rank !== 'Jolly');
+        if (nonJokers.length === 0) return null;
+        const targetRank = nonJokers[0].rank;
+        const usedSuits = new Set(nonJokers.map(c => c.suit));
+        const missingSuit = SUITS.find(s => !usedSuits.has(s));
+        if (!missingSuit) return null;
+        return { suit: missingSuit, rank: targetRank, val: VALUES[targetRank] };
+    }
+
+    // Se è una scala, calcoliamo la posizione mancante usando il sorting ordinato
+    const sorted = sortSequenceMeld(meld);
+    const jokerPos = sorted.findIndex(c => c.rank === 'Jolly');
+    if (jokerPos === -1) return null;
+
+    const suit = sorted.find(c => c.rank !== 'Jolly').suit;
+    
+    // Controlliamo l'elemento precedente o successivo per dedurre il valore
+    let refCard = sorted[jokerPos - 1] || sorted[jokerPos + 1];
+    if (!refCard) return null;
+    
+    let refIdx = RANKS.indexOf(refCard.rank);
+    // Gestione assi alti/bassi
+    let targetIdx = jokerPos > 0 ? refIdx + 1 : refIdx - 1;
+    if (targetIdx < 0 || targetIdx >= RANKS.length) return null;
+
+    let targetRank = RANKS[targetIdx];
+    return { suit: suit, rank: targetRank, val: VALUES[targetRank] };
+}
+
+// Controlla se il giocatore possiede la carta naturale in mano per sostituire il Jolly
+function canReplaceJokerInMeld(meldIndex, jokerCardIndex) {
+    if (!state.hasOpened.player || state.turn !== 'player' || !state.hasDrawn) return false;
+    let meld = state.melds[meldIndex];
+    if (!meld || meld[jokerCardIndex].rank !== 'Jolly') return false;
+
+    let requiredCard = getJokerReplacementCard(meld, jokerCardIndex);
+    if (!requiredCard) return false;
+
+    // Verifica se il giocatore ha la carta esatta in mano
+    return state.hands.player.some(c => c.rank === requiredCard.rank && c.suit === requiredCard.suit);
+}
+
+// Azione eseguita quando il giocatore clicca sul Jolly sul tavolo per rilevarlo
+function tryReplaceJoker(meldIndex, jokerCardIndex) {
+    if (!canReplaceJokerInMeld(meldIndex, jokerCardIndex)) {
+        alert("Non puoi raccogliere questo Jolly: devi aver aperto, aver pescato e possedere la carta naturale esatta in mano per sostituirlo.");
+        return;
+    }
+
+    let meld = state.melds[meldIndex];
+    let requiredCardSpec = getJokerReplacementCard(meld, jokerCardIndex);
+
+    // Trova la carta in mano del giocatore
+    let playerCardIdx = state.hands.player.findIndex(c => c.rank === requiredCardSpec.rank && c.suit === requiredCardSpec.suit);
+    if (playerCardIdx === -1) return;
+
+    // Rimuovi la carta dalla mano e inseriscila al posto del Jolly nella combinazione
+    let naturalCard = state.hands.player.splice(playerCardIdx, 1)[0];
+    let removedJoker = meld[jokerCardIndex];
+    
+    meld[jokerCardIndex] = naturalCard; // Sostituzione completata sul tavolo
+
+    // Imposta il Jolly come "in sospeso" costringendo l'utente a riutilizzarlo subito
+    pendingJoker = removedJoker;
+    state.hands.player.push(pendingJoker); // Mette temporaneamente il Jolly in mano per permetterne l'uso immediato
+    selectedCards = [pendingJoker.id]; // Seleziona automaticamente il jolly per facilitare il riutilizzo
+
+    alert(`Hai raccolto il Jolly! Devi riutilizzarlo immediatamente in una combinazione o attaccandolo in questo turno.`);
+    saveState();
+    renderAll();
 }
 
 function getSubsets(arr, minSize = 3) {
@@ -464,6 +544,17 @@ function playMeld() {
         }
     }
 
+    // Se il giocatore ha completato il turno di riutilizzo del Jolly, rimuoviamo lo stato di blocco pendente
+    if (pendingJoker) {
+        // Controlliamo che il jolly non sia rimasto in mano
+        if (!state.hands.player.some(c => c.id === pendingJoker.id)) {
+            pendingJoker = null;
+        } else {
+            alert("Hai ancora il Jolly raccolto in mano! Devi utilizzarlo prima di poter scartare o terminare il turno.");
+            return;
+        }
+    }
+
     if (state.hands.player.length === 0) return handleWin('Giocatore');
     saveState();
     renderAll();
@@ -472,6 +563,11 @@ function playMeld() {
 function discardCard() {
     if (state.turn !== 'player' || !state.hasDrawn || selectedCards.length !== 1) return;
     
+    if (pendingJoker) {
+        alert("Hai un Jolly raccolto in sospeso! Devi assolutamente riutilizzarlo prima di poter scartare.");
+        return;
+    }
+
     const cardId = selectedCards[0];
     const cardIdx = state.hands.player.findIndex(c => c.id === cardId);
     const cardToDiscard = state.hands.player[cardIdx];
@@ -492,10 +588,6 @@ function discardCard() {
     saveState();
     renderAll();
     checkAITurn();
-}
-
-function isValidCombination(cards) {
-    return isValidMeld(cards);
 }
 
 function aiTurn() {
@@ -576,6 +668,7 @@ function checkAITurn() {
 
 function handleWin(winner) {
     aiThinking = false;
+    pendingJoker = null;
     alert(`${winner} ha CHIUSO! Partita finita.`);
     localStorage.removeItem('scala40_save');
     startNewGame();
@@ -584,7 +677,7 @@ function handleWin(winner) {
 
 function renderAll() {
     const statusText = state.turn === 'player' 
-        ? (state.hasDrawn ? 'Turno: Tuo (Gioca o Scarta)' : 'Turno: Tuo (PESCA UNA CARTA!)') 
+        ? (pendingJoker ? '⚠️ Riusa il Jolly raccolto!' : (state.hasDrawn ? 'Turno: Tuo (Gioca o Scarta)' : 'Turno: Tuo (PESCA UNA CARTA!)')) 
         : 'Turno: Computer sta pensando...';
     document.getElementById('turn-indicator').innerText = statusText;
     
@@ -613,10 +706,17 @@ function renderAll() {
     
     const meldsArea = document.getElementById('melds-area');
     meldsArea.innerHTML = '';
-    state.melds.forEach(meld => {
+    
+    state.melds.forEach((meld, mIdx) => {
         let displayMeld = sortSequenceMeld(meld);
         let groupHtml = '<div class="meld-group">';
-        displayMeld.forEach(c => groupHtml += createCardHTML(c));
+        
+        displayMeld.forEach((c, cIdx) => {
+            let isJolly = c.rank === 'Jolly';
+            let canTake = isJolly && canReplaceJokerInMeld(mIdx, meld.indexOf(c));
+            groupHtml += createCardHTML(c, isJolly, canTake, mIdx, meld.indexOf(c));
+        });
+        
         groupHtml += '</div>';
         meldsArea.innerHTML += groupHtml;
     });
@@ -653,14 +753,17 @@ function renderAll() {
     document.getElementById('btn-cala').disabled = !(canPlay && selectedCards.length >= minSelection);
     
     const isSingleJokerSelected = selectedCards.length === 1 && state.hands.player.find(c => c.id === selectedCards[0])?.rank === 'Jolly';
-    document.getElementById('btn-scarta').disabled = !(canPlay && selectedCards.length === 1 && !isSingleJokerSelected);
+    document.getElementById('btn-scarta').disabled = !(canPlay && selectedCards.length === 1 && !isSingleJokerSelected && !pendingJoker);
 }
 
-function createCardHTML(c) {
+function createCardHTML(c, isJolly = false, canTake = false, meldIndex = -1, cardIndex = -1) {
     let colorClass = c.rank === 'Jolly' ? 'joker' : ((c.suit === '♥' || c.suit === '♦') ? 'red' : '');
     let rankDisplay = c.rank === 'Jolly' ? 'JOKER' : c.rank;
+    let extraClass = canTake ? 'joker-target' : '';
+    let clickAttr = (canTake && meldIndex !== -1 && cardIndex !== -1) ? `onclick="tryReplaceJoker(${meldIndex}, ${cardIndex})" title="Clicca per sostituire il jolly con la carta naturale"` : '';
+    
     return `
-        <div class="card ${colorClass}">
+        <div class="card ${colorClass} ${extraClass}" ${clickAttr}>
             <div style="font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
             <div class="suit">${c.suit}</div>
             <div style="text-align: right; transform: rotate(180deg); font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
@@ -682,7 +785,7 @@ function resetGame() {
 }
 
 function toggleFullscreen() {
-    if (!document.fullscreenElement) {
+    if (!document.documentElement.requestFullscreen()) {
         document.documentElement.requestFullscreen().catch(err => console.log(err));
     } else {
         if (document.exitFullscreen) document.exitFullscreen();
