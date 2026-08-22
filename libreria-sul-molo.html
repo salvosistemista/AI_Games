@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>La Libreria sul Molo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sabbia:#F2E8D5;
+    --pannello:#FFFBF2;
+    --inchiostro:#2B2118;
+    --mare:#2F6F6B;
+    --mare-scuro:#204F4C;
+    --corallo:#C9622B;
+    --oro:#D4A72C;
+    --tenue:#8C7A63;
+    --bordo: #E3D6BC;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--mare-scuro);}
+  body{
+    font-family:'Nunito', sans-serif;
+    color:var(--inchiostro);
+    display:flex; align-items:center; justify-content:center;
+  }
+  #app{
+    width:100vw; height:100vh;
+    background:var(--sabbia);
+    position:relative;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  h1,h2,h3{font-family:'Fraunces', serif; margin:0;}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 18px;
+    background:var(--mare); color:#FFFBF2;
+    flex-shrink:0;
+  }
+  .topbar .titolo{font-family:'Fraunces', serif; font-weight:600; font-size:1.15rem; letter-spacing:.2px;}
+  .stat-pill{
+    display:flex; gap:14px; align-items:center; font-weight:700; font-size:.95rem;
+  }
+  .stat-pill span.icona{opacity:.85; font-weight:600; margin-right:4px;}
+  .oro-val{color:var(--oro);}
+  .schermo{flex:1; display:flex; overflow:hidden;}
+  .colonna{padding:14px 18px; overflow-y:auto;}
+  .btn{
+    font-family:'Nunito', sans-serif; font-weight:800; font-size:.95rem;
+    border:none; border-radius:10px; padding:11px 20px; cursor:pointer;
+    background:var(--mare); color:#FFFBF2;
+    transition:transform .08s ease;
+  }
+  .btn:active{transform:scale(.96);}
+  .btn.secondario{background:transparent; color:var(--mare); border:2px solid var(--mare);}
+  .btn.corallo{background:var(--corallo);}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .card{
+    background:var(--pannello); border:1px solid var(--bordo); border-radius:12px;
+    padding:12px 14px; margin-bottom:10px;
+  }
+  .genere-riga{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 4px; border-bottom:1px dashed var(--bordo);
+  }
+  .genere-riga:last-child{border-bottom:none;}
+  .genere-nome{font-weight:700;}
+  .genere-sub{font-size:.75rem; color:var(--tenue);}
+  .stepper{display:flex; align-items:center; gap:8px;}
+  .stepper button{
+    width:30px; height:30px; border-radius:8px; border:1px solid var(--bordo);
+    background:#fff; font-weight:800; font-size:1rem; cursor:pointer;
+  }
+  .stepper .val{min-width:22px; text-align:center; font-weight:800;}
+  .bollettino{
+    background:#fff; border:1px dashed var(--tenue); border-radius:10px;
+    padding:10px 14px; font-size:.85rem; color:var(--tenue);
+  }
+  .cliente-box{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; gap:14px; text-align:center; padding:20px;
+  }
+  .cliente-avatar{
+    width:64px; height:64px; border-radius:50%;
+    background:var(--mare); color:#fff; display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-size:1.6rem; font-weight:700;
+  }
+  .keyword-chip{
+    display:inline-block; background:var(--oro); color:#3a2e0f; font-weight:800;
+    padding:4px 10px; border-radius:20px; font-size:.8rem; margin:3px;
+  }
+  .scaffale{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:10px;
+    padding:8px;
+  }
+  .libro-mini{
+    background:#fff; border:1px solid var(--bordo); border-radius:8px; padding:10px;
+    cursor:pointer; font-size:.78rem; text-align:left; line-height:1.35;
+  }
+  .libro-mini:active{background:var(--sabbia);}
+  .libro-titolo{font-weight:800; font-size:.85rem; margin:2px 0;}
+  .libro-genere{color:var(--corallo); font-weight:700; font-size:.68rem; text-transform:uppercase; letter-spacing:.3px;}
+  .libro-meta{color:var(--tenue); font-size:.7rem; margin-bottom:4px;}
+  .libro-sinossi{font-size:.75rem; color:var(--inchiostro); margin-bottom:4px;}
+  .libro-footer{display:flex; justify-content:space-between; align-items:center; font-size:.72rem; color:var(--tenue); margin-top:4px; border-top:1px dashed var(--bordo); padding-top:4px;}
+  .copertina-libro{width:34px; height:48px; flex-shrink:0; border-radius:3px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.18);}
+  .copertina-libro svg{display:block; width:100%; height:100%;}
+  .riga-libro{display:flex; gap:8px; align-items:flex-start;}
+  .riga-libro > .testo-libro{flex:1; min-width:0;}
+  footer.azioni{
+    padding:12px 18px; display:flex; justify-content:flex-end; gap:10px;
+    border-top:1px solid var(--bordo); background:var(--pannello); flex-shrink:0;
+  }
+  .riepilogo-riga{display:flex; justify-content:space-between; padding:6px 0; font-size:.95rem;}
+  .riepilogo-riga.totale{font-weight:800; border-top:2px solid var(--inchiostro); margin-top:6px; padding-top:8px;}
+  .rotate-warning{
+    position:fixed; inset:0; background:var(--mare-scuro); color:#fff;
+    display:none; align-items:center; justify-content:center; text-align:center; padding:30px;
+    font-family:'Fraunces', serif; font-size:1.1rem; z-index:999;
+  }
+  @media (orientation: portrait){
+    .rotate-warning{display:flex;}
+  }
+  .overlay-conferma{
+    position:fixed; inset:0; background:rgba(32,79,76,.75);
+    display:flex; align-items:center; justify-content:center; z-index:1000;
+    padding:20px;
+  }
+  .overlay-conferma .box{
+    background:var(--pannello); border-radius:14px; padding:20px 22px;
+    max-width:320px; text-align:center;
+  }
+  .overlay-conferma p{margin:0 0 16px 0; font-size:.95rem;}
+  .overlay-conferma .riga-btn{display:flex; gap:10px; justify-content:center;}
+  .scena-location{
+    width:100%; height:130px; border-radius:12px; overflow:hidden;
+    margin-bottom:10px; border:1px solid var(--bordo); position:relative;
+  }
+  .scena-location svg{width:100%; height:100%; display:block;}
+  .scena-furgone{
+    width:100%; height:100px; border-radius:12px; overflow:hidden;
+    margin-top:10px; border:1px solid var(--bordo); background:#fff;
+  }
+  .scena-furgone svg{width:100%; height:100%; display:block;}
+  .ritratto-npc{width:100%; height:100%; border-radius:50%; overflow:hidden; display:block;}
+  .ritratto-npc svg{width:100%; height:100%; display:block;}
+  .riga-pioggia{ animation: cadutaPioggia 0.9s linear infinite; }
+  @keyframes cadutaPioggia{
+    0%{ transform:translateY(-14px); opacity:0; }
+    30%{ opacity:1; }
+    100%{ transform:translateY(24px); opacity:0; }
+  }
+  .particella-primavera{ animation: cadutaPetalo 4.5s linear infinite; }
+  @keyframes cadutaPetalo{
+    0%{ transform:translate(0,-10px) rotate(0deg); opacity:0; }
+    10%{ opacity:1; }
+    50%{ transform:translate(10px,65px) rotate(180deg); }
+    100%{ transform:translate(-8px,150px) rotate(360deg); opacity:0; }
+  }
+  .particella-autunno{ animation: cadutaFoglia 5.5s linear infinite; }
+  @keyframes cadutaFoglia{
+    0%{ transform:translate(0,-10px) rotate(0deg); opacity:0; }
+    10%{ opacity:1; }
+    50%{ transform:translate(-14px,70px) rotate(-140deg); }
+    100%{ transform:translate(10px,150px) rotate(220deg); opacity:0; }
+  }
+  .intro-scena{ width:100%; height:100%; background:#BFE3D0; overflow:hidden; position:relative; }
+  .intro-scena svg{ position:absolute; top:0; left:0; height:100%; display:block; }
+  .strato-lontano{ width:220%; animation: scorriLontano 11s linear forwards; }
+  .strato-vicino{ width:260%; animation: scorriVicino 11s linear forwards; }
+  @keyframes scorriLontano{ from{ transform:translateX(0); } to{ transform:translateX(-54%); } }
+  @keyframes scorriVicino{ from{ transform:translateX(0); } to{ transform:translateX(-62%); } }
+  .auto-roulotte{
+    position:absolute; bottom:14%; left:-32%; width:34%; height:26%;
+    animation: passaggioAuto 11s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  .auto-roulotte svg{ width:100%; height:100%; display:block; }
+  @keyframes passaggioAuto{
+    0%{ left:-32%; }
+    15%{ left:-32%; }
+    88%{ left:105%; }
+    100%{ left:105%; }
+  }
+  .intro-salta{
+    position:absolute; bottom:14px; right:14px; z-index:5;
+    background:rgba(32,79,76,.55); color:#fff; border:1px solid rgba(255,255,255,.5);
+    border-radius:8px; padding:8px 14px; font-family:'Nunito',sans-serif; font-weight:800;
+    font-size:.8rem; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="rotate-warning">Ruota lo schermo in orizzontale 🔄<br>per giocare a La Libreria sul Molo</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="titolo">📖 La Libreria sul Molo</div>
+    <div class="stat-pill">
+      <div id="hud-giorno-wrap" style="opacity:.35;"><span class="icona">Giorno</span><span id="hud-giorno">–</span></div>
+      <div id="hud-capitale-wrap" style="opacity:.35;"><span class="icona">💰</span><span class="oro-val" id="hud-capitale">–</span>€</div>
+      <button id="btn-fullscreen" onclick="toggleFullscreen()" style="background:none; border:none; color:#FFFBF2; font-size:1.2rem; cursor:pointer; padding:2px 6px;">⛶</button>
+      <button id="btn-menu" onclick="schermataMenu()" style="background:none; border:1px solid #FFFBF2; color:#FFFBF2; font-size:.75rem; font-weight:800; border-radius:6px; cursor:pointer; padding:4px 8px; display:none;">☰ Menu</button>
+    </div>
+  </div>
+  <div class="schermo" id="schermo"></div>
+  <footer class="azioni" id="azioni"></footer>
+</div>
+
+<script>
+/* ===================== FULLSCREEN ===================== */
+function toggleFullscreen(){
+  const el = document.documentElement;
+  const inFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+  if(!inFullscreen){
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if(req) req.call(el).catch(()=>{});
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if(exit) exit.call(document);
+  }
+}
+document.addEventListener("fullscreenchange", aggiornaIconaFullscreen);
+document.addEventListener("webkitfullscreenchange", aggiornaIconaFullscreen);
+function aggiornaIconaFullscreen(){
+  const btn = document.getElementById("btn-fullscreen");
+  const inFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+  if(btn) btn.textContent = inFullscreen ? "⤢" : "⛶";
+}
+
+/* ===================== AUDIO (sintetico, Web Audio API) ===================== */
+function caricaPreferenzaAudio(){
+  const v = localStorage.getItem("libreria_molo_audio");
+  return v === null ? true : v === "1";
+}
+let audioAbilitato = caricaPreferenzaAudio();
+let audioCtx = null;
+function toggleAudio(){
+  audioAbilitato = !audioAbilitato;
+  localStorage.setItem("libreria_molo_audio", audioAbilitato ? "1" : "0");
+  if(audioAbilitato) suonaClick();
+  schermataOpzioni();
+}
+function getAudioCtx(){
+  if(!audioAbilitato) return null;
+  if(!audioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    audioCtx = new AC();
+  }
+  if(audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+function suonaTono(freq, durata, tipo, volume, ritardo){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  tipo = tipo || "sine"; volume = volume===undefined ? 0.12 : volume; ritardo = ritardo || 0;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = tipo;
+  osc.frequency.value = freq;
+  const t0 = ctx.currentTime + ritardo;
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(volume, t0+0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+durata);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(t0); osc.stop(t0+durata+0.02);
+}
+function suonaVendita(){ suonaTono(880,0.12,'sine',0.12); suonaTono(1320,0.15,'sine',0.1,0.08); }
+function suonaMissione(){ [523.25,659.25,783.99,1046.5].forEach((f,i)=> suonaTono(f,0.18,'triangle',0.12,i*0.09)); }
+function suonaErrore(){ suonaTono(180,0.2,'sawtooth',0.08); }
+function suonaClick(){ suonaTono(440,0.05,'square',0.04); }
+function suonaGiorno(){ suonaTono(660,0.1,'sine',0.08); suonaTono(880,0.14,'sine',0.08,0.1); }
+
+/* ===================== CATALOGO ===================== */
+const CATALOGO = [{"id": "narr_001", "titolo": "L'Ultimo Mare", "autore": "Nicola Ferretti", "genere": "Narrativa", "anno": 1999, "pagine": 288, "descrizione": "Una famiglia divisa da un segreto mai detto.", "parole_chiave": ["famiglia", "segreto", "generazioni", "perdono"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 9, "reale": false}, {"id": "narr_002", "titolo": "L'Orizzonte Tardivo", "autore": "Nicola Bruno", "genere": "Narrativa", "anno": 1976, "pagine": 294, "descrizione": "Una lettera mai spedita che cambia tutto.", "parole_chiave": ["mare", "famiglia", "campagna", "amicizia"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 18, "reale": false}, {"id": "narr_003", "titolo": "L'Ultimo Quaderno", "autore": "Elena Greco", "genere": "Narrativa", "anno": 1968, "pagine": 271, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["casa", "mare", "famiglia", "amicizia"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 18, "reale": false}, {"id": "narr_004", "titolo": "Il Vento Invisibile", "autore": "Davide Barbieri", "genere": "Narrativa", "anno": 2018, "pagine": 400, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["casa", "generazioni", "segreto", "famiglia"], "rarita": "rara", "prezzo_acquisto": 6, "prezzo_vendita": 35, "reale": false}, {"id": "narr_005", "titolo": "Il Treno Segreto", "autore": "Silvia Villa", "genere": "Narrativa", "anno": 2002, "pagine": 393, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["campagna", "amicizia", "perdono", "segreto"], "rarita": "non_comune", "prezzo_acquisto": 9, "prezzo_vendita": 30, "reale": false}, {"id": "narr_006", "titolo": "Il Ritorno Lontano", "autore": "Andrea Serra", "genere": "Narrativa", "anno": 1991, "pagine": 277, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["perdono", "generazioni", "amicizia", "ritorno"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 8, "reale": false}, {"id": "narr_007", "titolo": "Il Faro Silenzioso", "autore": "Francesca Santoro", "genere": "Narrativa", "anno": 2018, "pagine": 363, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["generazioni", "memoria", "ritorno", "amicizia"], "rarita": "non_comune", "prezzo_acquisto": 6, "prezzo_vendita": 21, "reale": false}, {"id": "narr_008", "titolo": "L'Ultimo Cortile", "autore": "Silvia Santoro", "genere": "Narrativa", "anno": 1989, "pagine": 409, "descrizione": "Una lettera mai spedita che cambia tutto.", "parole_chiave": ["ritorno", "amicizia", "generazioni", "segreto"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 17, "reale": false}, {"id": "narr_009", "titolo": "Il Molo Tardivo", "autore": "Luca Bruno", "genere": "Narrativa", "anno": 2000, "pagine": 196, "descrizione": "Un'amicizia nata per caso in un paese di mare.", "parole_chiave": ["ritorno", "memoria", "mare", "perdono"], "rarita": "non_comune", "prezzo_acquisto": 9, "prezzo_vendita": 30, "reale": false}, {"id": "narr_010", "titolo": "Il Silenzio Silenzioso", "autore": "Alessia Colombo", "genere": "Narrativa", "anno": 1980, "pagine": 291, "descrizione": "Tre generazioni e un'eredità difficile.", "parole_chiave": ["memoria", "famiglia", "mare", "casa"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 16, "reale": false}, {"id": "narr_011", "titolo": "Il Vento Ultimo", "autore": "Camilla Barbieri", "genere": "Narrativa", "anno": 1974, "pagine": 219, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["campagna", "perdono", "famiglia", "mare"], "rarita": "non_comune", "prezzo_acquisto": 5, "prezzo_vendita": 21, "reale": false}, {"id": "narr_012", "titolo": "Il Molo Sospeso", "autore": "Davide Gallo", "genere": "Narrativa", "anno": 1965, "pagine": 241, "descrizione": "Una lettera mai spedita che cambia tutto.", "parole_chiave": ["segreto", "casa", "memoria", "ritorno"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 12, "reale": false}, {"id": "narr_013", "titolo": "Vento di Mezzanotte", "autore": "Luca Costa", "genere": "Narrativa", "anno": 1995, "pagine": 403, "descrizione": "Una lettera mai spedita che cambia tutto.", "parole_chiave": ["ritorno", "generazioni", "perdono", "amicizia"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 14, "reale": false}, {"id": "narr_014", "titolo": "L'Ultimo Giardino", "autore": "Andrea Gallo", "genere": "Narrativa", "anno": 1966, "pagine": 266, "descrizione": "Una famiglia divisa da un segreto mai detto.", "parole_chiave": ["casa", "perdono", "generazioni", "mare"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 14, "reale": false}, {"id": "narr_015", "titolo": "Il Mare Segreto", "autore": "Marco Ricci", "genere": "Narrativa", "anno": 1966, "pagine": 311, "descrizione": "Tre generazioni e un'eredità difficile.", "parole_chiave": ["mare", "memoria", "generazioni", "casa"], "rarita": "non_comune", "prezzo_acquisto": 3, "prezzo_vendita": 10, "reale": false}, {"id": "narr_016", "titolo": "Ultimo come il Ritorno", "autore": "Francesca Colombo", "genere": "Narrativa", "anno": 1968, "pagine": 348, "descrizione": "Un'amicizia nata per caso in un paese di mare.", "parole_chiave": ["amicizia", "ritorno", "perdono", "generazioni"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 14, "reale": false}, {"id": "narr_017", "titolo": "Faro di Mezzanotte", "autore": "Luca Costa", "genere": "Narrativa", "anno": 1991, "pagine": 243, "descrizione": "Una famiglia divisa da un segreto mai detto.", "parole_chiave": ["memoria", "perdono", "segreto", "famiglia"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 11, "reale": false}, {"id": "narr_018", "titolo": "Il Mare Tardivo", "autore": "Simone Conti", "genere": "Narrativa", "anno": 1992, "pagine": 234, "descrizione": "Un'amicizia nata per caso in un paese di mare.", "parole_chiave": ["famiglia", "campagna", "ritorno", "casa"], "rarita": "non_comune", "prezzo_acquisto": 9, "prezzo_vendita": 31, "reale": false}, {"id": "narr_019", "titolo": "Fragile come il Treno", "autore": "Nicola Conti", "genere": "Narrativa", "anno": 1971, "pagine": 228, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["generazioni", "famiglia", "perdono", "amicizia"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 19, "reale": false}, {"id": "narr_020", "titolo": "Il Mare Sospeso", "autore": "Camilla Serra", "genere": "Narrativa", "anno": 1965, "pagine": 310, "descrizione": "Una famiglia divisa da un segreto mai detto.", "parole_chiave": ["campagna", "segreto", "perdono", "amicizia"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 16, "reale": false}, {"id": "narr_021", "titolo": "Il Giardino Segreto", "autore": "Gabriele Rinaldi", "genere": "Narrativa", "anno": 2001, "pagine": 200, "descrizione": "Un'amicizia nata per caso in un paese di mare.", "parole_chiave": ["casa", "perdono", "amicizia", "campagna"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 25, "reale": false}, {"id": "narr_022", "titolo": "L'Ultimo Silenzio", "autore": "Davide Villa", "genere": "Narrativa", "anno": 1982, "pagine": 417, "descrizione": "Una famiglia divisa da un segreto mai detto.", "parole_chiave": ["famiglia", "memoria", "segreto", "casa"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 11, "reale": false}, {"id": "narr_023", "titolo": "L'Ultimo Faro", "autore": "Andrea Marino", "genere": "Narrativa", "anno": 1980, "pagine": 220, "descrizione": "Un'amicizia nata per caso in un paese di mare.", "parole_chiave": ["perdono", "mare", "famiglia", "amicizia"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 12, "reale": false}, {"id": "narr_024", "titolo": "Il Treno Tardivo", "autore": "Paolo Fontana", "genere": "Narrativa", "anno": 1971, "pagine": 249, "descrizione": "Un ritorno a casa dopo vent'anni.", "parole_chiave": ["casa", "generazioni", "amicizia", "segreto"], "rarita": "non_comune", "prezzo_acquisto": 4, "prezzo_vendita": 14, "reale": false}, {"id": "gial_001", "titolo": "Silenzioso come il Caso", "autore": "Simone Costa", "genere": "Gialli", "anno": 1964, "pagine": 200, "descrizione": "Una scomparsa che riapre un caso chiuso vent'anni prima.", "parole_chiave": ["sospetto", "mistero", "notte", "alibi"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 18, "reale": false}, {"id": "gial_002", "titolo": "Freddo come il Caso", "autore": "Chiara Fontana", "genere": "Gialli", "anno": 1964, "pagine": 413, "descrizione": "Una scomparsa che riapre un caso chiuso vent'anni prima.", "parole_chiave": ["notte", "colpevole", "sospetto", "detective"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 7, "reale": false}, {"id": "gial_003", "titolo": "L'Ultimo Delitto", "autore": "Marco Marino", "genere": "Gialli", "anno": 1975, "pagine": 374, "descrizione": "Un detective in pensione richiamato per un ultimo caso.", "parole_chiave": ["indagine", "alibi", "tradimento", "mistero"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 24, "reale": false}, {"id": "gial_004", "titolo": "Sospetto di Mezzanotte", "autore": "Simone Marconi", "genere": "Gialli", "anno": 1973, "pagine": 388, "descrizione": "Una scomparsa che riapre un caso chiuso vent'anni prima.", "parole_chiave": ["tradimento", "detective", "mistero", "indagine"], "rarita": "rara", "prezzo_acquisto": 10, "prezzo_vendita": 61, "reale": false}, {"id": "gial_005", "titolo": "L'Archivio Irrisolto", "autore": "Beatrice Marino", "genere": "Gialli", "anno": 1981, "pagine": 410, "descrizione": "Un detective in pensione richiamato per un ultimo caso.", "parole_chiave": ["detective", "omicidio", "notte", "verità"], "rarita": "non_comune", "prezzo_acquisto": 5, "prezzo_vendita": 17, "reale": false}, {"id": "gial_006", "titolo": "L'Alibi Nascosto", "autore": "Camilla Greco", "genere": "Gialli", "anno": 2005, "pagine": 415, "descrizione": "Un delitto perfetto con un solo dettaglio fuori posto.", "parole_chiave": ["alibi", "omicidio", "indagine", "sospetto"], "rarita": "rara", "prezzo_acquisto": 6, "prezzo_vendita": 39, "reale": false}, {"id": "gial_007", "titolo": "L'Ultimo Verdetto", "autore": "Alessia Bruno", "genere": "Gialli", "anno": 2000, "pagine": 330, "descrizione": "Un omicidio in un piccolo paese di mare dove tutti nascondono qualcosa.", "parole_chiave": ["tradimento", "detective", "mistero", "omicidio"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 16, "reale": false}, {"id": "gial_008", "titolo": "Delitto di Mezzanotte", "autore": "Alessia Barbieri", "genere": "Gialli", "anno": 1982, "pagine": 369, "descrizione": "Un omicidio in un piccolo paese di mare dove tutti nascondono qualcosa.", "parole_chiave": ["mistero", "colpevole", "notte", "alibi"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 9, "reale": false}, {"id": "gial_009", "titolo": "Spietato come il Porto", "autore": "Simone Greco", "genere": "Gialli", "anno": 2005, "pagine": 391, "descrizione": "Un detective in pensione richiamato per un ultimo caso.", "parole_chiave": ["notte", "mistero", "tradimento", "colpevole"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 15, "reale": false}, {"id": "gial_010", "titolo": "L'Ultimo Alibi", "autore": "Alessia Villa", "genere": "Gialli", "anno": 1990, "pagine": 313, "descrizione": "Un detective in pensione richiamato per un ultimo caso.", "parole_chiave": ["colpevole", "verità", "sospetto", "alibi"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 21, "reale": false}, {"id": "gial_011", "titolo": "L'Ultimo Sospetto", "autore": "Marco Gallo", "genere": "Gialli", "anno": 2024, "pagine": 321, "descrizione": "Un delitto perfetto con un solo dettaglio fuori posto.", "parole_chiave": ["indagine", "verità", "tradimento", "alibi"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 9, "reale": false}, {"id": "gial_012", "titolo": "Ultimo come l' Archivio", "autore": "Giulia Colombo", "genere": "Gialli", "anno": 2011, "pagine": 308, "descrizione": "Un detective in pensione richiamato per un ultimo caso.", "parole_chiave": ["sospetto", "colpevole", "verità", "omicidio"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 11, "reale": false}, {"id": "gial_013", "titolo": "Ultimo come l' Indizio", "autore": "Nicola Barbieri", "genere": "Gialli", "anno": 1982, "pagine": 443, "descrizione": "Un testimone che cambia versione ogni notte.", "parole_chiave": ["notte", "colpevole", "tradimento", "verità"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 15, "reale": false}, {"id": "gial_014", "titolo": "Freddo come il Testimone", "autore": "Silvia De Luca", "genere": "Gialli", "anno": 1993, "pagine": 360, "descrizione": "Un detective in pensione richiamato per un ultimo caso.", "parole_chiave": ["mistero", "verità", "indagine", "alibi"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 19, "reale": false}, {"id": "gial_015", "titolo": "Il Porto Nascosto", "autore": "Chiara Moretti", "genere": "Gialli", "anno": 1966, "pagine": 306, "descrizione": "Un testimone che cambia versione ogni notte.", "parole_chiave": ["alibi", "colpevole", "verità", "detective"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 10, "reale": false}, {"id": "gial_016", "titolo": "Oscuro come il Sospetto", "autore": "Giulia Santoro", "genere": "Gialli", "anno": 1986, "pagine": 322, "descrizione": "Un omicidio in un piccolo paese di mare dove tutti nascondono qualcosa.", "parole_chiave": ["alibi", "mistero", "tradimento", "verità"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 22, "reale": false}, {"id": "gial_017", "titolo": "Caso di Mezzanotte", "autore": "Giulia Greco", "genere": "Gialli", "anno": 1983, "pagine": 371, "descrizione": "Un testimone che cambia versione ogni notte.", "parole_chiave": ["sospetto", "verità", "notte", "mistero"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 12, "reale": false}, {"id": "gial_018", "titolo": "L'Archivio Oscuro", "autore": "Beatrice Serra", "genere": "Gialli", "anno": 1965, "pagine": 266, "descrizione": "Un testimone che cambia versione ogni notte.", "parole_chiave": ["alibi", "detective", "verità", "sospetto"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 13, "reale": false}, {"id": "gial_019", "titolo": "L'Ultimo Archivio", "autore": "Elena Conti", "genere": "Gialli", "anno": 1963, "pagine": 391, "descrizione": "Un delitto perfetto con un solo dettaglio fuori posto.", "parole_chiave": ["omicidio", "alibi", "detective", "colpevole"], "rarita": "non_comune", "prezzo_acquisto": 10, "prezzo_vendita": 37, "reale": false}, {"id": "gial_020", "titolo": "Il Delitto Irrisolto", "autore": "Gabriele Bianchi", "genere": "Gialli", "anno": 1977, "pagine": 232, "descrizione": "Un testimone che cambia versione ogni notte.", "parole_chiave": ["indagine", "detective", "verità", "alibi"], "rarita": "non_comune", "prezzo_acquisto": 5, "prezzo_vendita": 21, "reale": false}, {"id": "gial_021", "titolo": "Porto di Mezzanotte", "autore": "Luca Ferraro", "genere": "Gialli", "anno": 1968, "pagine": 348, "descrizione": "Un omicidio in un piccolo paese di mare dove tutti nascondono qualcosa.", "parole_chiave": ["mistero", "tradimento", "colpevole", "alibi"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 20, "reale": false}, {"id": "gial_022", "titolo": "Indizio di Mezzanotte", "autore": "Gabriele Colombo", "genere": "Gialli", "anno": 2012, "pagine": 344, "descrizione": "Un omicidio in un piccolo paese di mare dove tutti nascondono qualcosa.", "parole_chiave": ["alibi", "colpevole", "tradimento", "notte"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 20, "reale": false}, {"id": "gial_023", "titolo": "L'Ultimo Indizio", "autore": "Paolo Bruno", "genere": "Gialli", "anno": 2023, "pagine": 292, "descrizione": "Un testimone che cambia versione ogni notte.", "parole_chiave": ["sospetto", "tradimento", "notte", "alibi"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 16, "reale": false}, {"id": "gial_024", "titolo": "Silenzioso come il Verdetto", "autore": "Silvia Ricci", "genere": "Gialli", "anno": 2016, "pagine": 262, "descrizione": "Un omicidio in un piccolo paese di mare dove tutti nascondono qualcosa.", "parole_chiave": ["mistero", "verità", "detective", "tradimento"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 22, "reale": false}, {"id": "fant_001", "titolo": "Ultimo come il Guardiano", "autore": "Luca Conti", "genere": "Fantasy", "anno": 1975, "pagine": 461, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["potere", "avventura", "incantesimo", "eroe"], "rarita": "comune", "prezzo_acquisto": 11, "prezzo_vendita": 25, "reale": false}, {"id": "fant_002", "titolo": "Cristallo di Mezzanotte", "autore": "Andrea Conti", "genere": "Fantasy", "anno": 2003, "pagine": 531, "descrizione": "Una profezia dimenticata che si avvera al momento sbagliato.", "parole_chiave": ["magia", "regno", "avventura", "incantesimo"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 21, "reale": false}, {"id": "fant_003", "titolo": "L'Ultimo Incantesimo", "autore": "Camilla Marino", "genere": "Fantasy", "anno": 1989, "pagine": 561, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["potere", "eroe", "avventura", "drago"], "rarita": "non_comune", "prezzo_acquisto": 9, "prezzo_vendita": 34, "reale": false}, {"id": "fant_004", "titolo": "L'Incantesimo Eterno", "autore": "Nicola Serra", "genere": "Fantasy", "anno": 1974, "pagine": 390, "descrizione": "Una profezia dimenticata che si avvera al momento sbagliato.", "parole_chiave": ["avventura", "incantesimo", "battaglia", "magia"], "rarita": "non_comune", "prezzo_acquisto": 9, "prezzo_vendita": 30, "reale": false}, {"id": "fant_005", "titolo": "Trono di Mezzanotte", "autore": "Nicola Bianchi", "genere": "Fantasy", "anno": 1979, "pagine": 303, "descrizione": "Un regno diviso da un incantesimo antico.", "parole_chiave": ["incantesimo", "avventura", "drago", "potere"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 14, "reale": false}, {"id": "fant_006", "titolo": "Il Drago Ultimo", "autore": "Alessia Serra", "genere": "Fantasy", "anno": 2023, "pagine": 306, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["eroe", "regno", "incantesimo", "profezia"], "rarita": "comune", "prezzo_acquisto": 11, "prezzo_vendita": 23, "reale": false}, {"id": "fant_007", "titolo": "L'Ultimo Portale", "autore": "Simone Barbieri", "genere": "Fantasy", "anno": 2000, "pagine": 596, "descrizione": "Un'eroina che scopre un potere che non voleva.", "parole_chiave": ["incantesimo", "portale", "eroe", "profezia"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 13, "reale": false}, {"id": "fant_008", "titolo": "Eterno come il Guardiano", "autore": "Paolo Moretti", "genere": "Fantasy", "anno": 2002, "pagine": 388, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["regno", "drago", "profezia", "battaglia"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 9, "reale": false}, {"id": "fant_009", "titolo": "Il Portale Sommerso", "autore": "Andrea Ferraro", "genere": "Fantasy", "anno": 2007, "pagine": 424, "descrizione": "Una profezia dimenticata che si avvera al momento sbagliato.", "parole_chiave": ["regno", "profezia", "avventura", "portale"], "rarita": "comune", "prezzo_acquisto": 11, "prezzo_vendita": 22, "reale": false}, {"id": "fant_010", "titolo": "La Spada Dimenticato", "autore": "Chiara Ferretti", "genere": "Fantasy", "anno": 1965, "pagine": 364, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["battaglia", "avventura", "eroe", "magia"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 14, "reale": false}, {"id": "fant_011", "titolo": "Ultimo come il Trono", "autore": "Gabriele Rinaldi", "genere": "Fantasy", "anno": 2018, "pagine": 501, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["battaglia", "avventura", "magia", "eroe"], "rarita": "rara", "prezzo_acquisto": 11, "prezzo_vendita": 73, "reale": false}, {"id": "fant_012", "titolo": "Il Guardiano Dimenticato", "autore": "Luca Conti", "genere": "Fantasy", "anno": 1995, "pagine": 613, "descrizione": "Una profezia dimenticata che si avvera al momento sbagliato.", "parole_chiave": ["avventura", "drago", "portale", "potere"], "rarita": "rara", "prezzo_acquisto": 8, "prezzo_vendita": 55, "reale": false}, {"id": "fant_013", "titolo": "Ultimo come il Drago", "autore": "Paolo Serra", "genere": "Fantasy", "anno": 1983, "pagine": 490, "descrizione": "Una profezia dimenticata che si avvera al momento sbagliato.", "parole_chiave": ["avventura", "portale", "magia", "profezia"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 18, "reale": false}, {"id": "fant_014", "titolo": "L'Ultimo Bosco", "autore": "Giulia Fontana", "genere": "Fantasy", "anno": 1991, "pagine": 491, "descrizione": "Un regno diviso da un incantesimo antico.", "parole_chiave": ["profezia", "incantesimo", "potere", "avventura"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 23, "reale": false}, {"id": "fant_015", "titolo": "La Profezia Ultimo", "autore": "Beatrice Conti", "genere": "Fantasy", "anno": 1969, "pagine": 294, "descrizione": "Un bosco che cambia forma a ogni luna piena.", "parole_chiave": ["profezia", "drago", "avventura", "eroe"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 14, "reale": false}, {"id": "fant_016", "titolo": "Incantato come il Cristallo", "autore": "Paolo Bianchi", "genere": "Fantasy", "anno": 1993, "pagine": 429, "descrizione": "Un bosco che cambia forma a ogni luna piena.", "parole_chiave": ["avventura", "portale", "eroe", "profezia"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 10, "reale": false}, {"id": "fant_017", "titolo": "Profezia di Mezzanotte", "autore": "Silvia Bruno", "genere": "Fantasy", "anno": 1983, "pagine": 539, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["magia", "avventura", "incantesimo", "portale"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 14, "reale": false}, {"id": "fant_018", "titolo": "Ultimo come il Portale", "autore": "Nicola Greco", "genere": "Fantasy", "anno": 1991, "pagine": 444, "descrizione": "Un'eroina che scopre un potere che non voleva.", "parole_chiave": ["profezia", "portale", "battaglia", "incantesimo"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 18, "reale": false}, {"id": "fant_019", "titolo": "L'Ultimo Regno", "autore": "Chiara Conti", "genere": "Fantasy", "anno": 2023, "pagine": 298, "descrizione": "Un'eroina che scopre un potere che non voleva.", "parole_chiave": ["incantesimo", "potere", "regno", "portale"], "rarita": "non_comune", "prezzo_acquisto": 10, "prezzo_vendita": 37, "reale": false}, {"id": "fant_020", "titolo": "Incantato come il Portale", "autore": "Silvia Ricci", "genere": "Fantasy", "anno": 2001, "pagine": 483, "descrizione": "Un regno diviso da un incantesimo antico.", "parole_chiave": ["potere", "incantesimo", "portale", "drago"], "rarita": "non_comune", "prezzo_acquisto": 6, "prezzo_vendita": 20, "reale": false}, {"id": "fant_021", "titolo": "Il Cristallo Ultimo", "autore": "Davide Gallo", "genere": "Fantasy", "anno": 2009, "pagine": 326, "descrizione": "Una profezia dimenticata che si avvera al momento sbagliato.", "parole_chiave": ["regno", "battaglia", "eroe", "incantesimo"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 15, "reale": false}, {"id": "fant_022", "titolo": "Il Regno Eterno", "autore": "Matteo Bruno", "genere": "Fantasy", "anno": 1971, "pagine": 405, "descrizione": "Un bosco che cambia forma a ogni luna piena.", "parole_chiave": ["portale", "drago", "incantesimo", "regno"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 8, "reale": false}, {"id": "fant_023", "titolo": "Sommerso come il Guardiano", "autore": "Federica Bianchi", "genere": "Fantasy", "anno": 1976, "pagine": 516, "descrizione": "Un drago custode dell'ultimo portale rimasto.", "parole_chiave": ["eroe", "avventura", "magia", "portale"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 15, "reale": false}, {"id": "fant_024", "titolo": "L'Ultima Profezia", "autore": "Simone Costa", "genere": "Fantasy", "anno": 1991, "pagine": 434, "descrizione": "Un'eroina che scopre un potere che non voleva.", "parole_chiave": ["portale", "eroe", "regno", "incantesimo"], "rarita": "rara", "prezzo_acquisto": 8, "prezzo_vendita": 56, "reale": false}, {"id": "sagg_001", "titolo": "L'Ultima Astronomia", "autore": "Valentina Costa", "genere": "Saggistica", "anno": 1962, "pagine": 294, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["pratico", "arte", "cucina", "economia"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 16, "reale": false}, {"id": "sagg_002", "titolo": "L'Ultima Cucina", "autore": "Chiara Colombo", "genere": "Saggistica", "anno": 2019, "pagine": 310, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["cucina", "arte", "storia", "pratico"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 17, "reale": false}, {"id": "sagg_003", "titolo": "La Botanica Pratico", "autore": "Luca Moretti", "genere": "Saggistica", "anno": 1970, "pagine": 351, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["natura", "filosofia", "cucina", "economia"], "rarita": "non_comune", "prezzo_acquisto": 10, "prezzo_vendita": 40, "reale": false}, {"id": "sagg_004", "titolo": "Essenziale come il Filosofia", "autore": "Alessia Colombo", "genere": "Saggistica", "anno": 1991, "pagine": 396, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["guida", "scienza", "economia", "arte"], "rarita": "rara", "prezzo_acquisto": 9, "prezzo_vendita": 65, "reale": false}, {"id": "sagg_005", "titolo": "L'Ultima Biologia", "autore": "Nicola Colombo", "genere": "Saggistica", "anno": 1991, "pagine": 244, "descrizione": "Un manuale illustrato passo per passo.", "parole_chiave": ["pratico", "economia", "natura", "storia"], "rarita": "comune", "prezzo_acquisto": 11, "prezzo_vendita": 20, "reale": false}, {"id": "sagg_006", "titolo": "Moderno come il Cucina", "autore": "Andrea Ferretti", "genere": "Saggistica", "anno": 2002, "pagine": 360, "descrizione": "Un'introduzione accessibile a un grande classico del pensiero.", "parole_chiave": ["cucina", "economia", "manuale", "arte"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 23, "reale": false}, {"id": "sagg_007", "titolo": "L'Ultima Storia", "autore": "Nicola Bianchi", "genere": "Saggistica", "anno": 1986, "pagine": 266, "descrizione": "Un manuale illustrato passo per passo.", "parole_chiave": ["filosofia", "economia", "guida", "scienza"], "rarita": "rara", "prezzo_acquisto": 6, "prezzo_vendita": 36, "reale": false}, {"id": "sagg_008", "titolo": "Moderno come l' Economia", "autore": "Matteo Moretti", "genere": "Saggistica", "anno": 1990, "pagine": 263, "descrizione": "Una raccolta di saggi brevi sul tema.", "parole_chiave": ["natura", "manuale", "pratico", "cucina"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 16, "reale": false}, {"id": "sagg_009", "titolo": "L'Artigianato Moderno", "autore": "Beatrice Ferretti", "genere": "Saggistica", "anno": 2004, "pagine": 204, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["storia", "pratico", "natura", "manuale"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 19, "reale": false}, {"id": "sagg_010", "titolo": "Astronomia di Mezzanotte", "autore": "Andrea Ricci", "genere": "Saggistica", "anno": 2011, "pagine": 187, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["storia", "cucina", "guida", "manuale"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 17, "reale": false}, {"id": "sagg_011", "titolo": "Filosofia di Mezzanotte", "autore": "Matteo Gallo", "genere": "Saggistica", "anno": 1999, "pagine": 232, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["guida", "cucina", "storia", "manuale"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 9, "reale": false}, {"id": "sagg_012", "titolo": "L'Architettura Moderno", "autore": "Matteo De Luca", "genere": "Saggistica", "anno": 1999, "pagine": 177, "descrizione": "Un'introduzione accessibile a un grande classico del pensiero.", "parole_chiave": ["filosofia", "scienza", "storia", "natura"], "rarita": "non_comune", "prezzo_acquisto": 12, "prezzo_vendita": 45, "reale": false}, {"id": "sagg_013", "titolo": "La Storia Illustrato", "autore": "Paolo Conti", "genere": "Saggistica", "anno": 2007, "pagine": 382, "descrizione": "Un'introduzione accessibile a un grande classico del pensiero.", "parole_chiave": ["manuale", "pratico", "natura", "cucina"], "rarita": "rara", "prezzo_acquisto": 11, "prezzo_vendita": 72, "reale": false}, {"id": "sagg_014", "titolo": "Economia di Mezzanotte", "autore": "Gabriele De Luca", "genere": "Saggistica", "anno": 1980, "pagine": 266, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["pratico", "economia", "manuale", "filosofia"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 20, "reale": false}, {"id": "sagg_015", "titolo": "Geografia di Mezzanotte", "autore": "Paolo Ricci", "genere": "Saggistica", "anno": 1989, "pagine": 230, "descrizione": "Un manuale illustrato passo per passo.", "parole_chiave": ["natura", "guida", "arte", "storia"], "rarita": "comune", "prezzo_acquisto": 12, "prezzo_vendita": 24, "reale": false}, {"id": "sagg_016", "titolo": "L'Economia Breve", "autore": "Nicola Rinaldi", "genere": "Saggistica", "anno": 1999, "pagine": 394, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["filosofia", "natura", "manuale", "scienza"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 23, "reale": false}, {"id": "sagg_017", "titolo": "L'Architettura Pratico", "autore": "Federica De Luca", "genere": "Saggistica", "anno": 1975, "pagine": 189, "descrizione": "Un'introduzione accessibile a un grande classico del pensiero.", "parole_chiave": ["scienza", "manuale", "natura", "economia"], "rarita": "rara", "prezzo_acquisto": 9, "prezzo_vendita": 58, "reale": false}, {"id": "sagg_018", "titolo": "L'Artigianato Completo", "autore": "Nicola Barbieri", "genere": "Saggistica", "anno": 2001, "pagine": 322, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["storia", "cucina", "pratico", "manuale"], "rarita": "non_comune", "prezzo_acquisto": 8, "prezzo_vendita": 33, "reale": false}, {"id": "sagg_019", "titolo": "L'Ultima Filosofia", "autore": "Federica Greco", "genere": "Saggistica", "anno": 1966, "pagine": 186, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["manuale", "filosofia", "scienza", "arte"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 16, "reale": false}, {"id": "sagg_020", "titolo": "L'Ultima Geografia", "autore": "Federica Barbieri", "genere": "Saggistica", "anno": 1967, "pagine": 376, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["guida", "pratico", "storia", "natura"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 20, "reale": false}, {"id": "sagg_021", "titolo": "Breve come il Filosofia", "autore": "Simone Costa", "genere": "Saggistica", "anno": 1975, "pagine": 343, "descrizione": "Una storia raccontata attraverso oggetti quotidiani.", "parole_chiave": ["manuale", "natura", "economia", "storia"], "rarita": "comune", "prezzo_acquisto": 12, "prezzo_vendita": 26, "reale": false}, {"id": "sagg_022", "titolo": "Pratico come l' Astronomia", "autore": "Valentina Barbieri", "genere": "Saggistica", "anno": 1965, "pagine": 151, "descrizione": "Una raccolta di saggi brevi sul tema.", "parole_chiave": ["cucina", "scienza", "guida", "economia"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 16, "reale": false}, {"id": "sagg_023", "titolo": "Breve come il Storia", "autore": "Nicola Gallo", "genere": "Saggistica", "anno": 1994, "pagine": 293, "descrizione": "Un manuale illustrato passo per passo.", "parole_chiave": ["manuale", "economia", "storia", "scienza"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 24, "reale": false}, {"id": "sagg_024", "titolo": "La Geografia Breve", "autore": "Simone Ferraro", "genere": "Saggistica", "anno": 1969, "pagine": 253, "descrizione": "Una guida pratica per principianti.", "parole_chiave": ["natura", "guida", "arte", "economia"], "rarita": "non_comune", "prezzo_acquisto": 11, "prezzo_vendita": 42, "reale": false}, {"id": "infa_001", "titolo": "L'Elefantino Magico", "autore": "Federica Greco", "genere": "Infanzia", "anno": 1995, "pagine": 34, "descrizione": "Un compleanno che non va come previsto ma finisce benissimo.", "parole_chiave": ["famiglia", "magia", "animali", "avventura"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 4, "reale": false}, {"id": "infa_002", "titolo": "Il Drago Birichino", "autore": "Francesca Marino", "genere": "Infanzia", "anno": 1984, "pagine": 42, "descrizione": "Un'amicizia improbabile tra due creature diverse.", "parole_chiave": ["coraggio", "avventura", "famiglia", "casa"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 4, "reale": false}, {"id": "infa_003", "titolo": "Farfalla di Mezzanotte", "autore": "Riccardo Villa", "genere": "Infanzia", "anno": 2010, "pagine": 96, "descrizione": "Una lezione sull'aiutare gli altri raccontata con dolcezza.", "parole_chiave": ["scoperta", "magia", "gioco", "coraggio"], "rarita": "non_comune", "prezzo_acquisto": 2, "prezzo_vendita": 7, "reale": false}, {"id": "infa_004", "titolo": "Buffo come il Gattino", "autore": "Federica Rinaldi", "genere": "Infanzia", "anno": 1984, "pagine": 88, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["famiglia", "scoperta", "gioco", "amicizia"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 9, "reale": false}, {"id": "infa_005", "titolo": "L'Ultimo Elefantino", "autore": "Camilla Greco", "genere": "Infanzia", "anno": 1991, "pagine": 94, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["scoperta", "animali", "magia", "famiglia"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 4, "reale": false}, {"id": "infa_006", "titolo": "Pinguino di Mezzanotte", "autore": "Alessia Ferretti", "genere": "Infanzia", "anno": 1994, "pagine": 46, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["animali", "scoperta", "gioco", "famiglia"], "rarita": "non_comune", "prezzo_acquisto": 5, "prezzo_vendita": 17, "reale": false}, {"id": "infa_007", "titolo": "L'Ultimo Delfino", "autore": "Alessia Ferretti", "genere": "Infanzia", "anno": 1983, "pagine": 36, "descrizione": "Una lezione sull'aiutare gli altri raccontata con dolcezza.", "parole_chiave": ["gentilezza", "famiglia", "gioco", "magia"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 5, "reale": false}, {"id": "infa_008", "titolo": "Gattino di Mezzanotte", "autore": "Valentina Bianchi", "genere": "Infanzia", "anno": 2000, "pagine": 34, "descrizione": "Un viaggio fantastico per tornare a casa prima di sera.", "parole_chiave": ["gioco", "gentilezza", "magia", "casa"], "rarita": "non_comune", "prezzo_acquisto": 4, "prezzo_vendita": 17, "reale": false}, {"id": "infa_009", "titolo": "Il Pinguino Coraggioso", "autore": "Giulia Marino", "genere": "Infanzia", "anno": 1981, "pagine": 47, "descrizione": "Un'amicizia improbabile tra due creature diverse.", "parole_chiave": ["magia", "scoperta", "animali", "coraggio"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 11, "reale": false}, {"id": "infa_010", "titolo": "Il Drago Coraggioso", "autore": "Nicola De Luca", "genere": "Infanzia", "anno": 1964, "pagine": 67, "descrizione": "Una lezione sull'aiutare gli altri raccontata con dolcezza.", "parole_chiave": ["avventura", "gentilezza", "casa", "coraggio"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 4, "reale": false}, {"id": "infa_011", "titolo": "Il Riccio Magico", "autore": "Gabriele Ferraro", "genere": "Infanzia", "anno": 2010, "pagine": 81, "descrizione": "Un'amicizia improbabile tra due creature diverse.", "parole_chiave": ["gioco", "animali", "famiglia", "gentilezza"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 7, "reale": false}, {"id": "infa_012", "titolo": "Riccio di Mezzanotte", "autore": "Beatrice Ferraro", "genere": "Infanzia", "anno": 2011, "pagine": 72, "descrizione": "Una lezione sull'aiutare gli altri raccontata con dolcezza.", "parole_chiave": ["gioco", "gentilezza", "avventura", "casa"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 14, "reale": false}, {"id": "infa_013", "titolo": "Il Topolino Birichino", "autore": "Paolo De Luca", "genere": "Infanzia", "anno": 2016, "pagine": 39, "descrizione": "Un viaggio fantastico per tornare a casa prima di sera.", "parole_chiave": ["coraggio", "avventura", "famiglia", "animali"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 9, "reale": false}, {"id": "infa_014", "titolo": "Gentile come il Drago", "autore": "Matteo Marconi", "genere": "Infanzia", "anno": 1988, "pagine": 30, "descrizione": "Un compleanno che non va come previsto ma finisce benissimo.", "parole_chiave": ["gioco", "magia", "animali", "scoperta"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 7, "reale": false}, {"id": "infa_015", "titolo": "Elefantino di Mezzanotte", "autore": "Alessia Bianchi", "genere": "Infanzia", "anno": 1970, "pagine": 28, "descrizione": "Un viaggio fantastico per tornare a casa prima di sera.", "parole_chiave": ["scoperta", "avventura", "casa", "animali"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 5, "reale": false}, {"id": "infa_016", "titolo": "L'Orsetto Gentile", "autore": "Nicola Barbieri", "genere": "Infanzia", "anno": 1995, "pagine": 78, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["famiglia", "animali", "casa", "amicizia"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 7, "reale": false}, {"id": "infa_017", "titolo": "Piccolo come il Coniglio", "autore": "Paolo Conti", "genere": "Infanzia", "anno": 2000, "pagine": 92, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["gioco", "animali", "avventura", "scoperta"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 12, "reale": false}, {"id": "infa_018", "titolo": "L'Ultimo Orsetto", "autore": "Elena De Luca", "genere": "Infanzia", "anno": 2024, "pagine": 70, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["gioco", "casa", "amicizia", "animali"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 10, "reale": false}, {"id": "infa_019", "titolo": "Il Riccio Birichino", "autore": "Giulia Marino", "genere": "Infanzia", "anno": 2012, "pagine": 32, "descrizione": "Un viaggio fantastico per tornare a casa prima di sera.", "parole_chiave": ["animali", "coraggio", "magia", "gioco"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 8, "reale": false}, {"id": "infa_020", "titolo": "Birichino come il Drago", "autore": "Chiara Ferretti", "genere": "Infanzia", "anno": 2007, "pagine": 82, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["famiglia", "animali", "amicizia", "gentilezza"], "rarita": "rara", "prezzo_acquisto": 5, "prezzo_vendita": 35, "reale": false}, {"id": "infa_021", "titolo": "Curioso come il Pinguino", "autore": "Marco Moretti", "genere": "Infanzia", "anno": 1980, "pagine": 69, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["magia", "famiglia", "coraggio", "gentilezza"], "rarita": "rara", "prezzo_acquisto": 6, "prezzo_vendita": 40, "reale": false}, {"id": "infa_022", "titolo": "Curioso come il Delfino", "autore": "Luca Conti", "genere": "Infanzia", "anno": 2006, "pagine": 87, "descrizione": "Un viaggio fantastico per tornare a casa prima di sera.", "parole_chiave": ["gioco", "famiglia", "coraggio", "magia"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 10, "reale": false}, {"id": "infa_023", "titolo": "L'Ultimo Drago", "autore": "Davide Ferraro", "genere": "Infanzia", "anno": 1990, "pagine": 78, "descrizione": "Un'amicizia improbabile tra due creature diverse.", "parole_chiave": ["scoperta", "magia", "casa", "amicizia"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 4, "reale": false}, {"id": "infa_024", "titolo": "Magico come l' Elefantino", "autore": "Valentina Marino", "genere": "Infanzia", "anno": 1994, "pagine": 44, "descrizione": "Un piccolo animale che impara a essere coraggioso.", "parole_chiave": ["avventura", "scoperta", "amicizia", "coraggio"], "rarita": "comune", "prezzo_acquisto": 2, "prezzo_vendita": 4, "reale": false}, {"id": "roma_001", "titolo": "L'Ultima Lettera", "autore": "Chiara Villa", "genere": "Romance", "anno": 2022, "pagine": 294, "descrizione": "Una promessa mantenuta dopo anni di silenzio.", "parole_chiave": ["matrimonio", "cuore", "promessa", "estate"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 13, "reale": false}, {"id": "roma_002", "titolo": "L'Ultimo Estate", "autore": "Giulia Serra", "genere": "Romance", "anno": 1993, "pagine": 332, "descrizione": "Un matrimonio combinato che diventa qualcos'altro.", "parole_chiave": ["gelosia", "cuore", "estate", "passione"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 10, "reale": false}, {"id": "roma_003", "titolo": "Matrimonio di Mezzanotte", "autore": "Riccardo Moretti", "genere": "Romance", "anno": 1969, "pagine": 234, "descrizione": "Due persone che si incontrano ogni estate nello stesso posto.", "parole_chiave": ["matrimonio", "promessa", "destino", "amore"], "rarita": "rara", "prezzo_acquisto": 5, "prezzo_vendita": 35, "reale": false}, {"id": "roma_004", "titolo": "L'Ultimo Ritorno", "autore": "Davide Serra", "genere": "Romance", "anno": 2007, "pagine": 379, "descrizione": "Un amore nato per errore da uno scambio di lettere.", "parole_chiave": ["incontro", "gelosia", "lettera", "amore"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 27, "reale": false}, {"id": "roma_005", "titolo": "Promessa di Mezzanotte", "autore": "Federica Marino", "genere": "Romance", "anno": 1991, "pagine": 341, "descrizione": "Un amore nato per errore da uno scambio di lettere.", "parole_chiave": ["destino", "cuore", "gelosia", "promessa"], "rarita": "non_comune", "prezzo_acquisto": 3, "prezzo_vendita": 11, "reale": false}, {"id": "roma_006", "titolo": "Segreto come il Matrimonio", "autore": "Alessia Ferretti", "genere": "Romance", "anno": 1990, "pagine": 319, "descrizione": "Due vicini di casa che si detestano fino a un certo punto.", "parole_chiave": ["incontro", "promessa", "gelosia", "passione"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 23, "reale": false}, {"id": "roma_007", "titolo": "L'Estate Dolce", "autore": "Luca Serra", "genere": "Romance", "anno": 1982, "pagine": 257, "descrizione": "Una promessa mantenuta dopo anni di silenzio.", "parole_chiave": ["gelosia", "estate", "cuore", "promessa"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 24, "reale": false}, {"id": "roma_008", "titolo": "L'Ultimo Vicino", "autore": "Elena De Luca", "genere": "Romance", "anno": 2003, "pagine": 243, "descrizione": "Due vicini di casa che si detestano fino a un certo punto.", "parole_chiave": ["destino", "promessa", "gelosia", "incontro"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 11, "reale": false}, {"id": "roma_009", "titolo": "L'Ultimo Libraio", "autore": "Giulia Ferretti", "genere": "Romance", "anno": 1964, "pagine": 364, "descrizione": "Due vicini di casa che si detestano fino a un certo punto.", "parole_chiave": ["estate", "lettera", "passione", "destino"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 23, "reale": false}, {"id": "roma_010", "titolo": "Tardivo come l' Amore", "autore": "Davide Conti", "genere": "Romance", "anno": 1977, "pagine": 375, "descrizione": "Un matrimonio combinato che diventa qualcos'altro.", "parole_chiave": ["estate", "matrimonio", "cuore", "incontro"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 25, "reale": false}, {"id": "roma_011", "titolo": "Inatteso come il Promessa", "autore": "Gabriele Bianchi", "genere": "Romance", "anno": 1982, "pagine": 281, "descrizione": "Una promessa mantenuta dopo anni di silenzio.", "parole_chiave": ["passione", "promessa", "incontro", "estate"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 12, "reale": false}, {"id": "roma_012", "titolo": "L'Ultimo Incontro", "autore": "Andrea Bianchi", "genere": "Romance", "anno": 1968, "pagine": 212, "descrizione": "Una promessa mantenuta dopo anni di silenzio.", "parole_chiave": ["passione", "destino", "lettera", "gelosia"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 6, "reale": false}, {"id": "roma_013", "titolo": "Dolce come il Promessa", "autore": "Davide Conti", "genere": "Romance", "anno": 1963, "pagine": 223, "descrizione": "Un matrimonio combinato che diventa qualcos'altro.", "parole_chiave": ["gelosia", "matrimonio", "lettera", "cuore"], "rarita": "rara", "prezzo_acquisto": 6, "prezzo_vendita": 40, "reale": false}, {"id": "roma_014", "titolo": "Il Ritorno Estivo", "autore": "Riccardo Ferraro", "genere": "Romance", "anno": 1996, "pagine": 202, "descrizione": "Due persone che si incontrano ogni estate nello stesso posto.", "parole_chiave": ["passione", "promessa", "estate", "incontro"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 13, "reale": false}, {"id": "roma_015", "titolo": "L'Estate Inatteso", "autore": "Davide Ferretti", "genere": "Romance", "anno": 1986, "pagine": 329, "descrizione": "Un matrimonio combinato che diventa qualcos'altro.", "parole_chiave": ["gelosia", "estate", "cuore", "matrimonio"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 8, "reale": false}, {"id": "roma_016", "titolo": "Estivo come il Vicino", "autore": "Alessia Conti", "genere": "Romance", "anno": 1995, "pagine": 316, "descrizione": "Un amore nato per errore da uno scambio di lettere.", "parole_chiave": ["destino", "gelosia", "promessa", "matrimonio"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 5, "reale": false}, {"id": "roma_017", "titolo": "Ritorno di Mezzanotte", "autore": "Davide Santoro", "genere": "Romance", "anno": 1983, "pagine": 329, "descrizione": "Due vicini di casa che si detestano fino a un certo punto.", "parole_chiave": ["gelosia", "matrimonio", "estate", "lettera"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 16, "reale": false}, {"id": "roma_018", "titolo": "L'Ultimo Amore", "autore": "Federica Ferraro", "genere": "Romance", "anno": 2012, "pagine": 376, "descrizione": "Due persone che si incontrano ogni estate nello stesso posto.", "parole_chiave": ["destino", "matrimonio", "estate", "incontro"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 7, "reale": false}, {"id": "roma_019", "titolo": "Libraio di Mezzanotte", "autore": "Camilla Barbieri", "genere": "Romance", "anno": 2011, "pagine": 297, "descrizione": "Un amore nato per errore da uno scambio di lettere.", "parole_chiave": ["lettera", "amore", "cuore", "matrimonio"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 26, "reale": false}, {"id": "roma_020", "titolo": "L'Ultimo Matrimonio", "autore": "Simone De Luca", "genere": "Romance", "anno": 2011, "pagine": 356, "descrizione": "Un matrimonio combinato che diventa qualcos'altro.", "parole_chiave": ["amore", "promessa", "lettera", "estate"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 13, "reale": false}, {"id": "roma_021", "titolo": "Impossibile come il Matrimonio", "autore": "Nicola Ricci", "genere": "Romance", "anno": 1996, "pagine": 290, "descrizione": "Una promessa mantenuta dopo anni di silenzio.", "parole_chiave": ["destino", "matrimonio", "lettera", "cuore"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 8, "reale": false}, {"id": "roma_022", "titolo": "L'Ultimo Bacio", "autore": "Alessia Conti", "genere": "Romance", "anno": 1984, "pagine": 343, "descrizione": "Una promessa mantenuta dopo anni di silenzio.", "parole_chiave": ["estate", "cuore", "passione", "lettera"], "rarita": "non_comune", "prezzo_acquisto": 8, "prezzo_vendita": 32, "reale": false}, {"id": "roma_023", "titolo": "Segreto come il Bacio", "autore": "Nicola Costa", "genere": "Romance", "anno": 1970, "pagine": 227, "descrizione": "Due vicini di casa che si detestano fino a un certo punto.", "parole_chiave": ["destino", "lettera", "gelosia", "amore"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 14, "reale": false}, {"id": "roma_024", "titolo": "Vicino di Mezzanotte", "autore": "Alessia Conti", "genere": "Romance", "anno": 1968, "pagine": 374, "descrizione": "Un amore nato per errore da uno scambio di lettere.", "parole_chiave": ["amore", "gelosia", "promessa", "lettera"], "rarita": "comune", "prezzo_acquisto": 3, "prezzo_vendita": 6, "reale": false}, {"id": "horr_001", "titolo": "Nascosto come il Cripta", "autore": "Alessia Ferraro", "genere": "Horror", "anno": 2003, "pagine": 205, "descrizione": "Una casa sulla scogliera che nasconde un segreto da un secolo.", "parole_chiave": ["segreto", "maledizione", "paura", "mistero"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 24, "reale": false}, {"id": "horr_002", "titolo": "La Nebbia Antico", "autore": "Luca Ferraro", "genere": "Horror", "anno": 2018, "pagine": 199, "descrizione": "Una casa sulla scogliera che nasconde un segreto da un secolo.", "parole_chiave": ["ombra", "mistero", "casa", "notte"], "rarita": "rara", "prezzo_acquisto": 7, "prezzo_vendita": 51, "reale": false}, {"id": "horr_003", "titolo": "Antico come l' Ombra", "autore": "Beatrice Costa", "genere": "Horror", "anno": 1974, "pagine": 397, "descrizione": "Una casa sulla scogliera che nasconde un segreto da un secolo.", "parole_chiave": ["casa", "notte", "antico", "segreto"], "rarita": "non_comune", "prezzo_acquisto": 5, "prezzo_vendita": 21, "reale": false}, {"id": "horr_004", "titolo": "La Nebbia Silenzioso", "autore": "Francesca Serra", "genere": "Horror", "anno": 2001, "pagine": 353, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["nebbia", "sinistro", "casa", "paura"], "rarita": "non_comune", "prezzo_acquisto": 10, "prezzo_vendita": 36, "reale": false}, {"id": "horr_005", "titolo": "Casa di Mezzanotte", "autore": "Andrea Marconi", "genere": "Horror", "anno": 1978, "pagine": 288, "descrizione": "Una nebbia che porta con sé qualcosa di antico.", "parole_chiave": ["antico", "ombra", "casa", "notte"], "rarita": "rara", "prezzo_acquisto": 7, "prezzo_vendita": 45, "reale": false}, {"id": "horr_006", "titolo": "L'Abisso Sinistro", "autore": "Marco Colombo", "genere": "Horror", "anno": 1991, "pagine": 268, "descrizione": "Una nebbia che porta con sé qualcosa di antico.", "parole_chiave": ["nebbia", "sinistro", "ombra", "casa"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 13, "reale": false}, {"id": "horr_007", "titolo": "L'Ultima Cantina", "autore": "Riccardo Bianchi", "genere": "Horror", "anno": 1991, "pagine": 381, "descrizione": "Una cripta riaperta per errore durante uno scavo.", "parole_chiave": ["casa", "nebbia", "antico", "sinistro"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 12, "reale": false}, {"id": "horr_008", "titolo": "Specchio di Mezzanotte", "autore": "Elena De Luca", "genere": "Horror", "anno": 1990, "pagine": 325, "descrizione": "Uno specchio che restituisce un riflesso che non è il tuo.", "parole_chiave": ["mistero", "segreto", "paura", "nebbia"], "rarita": "non_comune", "prezzo_acquisto": 8, "prezzo_vendita": 33, "reale": false}, {"id": "horr_009", "titolo": "Ombra di Mezzanotte", "autore": "Camilla Villa", "genere": "Horror", "anno": 1969, "pagine": 364, "descrizione": "Una nebbia che porta con sé qualcosa di antico.", "parole_chiave": ["segreto", "antico", "mistero", "ombra"], "rarita": "comune", "prezzo_acquisto": 5, "prezzo_vendita": 9, "reale": false}, {"id": "horr_010", "titolo": "Antico come il Faro", "autore": "Marco Fontana", "genere": "Horror", "anno": 1991, "pagine": 362, "descrizione": "Uno specchio che restituisce un riflesso che non è il tuo.", "parole_chiave": ["paura", "nebbia", "ombra", "sinistro"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 15, "reale": false}, {"id": "horr_011", "titolo": "Lo Specchio Oscuro", "autore": "Nicola Rinaldi", "genere": "Horror", "anno": 2021, "pagine": 207, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["paura", "ombra", "nebbia", "mistero"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 13, "reale": false}, {"id": "horr_012", "titolo": "Spettrale come il Nebbia", "autore": "Valentina Greco", "genere": "Horror", "anno": 1967, "pagine": 364, "descrizione": "Una cripta riaperta per errore durante uno scavo.", "parole_chiave": ["notte", "casa", "mistero", "antico"], "rarita": "comune", "prezzo_acquisto": 7, "prezzo_vendita": 14, "reale": false}, {"id": "horr_013", "titolo": "Villaggio di Mezzanotte", "autore": "Giulia Ferraro", "genere": "Horror", "anno": 1991, "pagine": 362, "descrizione": "Una cripta riaperta per errore durante uno scavo.", "parole_chiave": ["nebbia", "sinistro", "segreto", "antico"], "rarita": "non_comune", "prezzo_acquisto": 5, "prezzo_vendita": 21, "reale": false}, {"id": "horr_014", "titolo": "Maledetto come il Specchio", "autore": "Paolo Rinaldi", "genere": "Horror", "anno": 2013, "pagine": 359, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["segreto", "paura", "maledizione", "mistero"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 11, "reale": false}, {"id": "horr_015", "titolo": "La Casa Oscuro", "autore": "Marco Gallo", "genere": "Horror", "anno": 2009, "pagine": 201, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["antico", "maledizione", "sinistro", "nebbia"], "rarita": "comune", "prezzo_acquisto": 9, "prezzo_vendita": 20, "reale": false}, {"id": "horr_016", "titolo": "Faro di Mezzanotte", "autore": "Federica Ricci", "genere": "Horror", "anno": 1998, "pagine": 343, "descrizione": "Uno specchio che restituisce un riflesso che non è il tuo.", "parole_chiave": ["maledizione", "ombra", "notte", "casa"], "rarita": "comune", "prezzo_acquisto": 6, "prezzo_vendita": 12, "reale": false}, {"id": "horr_017", "titolo": "Sinistro come il Specchio", "autore": "Federica Serra", "genere": "Horror", "anno": 2002, "pagine": 363, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["sinistro", "antico", "paura", "notte"], "rarita": "comune", "prezzo_acquisto": 4, "prezzo_vendita": 9, "reale": false}, {"id": "horr_018", "titolo": "L'Ultimo Villaggio", "autore": "Valentina Serra", "genere": "Horror", "anno": 2010, "pagine": 327, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["maledizione", "segreto", "ombra", "nebbia"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 24, "reale": false}, {"id": "horr_019", "titolo": "Nascosto come il Nebbia", "autore": "Simone Fontana", "genere": "Horror", "anno": 1995, "pagine": 224, "descrizione": "Un villaggio che scompare ogni sette anni.", "parole_chiave": ["maledizione", "ombra", "segreto", "notte"], "rarita": "non_comune", "prezzo_acquisto": 8, "prezzo_vendita": 29, "reale": false}, {"id": "horr_020", "titolo": "Nascosto come il Casa", "autore": "Francesca Rinaldi", "genere": "Horror", "anno": 1979, "pagine": 286, "descrizione": "Una cripta riaperta per errore durante uno scavo.", "parole_chiave": ["segreto", "paura", "mistero", "antico"], "rarita": "non_comune", "prezzo_acquisto": 4, "prezzo_vendita": 15, "reale": false}, {"id": "horr_021", "titolo": "Abisso di Mezzanotte", "autore": "Davide Marconi", "genere": "Horror", "anno": 1975, "pagine": 238, "descrizione": "Una casa sulla scogliera che nasconde un segreto da un secolo.", "parole_chiave": ["antico", "maledizione", "sinistro", "segreto"], "rarita": "comune", "prezzo_acquisto": 10, "prezzo_vendita": 23, "reale": false}, {"id": "horr_022", "titolo": "L'Ultima Ombra", "autore": "Matteo Ferraro", "genere": "Horror", "anno": 1978, "pagine": 282, "descrizione": "Una cripta riaperta per errore durante uno scavo.", "parole_chiave": ["antico", "segreto", "mistero", "nebbia"], "rarita": "non_comune", "prezzo_acquisto": 7, "prezzo_vendita": 26, "reale": false}, {"id": "horr_023", "titolo": "L'Ultima Cripta", "autore": "Marco Santoro", "genere": "Horror", "anno": 2017, "pagine": 246, "descrizione": "Una nebbia che porta con sé qualcosa di antico.", "parole_chiave": ["paura", "ombra", "nebbia", "notte"], "rarita": "non_comune", "prezzo_acquisto": 6, "prezzo_vendita": 21, "reale": false}, {"id": "horr_024", "titolo": "L'Ultimo Specchio", "autore": "Riccardo Fontana", "genere": "Horror", "anno": 2003, "pagine": 365, "descrizione": "Uno specchio che restituisce un riflesso che non è il tuo.", "parole_chiave": ["ombra", "antico", "sinistro", "maledizione"], "rarita": "comune", "prezzo_acquisto": 8, "prezzo_vendita": 18, "reale": false}];
+
+/* ===================== CONFIG GENERI / METEO ===================== */
+const GENERI = ["Narrativa","Gialli","Fantasy","Saggistica","Infanzia","Romance","Horror"];
+const P_BASE = {Narrativa:.13, Gialli:.14, Fantasy:.12, Saggistica:.10, Infanzia:.13, Romance:.12, Horror:.09};
+const GENERE_STILE = {
+  Narrativa:  { colore:'#4A9B95', icona:'onda' },
+  Gialli:     { colore:'#3B4B6B', icona:'lente' },
+  Fantasy:    { colore:'#6B3FA0', icona:'stella' },
+  Saggistica: { colore:'#8C7A63', icona:'libro' },
+  Infanzia:   { colore:'#D4A72C', icona:'orsetto' },
+  Romance:    { colore:'#D98BA0', icona:'cuore' },
+  Horror:     { colore:'#241B2E', icona:'luna' },
+};
+function inizialiTitolo(titolo){
+  const t = titolo.replace(/^(L'|Il |La |Lo |Gli |I |Le )/i, '');
+  return t.slice(0,2).toUpperCase();
+}
+function svgCopertina(libro){
+  const stile = GENERE_STILE[libro.genere];
+  let icona = '';
+  switch(stile.icona){
+    case 'onda':    icona = `<path d="M4,20 Q9,15 14,20 T24,20" stroke="#fff" stroke-width="1.6" fill="none" opacity=".85"/>`; break;
+    case 'lente':   icona = `<circle cx="12" cy="16" r="5.5" fill="none" stroke="#fff" stroke-width="1.6" opacity=".85"/><line x1="16" y1="20" x2="21" y2="25" stroke="#fff" stroke-width="1.8" opacity=".85"/>`; break;
+    case 'stella':  icona = `<polygon points="14,9 16.2,14.8 22.5,15.1 17.6,19.1 19.3,25.2 14,21.7 8.7,25.2 10.4,19.1 5.5,15.1 11.8,14.8" fill="#fff" opacity=".85"/>`; break;
+    case 'libro':   icona = `<path d="M5,13 L13,11.5 L13,23 L5,24.5 Z" fill="#fff" opacity=".85"/><path d="M23,13 L15,11.5 L15,23 L23,24.5 Z" fill="#fff" opacity=".85"/>`; break;
+    case 'orsetto': icona = `<circle cx="14" cy="18" r="6" fill="#fff" opacity=".85"/><circle cx="9" cy="12" r="2.4" fill="#fff" opacity=".85"/><circle cx="19" cy="12" r="2.4" fill="#fff" opacity=".85"/>`; break;
+    case 'cuore':   icona = `<path d="M14,25 C4,17 6,9 14,13 C22,9 24,17 14,25 Z" fill="#fff" opacity=".85"/>`; break;
+    case 'luna':    icona = `<path d="M19,9 A9,9 0 1 0 19,27 A7,7 0 1 1 19,9 Z" fill="#fff" opacity=".85"/>`; break;
+  }
+  const iniziali = inizialiTitolo(libro.titolo);
+  return `<svg viewBox="0 0 28 40">
+    <rect x="0" y="0" width="28" height="40" rx="2" fill="${stile.colore}"/>
+    <rect x="1.5" y="1.5" width="25" height="37" rx="1.5" fill="none" stroke="#ffffff" stroke-opacity=".3" stroke-width="1"/>
+    ${icona}
+    <text x="14" y="35" font-family="Fraunces, serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle" opacity=".95">${iniziali}</text>
+  </svg>`;
+}
+
+/* ===================== STAGIONI ===================== */
+const GIORNI_PER_STAGIONE = 15;
+const STAGIONI = [
+  { id:"primavera", nome:"Primavera", emoji:"🌱", meteoPesi:{Sereno:1.3, Nuvoloso:1.0, Pioggia:1.1, Temporale:0.6, Nebbia:0.7} },
+  { id:"estate",    nome:"Estate",    emoji:"☀️", meteoPesi:{Sereno:1.7, Nuvoloso:0.8, Pioggia:0.3, Temporale:0.5, Nebbia:0.2} },
+  { id:"autunno",   nome:"Autunno",   emoji:"🍂", meteoPesi:{Sereno:0.7, Nuvoloso:1.3, Pioggia:1.4, Temporale:1.1, Nebbia:1.5} },
+  { id:"inverno",   nome:"Inverno",   emoji:"❄️", meteoPesi:{Sereno:0.5, Nuvoloso:1.1, Pioggia:0.9, Temporale:1.3, Nebbia:1.7} },
+];
+function stagioneCorrente(){
+  const indice = Math.floor((stato.giorno-1)/GIORNI_PER_STAGIONE) % STAGIONI.length;
+  return STAGIONI[indice];
+}
+function estraiMeteo(){
+  const pesi = stagioneCorrente().meteoPesi;
+  const totale = METEO_TIPI.reduce((s,m)=>s+pesi[m],0);
+  let r = Math.random()*totale;
+  for(const m of METEO_TIPI){ r -= pesi[m]; if(r<=0) return m; }
+  return METEO_TIPI[METEO_TIPI.length-1];
+}
+
+const METEO_TIPI = ["Sereno","Nuvoloso","Pioggia","Temporale","Nebbia"];
+const METEO_EFFETTI = {
+  Sereno:    {Infanzia:1.3, Romance:1.1},
+  Nuvoloso:  {},
+  Pioggia:   {Horror:1.4, Narrativa:1.15},
+  Temporale: {Horror:1.6, Fantasy:1.2, Narrativa:0.9, Gialli:0.9, Saggistica:0.9, Infanzia:0.9, Romance:0.9},
+  Nebbia:    {Gialli:1.3, Horror:1.2}
+};
+
+/* ===================== ARREDI ===================== */
+const ARREDI = [
+  { id:"lampada",   nome:"Lampada calda",      costo:25, emoji:"🕯️", bonus:{Romance:1.08, Narrativa:1.08} },
+  { id:"baule",     nome:"Baule antico",       costo:40, emoji:"🗝️", bonus:{Horror:1.10, Fantasy:1.10} },
+  { id:"angolino",  nome:"Angolo lettura bimbi", costo:35, emoji:"🧸", bonus:{Infanzia:1.10} },
+  { id:"scaffale2", nome:"Scaffale aggiuntivo", costo:60, emoji:"📚", bonus:{}, effettoSpeciale:"capacita" },
+  { id:"tendina",   nome:"Tendina a righe",     costo:15, emoji:"🎪", bonus:{}, decorativo:true },
+  { id:"gattotoppa", nome:"Gatto di pezza sul bancone", costo:12, emoji:"🐱", bonus:{}, decorativo:true },
+];
+
+/* ===================== EVENTI ===================== */
+const EVENTI = [
+  { id:"festa_estate",  stagione:"estate",    peso:2, testo:"🎉 Festa d'estate sul lungomare: più visitatori oggi!", effettoClienti:1.4 },
+  { id:"sagra_autunno", stagione:"autunno",   peso:2, testo:"🍁 Sagra d'autunno in piazza: paese in fermento.", effettoClienti:1.25 },
+  { id:"mercatino_inverno", stagione:"inverno", peso:1.5, testo:"🕯️ Mercatino d'inverno: chi vende un libro raro riceve un bonus.", bonusRaro:1 },
+  { id:"fioritura_primavera", stagione:"primavera", peso:1.5, testo:"🌸 Fioritura nei giardini: passeggiate in più per il paese.", effettoClienti:1.2 },
+  { id:"critico", stagione:null, peso:1, testo:"🧐 Un critico letterario è in visita: chi vende un libro raro riceve un bonus.", bonusRaro:1 },
+  { id:"nessuno", stagione:null, peso:4, testo:"", effettoClienti:1.0 },
+];
+function estraiEvento(){
+  const stagioneId = stagioneCorrente().id;
+  const disponibili = EVENTI.filter(e => e.stagione===null || e.stagione===stagioneId);
+  const totale = disponibili.reduce((s,e)=>s+e.peso,0);
+  let r = Math.random()*totale;
+  for(const e of disponibili){ r -= e.peso; if(r<=0) return e; }
+  return disponibili[disponibili.length-1];
+}
+
+/* ===================== LOCATION ===================== */
+const LOCATIONS = [
+  { id:"lungomare", nome:"Lungomare del Porto", parcheggio:3, bonus:{}, condizione: ()=>true, descrizioneSblocco:"sempre disponibile" },
+  { id:"mercato",   nome:"Piazza del Mercato",  parcheggio:4, bonus:{Saggistica:1.2}, condizione: ()=>stato.capitale>=250, descrizioneSblocco:"da 250€ di capitale" },
+  { id:"faro",      nome:"Faro Vecchio",        parcheggio:5, bonus:{Horror:1.3}, condizione: ()=>stato.capitale>=800, descrizioneSblocco:"da 800€ di capitale" },
+  { id:"giardini",  nome:"Giardini Comunali",   parcheggio:3, bonus:{Infanzia:1.15, Romance:1.1}, condizione: ()=>stato.missioni.elio.stage>=1, descrizioneSblocco:"completando la prima missione di Elio" },
+  { id:"stazione",  nome:"Stazione dei Treni",  parcheggio:4, bonus:{}, condizione: ()=>stato.capitale>=2000, descrizioneSblocco:"da 2000€ di capitale" },
+  { id:"collina",   nome:"Collina degli Ulivi", parcheggio:3, bonus:{Narrativa:1.2}, condizione: ()=>totaleMissioniCompletate()>=3, descrizioneSblocco:"completando 3 tappe di missione in totale" },
+];
+function totaleMissioniCompletate(){
+  return Object.values(stato.missioni).reduce((s,m)=>s+m.stage, 0);
+}
+function locationSbloccate(){ return LOCATIONS.filter(l => l.condizione() || stato.locationSbloccateStoriche.includes(l.id)); }
+
+/* ===================== NPC / MISSIONI ===================== */
+const NPC = {
+  ines: {
+    nome:"Nonna Ines", ruolo:"pescivendola", emoji:"👵",
+    generiPreferiti:["Gialli","Romance"],
+    missioni:[
+      { descrizione:"Vendi 5 libri di Gialli o Romance", target:5, ricompensa:20 },
+      { descrizione:"Vendi altri 12 libri di Gialli o Romance", target:12, ricompensa:35 },
+    ]
+  },
+  marco: {
+    nome:"Marco", ruolo:"pescatore", emoji:"🎣",
+    generiPreferiti:["Fantasy","Narrativa"],
+    missioni:[
+      { descrizione:"Vendi 6 libri di Fantasy o Narrativa", target:6, ricompensa:25 },
+      { descrizione:"Vendi altri 15 libri di Fantasy o Narrativa", target:15, ricompensa:45 },
+    ]
+  },
+  elio: {
+    nome:"Elio", ruolo:"giardiniere comunale", emoji:"🌿",
+    generiPreferiti:["Saggistica"],
+    missioni:[
+      { descrizione:"Vendi 5 libri di Saggistica", target:5, ricompensa:22 },
+      { descrizione:"Vendi altri 13 libri di Saggistica", target:13, ricompensa:40 },
+    ]
+  },
+  sara: {
+    nome:"Sara", ruolo:"maestra elementare", emoji:"🍎",
+    generiPreferiti:["Infanzia"],
+    missioni:[
+      { descrizione:"Vendi 5 libri per l'Infanzia", target:5, ricompensa:20 },
+      { descrizione:"Vendi altri 12 libri per l'Infanzia", target:12, ricompensa:38 },
+    ]
+  },
+  vittoria: {
+    nome:"Vittoria", ruolo:"pittrice eccentrica", emoji:"🎨",
+    generiPreferiti:["Horror"],
+    missioni:[
+      { descrizione:"Vendi 4 libri Horror/Mistero", target:4, ricompensa:24 },
+      { descrizione:"Vendi altri 10 libri Horror/Mistero", target:10, ricompensa:42 },
+    ]
+  },
+  donpaolo: {
+    nome:"Don Paolo", ruolo:"parroco", emoji:"⛪",
+    generiPreferiti:["Saggistica","Narrativa"],
+    missioni:[
+      { descrizione:"Vendi 6 libri di Saggistica o Narrativa", target:6, ricompensa:24 },
+      { descrizione:"Vendi altri 15 libri di Saggistica o Narrativa", target:15, ricompensa:44 },
+    ]
+  },
+  tommaso: {
+    nome:"Tommaso", ruolo:"studente fuori sede", emoji:"🎓",
+    generiPreferiti:["Saggistica","Gialli"],
+    missioni:[
+      { descrizione:"Vendi 5 libri di Saggistica o Gialli", target:5, ricompensa:20 },
+      { descrizione:"Vendi altri 13 libri di Saggistica o Gialli", target:13, ricompensa:38 },
+    ]
+  },
+  adele: {
+    nome:"Signora Adele", ruolo:"proprietaria del Faro Vecchio", emoji:"🏮",
+    generiPreferiti:["Narrativa","Horror"],
+    missioni:[
+      { descrizione:"Vendi 6 libri di Narrativa o Horror", target:6, ricompensa:26 },
+      { descrizione:"Vendi altri 15 libri di Narrativa o Horror", target:15, ricompensa:48 },
+    ]
+  }
+};
+
+/* ===================== DIALOGHI DI FINE MISSIONE ===================== */
+const DIALOGHI = {
+  ines: [
+    `"Proprio quello che cercavo! Con questi passo tutte le sere al bancone del pesce senza annoiarmi." Nonna Ines ti strizza l'occhio e infila un libro nella borsa della spesa.`,
+    `"Sai, tra questi gialli continuo a cercare una ricetta che mia madre teneva scritta sul retro di un romanzo, anni fa. Grazie a te forse la ritroverò." Ti offre un vasetto di alici sott'olio, "di casa".`,
+  ],
+  marco: [
+    `"Belle storie, quelle che mi hai consigliato. Il mare durante i turni lunghi si fa più corto." Marco arrotola una sigaretta e annuisce verso lo scaffale.`,
+    `"C'è un libro che cercavo da anni, apparteneva a mio padre prima che la barca lo perdesse in una mareggiata. Non è ancora questo, ma mi hai fatto sperare di ritrovarlo." Ti stringe la mano, ruvida di sale.`,
+  ],
+  elio: [
+    `"Con questi manuali il mio orto comunale avrà finalmente una sesta di rotazione decente." Elio si toglie i guanti da giardinaggio per stringerti la mano.`,
+    `"I Giardini Comunali sono da anni abbandonati a loro stessi. Con quello che ho imparato da questi libri, credo di poterli riportare in vita — e da oggi sono di nuovo aperti, grazie a te." I Giardini Comunali sono ora raggiungibili.`,
+  ],
+  sara: [
+    `"I miei alunni litigano già per chi legge questo per primo." Sara ride, stringendo i libri al petto come fossero preziosi.`,
+    `"Stiamo allestendo un angolo lettura in classe, e questi saranno il cuore della mensola. Ti porterò i disegni dei bambini, vedrai." Ti lascia un biglietto pieno di adesivi a forma di stelle.`,
+  ],
+  vittoria: [
+    `"Ottime atmosfere. Mi serviranno per la prossima tela." Vittoria osserva le copertine con occhio critico, poi le annusa, letteralmente.`,
+    `"Sto preparando una mostra ispirata a un libro che non trovo da nessuna parte — nessuno lo ricorda nemmeno. Questi però mi hanno dato l'idea giusta per iniziare comunque." Ti regala un piccolo schizzo a carboncino del tuo furgone.`,
+  ],
+  donpaolo: [
+    `"Utili per l'omelia di domenica, e non solo." Don Paolo li sfoglia con cura, come se ogni pagina fosse fragile.`,
+    `"L'archivio della parrocchia è un disordine di scatoloni da trent'anni. Con il tuo aiuto ho finalmente trovato il tempo — e i libri giusti — per rimetterlo in ordine." Ti dà le chiavi del vecchio ripostiglio, "non si sa mai".`,
+  ],
+  tommaso: [
+    `"Salvo! Letteralmente. La mia tesi era ferma da settimane." Tommaso, fuori sede e sempre di corsa, ti abbraccia senza chiedere permesso.`,
+    `"Ho consegnato la bibliografia oggi stesso. Il relatore ha storto il naso solo su due citazioni, il che per lui è quasi un complimento." Ti promette una copia della tesi rilegata, "quando sarà pubblicata, forse".`,
+  ],
+  adele: [
+    `"Il Faro Vecchio si merita libri così, non le solite guide turistiche." La Signora Adele osserva il mare da dietro i suoi occhiali spessi.`,
+    `"Da quando è spento, il faro raccoglie solo polvere e gabbiani. Ho deciso: lo riapro come piccola biblioteca, e tu sarai il primo fornitore ufficiale." Ti consegna una vecchia chiave di ottone, pesante e fredda.`,
+  ],
+};
+
+/* ===================== INTRODUZIONI NPC (primo incontro) ===================== */
+const INTRO = {
+  ines: `Una donna anziana con le mani segnate dal sale entra spingendo un carrello della spesa vuoto. "Sono Ines, vendo pesce giù al molo da quarant'anni. Mi han detto che qui si trovano libri gialli e qualche storia d'amore. È vero?"`,
+  marco: `Un uomo abbronzato, tuta da lavoro e odore di rete da pesca, si ferma a guardare lo scaffale con curiosità sospettosa. "Marco, faccio il pescatore. Nei turni lunghi mi serve qualcosa da leggere. Fantasy, avventure, roba così."`,
+  elio: `Un signore con le mani sporche di terra e un paio di forbici da potatura in tasca si avvicina piano. "Elio, curo i Giardini Comunali — quel che ne resta. Cerco manuali di botanica, se ne hai."`,
+  sara: `Una giovane donna con una borsa piena di quaderni corretti a metà si affaccia dal finestrino. "Sara, insegno alla scuola elementare. I miei alunni divorano i libri illustrati più veloce di quanto io riesca a comprarli."`,
+  vittoria: `Una donna con le mani macchiate di colori a olio osserva lo scaffale con occhio critico, quasi giudicante. "Vittoria. Dipingo. Ho bisogno di atmosfere inquietanti — horror, misteri, roba che mette addosso i brividi."`,
+  donpaolo: `Un uomo anziano in tonaca nera si ferma con le mani dietro la schiena. "Sono Don Paolo, della parrocchia qui vicino. Mi servirebbero testi di storia locale, e magari qualche buon romanzo per le sere d'inverno."`,
+  tommaso: `Un ragazzo con lo zaino sformato e gli occhi stanchi si avvicina di corsa. "Tommaso, studio fuori sede. Ho la tesi ferma da settimane — mi servono saggi, e qualche giallo per staccare la testa ogni tanto."`,
+  adele: `Una donna elegante, occhiali spessi, osserva il furgone con aria valutativa. "Sono la Signora Adele, il Faro Vecchio è mio — quel che ne rimane. Cerco narrativa e horror. Ho gusti particolari."`,
+};
+
+/* ===================== RITRATTI NPC (SVG procedurali) ===================== */
+const RITRATTI = {
+  ines: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#F4D9C6"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#8C3B3B"/>
+    <circle cx="30" cy="24" r="12" fill="#D9A87A"/>
+    <path d="M17,20 Q30,4 43,20 Q43,12 30,10 Q17,12 17,20 Z" fill="#C9622B"/></svg>`,
+  marco: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#BFE0DE"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#2F6F6B"/>
+    <circle cx="30" cy="24" r="12" fill="#C68A5C"/>
+    <path d="M18,19 Q30,8 42,19 L42,16 Q30,12 18,16 Z" fill="#1B4A47"/>
+    <path d="M30,15 Q40,15 42,19 L18,19 Q20,15 30,15 Z" fill="#1B4A47"/></svg>`,
+  elio: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#D7E4B4"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#5B7A3A"/>
+    <circle cx="30" cy="26" r="12" fill="#C68A5C"/>
+    <ellipse cx="30" cy="17" rx="18" ry="5" fill="#D4A72C"/>
+    <ellipse cx="30" cy="13" rx="10" ry="6" fill="#D4A72C"/></svg>`,
+  sara: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#FBE1A6"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#C97B4A"/>
+    <path d="M15,26 Q15,10 30,10 Q45,10 45,26 Q45,34 40,34 L40,22 Q40,15 30,15 Q20,15 20,22 L20,34 Q15,34 15,26 Z" fill="#4A3B2D"/>
+    <circle cx="30" cy="25" r="11" fill="#D9A87A"/></svg>`,
+  vittoria: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#E3C6E8"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#6B3FA0"/>
+    <circle cx="30" cy="25" r="12" fill="#E0B896"/>
+    <ellipse cx="26" cy="14" rx="16" ry="8" fill="#3D2B52"/></svg>`,
+  donpaolo: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#D9D2C4"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#2B2118"/>
+    <rect x="25" y="36" width="10" height="8" fill="#FFFFFF"/>
+    <circle cx="30" cy="23" r="11" fill="#D9A87A"/></svg>`,
+  tommaso: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#C9DDEE"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#204F4C"/>
+    <circle cx="30" cy="25" r="12" fill="#C68A5C"/>
+    <path d="M18,20 Q18,8 30,8 Q42,8 42,20 Q30,15 18,20 Z" fill="#C9622B"/></svg>`,
+  adele: `<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" fill="#E8C9B0"/>
+    <path d="M10,58 Q10,38 30,38 Q50,38 50,58 Z" fill="#7A5C3E"/>
+    <circle cx="30" cy="25" r="12" fill="#E0B896"/>
+    <ellipse cx="30" cy="15" rx="13" ry="9" fill="#C9C2B6"/>
+    <circle cx="25" cy="26" r="4.5" fill="none" stroke="#204F4C" stroke-width="1.5"/>
+    <circle cx="35" cy="26" r="4.5" fill="none" stroke="#204F4C" stroke-width="1.5"/>
+    <line x1="29.5" y1="26" x2="30.5" y2="26" stroke="#204F4C" stroke-width="1.5"/></svg>`,
+};
+
+/* ===================== STATO ===================== */
+let stato = null;
+
+function nuovaPartita(){
+  const missioniIniziali = {};
+  Object.keys(NPC).forEach(k=> missioniIniziali[k] = { stage:0, progresso:0, completata:false });
+  stato = { giorno:1, capitale:40, magazzino:{}, scaffali:{}, capacitaScaffale:3, meteoOggi:null,
+    locationAttuale:"lungomare", locationSbloccateStoriche:["lungomare"],
+    missioni: missioniIniziali,
+    arrediPosseduti: [], eventoOggi: null, mercatoOggi: [], finaleVisto: false, npcIncontrati: [] };
+  // dotazione iniziale: 2 copie di 3 libri comuni a genere
+  GENERI.forEach(g=>{
+    const libriGenere = CATALOGO.filter(l=>l.genere===g && l.rarita==="comune").slice(0,2);
+    libriGenere.forEach(l=>{ stato.magazzino[l.id] = 2; });
+  });
+  salvaStato();
+}
+function salvaStato(){ localStorage.setItem("libreria_molo_v1", JSON.stringify(stato)); }
+function caricaStato(){
+  let s;
+  try{ s = JSON.parse(localStorage.getItem("libreria_molo_v1")); }catch(e){ return null; }
+  if(!s) return null;
+  // migrazione: riempie eventuali campi mancanti da versioni precedenti del salvataggio
+  const difetti = {
+    locationAttuale: "lungomare",
+    locationSbloccateStoriche: ["lungomare"],
+    missioni: { ines: { stage:0, progresso:0, completata:false }, marco: { stage:0, progresso:0, completata:false } },
+    arrediPosseduti: [],
+    eventoOggi: null,
+    capacitaScaffale: 3,
+    mercatoOggi: [],
+    finaleVisto: false,
+    npcIncontrati: [],
+  };
+  Object.keys(difetti).forEach(k=>{
+    if(s[k] === undefined) s[k] = difetti[k];
+  });
+  Object.keys(NPC).forEach(k=>{
+    if(!s.missioni[k]) s.missioni[k] = { stage:0, progresso:0, completata:false };
+  });
+  return s;
+}
+
+function capacitaScaffaleAttuale(){
+  return stato.arrediPosseduti.includes("scaffale2") ? 5 : 3;
+}
+function bonusArredi(genere){
+  let m = 1.0;
+  ARREDI.forEach(a=>{
+    if(stato.arrediPosseduti.includes(a.id) && a.bonus[genere]) m *= a.bonus[genere];
+  });
+  return m;
+}
+function acquistaArredo(id){
+  const a = ARREDI.find(x=>x.id===id);
+  if(stato.arrediPosseduti.includes(id) || stato.capitale < a.costo) return;
+  stato.capitale -= a.costo;
+  stato.arrediPosseduti.push(id);
+  if(a.effettoSpeciale === "capacita") stato.capacitaScaffale = capacitaScaffaleAttuale();
+  salvaStato();
+  suonaClick();
+  schermataPianificazione();
+}
+
+/* ===================== MERCATO SERALE ===================== */
+function generaMercatoOggi(){
+  const scelti = [];
+  GENERI.forEach(g=>{
+    const libriGenere = CATALOGO.filter(l=>l.genere===g);
+    const shuffled = [...libriGenere].sort(()=>Math.random()-0.5);
+    const nOfferte = 2 + Math.floor(Math.random()*2); // 2-3 titoli per genere
+    shuffled.slice(0, nOfferte).forEach(l=>{
+      scelti.push({ id:l.id, disponibili: 1 + Math.floor(Math.random()*3) });
+    });
+  });
+  stato.mercatoOggi = scelti;
+}
+
+function schermataMercato(){
+  if(!stato.mercatoOggi.length) generaMercatoOggi();
+  const sch = document.getElementById("schermo");
+  sch.innerHTML = `
+    <div class="colonna" style="width:32%; border-right:1px solid var(--bordo);">
+      <h2>Mercatino dei libri usati</h2>
+      <p style="font-size:.85rem; color:var(--tenue);">Offerta diversa ogni sera. Compra ciò che ti serve per domani.</p>
+      <div class="card">💰 Capitale: <strong>${stato.capitale}€</strong></div>
+    </div>
+    <div class="colonna" style="flex:1;" id="colonna-mercato"></div>
+  `;
+  const col = document.getElementById("colonna-mercato");
+  col.innerHTML = `<div class="scaffale" id="scaffale-mercato"></div>`;
+  renderMercato();
+  document.getElementById("azioni").innerHTML = `<button class="btn corallo" onclick="giornoSuccessivo()">Vai a dormire →</button>`;
+}
+function renderMercato(){
+  const scaffale = document.getElementById("scaffale-mercato");
+  scaffale.innerHTML = "";
+  stato.mercatoOggi.forEach(voce=>{
+    if(voce.disponibili <= 0) return;
+    const l = libroById(voce.id);
+    const giaPossedute = stato.magazzino[l.id] || 0;
+    const div = document.createElement("div");
+    div.className = "libro-mini";
+    div.style.cursor = stato.capitale >= l.prezzo_acquisto ? "pointer" : "default";
+    div.style.opacity = stato.capitale >= l.prezzo_acquisto ? "1" : ".5";
+    div.innerHTML = contenutoCardLibro(l, `<span>${voce.disponibili} disp.${giaPossedute ? ` · hai già ${giaPossedute}` : ""}</span><strong>${l.prezzo_acquisto}€</strong>`);
+    div.onclick = ()=>{
+      if(stato.capitale < l.prezzo_acquisto) return;
+      stato.capitale -= l.prezzo_acquisto;
+      stato.magazzino[l.id] = (stato.magazzino[l.id]||0) + 1;
+      voce.disponibili -= 1;
+      aggiornaHUD();
+      salvaStato();
+      suonaClick();
+      renderMercato();
+    };
+    scaffale.appendChild(div);
+  });
+}
+
+function libroById(id){ return CATALOGO.find(l=>l.id===id); }
+function libriInMagazzino(genere){
+  return Object.keys(stato.magazzino)
+    .filter(id => stato.magazzino[id] > 0 && libroById(id).genere === genere)
+    .map(id => ({...libroById(id), qta: stato.magazzino[id]}));
+}
+function contenutoCardLibroCompatto(l){
+  return `<div class="riga-libro">
+    <div class="copertina-libro">${svgCopertina(l)}</div>
+    <div class="testo-libro">
+      <div class="libro-genere">${l.genere}</div>
+      <div class="libro-titolo">${l.titolo}</div>
+      <div class="libro-meta">${l.autore}</div>
+    </div>
+  </div>`;
+}
+function contenutoCardLibro(l, footerHtml){
+  return `<div class="riga-libro">
+    <div class="copertina-libro">${svgCopertina(l)}</div>
+    <div class="testo-libro">
+      <div class="libro-genere">${l.genere} · ${l.rarita.replace('_',' ')}</div>
+      <div class="libro-titolo">${l.titolo}</div>
+      <div class="libro-meta">${l.autore} · ${l.anno} · ${l.pagine} pag.</div>
+      <div class="libro-sinossi">${l.descrizione}</div>
+      ${footerHtml ? `<div class="libro-footer">${footerHtml}</div>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ===================== CONFERMA (overlay custom, non usa confirm() nativo) ===================== */
+function chiediConferma(messaggio, onSi){
+  const overlay = document.createElement("div");
+  overlay.className = "overlay-conferma";
+  overlay.innerHTML = `
+    <div class="box">
+      <p>${messaggio}</p>
+      <div class="riga-btn">
+        <button class="btn secondario" id="conferma-no">Annulla</button>
+        <button class="btn corallo" id="conferma-si">Conferma</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById("conferma-no").onclick = ()=> overlay.remove();
+  document.getElementById("conferma-si").onclick = ()=>{ overlay.remove(); onSi(); };
+}
+
+/* ===================== SCENA LOCATION (SVG procedurale) ===================== */
+function paletteStagione(stagioneId){
+  switch(stagioneId){
+    case 'estate':  return { cieloA:'#8FD3E8', cieloB:'#FDECC8', mare:'#2F8F8A' };
+    case 'autunno': return { cieloA:'#F2B66D', cieloB:'#F7DDB0', mare:'#3C7570' };
+    case 'inverno': return { cieloA:'#C9D8DE', cieloB:'#EDF2F2', mare:'#4A7C82' };
+    default:        return { cieloA:'#BFE3D0', cieloB:'#FBEFD9', mare:'#3A9B92' }; // primavera
+  }
+}
+function svgSfondoLocation(locId){
+  const pal = paletteStagione(stagioneCorrente().id);
+  const meteo = stato.meteoOggi;
+  const cielo = `<defs><linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${pal.cieloA}"/>
+      <stop offset="100%" stop-color="${pal.cieloB}"/>
+    </linearGradient></defs>
+    <rect x="0" y="0" width="400" height="140" fill="url(#cielo)"/>`;
+
+  let corpo = '';
+  switch(locId){
+    case 'lungomare':
+      corpo = `
+        <rect x="0" y="95" width="400" height="45" fill="${pal.mare}"/>
+        <g fill="#E8D9BE">
+          <rect x="20" y="60" width="34" height="35" rx="2"/>
+          <rect x="60" y="66" width="30" height="29" rx="2"/>
+          <rect x="96" y="58" width="34" height="37" rx="2"/>
+        </g>
+        <g fill="#B85C3E">
+          <polygon points="20,60 37,45 54,60"/>
+          <polygon points="60,66 75,52 90,66"/>
+          <polygon points="96,58 113,42 130,58"/>
+        </g>
+        <g fill="#204F4C">
+          <polygon points="250,100 262,80 274,100"/><rect x="258" y="98" width="4" height="14"/>
+          <polygon points="300,105 310,90 320,105"/><rect x="306" y="103" width="4" height="12"/>
+        </g>`;
+      break;
+    case 'mercato':
+      corpo = `
+        <rect x="0" y="105" width="400" height="35" fill="#DCC9A0"/>
+        <rect x="30" y="70" width="55" height="35" fill="#E8D9BE"/><polygon points="25,70 60,50 95,70" fill="#C9622B"/>
+        <rect x="120" y="75" width="55" height="30" fill="#F2E8D5"/><polygon points="115,75 150,58 185,75" fill="#D4A72C"/>
+        <rect x="210" y="68" width="55" height="37" fill="#E8D9BE"/><polygon points="205,68 240,48 275,68" fill="#2F6F6B"/>
+        <rect x="300" y="74" width="55" height="31" fill="#F2E8D5"/><polygon points="295,74 330,56 365,74" fill="#C9622B"/>`;
+      break;
+    case 'faro':
+      corpo = `
+        <rect x="0" y="100" width="400" height="40" fill="${pal.mare}"/>
+        <polygon points="0,100 400,95 400,110 0,105" fill="#5B4636"/>
+        <rect x="185" y="35" width="30" height="65" fill="#F2E8D5" stroke="#B85C3E" stroke-width="2"/>
+        <rect x="185" y="35" width="30" height="10" fill="#C9622B"/>
+        <rect x="185" y="55" width="30" height="10" fill="#C9622B"/>
+        <rect x="185" y="75" width="30" height="10" fill="#C9622B"/>
+        <polygon points="180,35 220,35 200,15" fill="#204F4C"/>
+        <circle cx="200" cy="26" r="4" fill="#FFE9A8"/>`;
+      break;
+    case 'giardini':
+      corpo = `
+        <rect x="0" y="110" width="400" height="30" fill="#8FAE72"/>
+        <g fill="#4E7C4A">
+          <ellipse cx="60" cy="95" rx="35" ry="22"/><ellipse cx="140" cy="100" rx="40" ry="25"/>
+          <ellipse cx="260" cy="92" rx="38" ry="24"/><ellipse cx="340" cy="98" rx="32" ry="20"/>
+        </g>
+        <g fill="#6B9B5E">
+          <circle cx="90" cy="85" r="16"/><circle cx="200" cy="80" r="18"/><circle cx="310" cy="83" r="15"/>
+        </g>`;
+      break;
+    case 'stazione':
+      corpo = `
+        <rect x="0" y="115" width="400" height="25" fill="#B7A98C"/>
+        <rect x="0" y="112" width="400" height="4" fill="#6B6155"/>
+        <g stroke="#6B6155" stroke-width="2">
+          <line x1="10" y1="120" x2="10" y2="140"/><line x1="50" y1="120" x2="50" y2="140"/>
+          <line x1="90" y1="120" x2="90" y2="140"/><line x1="130" y1="120" x2="130" y2="140"/>
+        </g>
+        <rect x="150" y="70" width="180" height="35" rx="6" fill="#2F6F6B"/>
+        <rect x="165" y="80" width="20" height="15" fill="#F2E8D5"/>
+        <rect x="195" y="80" width="20" height="15" fill="#F2E8D5"/>
+        <rect x="225" y="80" width="20" height="15" fill="#F2E8D5"/>`;
+      break;
+    case 'collina':
+      corpo = `
+        <path d="M0,110 Q100,80 200,105 T400,95 V140 H0 Z" fill="#A8B36B"/>
+        <path d="M0,120 Q120,100 250,118 T400,112 V140 H0 Z" fill="#8FA05A"/>
+        <g fill="#6B8F52">
+          <circle cx="80" cy="100" r="10"/><rect x="78" y="108" width="4" height="8" fill="#7A5C3E"/>
+          <circle cx="160" cy="95" r="11"/><rect x="158" y="104" width="4" height="9" fill="#7A5C3E"/>
+          <circle cx="260" cy="102" r="10"/><rect x="258" y="110" width="4" height="8" fill="#7A5C3E"/>
+          <circle cx="330" cy="97" r="11"/><rect x="328" y="106" width="4" height="9" fill="#7A5C3E"/>
+        </g>`;
+      break;
+  }
+
+  let overlay = '';
+  if(meteo === 'Nebbia')        overlay = `<rect width="400" height="140" fill="#DCE4E2" opacity="0.55"/>`;
+  else if(meteo === 'Temporale') overlay = `<rect width="400" height="140" fill="#2A3A42" opacity="0.4"/>`;
+  else if(meteo === 'Pioggia')   overlay = `<rect width="400" height="140" fill="#3A5A63" opacity="0.18"/>`;
+  else if(meteo === 'Nuvoloso')  overlay = `<rect width="400" height="140" fill="#B9C2C4" opacity="0.22"/>`;
+
+  const pioggiaLinee = (meteo==='Pioggia'||meteo==='Temporale') ? `
+    <g stroke="#DCEAF0" stroke-width="1.4" opacity="0.6">
+      <line x1="30" y1="0" x2="20" y2="30" class="riga-pioggia"/>
+      <line x1="90" y1="10" x2="80" y2="40" class="riga-pioggia" style="animation-delay:.3s"/>
+      <line x1="150" y1="0" x2="140" y2="30" class="riga-pioggia" style="animation-delay:.6s"/>
+      <line x1="220" y1="10" x2="210" y2="40" class="riga-pioggia" style="animation-delay:.15s"/>
+      <line x1="280" y1="0" x2="270" y2="30" class="riga-pioggia" style="animation-delay:.45s"/>
+      <line x1="340" y1="10" x2="330" y2="40" class="riga-pioggia" style="animation-delay:.75s"/>
+    </g>` : '';
+
+  const particelleStagione = generaParticelleStagione(meteo);
+
+  return `<svg viewBox="0 0 400 140" preserveAspectRatio="xMidYMid slice">${cielo}${corpo}${overlay}${pioggiaLinee}${particelleStagione}</svg>`;
+}
+
+function generaParticelleStagione(meteo){
+  if(meteo!=='Sereno' && meteo!=='Nuvoloso') return '';
+  const stagioneId = stagioneCorrente().id;
+  let tipo, colori;
+  if(stagioneId==='primavera'){ tipo='primavera'; colori=['#F3C6D9','#FBE1EA','#E8A9C4']; }
+  else if(stagioneId==='autunno'){ tipo='autunno'; colori=['#C9622B','#D4A72C','#8C4A2B']; }
+  else return '';
+  let out = '';
+  for(let i=0;i<6;i++){
+    const x = 20 + Math.random()*360;
+    const delay = (Math.random()*4).toFixed(2);
+    const durata = (3.5+Math.random()*2.5).toFixed(2);
+    const colore = colori[i%colori.length];
+    const forma = tipo==='primavera'
+      ? `<ellipse cx="0" cy="0" rx="3.5" ry="2" fill="${colore}"/>`
+      : `<path d="M0,-3 Q3,0 0,3 Q-3,0 0,-3 Z" fill="${colore}"/>`;
+    out += `<g class="particella-${tipo}" style="animation-delay:${delay}s; animation-duration:${durata}s;" transform="translate(${x},0)">${forma}</g>`;
+  }
+  return `<g>${out}</g>`;
+}
+
+function svgFurgone(){
+  const has = id => stato.arrediPosseduti.includes(id);
+  let decorazioni = '';
+  if(has('tendina')){
+    decorazioni += `<path d="M30,48 q5,6 10,0 q5,6 10,0 q5,6 10,0 q5,6 10,0 q5,6 10,0 q5,6 10,0" fill="none" stroke="#C9622B" stroke-width="3"/>`;
+  }
+  if(has('lampada')){
+    decorazioni += `<line x1="65" y1="48" x2="65" y2="58" stroke="#8C7A63" stroke-width="1.5"/><circle cx="65" cy="61" r="5" fill="#D4A72C"/>`;
+  }
+  if(has('scaffale2')){
+    decorazioni += `<line x1="34" y1="70" x2="96" y2="70" stroke="#8C7A63" stroke-width="2"/>
+      <rect x="38" y="60" width="6" height="10" fill="#C9622B"/><rect x="46" y="58" width="6" height="12" fill="#2F6F6B"/><rect x="54" y="61" width="6" height="9" fill="#D4A72C"/>`;
+  }
+  if(has('angolino')){
+    decorazioni += `<circle cx="88" cy="72" r="6" fill="#B85C3E"/><circle cx="84" cy="68" r="2.5" fill="#B85C3E"/><circle cx="92" cy="68" r="2.5" fill="#B85C3E"/>`;
+  }
+  if(has('baule')){
+    decorazioni += `<rect x="118" y="72" width="22" height="14" rx="2" fill="#7A5C3E" stroke="#5B4636" stroke-width="1.5"/><line x1="118" y1="79" x2="140" y2="79" stroke="#5B4636" stroke-width="1.5"/>`;
+  }
+  if(has('gattotoppa')){
+    decorazioni += `<ellipse cx="140" cy="38" rx="10" ry="6" fill="#2B2118"/><polygon points="132,34 135,26 139,34" fill="#2B2118"/><polygon points="145,34 148,26 151,34" fill="#2B2118"/><line x1="150" y1="40" x2="158" y2="36" stroke="#2B2118" stroke-width="1.5"/>`;
+  }
+  return `<svg viewBox="0 0 220 110" preserveAspectRatio="xMidYMid meet">
+    <rect x="5" y="82" width="170" height="6" fill="#2B2118" rx="3"/>
+    <path d="M170,50 Q170,45 176,45 L196,45 Q205,45 205,55 L205,75 Q205,85 195,85 L170,85 Z" fill="#2F6F6B"/>
+    <rect x="176" y="52" width="22" height="18" rx="3" fill="#BEE3E0"/>
+    <rect x="10" y="40" width="160" height="45" rx="8" fill="#C9622B"/>
+    <rect x="30" y="48" width="70" height="30" rx="4" fill="#BEE3E0"/>
+    <line x1="115" y1="48" x2="115" y2="85" stroke="#204F4C" stroke-width="1.5"/>
+    ${decorazioni}
+    <circle cx="45" cy="90" r="14" fill="#2B2118"/><circle cx="45" cy="90" r="6" fill="#8C7A63"/>
+    <circle cx="150" cy="90" r="14" fill="#2B2118"/><circle cx="150" cy="90" r="6" fill="#8C7A63"/>
+  </svg>`;
+}
+
+/* ===================== MENU PRINCIPALE / OPZIONI ===================== */
+function entraNelGioco(){
+  document.getElementById("btn-menu").style.display = "inline-block";
+  document.getElementById("hud-giorno-wrap").style.opacity = "1";
+  document.getElementById("hud-capitale-wrap").style.opacity = "1";
+  aggiornaHUD();
+}
+function schermataMenu(){
+  document.getElementById("btn-menu").style.display = "none";
+  const salvataggioEsiste = !!localStorage.getItem("libreria_molo_v1");
+  const sch = document.getElementById("schermo");
+  sch.innerHTML = `
+    <div class="colonna" style="flex:1; max-width:420px; margin:0 auto; height:100%; overflow-y:auto; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:14px;">
+      <h1 style="font-size:1.8rem;">📖 La Libreria sul Molo</h1>
+      <p style="color:var(--tenue); font-size:.9rem; max-width:320px;">Una libreria dell'usato ambulante, un furgoncino, e un paese di mare pieno di storie da consigliare.</p>
+      <div style="display:flex; flex-direction:column; gap:10px; width:220px;">
+        ${salvataggioEsiste ? `<button class="btn corallo" onclick="continuaPartita()">Continua</button>` : ""}
+        <button class="btn ${salvataggioEsiste ? 'secondario' : 'corallo'}" onclick="nuovaPartitaDaMenu()">Nuova partita</button>
+        <button class="btn secondario" onclick="schermataOpzioni()">Opzioni</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("azioni").innerHTML = "";
+}
+function continuaPartita(){
+  stato = caricaStato();
+  entraNelGioco();
+  schermataPianificazione();
+}
+function nuovaPartitaDaMenu(){
+  const salvataggioEsiste = !!localStorage.getItem("libreria_molo_v1");
+  const avvia = ()=>{
+    localStorage.removeItem("libreria_molo_v1");
+    nuovaPartita();
+    mostraIntroCinematica(()=>{
+      entraNelGioco();
+      schermataPianificazione();
+    });
+  };
+  if(salvataggioEsiste){
+    chiediConferma("Iniziare una nuova partita cancellerà quella attuale. Continuare?", avvia);
+  } else {
+    avvia();
+  }
+}
+
+/* ===================== INTRO CINEMATICA ===================== */
+function mostraIntroCinematica(callback){
+  document.getElementById("btn-menu").style.display = "none";
+  const sch = document.getElementById("schermo");
+  const azioniEl = document.getElementById("azioni");
+  azioniEl.style.display = "none";
+  const callbackConRipristino = ()=>{
+    azioniEl.style.display = "";
+    callback();
+  };
+  const lontano = `<svg viewBox="0 0 1600 300" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
+      <rect width="1600" height="300" fill="#BFE3D0"/>
+      <path d="M0,210 Q100,170 200,210 T400,210 T600,210 T800,210 T1000,210 T1200,210 T1400,210 T1600,210 V300 H0 Z" fill="#8FAE72" opacity=".65"/>
+      <circle cx="1300" cy="60" r="34" fill="#FBEFD9" opacity=".9"/>
+    </svg>`;
+  const vicino = `<svg viewBox="0 0 1800 300" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
+      <rect y="228" width="1800" height="72" fill="#7A9B5E"/>
+      <line x1="0" y1="246" x2="1800" y2="246" stroke="#8C7A63" stroke-width="2"/>
+      <g stroke="#8C7A63" stroke-width="4">
+        <line x1="150" y1="234" x2="150" y2="260"/><line x1="380" y1="234" x2="380" y2="260"/>
+        <line x1="610" y1="234" x2="610" y2="260"/><line x1="840" y1="234" x2="840" y2="260"/>
+        <line x1="1070" y1="234" x2="1070" y2="260"/><line x1="1300" y1="234" x2="1300" y2="260"/>
+        <line x1="1530" y1="234" x2="1530" y2="260"/><line x1="1760" y1="234" x2="1760" y2="260"/>
+      </g>
+      <g fill="#4E7C4A">
+        <ellipse cx="80" cy="216" rx="30" ry="18"/><ellipse cx="330" cy="222" rx="26" ry="15"/>
+        <ellipse cx="580" cy="214" rx="32" ry="19"/><ellipse cx="850" cy="220" rx="28" ry="16"/>
+        <ellipse cx="1120" cy="215" rx="30" ry="18"/><ellipse cx="1400" cy="219" rx="27" ry="16"/>
+        <ellipse cx="1660" cy="216" rx="31" ry="18"/>
+      </g>
+    </svg>`;
+  const autoRoulotte = `<svg viewBox="0 0 260 100">
+      <rect x="10" y="35" width="90" height="45" rx="8" fill="#F2E8D5" stroke="#B85C3E" stroke-width="2"/>
+      <rect x="25" y="45" width="25" height="18" rx="2" fill="#4A9B95"/>
+      <circle cx="30" cy="82" r="10" fill="#2B2118"/><circle cx="30" cy="82" r="4" fill="#8C7A63"/>
+      <circle cx="80" cy="82" r="10" fill="#2B2118"/><circle cx="80" cy="82" r="4" fill="#8C7A63"/>
+      <line x1="100" y1="70" x2="120" y2="70" stroke="#5B4636" stroke-width="3"/>
+      <path d="M120,60 L135,60 L145,45 L175,45 Q185,45 188,55 L200,55 L200,80 L120,80 Z" fill="#C9622B"/>
+      <rect x="150" y="50" width="22" height="14" rx="2" fill="#BEE3E0"/>
+      <circle cx="140" cy="82" r="10" fill="#2B2118"/><circle cx="140" cy="82" r="4" fill="#8C7A63"/>
+      <circle cx="188" cy="82" r="10" fill="#2B2118"/><circle cx="188" cy="82" r="4" fill="#8C7A63"/>
+    </svg>`;
+
+  sch.innerHTML = `
+    <div class="intro-scena" style="flex:1;">
+      <div class="strato-lontano" style="position:absolute; bottom:0; left:0; height:62%;">${lontano}</div>
+      <div class="strato-vicino" style="position:absolute; bottom:0; left:0; height:46%;">${vicino}</div>
+      <div class="auto-roulotte">${autoRoulotte}</div>
+      <button class="intro-salta" onclick="saltaIntro()">Salta ⏭</button>
+    </div>
+  `;
+  document.getElementById("azioni").innerHTML = "";
+  const timeoutId = setTimeout(callbackConRipristino, 11000);
+  window._saltaIntroCallback = ()=>{ clearTimeout(timeoutId); callbackConRipristino(); };
+}
+function saltaIntro(){
+  if(window._saltaIntroCallback) window._saltaIntroCallback();
+}
+function schermataOpzioni(){
+  document.getElementById("btn-menu").style.display = "none";
+  const sch = document.getElementById("schermo");
+  sch.innerHTML = `
+    <div class="colonna" style="flex:1; max-width:380px; margin:0 auto; height:100%; overflow-y:auto; display:flex; flex-direction:column; justify-content:center; gap:12px;">
+      <h2>Opzioni</h2>
+      <button class="btn secondario" onclick="toggleAudio()">${audioAbilitato ? '🔊 Effetti sonori: attivi' : '🔇 Effetti sonori: disattivi'}</button>
+      <button class="btn secondario" onclick="toggleFullscreen()">⛶ Schermo intero</button>
+      <button class="btn secondario" onclick="cancellaSalvataggio()">🗑️ Cancella salvataggio</button>
+      <button class="btn" onclick="schermataMenu()">← Torna al menu</button>
+    </div>
+  `;
+  document.getElementById("azioni").innerHTML = "";
+}
+function cancellaSalvataggio(){
+  chiediConferma("Cancellare definitivamente il salvataggio?", ()=>{
+    localStorage.removeItem("libreria_molo_v1");
+    stato = null;
+    schermataMenu();
+  });
+}
+
+/* ===================== HUD ===================== */
+function aggiornaHUD(){
+  document.getElementById("hud-giorno").textContent = stato.giorno;
+  document.getElementById("hud-capitale").textContent = stato.capitale;
+}
+
+/* ===================== SCHERMATA: PIANIFICAZIONE ===================== */
+function schermataPianificazione(){
+  stato.capacitaScaffale = capacitaScaffaleAttuale();
+  if(!stato.meteoOggi) stato.meteoOggi = estraiMeteo();
+  if(!stato.eventoOggi) stato.eventoOggi = estraiEvento();
+  const sch = document.getElementById("schermo");
+  const effetti = METEO_EFFETTI[stato.meteoOggi];
+  const effettiTesto = Object.keys(effetti).length
+    ? Object.entries(effetti).map(([g,m])=>`${g} ${m>1?"↑":"↓"}${Math.round(Math.abs(m-1)*100)}%`).join(" · ")
+    : "nessun effetto particolare";
+  const eventoTesto = stato.eventoOggi.testo ? `<br>${stato.eventoOggi.testo}` : "";
+
+  const sbloccate = locationSbloccate();
+  const locButtons = sbloccate.map(l => `
+    <button class="btn ${l.id===stato.locationAttuale ? '' : 'secondario'}" style="margin:3px;"
+      onclick="sceglieLocation('${l.id}')">${l.nome}</button>
+  `).join("");
+  const prossimaBloccata = LOCATIONS.find(l => !sbloccate.includes(l));
+  const teaser = prossimaBloccata ? `<div class="genere-sub" style="margin-top:6px;">🔒 ${prossimaBloccata.nome}: ${prossimaBloccata.descrizioneSblocco}</div>` : "";
+
+  const missioniAttive = Object.keys(stato.missioni).filter(id=>stato.npcIncontrati.includes(id) && !stato.missioni[id].completata).length;
+  const missioniCompletate = Object.keys(stato.missioni).filter(id=>stato.npcIncontrati.includes(id) && stato.missioni[id].completata).length;
+  const daScoprire = Object.keys(NPC).length - stato.npcIncontrati.length;
+  const missCard = `<div class="card">📔 <strong>Missioni</strong>: ${missioniAttive} attive · ${missioniCompletate} completate
+    ${daScoprire ? `<br><span class="genere-sub">${daScoprire} personagg${daScoprire===1?'io':'i'} ancora da conoscere</span>` : ""}</div>`;
+
+  sch.innerHTML = `
+    <div class="colonna" style="width:38%; border-right:1px solid var(--bordo);">
+      <div class="scena-location">${svgSfondoLocation(stato.locationAttuale)}</div>
+      <h2>${stagioneCorrente().emoji} ${stagioneCorrente().nome} — Giorno ${stato.giorno}</h2>
+      <div class="bollettino">
+        ☀️ Meteo: <strong>${stato.meteoOggi}</strong><br>
+        ${effettiTesto}${eventoTesto}
+      </div>
+      <div class="card" style="margin-top:12px;">
+        📍 Location: <strong>${LOCATIONS.find(l=>l.id===stato.locationAttuale).nome}</strong><br>
+        <span style="font-size:.8rem; color:var(--tenue);">costo giornaliero: ${LOCATIONS.find(l=>l.id===stato.locationAttuale).parcheggio}€</span><br>
+        <div style="margin-top:6px;">${locButtons}</div>
+        ${teaser}
+      </div>
+      ${missCard}
+      <div class="scena-furgone">${svgFurgone()}</div>
+      <button class="btn secondario" style="margin-top:8px; font-size:.8rem;" onclick="schermataDiario()">📔 Diario di bordo</button>
+      <button class="btn secondario" style="margin-top:6px; font-size:.8rem;" onclick="schermataInventario()">📚 Inventario</button>
+      <p style="font-size:.85rem; color:var(--tenue); margin-top:10px;">Scegli quanti libri esporre per genere (max ${stato.capacitaScaffale} per genere, in base a ciò che hai in magazzino).</p>
+    </div>
+    <div class="colonna" style="flex:1;" id="colonna-generi"></div>
+  `;
+
+  const col = document.getElementById("colonna-generi");
+  GENERI.forEach(g=>{
+    const disponibili = libriInMagazzino(g).reduce((s,l)=>s+l.qta,0);
+    if(stato.scaffali[g] === undefined) stato.scaffali[g] = Math.min(disponibili, stato.capacitaScaffale);
+    const riga = document.createElement("div");
+    riga.className = "genere-riga";
+    riga.innerHTML = `
+      <div>
+        <div class="genere-nome">${g}</div>
+        <div class="genere-sub">${disponibili} disponibili in magazzino</div>
+      </div>
+      <div class="stepper">
+        <button onclick="cambiaScaffale('${g}', -1)">−</button>
+        <div class="val" id="val-${g}">${stato.scaffali[g]}</div>
+        <button onclick="cambiaScaffale('${g}', 1)">+</button>
+      </div>
+    `;
+    col.appendChild(riga);
+  });
+
+  const arrediHtml = ARREDI.map(a=>{
+    const posseduto = stato.arrediPosseduti.includes(a.id);
+    const tag = a.decorativo ? " · decorativo" : "";
+    return `<button class="btn ${posseduto ? 'secondario' : ''}" style="margin:3px; font-size:.8rem;"
+      onclick="acquistaArredo('${a.id}')" ${posseduto || stato.capitale<a.costo ? 'disabled':''}>
+      ${a.emoji} ${a.nome}${tag} ${posseduto ? '✓' : `(${a.costo}€)`}
+    </button>`;
+  }).join("");
+  const arrediBox = document.createElement("div");
+  arrediBox.innerHTML = `<h3 style="margin-top:16px; font-size:1rem;">Bottega arredi</h3><div>${arrediHtml}</div>`;
+  col.appendChild(arrediBox);
+
+  document.getElementById("azioni").innerHTML = `
+    <button class="btn corallo" onclick="apriNegozio()">Apri il negozio →</button>
+  `;
+  aggiornaHUD();
+}
+/* ===================== SCHERMATA: DIARIO DI BORDO ===================== */
+function schermataDiario(){
+  const sch = document.getElementById("schermo");
+  const incontrati = Object.keys(NPC).filter(id=>stato.npcIncontrati.includes(id));
+  const daScoprire = Object.keys(NPC).length - incontrati.length;
+  const righe = incontrati.map(npcId=>{
+    const npc = NPC[npcId];
+    const s = stato.missioni[npcId];
+    const completataDelTutto = s.completata && s.stage >= npc.missioni.length;
+    const corpo = completataDelTutto
+      ? `<span class="genere-sub">Tutte le missioni completate.</span>`
+      : (() => {
+          const m = npc.missioni[s.stage];
+          return `Tappa ${s.stage+1}/${npc.missioni.length}: ${m.descrizione}<br>
+            <span style="font-weight:800;">${s.progresso}/${m.target}</span>`;
+        })();
+    return `<div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="ritratto-npc" style="width:34px; height:34px;">${RITRATTI[npcId]}</div>
+          <strong>${npc.nome}</strong>
+        </div>
+        <span class="genere-sub">${npc.ruolo}</span>
+      </div>
+      <div style="margin-top:4px; font-size:.9rem;">${corpo}</div>
+    </div>`;
+  }).join("") + (daScoprire ? `<div class="card" style="text-align:center; color:var(--tenue);">
+      ❓ ${daScoprire} altr${daScoprire===1?'a persona':'e persone'} di Bookstonbury non ancora incontrat${daScoprire===1?'a':'e'}.
+    </div>` : "");
+
+  sch.innerHTML = `
+    <div class="colonna" style="flex:1; max-width:480px; margin:0 auto; height:100%; overflow-y:auto;">
+      <h2>📔 Diario di bordo</h2>
+      <p style="font-size:.85rem; color:var(--tenue);">Le persone di Bookstonbury e cosa stanno aspettando da te.</p>
+      ${righe}
+    </div>
+  `;
+  document.getElementById("azioni").innerHTML = `<button class="btn secondario" onclick="schermataPianificazione()">← Torna alla pianificazione</button>`;
+}
+
+/* ===================== SCHERMATA: INVENTARIO ===================== */
+let filtroInventario = "Tutti";
+function schermataInventario(){
+  const sch = document.getElementById("schermo");
+  const tuttiIGeneri = ["Tutti", ...GENERI];
+  const tabHtml = tuttiIGeneri.map(g=>`
+    <button class="btn ${filtroInventario===g ? '' : 'secondario'}" style="margin:2px; font-size:.75rem; padding:7px 12px;"
+      onclick="filtroInventario='${g}'; schermataInventario();">${g}</button>
+  `).join("");
+
+  const libriPosseduti = Object.keys(stato.magazzino)
+    .filter(id => stato.magazzino[id] > 0)
+    .map(id => ({...libroById(id), qta: stato.magazzino[id]}))
+    .filter(l => filtroInventario==="Tutti" || l.genere===filtroInventario)
+    .sort((a,b)=> a.titolo.localeCompare(b.titolo));
+
+  sch.innerHTML = `
+    <div class="colonna" style="flex:1; margin:0 auto; height:100%; overflow-y:auto; max-width:640px;">
+      <h2>📚 Inventario</h2>
+      <p style="font-size:.85rem; color:var(--tenue);">${libriPosseduti.length} titoli in magazzino.</p>
+      <div style="margin-bottom:10px;">${tabHtml}</div>
+      <div class="scaffale" id="scaffale-inventario"></div>
+    </div>
+  `;
+  const scaffale = document.getElementById("scaffale-inventario");
+  if(!libriPosseduti.length){
+    scaffale.innerHTML = `<p class="genere-sub">Nessun libro di questo genere in magazzino.</p>`;
+  }
+  libriPosseduti.forEach(l=>{
+    const div = document.createElement("div");
+    div.className = "libro-mini";
+    div.style.cursor = "default";
+    div.innerHTML = contenutoCardLibro(l, `<span>In magazzino: ${l.qta}</span><strong>vendita ${l.prezzo_vendita}€</strong>`);
+    scaffale.appendChild(div);
+  });
+  document.getElementById("azioni").innerHTML = `<button class="btn secondario" onclick="schermataPianificazione()">← Torna alla pianificazione</button>`;
+}
+
+function mostraDettaglioLibro(l){
+  const overlay = document.createElement("div");
+  overlay.className = "overlay-conferma";
+  overlay.innerHTML = `
+    <div class="box" style="max-width:340px; text-align:left;">
+      <div class="libro-genere">${l.genere} · ${l.rarita.replace('_',' ')}</div>
+      <h3 style="margin:4px 0 2px 0;">${l.titolo}</h3>
+      <div style="font-size:.85rem; color:var(--tenue); margin-bottom:8px;">${l.autore} · ${l.anno} · ${l.pagine} pagine</div>
+      <p style="font-size:.9rem; margin:0 0 10px 0;">${l.descrizione}</p>
+      <div style="font-size:.8rem; color:var(--tenue);">In magazzino: <strong>${l.qta}</strong> copie · Vendita: ${l.prezzo_vendita}€</div>
+      <div class="riga-btn" style="margin-top:14px;">
+        <button class="btn corallo" id="chiudi-dettaglio">Chiudi</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById("chiudi-dettaglio").onclick = ()=> overlay.remove();
+}
+
+function sceglieLocation(id){
+  stato.locationAttuale = id;
+  if(!stato.locationSbloccateStoriche.includes(id)) stato.locationSbloccateStoriche.push(id);
+  schermataPianificazione();
+}
+function cambiaScaffale(g, delta){
+  const disponibili = libriInMagazzino(g).reduce((s,l)=>s+l.qta,0);
+  const max = Math.min(disponibili, stato.capacitaScaffale);
+  stato.scaffali[g] = Math.max(0, Math.min(max, (stato.scaffali[g]||0) + delta));
+  document.getElementById(`val-${g}`).textContent = stato.scaffali[g];
+}
+
+/* ===================== SCHERMATA: APERTURA NEGOZIO ===================== */
+let coda = [];
+let contatoriGiorno = { incassi:0, venduti:0, spese:3, eventiMissione:[] };
+
+function apriNegozio(){
+  coda = [];
+  let nClienti = 6 + Math.floor(Math.random()*4); // 6-9
+  if(stato.eventoOggi && stato.eventoOggi.effettoClienti) nClienti = Math.round(nClienti * stato.eventoOggi.effettoClienti);
+  for(let i=0;i<nClienti;i++){
+    coda.push({ raccomandazione: Math.random() < 0.35 });
+  }
+  const loc = LOCATIONS.find(l=>l.id===stato.locationAttuale);
+  contatoriGiorno = { incassi:0, venduti:0, spese:loc.parcheggio, eventiMissione:[] };
+
+  const nonIncontrati = Object.keys(NPC).filter(id=>!stato.npcIncontrati.includes(id));
+  if(nonIncontrati.length && Math.random() < 0.45){
+    const scelto = nonIncontrati[Math.floor(Math.random()*nonIncontrati.length)];
+    mostraIncontroNPC(scelto);
+    return;
+  }
+  prossimoCliente();
+}
+
+function mostraIncontroNPC(npcId){
+  stato.npcIncontrati.push(npcId);
+  salvaStato();
+  const npc = NPC[npcId];
+  const sch = document.getElementById("schermo");
+  sch.innerHTML = `
+    <div class="colonna" style="flex:1; max-width:460px; margin:0 auto; height:100%; overflow-y:auto; text-align:center;">
+      <div class="ritratto-npc" style="width:72px; height:72px; margin:0 auto 10px auto;">${RITRATTI[npcId]}</div>
+      <h3>Un nuovo volto in negozio</h3>
+      <p style="font-style:italic; font-size:.9rem; text-align:left; margin-top:10px;">${INTRO[npcId]}</p>
+      <p style="font-size:.8rem; color:var(--tenue); margin-top:10px;">${npc.nome} è ora annotata nel diario di bordo.</p>
+    </div>
+  `;
+  document.getElementById("azioni").innerHTML = `<button class="btn corallo" onclick="prossimoCliente()">Continua →</button>`;
+}
+
+function prossimoCliente(){
+  const sch = document.getElementById("schermo");
+  if(coda.length === 0){ return chiusuraGiornata(); }
+  const cliente = coda.shift();
+
+  if(cliente.raccomandazione){
+    mostraClienteRaccomandazione(sch);
+  } else {
+    mostraClienteAutomatico(sch);
+  }
+}
+
+function generiConScorta(){
+  return GENERI.filter(g => (stato.scaffali[g]||0) > 0);
+}
+
+function probabilitaVendita(genere){
+  const base = P_BASE[genere];
+  const scorta = stato.scaffali[genere]||0;
+  const moltScorta = scorta<=1 ? 0.6 : (scorta<=5 ? 1.0 : 1.15);
+  const moltMeteo = (METEO_EFFETTI[stato.meteoOggi]||{})[genere] || 1.0;
+  const loc = LOCATIONS.find(l=>l.id===stato.locationAttuale);
+  const moltLocation = (loc.bonus||{})[genere] || 1.0;
+  const moltArredi = bonusArredi(genere);
+  return Math.min(0.45, base * moltScorta * moltMeteo * moltLocation * moltArredi);
+}
+
+function registraProgressoMissione(genere){
+  Object.keys(NPC).forEach(npcId=>{
+    const npc = NPC[npcId];
+    if(!stato.npcIncontrati.includes(npcId)) return;
+    const stato_npc = stato.missioni[npcId];
+    if(stato_npc.stage >= npc.missioni.length) return;
+    if(!npc.generiPreferiti.includes(genere)) return;
+    stato_npc.progresso += 1;
+    const m = npc.missioni[stato_npc.stage];
+    if(stato_npc.progresso >= m.target){
+      stato.capitale += m.ricompensa;
+      if(!contatoriGiorno.eventiMissione) contatoriGiorno.eventiMissione = [];
+      contatoriGiorno.eventiMissione.push({
+        npcId, npc:npc.nome, emoji:npc.emoji, ricompensa:m.ricompensa,
+        stageCompletato: stato_npc.stage+1, ultima: stato_npc.stage+1 >= npc.missioni.length,
+        dialogo: (DIALOGHI[npcId] && DIALOGHI[npcId][stato_npc.stage]) || null,
+      });
+      suonaMissione();
+      stato_npc.stage += 1;
+      stato_npc.progresso = 0;
+      if(stato_npc.stage >= npc.missioni.length) stato_npc.completata = true;
+    }
+  });
+  if(!stato.finaleVisto && totaleMissioniCompletate() >= 16){
+    stato.finaleVisto = true;
+    contatoriGiorno.finaleSbloccato = true;
+  }
+}
+
+function mostraClienteAutomatico(sch){
+  const generiOk = generiConScorta();
+  let genereScelto = null;
+  if(generiOk.length){
+    // pesa la scelta del cliente in base a probabilità di vendita
+    const pesi = generiOk.map(g=>probabilitaVendita(g));
+    const somma = pesi.reduce((a,b)=>a+b,0);
+    let r = Math.random()*somma;
+    for(let i=0;i<generiOk.length;i++){ r -= pesi[i]; if(r<=0){ genereScelto = generiOk[i]; break; } }
+    if(!genereScelto) genereScelto = generiOk[generiOk.length-1];
+  }
+  const successo = genereScelto && Math.random() < probabilitaVendita(genereScelto)*1.5;
+
+  sch.innerHTML = `<div class="cliente-box">
+    <div class="cliente-avatar">🧍</div>
+    <h3>Un cliente sta sfogliando gli scaffali...</h3>
+  </div>`;
+  document.getElementById("azioni").innerHTML = `<button class="btn secondario" disabled>attendi...</button>`;
+
+  setTimeout(()=>{
+    if(successo && genereScelto){
+      vendiLibroCasuale(genereScelto);
+    }
+    prossimoCliente();
+  }, 550);
+}
+
+function vendiLibroCasuale(genere){
+  const libri = libriInMagazzino(genere);
+  if(!libri.length) return;
+  const libro = libri[Math.floor(Math.random()*libri.length)];
+  stato.magazzino[libro.id] -= 1;
+  stato.scaffali[genere] = Math.max(0, stato.scaffali[genere]-1);
+  let ricavo = libro.prezzo_vendita;
+  if(stato.eventoOggi && stato.eventoOggi.bonusRaro && libro.rarita === "rara") ricavo += 15;
+  stato.capitale += ricavo;
+  contatoriGiorno.incassi += ricavo;
+  contatoriGiorno.venduti += 1;
+  registraProgressoMissione(genere);
+  aggiornaHUD();
+  salvaStato();
+  suonaVendita();
+}
+
+function mostraClienteRaccomandazione(sch){
+  const generiOk = generiConScorta();
+  if(!generiOk.length){ return mostraClienteAutomatico(sch); }
+  const genereRichiesto = generiOk[Math.floor(Math.random()*generiOk.length)];
+  const libriGenere = libriInMagazzino(genereRichiesto);
+  const libroTarget = libriGenere[Math.floor(Math.random()*libriGenere.length)];
+  const parole = libroTarget.parole_chiave.slice(0,3);
+
+  sch.innerHTML = `
+    <div class="colonna" style="width:34%; border-right:1px solid var(--bordo);">
+      <div class="cliente-avatar" style="margin-bottom:10px;">🧍</div>
+      <h3>"Cerco qualcosa su..."</h3>
+      <div>${parole.map(p=>`<span class="keyword-chip">${p}</span>`).join("")}</div>
+      <p style="font-size:.8rem; color:var(--tenue); margin-top:10px;">Tocca il libro giusto sullo scaffale.</p>
+    </div>
+    <div class="colonna" style="flex:1;">
+      <div class="scaffale" id="scaffale-racc"></div>
+    </div>
+  `;
+  const scaffale = document.getElementById("scaffale-racc");
+  const opzioni = libriGenere.slice(0,6);
+  // assicura che il target sia tra le opzioni
+  if(!opzioni.find(l=>l.id===libroTarget.id)) opzioni[0] = libroTarget;
+
+  opzioni.forEach(l=>{
+    const div = document.createElement("div");
+    div.className = "libro-mini";
+    div.innerHTML = contenutoCardLibroCompatto(l);
+    div.onclick = ()=>{
+      if(l.id === libroTarget.id){
+        stato.magazzino[l.id] -= 1;
+        stato.scaffali[l.genere] = Math.max(0, stato.scaffali[l.genere]-1);
+        const bonus = Math.round(l.prezzo_vendita * 1.15);
+        stato.capitale += bonus;
+        contatoriGiorno.incassi += bonus;
+        contatoriGiorno.venduti += 1;
+        registraProgressoMissione(l.genere);
+        salvaStato();
+        suonaVendita();
+      } else {
+        suonaErrore();
+      }
+      aggiornaHUD();
+      prossimoCliente();
+    };
+    scaffale.appendChild(div);
+  });
+  document.getElementById("azioni").innerHTML = "";
+}
+
+/* ===================== SCHERMATA: CHIUSURA ===================== */
+function chiusuraGiornata(){
+  stato.capitale -= contatoriGiorno.spese;
+  const sch = document.getElementById("schermo");
+  const eventi = contatoriGiorno.eventiMissione || [];
+  const missioneHtml = eventi.map(em => `
+    <div class="card" style="border-color:var(--oro); background:#FFF8E4;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+        <div class="ritratto-npc" style="width:32px; height:32px;">${RITRATTI[em.npcId]}</div>
+        <strong>${em.npc}</strong>
+        <span class="genere-sub">tappa ${em.stageCompletato} completata</span>
+      </div>
+      ${em.dialogo ? `<p style="font-style:italic; font-size:.88rem; margin:6px 0;">${em.dialogo}</p>` : ""}
+      <div style="font-size:.85rem;">Ricompensa: <strong>+${em.ricompensa}€</strong>
+      ${em.ultima ? "<br><span class='genere-sub'>Per ora non ha altro da chiederti.</span>" : ""}</div>
+    </div>`).join("");
+  const finaleHtml = contatoriGiorno.finaleSbloccato ? `
+    <div class="card" style="border:2px solid var(--corallo); background:#FFF1E8;">
+      <h3 style="margin-bottom:6px;">🎉 La Festa dei Libri di Bookstonbury</h3>
+      <p style="font-size:.9rem;">Il paese non è più lo stesso: i Giardini Comunali sono di nuovo in fiore, il Faro Vecchio ospita una piccola biblioteca, l'archivio della parrocchia è in ordine e ovunque, tra il porto e la piazza, qualcuno sta leggendo un libro che gli hai consigliato tu.
+      Per festeggiare, tutta Bookstonbury si ritrova sul lungomare, tra bancarelle e letture ad alta voce — e al centro di tutto, come sempre, il tuo furgoncino.</p>
+      <p style="font-size:.85rem; color:var(--tenue); margin-top:8px;">Il tuo viaggio da libraio ambulante continua: c'è sempre un altro libro da consigliare.</p>
+    </div>` : "";
+  sch.innerHTML = `
+    <div class="colonna" style="flex:1; max-width:420px; margin:0 auto; height:100%; overflow-y:auto;">
+      <h2>Fine giornata 🌅</h2>
+      ${finaleHtml}
+      <div class="card">
+        <div class="riepilogo-riga"><span>Libri venduti</span><strong>${contatoriGiorno.venduti}</strong></div>
+        <div class="riepilogo-riga"><span>Incassi</span><strong>+${contatoriGiorno.incassi}€</strong></div>
+        <div class="riepilogo-riga"><span>Spese (parcheggio)</span><strong>−${contatoriGiorno.spese}€</strong></div>
+        <div class="riepilogo-riga totale"><span>Capitale attuale</span><strong>${stato.capitale}€</strong></div>
+      </div>
+      ${missioneHtml}
+    </div>
+  `;
+  document.getElementById("azioni").innerHTML = `<button class="btn corallo" onclick="schermataMercato()">Vai al mercatino →</button>`;
+  aggiornaHUD();
+  salvaStato();
+}
+function giornoSuccessivo(){
+  stato.giorno += 1;
+  stato.scaffali = {};
+  stato.mercatoOggi = [];
+  stato.meteoOggi = null;
+  stato.eventoOggi = null;
+  salvaStato();
+  suonaGiorno();
+  schermataPianificazione();
+}
+
+/* ===================== AVVIO ===================== */
+schermataMenu();
+</script>
+</body>
+</html>
