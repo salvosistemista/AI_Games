@@ -51,6 +51,31 @@
         .card.red { color: #d00; }
         .card.joker { color: #8e44ad; }
         .card.selected { transform: translateY(-15px); box-shadow: 0 0 10px yellow; border: 2px solid yellow; }
+        
+        /* Stile carta nuova pescata */
+        .card.drawn-card {
+            border: 2px solid #2ecc71;
+            box-shadow: 0 0 12px #2ecc71;
+            animation: pulse-drawn 1.5s infinite alternate;
+        }
+        .card.drawn-card::after {
+            content: "NUOVA";
+            position: absolute;
+            top: -8px;
+            right: -5px;
+            background: #2ecc71;
+            color: #000;
+            font-size: 8px;
+            font-weight: bold;
+            padding: 1px 3px;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+        @keyframes pulse-drawn {
+            from { box-shadow: 0 0 4px #2ecc71; }
+            to { box-shadow: 0 0 14px #2ecc71; }
+        }
+
         .card .suit { font-size: 20px; text-align: center; }
         
         .controls { display: flex; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; justify-content: center;}
@@ -125,18 +150,20 @@ let state = {
     turn: 'player', 
     hasOpened: { player: false, ai: false },
     hasDrawn: false,
+    lastDrawnCardId: null,
     sortPref: 'suit' 
 };
 
 let selectedCards = [];
 let aiThinking = false;
-let pendingJoker = null; // Gestisce il jolly raccolto da riposizionare immediatamente
+let pendingJoker = null;
 
 function init() {
     const savedState = localStorage.getItem('scala40_save');
     if (savedState) {
         state = JSON.parse(savedState);
         if(!state.sortPref) state.sortPref = 'suit';
+        if(state.lastDrawnCardId === undefined) state.lastDrawnCardId = null;
     } else {
         startNewGame();
     }
@@ -163,7 +190,7 @@ function startNewGame() {
     state = { 
         deck: [], discard: [], hands: { player: [], ai: [] }, 
         melds: [], turn: 'player', hasOpened: { player: false, ai: false }, 
-        hasDrawn: false, sortPref: state.sortPref || 'suit' 
+        hasDrawn: false, lastDrawnCardId: null, sortPref: state.sortPref || 'suit' 
     };
     
     for(let d=0; d<2; d++){
@@ -211,16 +238,21 @@ function recycleDiscardPile() {
 function drawCard(source) {
     if (state.turn !== 'player' || state.hasDrawn) return;
     
+    let drawn = null;
     if (source === 'stock') {
         if (state.deck.length === 0) recycleDiscardPile();
         if (state.deck.length > 0) {
-            state.hands.player.push(state.deck.pop());
+            drawn = state.deck.pop();
+            state.hands.player.push(drawn);
             state.hasDrawn = true;
+            state.lastDrawnCardId = drawn.id;
         }
     } else if (source === 'discard' && state.discard.length > 0) {
         if(state.hasOpened.player) {
-            state.hands.player.push(state.discard.pop());
+            drawn = state.discard.pop();
+            state.hands.player.push(drawn);
             state.hasDrawn = true;
+            state.lastDrawnCardId = drawn.id;
         } else {
             alert("Devi aver già aperto per pescare dagli scarti!");
             return;
@@ -252,7 +284,6 @@ function isValidMeld(cards) {
     const nonJokers = cards.filter(c => c.rank !== 'Jolly');
     if (nonJokers.length === 0) return false;
 
-    // 1. Tris / Quartetto
     if (cards.length <= 4) {
         const firstRank = nonJokers[0].rank;
         const sameRank = nonJokers.every(c => c.rank === firstRank);
@@ -260,7 +291,6 @@ function isValidMeld(cards) {
         if (sameRank && uniqueSuits) return true;
     }
 
-    // 2. Scala
     const firstSuit = nonJokers[0].suit;
     if (!nonJokers.every(c => c.suit === firstSuit)) return false;
 
@@ -359,10 +389,8 @@ function canAttachCardToMeld(card, meld) {
     return false;
 }
 
-// Determina quale carta esatta il Jolly sta sostituendo all'interno di una combinazione
 function getJokerReplacementCard(meld, jokerIndex) {
     if (!isSequenceMeld(meld)) {
-        // Se è un tris/quartetto, il Jolly rappresenta lo stesso rango ma di un seme mancante
         const nonJokers = meld.filter(c => c.rank !== 'Jolly');
         if (nonJokers.length === 0) return null;
         const targetRank = nonJokers[0].rank;
@@ -372,19 +400,15 @@ function getJokerReplacementCard(meld, jokerIndex) {
         return { suit: missingSuit, rank: targetRank, val: VALUES[targetRank] };
     }
 
-    // Se è una scala, calcoliamo la posizione mancante usando il sorting ordinato
     const sorted = sortSequenceMeld(meld);
     const jokerPos = sorted.findIndex(c => c.rank === 'Jolly');
     if (jokerPos === -1) return null;
 
     const suit = sorted.find(c => c.rank !== 'Jolly').suit;
-    
-    // Controlliamo l'elemento precedente o successivo per dedurre il valore
     let refCard = sorted[jokerPos - 1] || sorted[jokerPos + 1];
     if (!refCard) return null;
     
     let refIdx = RANKS.indexOf(refCard.rank);
-    // Gestione assi alti/bassi
     let targetIdx = jokerPos > 0 ? refIdx + 1 : refIdx - 1;
     if (targetIdx < 0 || targetIdx >= RANKS.length) return null;
 
@@ -392,7 +416,6 @@ function getJokerReplacementCard(meld, jokerIndex) {
     return { suit: suit, rank: targetRank, val: VALUES[targetRank] };
 }
 
-// Controlla se il giocatore possiede la carta naturale in mano per sostituire il Jolly
 function canReplaceJokerInMeld(meldIndex, jokerCardIndex) {
     if (!state.hasOpened.player || state.turn !== 'player' || !state.hasDrawn) return false;
     let meld = state.melds[meldIndex];
@@ -401,11 +424,9 @@ function canReplaceJokerInMeld(meldIndex, jokerCardIndex) {
     let requiredCard = getJokerReplacementCard(meld, jokerCardIndex);
     if (!requiredCard) return false;
 
-    // Verifica se il giocatore ha la carta esatta in mano
     return state.hands.player.some(c => c.rank === requiredCard.rank && c.suit === requiredCard.suit);
 }
 
-// Azione eseguita quando il giocatore clicca sul Jolly sul tavolo per rilevarlo
 function tryReplaceJoker(meldIndex, jokerCardIndex) {
     if (!canReplaceJokerInMeld(meldIndex, jokerCardIndex)) {
         alert("Non puoi raccogliere questo Jolly: devi aver aperto, aver pescato e possedere la carta naturale esatta in mano per sostituirlo.");
@@ -415,20 +436,17 @@ function tryReplaceJoker(meldIndex, jokerCardIndex) {
     let meld = state.melds[meldIndex];
     let requiredCardSpec = getJokerReplacementCard(meld, jokerCardIndex);
 
-    // Trova la carta in mano del giocatore
     let playerCardIdx = state.hands.player.findIndex(c => c.rank === requiredCardSpec.rank && c.suit === requiredCardSpec.suit);
     if (playerCardIdx === -1) return;
 
-    // Rimuovi la carta dalla mano e inseriscila al posto del Jolly nella combinazione
     let naturalCard = state.hands.player.splice(playerCardIdx, 1)[0];
     let removedJoker = meld[jokerCardIndex];
     
-    meld[jokerCardIndex] = naturalCard; // Sostituzione completata sul tavolo
+    meld[jokerCardIndex] = naturalCard;
 
-    // Imposta il Jolly come "in sospeso" costringendo l'utente a riutilizzarlo subito
     pendingJoker = removedJoker;
-    state.hands.player.push(pendingJoker); // Mette temporaneamente il Jolly in mano per permetterne l'uso immediato
-    selectedCards = [pendingJoker.id]; // Seleziona automaticamente il jolly per facilitare il riutilizzo
+    state.hands.player.push(pendingJoker);
+    selectedCards = [pendingJoker.id];
 
     alert(`Hai raccolto il Jolly! Devi riutilizzarlo immediatamente in una combinazione o attaccandolo in questo turno.`);
     saveState();
@@ -479,7 +497,8 @@ function extractMelds(cards) {
 function playMeld() {
     if (state.turn !== 'player' || !state.hasDrawn || selectedCards.length < 1) return;
     
-    const cardsToPlay = state.hands.player.filter(c => selectedCards.includes(c.id));
+    const selectedIds = [...selectedCards];
+    const cardsToPlay = state.hands.player.filter(c => selectedIds.includes(c.id));
     let playedAny = false;
 
     if (cardsToPlay.length >= 3) {
@@ -495,7 +514,9 @@ function playMeld() {
             state.hasOpened.player = true;
             extractedMelds.forEach(m => state.melds.push(m));
             
-            state.hands.player = state.hands.player.filter(c => !selectedCards.includes(c.id));
+            const usedIds = new Set(extractedMelds.flat().map(c => c.id));
+            state.hands.player = state.hands.player.filter(c => !usedIds.has(c.id));
+            
             selectedCards = [];
             playedAny = true;
         }
@@ -507,50 +528,48 @@ function playMeld() {
             return;
         }
 
-        let remainingCards = [...cardsToPlay];
-        let attachedInLoop = true;
+        let successfullyAttachedIds = [];
 
-        while (attachedInLoop && remainingCards.length > 0) {
-            attachedInLoop = false;
-            for (let i = 0; i < remainingCards.length; i++) {
-                let card = remainingCards[i];
-                for (let meld of state.melds) {
-                    let pos = canAttachCardToMeld(card, meld);
-                    if (pos === 'start') {
-                        meld.unshift(card);
-                        remainingCards.splice(i, 1);
-                        attachedInLoop = true;
-                        playedAny = true;
-                        break;
-                    } else if (pos === 'end') {
-                        meld.push(card);
-                        remainingCards.splice(i, 1);
-                        attachedInLoop = true;
-                        playedAny = true;
-                        break;
-                    }
+        for (let cardId of selectedIds) {
+            let cardObj = state.hands.player.find(c => c.id === cardId);
+            if (!cardObj) continue;
+
+            let attached = false;
+            for (let meld of state.melds) {
+                let pos = canAttachCardToMeld(cardObj, meld);
+                if (pos === 'start') {
+                    meld.unshift(cardObj);
+                    attached = true;
+                    break;
+                } else if (pos === 'end') {
+                    meld.push(cardObj);
+                    attached = true;
+                    break;
                 }
-                if (attachedInLoop) break;
+            }
+
+            if (attached) {
+                successfullyAttachedIds.push(cardId);
             }
         }
 
-        if (playedAny) {
-            let attachedIds = cardsToPlay.filter(c => !remainingCards.includes(c)).map(c => c.id);
-            state.hands.player = state.hands.player.filter(c => !attachedIds.includes(c.id));
-            selectedCards = remainingCards.map(c => c.id);
+        if (successfullyAttachedIds.length > 0) {
+            state.hands.player = state.hands.player.filter(c => !successfullyAttachedIds.includes(c.id));
+            selectedCards = selectedIds.filter(id => !successfullyAttachedIds.includes(id));
+            playedAny = true;
         } else {
             alert("Le carte selezionate non formano combinazioni valide e non possono essere attaccate alle combinazioni presenti sul tavolo.");
             return;
         }
     }
 
-    // Se il giocatore ha completato il turno di riutilizzo del Jolly, rimuoviamo lo stato di blocco pendente
     if (pendingJoker) {
-        // Controlliamo che il jolly non sia rimasto in mano
         if (!state.hands.player.some(c => c.id === pendingJoker.id)) {
             pendingJoker = null;
         } else {
             alert("Hai ancora il Jolly raccolto in mano! Devi utilizzarlo prima di poter scartare o terminare il turno.");
+            saveState();
+            renderAll();
             return;
         }
     }
@@ -581,6 +600,7 @@ function discardCard() {
     state.hands.player.splice(cardIdx, 1);
     selectedCards = [];
     state.hasDrawn = false;
+    state.lastDrawnCardId = null; // Rimuove l'evidenziatore al momento dello scarto
     
     if (state.hands.player.length === 0) return handleWin('Giocatore');
     
@@ -654,6 +674,7 @@ function aiTurn() {
 
     state.turn = 'player';
     state.hasDrawn = false;
+    state.lastDrawnCardId = null;
     aiThinking = false;
     saveState();
     renderAll();
@@ -738,10 +759,11 @@ function renderAll() {
 
     sortedHand.forEach(c => {
         let isSelected = selectedCards.includes(c.id) ? 'selected' : '';
+        let isDrawn = (state.hasDrawn && c.id === state.lastDrawnCardId) ? 'drawn-card' : '';
         let colorClass = c.rank === 'Jolly' ? 'joker' : ((c.suit === '♥' || c.suit === '♦') ? 'red' : '');
         let rankDisplay = c.rank === 'Jolly' ? 'JOKER' : c.rank;
         playerHand.innerHTML += `
-            <div class="card ${colorClass} ${isSelected}" onclick="toggleCardSelection('${c.id}')">
+            <div class="card ${colorClass} ${isSelected} ${isDrawn}" onclick="toggleCardSelection('${c.id}')">
                 <div style="font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
                 <div class="suit">${c.suit}</div>
                 <div style="text-align: right; transform: rotate(180deg); font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
