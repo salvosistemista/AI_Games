@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leggende d'Irlanda — Atlante Incantato</title>
+<style>
+  :root{
+    --bg:#0e1a15;
+    --bg2:#0a1310;
+    --parchment:#e9dcbb;
+    --parchment2:#ddccA0;
+    --ink:#241d12;
+    --gold:#c9a341;
+    --gold-dim:#8a7431;
+    --ghost:#9a4a68;
+    --mystery:#3f8079;
+    --treasure:#c9a341;
+    --royal:#7b5cb8;
+    --magic:#5a76b8;
+    --creature:#c2712f;
+    --line: rgba(201,163,65,0.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% 0%, #16261f 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #142621 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    color:var(--parchment);
+    font-family: Georgia, 'Times New Roman', serif;
+    min-height:100%;
+  }
+  header{
+    padding:26px 20px 16px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  header h1{
+    margin:0;
+    font-size:clamp(22px,4.5vw,36px);
+    color:var(--gold);
+    text-transform:uppercase;
+    letter-spacing:0.14em;
+    text-shadow:0 0 18px rgba(201,163,65,0.35);
+  }
+  header p{
+    margin:8px 0 0;
+    font-style:italic;
+    color:var(--parchment2);
+    opacity:0.85;
+    font-size:14px;
+  }
+  .knot{ width:36px;height:36px;margin:10px auto 0;opacity:0.7; }
+  .stats{
+    text-align:center;font-size:11.5px;color:var(--gold-dim);
+    letter-spacing:0.08em;margin-top:8px;text-transform:uppercase;
+  }
+
+  .filters{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+    padding:14px 16px;border-bottom:1px solid var(--line);
+  }
+  .chip{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,0.02);
+    color:var(--parchment2);
+    padding:6px 14px;border-radius:20px;
+    font-size:12.5px;letter-spacing:0.04em;
+    cursor:pointer;user-select:none;
+    transition:all .2s ease;
+    font-family: Georgia, serif;
+  }
+  .chip[data-active="1"]{
+    background:var(--gold);
+    color:#1a1408;
+    border-color:var(--gold);
+    font-weight:bold;
+  }
+  .chip:hover{border-color:var(--gold);}
+
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:0;
+    max-width:1150px;
+    margin:0 auto;
+  }
+  @media(min-width:880px){
+    .layout{grid-template-columns: 1.05fr 0.95fr;}
+  }
+
+  .map-wrap{
+    padding:18px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+  }
+  #mapSvg{
+    width:100%;
+    max-width:460px;
+    height:auto;
+    filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+  }
+  .isle{
+    fill:#16281f;
+    stroke:var(--gold-dim);
+    stroke-width:1;
+    stroke-linejoin:round;
+  }
+  .isle-texture{
+    fill:none;
+    stroke:rgba(201,163,65,0.08);
+    stroke-width:0.6;
+  }
+  .marker circle.dot{
+    fill:var(--gold);
+    stroke:#1a1408;
+    stroke-width:0.8;
+    transition:r .15s ease;
+  }
+  .marker circle.pulse{
+    fill:none;
+    stroke:var(--gold);
+    stroke-width:1;
+    opacity:0.6;
+    animation:pulse 2.6s ease-out infinite;
+  }
+  .marker{cursor:pointer;}
+  .marker:hover circle.dot{ r:5.5; }
+  .marker.dim{ opacity:0.15; }
+  .marker.dim:hover{opacity:0.5;}
+  @keyframes pulse{
+    0%{r:3.5;opacity:0.7;}
+    100%{r:11;opacity:0;}
+  }
+  .marker text{
+    font-size:6px;
+    fill:var(--parchment2);
+    font-family:Georgia,serif;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .marker:hover text{opacity:1;}
+
+  .list-wrap{
+    padding:14px 18px 40px;
+    border-left:1px solid var(--line);
+    max-height:none;
+  }
+  .list-wrap h2{
+    font-size:13px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--gold-dim);
+    margin:6px 0 12px;
+  }
+  .story-item{
+    display:flex;gap:10px;align-items:center;
+    padding:9px 8px;
+    border-bottom:1px dashed var(--line);
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .story-item:hover{background:rgba(201,163,65,0.06);}
+  .story-item .dotcat{
+    width:9px;height:9px;border-radius:50%;flex:0 0 auto;
+  }
+  .story-item .meta{flex:1;}
+  .story-item .meta .t{
+    font-size:14.5px;color:var(--parchment);
+  }
+  .story-item .meta .p{
+    font-size:11.5px;color:var(--parchment2);opacity:0.7;font-style:italic;
+  }
+  .story-item.hidden{display:none;}
+
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(6,10,8,0.78);
+    display:none;
+    align-items:flex-start;justify-content:center;
+    padding:24px 14px;
+    overflow-y:auto;
+    z-index:50;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.show{display:flex;}
+  .card{
+    background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment2) 100%);
+    color:var(--ink);
+    max-width:620px;width:100%;
+    border-radius:4px;
+    box-shadow:0 30px 70px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.15);
+    position:relative;
+    margin:auto;
+    overflow:hidden;
+  }
+  .card .illus{ width:100%; display:block; background:#111; }
+  .card .content{ padding:22px 26px 28px; }
+  .card .tagrow{ display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
+  .tag{
+    font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;
+    padding:3px 9px;border-radius:12px;color:#fff;
+    opacity:0.92;
+  }
+  .card h3{ margin:0 0 2px; font-size:24px; letter-spacing:0.02em; color:#241d12; }
+  .card .place{ font-size:13px;font-style:italic;color:#5a4c2e;margin-bottom:14px; }
+  .card p{ line-height:1.62; font-size:15.5px; margin:0 0 12px; }
+  .card .closeBtn{
+    position:absolute;top:10px;right:10px;
+    width:32px;height:32px;border-radius:50%;
+    background:rgba(20,15,5,0.55);
+    color:#e9dcbb;border:none;font-size:18px;
+    cursor:pointer;line-height:32px;text-align:center;
+    z-index:2;
+  }
+  .card .closeBtn:hover{background:rgba(20,15,5,0.8);}
+
+  .langBtn{
+    position:absolute;top:10px;left:10px;
+    min-width:32px;height:32px;border-radius:16px;
+    background:rgba(20,15,5,0.55);
+    color:#e9dcbb;border:none;font-size:12px;font-weight:bold;letter-spacing:0.03em;
+    cursor:pointer;padding:0 10px;line-height:32px;text-align:center;
+    z-index:2;font-family:Georgia,serif;
+  }
+  .langBtn:hover{background:rgba(20,15,5,0.8);}
+
+  .modalNav{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:16px;padding-top:14px;border-top:1px dashed rgba(36,29,18,0.25);
+  }
+  .modalNav button{
+    background:rgba(36,29,18,0.08);border:1px solid rgba(36,29,18,0.25);
+    color:#241d12;padding:7px 12px;border-radius:18px;font-family:Georgia,serif;
+    font-size:12.5px;cursor:pointer;white-space:nowrap;
+  }
+  .modalNav button:hover{background:rgba(36,29,18,0.16);}
+  .modalNav button:disabled{opacity:0.3;cursor:default;}
+  .modalNav .stopn{font-size:11.5px;color:#5a4c2e;font-style:italic;text-align:center;flex:1;}
+
+  .startBtn{
+    display:block;margin:12px auto 0;
+    background:rgba(201,163,65,0.14);
+    border:1px solid var(--gold);
+    color:var(--gold);
+    padding:9px 20px;border-radius:22px;
+    font-family:Georgia,serif;font-size:13.5px;letter-spacing:0.05em;
+    cursor:pointer;
+  }
+  .startBtn:hover{background:rgba(201,163,65,0.26);}
+
+  .itinerary-bar{
+    position:fixed;left:0;right:0;bottom:0;
+    background:linear-gradient(180deg, rgba(14,26,21,0.85), rgba(9,17,14,0.98));
+    border-top:1px solid var(--line);
+    padding:10px 16px;
+    display:none;
+    align-items:center;justify-content:center;
+    gap:14px;flex-wrap:wrap;
+    z-index:60;
+    backdrop-filter:blur(3px);
+  }
+  .itinerary-bar.show{display:flex;}
+  .itinerary-bar button{
+    background:rgba(201,163,65,0.12);border:1px solid var(--gold-dim);color:var(--gold);
+    padding:7px 14px;border-radius:20px;font-family:Georgia,serif;font-size:13px;cursor:pointer;
+  }
+  .itinerary-bar button:hover{background:rgba(201,163,65,0.24);}
+  .itinerary-bar button:disabled{opacity:0.3;cursor:default;}
+  .itinerary-bar .stopinfo{text-align:center;font-size:12px;color:var(--parchment2);line-height:1.3;}
+  .itinerary-bar .stopinfo b{color:var(--gold);display:block;font-size:14px;}
+  .itinerary-bar .exitBtn{background:none;border:none;color:var(--parchment2);font-size:20px;cursor:pointer;padding:2px 8px;}
+  .itinerary-bar .exitBtn:hover{color:var(--gold);}
+
+  .route-line{ fill:none; stroke:var(--gold); stroke-width:1.1; stroke-dasharray:3,3; opacity:0.5; }
+  .stopnum-bg{ fill:var(--gold); opacity:0; transition:opacity .2s ease; }
+  .stopnum{ font-size:5.2px; font-weight:bold; fill:#1a1408; text-anchor:middle; opacity:0; transition:opacity .2s ease; pointer-events:none; }
+  body.itinerary-mode .stopnum-bg,
+  body.itinerary-mode .stopnum{ opacity:1; }
+  .marker.current circle.dot{ fill:#fff !important; r:6; }
+  .marker.current circle.pulse{ stroke:#fff !important; }
+  .marker.visited circle.dot{ stroke:#fff; stroke-width:1.6; }
+  body{ padding-bottom:0; }
+  body.itinerary-mode .layout{ padding-bottom:74px; }
+
+  footer{ text-align:center;padding:18px; font-size:11.5px;color:var(--parchment2);opacity:0.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="knot" viewBox="0 0 40 40"><path d="M20,4 C10,4 4,10 4,20 C4,30 10,36 20,36 C30,36 36,30 36,20 C36,10 30,4 20,4 M20,4 C26,10 26,30 20,36 M20,4 C14,10 14,30 20,36" fill="none" stroke="#c9a341" stroke-width="1.4"/></svg>
+  <h1>Éire Incantata</h1>
+  <p>Un atlante di fantasmi, re, maghi e tesori sepolti nella terra d'Irlanda</p>
+  <div class="stats" id="statsLine"></div>
+  <button class="startBtn" id="startItineraryBtn">🧭 Inizia l'itinerario completo</button>
+</header>
+
+<div class="filters" id="filters"></div>
+
+<div class="layout">
+  <div class="map-wrap">
+    <svg id="mapSvg" viewBox="0 0 400 514.5" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div class="list-wrap">
+    <h2>Le leggende</h2>
+    <div id="list"></div>
+  </div>
+</div>
+
+<footer>Contorno costruito da dati geografici reali del confine costiero d'Irlanda · Tocca un punto dorato o una voce dell'elenco per leggere</footer>
+
+<div class="overlay" id="overlay">
+  <div class="card" id="cardInner"></div>
+</div>
+
+<div class="itinerary-bar" id="itineraryBar">
+  <button id="prevStopBtn">◀ Precedente</button>
+  <div class="stopinfo">
+    <b id="stopCounter">Tappa 1 di 33</b>
+    <span id="stopTitle"></span>
+  </div>
+  <button id="nextStopBtn">Successiva ▶</button>
+  <button id="readStopBtn">Leggi la leggenda</button>
+  <button class="exitBtn" id="exitItineraryBtn" title="Esci dall'itinerario">✕</button>
+</div>
+
+<script>
+/* ---------- Categorie ---------- */
+const CATS = {
+  fantasmi:  {label:"Fantasmi",     label_en:"Ghosts",              color:"var(--ghost)"},
+  misteri:   {label:"Misteri",      label_en:"Mysteries",           color:"var(--mystery)"},
+  tesori:    {label:"Tesori",       label_en:"Treasures",           color:"var(--treasure)"},
+  reali:     {label:"Re & Regine",  label_en:"Kings & Queens",      color:"var(--royal)"},
+  maghi:     {label:"Maghi",        label_en:"Wizards",             color:"var(--magic)"},
+  creature:  {label:"Personaggi & Creature", label_en:"Characters & Creatures", color:"var(--creature)"}
+};
+
+/* ---------- Libreria icone (silhouette, stile linocut) ---------- */
+const ICON = {
+  castle:(c)=>`<path d="M8,82 L8,42 L18,42 L18,26 L28,26 L28,42 L38,42 L38,20 L50,20 L50,42 L60,42 L60,26 L70,26 L70,42 L82,42 L82,82 Z" fill="${c}"/><rect x="30" y="58" width="9" height="16" fill="#1c130a"/><rect x="52" y="52" width="6" height="11" fill="#f4d27a" opacity="0.75"/>`,
+  ruin:(c)=>`<path d="M8,82 L8,50 L18,50 L18,30 L28,34 L28,50 L40,50 L40,44 L52,50 L60,36 L64,50 L82,50 L82,82 Z" fill="${c}" opacity="0.9"/>`,
+  dolmen:(c)=>`<rect x="14" y="40" width="10" height="42" fill="${c}"/><rect x="66" y="40" width="10" height="42" fill="${c}"/><rect x="6" y="30" width="78" height="13" fill="${c}" transform="rotate(-3 45 36)"/>`,
+  stones:(c)=>{let s='';for(let i=0;i<7;i++){const a=(i/7)*Math.PI*2;const x=45+32*Math.cos(a);const y=58+15*Math.sin(a);s+=`<rect x="${x-4}" y="${y-15}" width="8" height="19" fill="${c}"/>`;}return s;},
+  spiral:(c)=>`<circle cx="45" cy="52" r="27" fill="none" stroke="${c}" stroke-width="4"/><circle cx="45" cy="52" r="17" fill="none" stroke="${c}" stroke-width="4"/><circle cx="45" cy="52" r="7" fill="${c}"/>`,
+  swans:(c)=>`<ellipse cx="28" cy="66" rx="16" ry="10" fill="${c}"/><path d="M28,59 C26,46 39,39 46,43" stroke="${c}" stroke-width="3" fill="none"/><ellipse cx="63" cy="72" rx="14" ry="9" fill="${c}"/><path d="M63,66 C61,54 73,48 78,52" stroke="${c}" stroke-width="3" fill="none"/>`,
+  salmon:(c)=>`<path d="M18,54 C32,18 66,18 80,44 C71,39 60,41 55,49 C61,50 65,55 65,62 C55,58 46,60 41,68 C45,60 35,58 30,62 C25,58 21,58 18,54 Z" fill="${c}"/><ellipse cx="35" cy="80" rx="32" ry="5" fill="${c}" opacity="0.28"/>`,
+  boar:(c)=>`<ellipse cx="46" cy="55" rx="28" ry="16" fill="${c}"/><path d="M18,55 L5,49 L9,60 Z" fill="${c}"/><path d="M10,47 L16,42 L15,50 Z" fill="#e9dcbb"/><rect x="13" y="66" width="6" height="15" fill="${c}"/><rect x="36" y="69" width="6" height="15" fill="${c}"/><rect x="56" y="69" width="6" height="15" fill="${c}"/><rect x="71" y="66" width="6" height="15" fill="${c}"/>`,
+  hound:(c)=>`<path d="M8,64 C14,48 42,46 57,53 C67,57 76,54 83,46 L81,54 C90,54 93,60 90,66 C85,70 78,68 75,63 C64,72 40,74 24,68 C16,72 10,72 8,64 Z" fill="${c}"/>`,
+  goat:(c)=>`<ellipse cx="44" cy="60" rx="20" ry="14" fill="${c}"/><rect x="19" y="70" width="6" height="14" fill="${c}"/><rect x="62" y="70" width="6" height="14" fill="${c}"/><circle cx="65" cy="45" r="10" fill="${c}"/><path d="M69,38 C74,27 81,25 82,29 C75,31 73,37 71,42 Z" fill="${c}"/><path d="M60,38 C55,27 48,25 47,29 C54,31 56,37 58,42 Z" fill="${c}"/>`,
+  monkboat:(c)=>`<path d="M12,72 C12,60 78,60 78,72 C78,79 12,79 12,72 Z" fill="${c}"/><ellipse cx="34" cy="55" rx="6" ry="11" fill="${c}"/><ellipse cx="56" cy="55" rx="6" ry="11" fill="${c}"/><path d="M62,84 L78,10 L88,84 Z" fill="${c}" opacity="0.45"/>`,
+  wave:(c)=>`<path d="M0,72 C14,56 26,56 40,72 C54,88 66,88 80,72 C94,56 100,56 110,66 L110,92 L0,92 Z" fill="${c}"/>`,
+  devil:(c)=>`<ellipse cx="45" cy="62" rx="15" ry="17" fill="${c}"/><path d="M35,51 L29,42 L38,47 Z" fill="${c}"/><path d="M55,51 L61,42 L52,47 Z" fill="${c}"/><path d="M18,28 L46,56 L62,12 Z" fill="${c}" opacity="0.5"/>`,
+  wisp:(c)=>`<path d="M45,82 C34,71 34,54 45,44 C56,33 56,18 45,8 C61,13 67,34 56,44 C67,49 67,66 56,76 C51,73 49,78 45,82 Z" fill="${c}" opacity="0.75"/>`,
+  crown:(c)=>`<path d="M20,60 L26,38 L38,50 L45,32 L52,50 L64,38 L70,60 Z" fill="${c}"/><rect x="18" y="60" width="54" height="10" fill="${c}"/>`,
+  cauldron:(c)=>`<path d="M15,45 C15,68 30,80 45,80 C60,80 75,68 75,45 Z" fill="${c}"/><rect x="10" y="40" width="70" height="7" rx="3" fill="${c}"/><path d="M20,40 C20,28 30,22 30,22" stroke="${c}" stroke-width="3" fill="none"/><path d="M70,40 C70,28 60,22 60,22" stroke="${c}" stroke-width="3" fill="none"/>`,
+  ship:(c)=>`<path d="M10,70 C10,78 80,78 80,70 L72,60 L18,60 Z" fill="${c}"/><rect x="42" y="20" width="4" height="42" fill="${c}"/><path d="M46,24 L70,50 L46,50 Z" fill="${c}"/><path d="M42,30 L20,50 L42,50 Z" fill="${c}" opacity="0.85"/>`,
+  raven:(c)=>`<path d="M20,60 C25,45 40,40 50,45 C55,35 65,32 72,38 C68,42 65,46 68,50 C60,48 55,52 58,58 C48,54 40,58 38,66 C32,60 25,60 20,60 Z" fill="${c}"/>`,
+  mountain:(c)=>`<path d="M10,80 L45,20 L60,45 L75,25 L90,80 Z" fill="${c}"/><rect x="43.5" y="10" width="2.5" height="12" fill="#e9dcbb"/><rect x="40" y="14" width="10" height="2.5" fill="#e9dcbb"/>`,
+  horse:(c)=>`<path d="M15,65 C15,50 30,40 40,42 C42,32 52,28 58,34 C56,38 58,42 62,42 L70,50 L64,52 L66,60 L58,58 C55,64 48,66 42,64 C40,70 30,72 15,65 Z" fill="${c}"/><rect x="20" y="64" width="4" height="14" fill="${c}"/><rect x="34" y="66" width="4" height="14" fill="${c}"/>`,
+  cats:(c)=>`<ellipse cx="30" cy="65" rx="14" ry="9" fill="${c}"/><path d="M20,58 L14,48 L24,54 Z" fill="${c}"/><path d="M32,58 L38,48 L34,55 Z" fill="${c}"/><path d="M42,66 Q60,60 62,45" stroke="${c}" stroke-width="3" fill="none"/><ellipse cx="70" cy="65" rx="14" ry="9" fill="${c}"/><path d="M78,58 L84,48 L74,54 Z" fill="${c}"/><path d="M66,58 L60,48 L64,55 Z" fill="${c}"/>`,
+  lighthouse:(c)=>`<path d="M38,80 L42,20 L58,20 L62,80 Z" fill="${c}"/><rect x="34" y="78" width="32" height="6" fill="${c}"/><rect x="40" y="12" width="20" height="10" fill="${c}"/><path d="M60,17 L78,8 M60,17 L78,17 M60,17 L78,26" stroke="#f4d27a" stroke-width="2" opacity="0.8"/>`,
+  bat:(c)=>`<path d="M45,50 C40,40 20,35 10,45 C20,42 30,48 35,55 C30,50 15,50 8,60 C22,55 32,58 38,64 C34,58 40,52 45,58 C50,52 56,58 52,64 C58,58 68,55 82,60 C75,50 60,50 55,55 C60,48 70,42 80,45 C70,35 50,40 45,50 Z" fill="${c}"/>`,
+  sword:(c)=>`<rect x="43" y="12" width="5" height="46" fill="${c}"/><path d="M43,12 L45.5,4 L48,12 Z" fill="${c}"/><rect x="32" y="55" width="27" height="5" fill="${c}"/><rect x="41" y="58" width="9" height="18" fill="${c}"/>`,
+  cliff:(c)=>`<path d="M0,55 L20,35 L35,45 L50,20 L65,40 L80,30 L100,50 L130,60 L130,92 L0,92 Z" fill="${c}"/>`,
+  hag:(c)=>`<path d="M45,25 C35,25 28,35 28,48 L24,80 L66,80 L62,48 C62,35 55,25 45,25 Z" fill="${c}"/><ellipse cx="45" cy="24" rx="9" ry="7" fill="${c}"/>`,
+  cave:(c)=>`<path d="M0,92 L0,60 C10,30 40,15 65,15 C90,15 120,30 130,60 L130,92 Z" fill="#050805"/><path d="M15,92 L15,65 C22,42 45,28 65,28 C85,28 108,42 115,65 L115,92 Z" fill="${c}"/>`
+};
+
+function moodColors(mood){
+  return {
+    night:['#0a1220','#1c2c44'],
+    duskghost:['#241226','#5c2a4a'],
+    gold:['#241a08','#6b4a16'],
+    mist:['#0f201c','#2d4a44'],
+    dawn:['#1a1430','#4a3560']
+  }[mood];
+}
+
+function buildScene(cfg){
+  const [c1,c2] = moodColors(cfg.mood);
+  const celestial = (cfg.mood==='gold')
+    ? `<circle cx="102" cy="20" r="11" fill="#f4d98a" opacity="0.9"/><circle cx="102" cy="20" r="20" fill="#f4d98a" opacity="0.15"/>`
+    : `<circle cx="100" cy="18" r="8" fill="#e9e4d0" opacity="0.85"/><circle cx="100" cy="18" r="17" fill="#e9e4d0" opacity="0.12"/>`;
+  const mist = (cfg.mood==='mist'||cfg.mood==='duskghost')
+    ? `<ellipse cx="30" cy="78" rx="34" ry="7" fill="#cfe0da" opacity="0.14"/><ellipse cx="85" cy="83" rx="28" ry="6" fill="#cfe0da" opacity="0.10"/>`
+    : '';
+  const mainIcon = ICON[cfg.main](cfg.accent);
+  const secondIcon = cfg.second ? ICON[cfg.second](cfg.accent2||cfg.accent) : '';
+  return `
+  <svg viewBox="0 0 130 92" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:220px;display:block;">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${c1}"/>
+        <stop offset="100%" stop-color="${c2}"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="130" height="92" fill="url(#sky)"/>
+    ${celestial}
+    <path d="M0,60 Q22,52 44,58 T90,54 T130,58 L130,92 L0,92 Z" fill="#0c140f"/>
+    ${mist}
+    <g transform="translate(${cfg.tx||18},${cfg.ty||4}) scale(${cfg.scale||0.72})">${mainIcon}</g>
+    ${secondIcon ? `<g transform="translate(${cfg.tx2||55},${cfg.ty2||2}) scale(${cfg.scale2||0.48})">${secondIcon}</g>` : ''}
+  </svg>`;
+}
+
+/* ---------- Dati delle leggende (coordinate derivate da dati geografici reali) ---------- */
+const STORIES = [
+  {
+    id:"newgrange", title:"Il Tumulo di Luce", place:"Newgrange, Valle del Boyne — Meath",
+    cats:["misteri","maghi"], x:309.2, y:222.8,
+    scene:{mood:"dawn", main:"spiral", accent:"#e9d9a0"},
+    text:"Sotto un tumulo di pietra bianca, vecchio più delle piramidi, dormono gli dèi del Popolo della Dea Danu. Si dice che il grande Dagda vi nascose il figlio Aengus Óg con un inganno: gli cedette la dimora 'per un giorno e una notte', ma nella lingua degli dèi ogni giorno è eterno, così il tumulo divenne suo per sempre. Una volta l'anno, all'alba del solstizio d'inverno, un raggio di sole scivola lungo lo stretto corridoio di pietra e incendia la camera più interna per soli diciassette minuti: gli antichi costruttori calcolarono quel varco di luce migliaia di anni prima che esistesse una parola per astronomia. I contadini della valle giurano che in quel momento i Sidhe, il popolo fatato, escono a danzare sui prati intorno al fiume, e chi li vede non racconta mai più la stessa storia due volte.",
+    en:{"title": "The Mound of Light", "place": "Newgrange, Boyne Valley — Meath", "text": "Beneath a mound of white stone, older than the pyramids, sleep the gods of the People of the goddess Danu. It is said the great Dagda hid his son Aengus Óg there through a trick: he lent him the dwelling 'for a day and a night', but in the language of the gods every day is eternal, so the mound became his forever. Once a year, at dawn on the winter solstice, a beam of sunlight slips down the narrow stone passage and sets the innermost chamber alight for just seventeen minutes: the ancient builders calculated that gap of light thousands of years before the word astronomy existed. Farmers in the valley swear that at that moment the Sídhe, the fairy folk, come out to dance on the meadows around the river, and whoever sees them never tells the story the same way twice."}
+  },
+  {
+    id:"tara", title:"La Pietra che Grida", place:"Collina di Tara — Meath",
+    cats:["reali","misteri"], x:299.2, y:237.4,
+    scene:{mood:"gold", main:"crown", second:"stones", accent:"#c9a341", accent2:"#8a7431", tx2:35, ty2:30, scale2:0.3},
+    text:"Sulla collina più sacra d'Irlanda, sede dei centoquarantadue Sommi Re, si erge ancora la Lia Fáil, la Pietra del Destino. Non è una pietra qualsiasi: quando il legittimo re d'Irlanda vi posava il piede, la pietra emetteva un grido che si udiva fino ai confini dell'isola, riconoscendo il sovrano scelto dagli dèi. Nessun pretendente falso osava avvicinarvisi, temendo il silenzio che ne avrebbe svelato l'inganno davanti a tutti i clan riuniti. Si narra che l'ultima volta che la pietra gridò fu per Conn dei Cento Battaglie, e che da allora, con l'arrivo di re stranieri e fedi nuove, la Lia Fáil abbia scelto il silenzio, aspettando ancora oggi, tra l'erba e il vento, un sovrano degno del suo antico giudizio.",
+    en:{"title": "The Stone That Screams", "place": "Hill of Tara — Meath", "text": "On Ireland's most sacred hill, seat of one hundred and forty-two High Kings, the Lia Fáil still stands: the Stone of Destiny. It was no ordinary stone — when the rightful King of Ireland set foot upon it, the stone let out a cry heard to the very edges of the island, recognising the sovereign chosen by the gods. No false pretender dared approach it, fearing the silence that would expose the deception before all the assembled clans. It is said the last time the stone cried out was for Conn of the Hundred Battles, and that ever since, with the coming of foreign kings and new faiths, the Lia Fáil has chosen silence, still waiting today, among the grass and the wind, for a sovereign worthy of its ancient judgement."}
+  },
+  {
+    id:"causeway", title:"Fionn e il Gigante Benandonner", place:"Selciato del Gigante — Antrim",
+    cats:["creature","maghi"], x:306.5, y:31.7,
+    scene:{mood:"night", main:"stones", accent:"#5a76b8"},
+    text:"Fionn mac Cumhaill, guerriero e mago capo dei Fianna, costruì un ponte di colonne esagonali di basalto attraverso il mare per sfidare a duello il gigante scozzese Benandonner. Ma quando lo vide avvicinarsi, alto come una torre, Fionn capì di aver sottovalutato il rivale. Corse dalla moglie Oonagh, che lo travestì da neonato e lo adagiò in un'enorme culla. Quando Benandonner bussò alla porta, Oonagh gli mostrò il 'bambino' di Fionn, spiegando con calma che il padre era fuori a caccia. Il gigante, terrorizzato all'idea di dover affrontare un padre capace di generare una simile creatura, fuggì distruggendo il ponte alle sue spalle per impedire l'inseguimento. Restano oggi, ai due capi del mare, i frammenti di quella strada: il Selciato del Gigante in Irlanda e la Grotta di Fingal in Scozia.",
+    en:{"title": "Fionn and the Giant Benandonner", "place": "Giant's Causeway — Antrim", "text": "Fionn mac Cumhaill, warrior and wizard-chief of the Fianna, built a bridge of hexagonal basalt columns across the sea to challenge the Scottish giant Benandonner to a duel. But when he saw him approaching, tall as a tower, Fionn realised he had badly underestimated his rival. He ran to his wife Oonagh, who disguised him as a baby and laid him in an enormous cradle. When Benandonner knocked at the door, Oonagh calmly showed him Fionn's 'child', explaining the father was out hunting. Terrified at the thought of facing a father capable of fathering such a creature, the giant fled, tearing up the bridge behind him to stop any pursuit. What remains today, at either end of the sea, are the fragments of that road: the Giant's Causeway in Ireland and Fingal's Cave in Scotland."}
+  },
+  {
+    id:"lir", title:"I Figli di Lir", place:"Lough Derravaragh — Westmeath",
+    cats:["maghi","fantasmi"], x:243.6, y:230.3,
+    scene:{mood:"duskghost", main:"swans", accent:"#e9dcbb"},
+    text:"Il dio del mare Lir ebbe quattro figli dalla sua seconda moglie Aoife, che presto li invidiò per l'amore che il padre riversava su di loro. Portatili a un lago con l'inganno, Aoife pronunciò un incantesimo di druida oscuro e li mutò in cigni, condannandoli a novecento anni d'esilio sulle acque d'Irlanda, pur lasciando loro voce e memoria umane. Per secoli i quattro cigni cantarono canzoni tanto belle da far addormentare chiunque le udisse, aspettando invano la fine della maledizione. Quando infine tornarono umani, all'arrivo del cristianesimo, erano ormai vecchissimi, la pelle rugosa come corteccia, e si spensero pochi istanti dopo aver ricevuto il battesimo, felici finalmente di poter morire insieme.",
+    en:{"title": "The Children of Lir", "place": "Lough Derravaragh — Westmeath", "text": "The sea god Lir had four children by his second wife Aoife, who soon grew jealous of the love their father poured on them. Luring them to a lake, Aoife spoke a dark druid's spell and turned them into swans, condemning them to nine hundred years of exile on the waters of Ireland, though she left them their human voices and memory. For centuries the four swans sang songs so beautiful they lulled anyone who heard them to sleep, waiting in vain for the curse to end. When they finally became human again, with the coming of Christianity, they were impossibly old, their skin wrinkled like bark, and they died only moments after receiving baptism, happy at last to be able to die together."}
+  },
+  {
+    id:"maeve", title:"Medb, Regina di Cnoc na Rí", place:"Knocknarea — Sligo",
+    cats:["reali"], x:155.2, y:152.1,
+    scene:{mood:"gold", main:"stones", accent:"#7b5cb8"},
+    text:"Sulla cima di Knocknarea, contro il cielo del Connacht, si staglia un cairn di pietre alto quanto una casa: si dice sia la tomba della regina Medb, la più temuta e ambiziosa sovrana d'Irlanda. Fu lei a scatenare la grande guerra del Táin Bó Cúailnge, l'invasione dell'Ulster, solo per possedere un toro pari a quello del marito Ailill, non sopportando di essere considerata meno ricca di lui. Guerriera, stratega e amante quanto le serviva per costruire alleanze, Medb volle essere sepolta in piedi, rivolta verso nord, con l'armatura indosso, così da poter tenere d'occhio in eterno i suoi vecchi nemici dell'Ulster. Nessuno, per rispetto o per timore, ha mai osato scavare quel cairn per verificarlo.",
+    en:{"title": "Medb, Queen of Cnoc na Rí", "place": "Knocknarea — Sligo", "text": "Atop Knocknarea, against the sky of Connacht, stands a cairn of stones as tall as a house: it is said to be the tomb of Queen Medb, the most feared and ambitious sovereign in Ireland. It was she who unleashed the great war of the Táin Bó Cúailnge, the invasion of Ulster, simply to own a bull equal to her husband Ailill's, unable to bear being thought less wealthy than him. Warrior, strategist, and lover whenever it served her alliances, Medb chose to be buried standing upright, facing north, in full armour, so she could forever keep watch over her old enemies in Ulster. No one, out of respect or fear, has ever dared dig into that cairn to find out."}
+  },
+  {
+    id:"leap", title:"L'Elementale di Leap Castle", place:"Leap Castle — Offaly",
+    cats:["fantasmi"], x:201.9, y:309.7,
+    scene:{mood:"duskghost", main:"ruin", second:"wisp", accent:"#4a3020", accent2:"#9a4a68", tx2:30, ty2:0, scale2:0.55},
+    text:"Chiamato il castello più infestato d'Irlanda, Leap Castle custodisce una cappella-oubliette dove i nemici del clan O'Carroll venivano gettati su pali di ferro e dimenticati a morire. Fu lì, durante lavori di restauro nell'Ottocento, che un operaio scoprì tra i detriti un vero e proprio strato umano compattato: ossa di generazioni di prigionieri. Da allora nel castello si manifesta 'l'Elementale', una presenza descritta come una massa grigia e putrescente con un volto simile a quello di una capra, un odore insopportabile di carne marcia, e uno sguardo che lascia chi lo incrocia svuotato per giorni. Diversi testimoni, tra cui membri della stessa famiglia proprietaria, hanno giurato di averlo visto muoversi lungo le scale, come se il dolore accumulato in quelle pietre non trovasse mai pace.",
+    en:{"title": "The Elemental of Leap Castle", "place": "Leap Castle — Offaly", "text": "Called the most haunted castle in Ireland, Leap Castle holds an oubliette-chapel where enemies of the O'Carroll clan were thrown onto iron spikes and left to die. It was there, during nineteenth-century restoration work, that a labourer discovered among the rubble a solid layer of compacted human remains: the bones of generations of prisoners. Ever since, the castle has been haunted by 'the Elemental', a presence described as a grey, rotting mass with a face resembling a goat's, an unbearable stench of decaying flesh, and a stare that leaves anyone who meets it drained for days. Several witnesses, including members of the family who own the castle, have sworn to seeing it move along the stairs, as if the pain accumulated in those stones could never find rest."}
+  },
+  {
+    id:"blarney", title:"La Pietra dell'Eloquenza", place:"Castello di Blarney — Cork",
+    cats:["tesori","misteri"], x:154.9, y:440.8,
+    scene:{mood:"gold", main:"castle", accent:"#c9a341"},
+    text:"In cima al castello di Blarney è incastonata una pietra grigia dai poteri leggendari: chi la bacia, sporgendosi a testa in giù da un'apertura nelle mura, riceve in dono una lingua incantata, capace di persuadere chiunque con parole dolci come il miele. Le origini della pietra si perdono tra mille racconti: c'è chi dice fosse la pietra su cui Giacobbe posò il capo nella Bibbia, chi la lega alla dea Clíodhna, regina delle fate del Munster, che l'avrebbe donata al signore del castello per aiutarlo a vincere una disputa legale con parole anziché con la spada. Da secoli nobili, avvocati e politici irlandesi hanno affrontato la scomoda posizione a testa in giù pur di ottenere quel dono, dando origine all'espressione inglese 'blarney' per indicare un'eloquenza tanto affascinante quanto poco sincera.",
+    en:{"title": "The Stone of Eloquence", "place": "Blarney Castle — Cork", "text": "Set into the top of Blarney Castle is a grey stone with legendary powers: whoever kisses it, leaning backwards head-first through a gap in the battlements, is granted an enchanted tongue, able to persuade anyone with words as sweet as honey. The stone's origins are lost among a thousand tales: some say it was the very stone on which Jacob rested his head in the Bible, others link it to Clíodhna, fairy queen of Munster, who supposedly gave it to the castle's lord to help him win a legal dispute with words rather than the sword. For centuries, nobles, lawyers and Irish politicians have braved that awkward upside-down position just to receive that gift, giving rise to the English expression 'blarney', meaning talk as charming as it is insincere."}
+  },
+  {
+    id:"skellig", title:"L'Isola dei Monaci del Cielo", place:"Skellig Michael — Kerry",
+    cats:["misteri"], x:10.0, y:460.4,
+    scene:{mood:"mist", main:"monkboat", accent:"#e9dcbb"},
+    text:"A quasi tredici chilometri dalla costa più occidentale d'Europa, uno scoglio di roccia nera emerge dall'Atlantico come la spina dorsale di un mostro sommerso. Per seicento anni, a partire dal VI secolo, una piccola comunità di monaci visse su Skellig Michael in celle di pietra a forma di alveare, arrampicate su seicento gradini scavati a mano nella roccia, pregando in un silenzio interrotto solo dal vento e dal grido delle sule. Si narra che l'isola fosse già sacra prima dei monaci, dedicata all'arcangelo Michele proprio perché lì, secondo la leggenda, egli sarebbe apparso per aiutare San Patrizio a scacciare gli ultimi serpenti e demoni d'Irlanda in mare aperto. Ancora oggi, chi vi approda nelle giornate di nebbia giura di sentire un canto sommesso salire dalle celle vuote.",
+    en:{"title": "The Island of the Sky Monks", "place": "Skellig Michael — Kerry", "text": "Almost thirteen kilometres off Europe's westernmost coast, a black rock rises out of the Atlantic like the spine of a sunken monster. For six hundred years, beginning in the sixth century, a small community of monks lived on Skellig Michael in beehive-shaped stone cells, climbing six hundred steps carved by hand into the rock, praying in a silence broken only by the wind and the cry of gannets. It is said the island was already sacred before the monks arrived, dedicated to the Archangel Michael because, according to legend, he appeared there to help Saint Patrick drive the last serpents and demons of Ireland out into the open sea. Even today, those who land there on foggy days swear they can hear a low chant rising from the empty cells."}
+  },
+  {
+    id:"poulnabrone", title:"La Tomba di Pietra del Burren", place:"Dolmen di Poulnabrone — Clare",
+    cats:["misteri","tesori"], x:112.8, y:302.1,
+    scene:{mood:"dawn", main:"dolmen", accent:"#c9a341"},
+    text:"Nel paesaggio lunare di pietra calcarea del Burren, dove quasi nulla cresce, si erge da cinquemilaseicento anni un portale di tre grandi lastre di pietra: il dolmen di Poulnabrone, 'il foro della quercia dolente'. Quando fu scavato nel secolo scorso, gli archeologi vi trovarono i resti di oltre venti persone, tra cui un neonato, sepolti insieme ad asce, perline e monili, segno che quel luogo fu per secoli una porta tra il mondo dei vivi e quello degli antenati. Gli abitanti della zona raccontano che nelle notti senza luna il dolmen si illumini di una luce fredda propria, e che le pietre stesse custodiscano un tesoro non fatto d'oro, ma di ossa e memoria: il primo patto mai scritto tra gli irlandesi e la loro terra.",
+    en:{"title": "The Stone Tomb of the Burren", "place": "Poulnabrone Dolmen — Clare", "text": "In the moon-like limestone landscape of the Burren, where almost nothing grows, a portal of three great stone slabs has stood for five thousand six hundred years: the Poulnabrone dolmen, 'the hole of the sorrowful oak'. When it was excavated last century, archaeologists found within it the remains of more than twenty people, including an infant, buried alongside axes, beads and ornaments, a sign the place served for centuries as a doorway between the world of the living and that of the ancestors. Locals say that on moonless nights the dolmen glows with its own cold light, and that the stones themselves guard a treasure made not of gold, but of bone and memory: the first pact ever written between the Irish and their land."}
+  },
+  {
+    id:"dunluce", title:"La Cucina Inghiottita dal Mare", place:"Castello di Dunluce — Antrim",
+    cats:["fantasmi","misteri"], x:294.0, y:40.0,
+    scene:{mood:"night", main:"ruin", second:"wave", accent:"#3a3a3a", accent2:"#3f8079", tx2:5, ty2:40, scale2:0.9},
+    text:"Arroccato su uno sperone di roccia basaltica sospeso sull'oceano, il castello di Dunluce sembra parte della scogliera stessa, tanto che una sua porzione, nel 1639, crollò davvero in mare durante una tempesta, trascinando con sé l'intera cucina e i servitori che vi lavoravano: solo un ragazzo di cucina, aggrappato per caso a un angolo di muro rimasto in piedi, sopravvisse. Da quella notte, dicono i pescatori della baia, nelle sere di burrasca si odono ancora grida e il tintinnio di pentole levarsi dalle onde sotto le rovine. Ancora prima di quella tragedia, il castello era detto infestato da Maeve Roe, figlia di un signore locale rinchiusa in una torre per impedirle di sposare l'uomo amato: si narra sia morta di dolore in quella stanza, e che il suo pianto sottile si confonda ancora con il vento marino.",
+    en:{"title": "The Kitchen Swallowed by the Sea", "place": "Dunluce Castle — Antrim", "text": "Perched on a spur of basalt rock suspended over the ocean, Dunluce Castle seems part of the cliff itself — so much so that in 1639 a section of it truly did collapse into the sea during a storm, dragging down the entire kitchen along with the servants working in it: only a kitchen boy, clinging by chance to a corner of wall left standing, survived. Since that night, fishermen in the bay say that on stormy evenings screams and the clatter of pots can still be heard rising from the waves beneath the ruins. Even before that tragedy, the castle was said to be haunted by Maeve Roe, a local lord's daughter locked in a tower to stop her marrying the man she loved: she is said to have died of grief in that room, her thin cry still blending with the sea wind."}
+  },
+  {
+    id:"cashel", title:"Il Diavolo e la Rocca del Re", place:"Rocca di Cashel — Tipperary",
+    cats:["reali","fantasmi"], x:204.9, y:367.7,
+    scene:{mood:"duskghost", main:"castle", second:"devil", accent:"#e9dcbb", accent2:"#9a4a68", tx2:70, ty2:5, scale2:0.4},
+    text:"La Rocca di Cashel, un colle di roccia calcarea coronato di torri e cattedrali in rovina, fu per secoli sede dei re di Munster. La leggenda narra che quello sperone di pietra non fosse sempre lì: San Patrizio, predicando ai piedi delle montagne di Devil's Bit a nord, avrebbe fatto infuriare così tanto il demonio che questi, con un morso di rabbia, strappò un boccone di montagna e lo sputò via, facendolo atterrare proprio a Cashel, dove poi sarebbe sorta la roccia dei re. È qui che il re Aenghus, il primo sovrano cristiano di Munster, ricevette il battesimo da San Patrizio in persona: durante il rito il santo, appoggiandosi al suo bastone appuntito, trafisse per errore il piede del re, che sopportò il dolore in silenzio, credendolo parte necessaria del sacramento.",
+    en:{"title": "The Devil and the King's Rock", "place": "Rock of Cashel — Tipperary", "text": "The Rock of Cashel, a limestone hill crowned with towers and ruined cathedrals, was for centuries the seat of the kings of Munster. Legend says that spur of stone was not always there: Saint Patrick, preaching at the foot of the Devil's Bit mountains to the north, so enraged the devil that he tore a mouthful out of the mountain in fury and spat it out, landing it right at Cashel, where the rock of the kings would later rise. It was here that King Aenghus, the first Christian king of Munster, was baptised by Saint Patrick himself: during the rite, the saint, leaning on his pointed staff, accidentally pierced the king's foot, who bore the pain in silence, believing it a necessary part of the sacrament."}
+  },
+  {
+    id:"salmon", title:"Il Salmone della Conoscenza", place:"Fiume Boyne — Meath",
+    cats:["maghi","tesori"], x:291.0, y:231.0,
+    scene:{mood:"mist", main:"salmon", accent:"#3f8079"},
+    text:"Per sette anni il druido Finegas pescò lungo le rive del Boyne, cercando il leggendario Salmone della Conoscenza, un pesce che aveva mangiato le nocciole cadute dall'Albero della Sapienza e racchiudeva in sé tutta la saggezza del mondo. Quando finalmente lo catturò, affidò al giovane apprendista Fionn il compito di cuocerlo, con l'unico ordine severo di non assaggiarne nemmeno un boccone. Ma mentre girava il pesce sul fuoco, una goccia di grasso bollente schizzò sul pollice di Fionn, che se lo portò istintivamente alla bocca per lenire il bruciore. In quell'istante tutta la conoscenza del salmone passò in lui: da allora, ogni volta che Fionn mac Cumhaill si succhiava il pollice, poteva vedere il passato, il presente e il futuro, un dono che lo avrebbe reso il più saggio condottiero dei Fianna.",
+    en:{"title": "The Salmon of Knowledge", "place": "River Boyne — Meath", "text": "For seven years the druid Finegas fished along the banks of the Boyne, seeking the legendary Salmon of Knowledge, a fish that had eaten the hazelnuts fallen from the Tree of Wisdom and held within it all the knowledge of the world. When he finally caught it, he entrusted the young apprentice Fionn with cooking it, under one strict order: not to taste even a single bite. But as he turned the fish over the fire, a drop of hot fat splashed onto Fionn's thumb, which he instinctively put in his mouth to soothe the burn. In that instant, all the salmon's knowledge passed into him: from then on, whenever Fionn mac Cumhaill sucked his thumb, he could see the past, present and future, a gift that made him the wisest leader of the Fianna."}
+  },
+  {
+    id:"diarmuid", title:"La Fuga sotto Ben Bulben", place:"Ben Bulben — Sligo",
+    cats:["reali","tesori"], x:166.2, y:139.7,
+    scene:{mood:"dawn", main:"boar", accent:"#c2712f"},
+    text:"Gráinne, promessa sposa del vecchio Fionn mac Cumhaill, si innamorò invece del giovane guerriero Diarmuid e, con un incantesimo d'amore da cui egli non poté difendersi, lo costrinse a fuggire con lei attraverso tutta l'Irlanda. Per un anno e un giorno i due amanti dormirono in luoghi diversi ogni notte, inseguiti dai Fianna: ancora oggi centinaia di dolmen sparsi per il paese sono chiamati 'i letti di Diarmuid e Gráinne'. Alla fine Fionn finse di perdonarli, ma quando un cinghiale magico ferì mortalmente Diarmuid proprio sotto la montagna di Ben Bulben, Fionn, che possedeva il potere di guarire chiunque bevesse acqua dalle sue mani, lasciò che l'acqua gli scivolasse tra le dita non una, ma due volte, prima di decidersi troppo tardi a salvarlo, vendicando così, goccia dopo goccia, il proprio antico onore ferito.",
+    en:{"title": "The Flight Beneath Ben Bulben", "place": "Ben Bulben — Sligo", "text": "Gráinne, promised bride of the aging Fionn mac Cumhaill, fell in love instead with the young warrior Diarmuid, and with a love spell he could not resist, forced him to flee with her across all of Ireland. For a year and a day the two lovers slept in a different place every night, pursued by the Fianna: to this day hundreds of dolmens scattered across the country are called 'the beds of Diarmuid and Gráinne'. In the end Fionn pretended to forgive them, but when a magic boar mortally wounded Diarmuid right beneath Ben Bulben, Fionn — who had the power to heal anyone who drank water from his cupped hands — let the water slip through his fingers not once, but twice, before deciding too late to save him, avenging, drop by drop, his own old wounded pride."}
+  },
+  {
+    id:"dobharchu", title:"Il Dobhar-chú del Lago", place:"Glenade Lough — Leitrim",
+    cats:["creature","misteri"], x:182.2, y:139.7,
+    scene:{mood:"mist", main:"hound", accent:"#0c140f"},
+    text:"Nel 1722, secondo la lapide ancora visibile nel cimitero di Conwal, una giovane donna di nome Grace Connolly stava lavando i panni sulla riva di Glenade Lough quando fu trascinata sott'acqua e uccisa da una creatura mai vista prima: metà lontra, metà segugio, ricoperta di un pelo grigio scuro e dotata di zanne enormi. Il marito, trovato il corpo dilaniato, inseguì la bestia a cavallo per chilometri fino a trafiggerla con un pugnale, ma nell'istante della sua morte un secondo Dobhar-chú, forse il compagno, emerse ruggendo dal lago per vendicarlo, costringendo l'uomo a una fuga disperata. Da allora i pescatori della zona evitano di lavare i panni da soli sulla riva al crepuscolo, e qualcuno giura che nelle acque più profonde del lago viva ancora l'ultimo discendente di quella stirpe.",
+    en:{"title": "The Dobhar-chú of the Lake", "place": "Glenade Lough — Leitrim", "text": "In 1722, according to the gravestone still visible in Conwal cemetery, a young woman named Grace Connolly was washing clothes on the shore of Glenade Lough when she was dragged underwater and killed by a creature never seen before: half otter, half hound, covered in dark grey fur and armed with enormous fangs. Her husband, finding the mauled body, chased the beast on horseback for miles until he stabbed it with a dagger, but at the instant of its death a second Dobhar-chú, perhaps its mate, rose roaring from the lake to avenge it, forcing the man into a desperate flight. Ever since, local fishermen avoid washing clothes alone on the shore at dusk, and some swear the last descendant of that bloodline still lives in the deepest waters of the lake."}
+  },
+  {
+    id:"dunamase", title:"La Banshee degli O'Moore", place:"Rock of Dunamase — Laois",
+    cats:["fantasmi","reali"], x:256.9, y:307.1,
+    scene:{mood:"night", main:"ruin", second:"wisp", accent:"#241d12", accent2:"#9a4a68", tx2:30, ty2:0, scale2:0.6},
+    text:"Le rovine sospese sulla Rock of Dunamase furono per secoli fortezza del clan O'Moore, signori del Laois, prima che Oliver Cromwell la riducesse in macerie. Si dice che ogni famiglia nobile d'Irlanda abbia la propria banshee, uno spirito femminile il cui pianto acuto annuncia la morte imminente di un membro del casato, e quella degli O'Moore fu tra le più temute: la si udiva gemere lungo le mura la notte prima che un capoclan cadesse in battaglia. I contadini della zona raccontano che, ancora oggi, se ci si ferma soli tra le pietre crollate al calar della sera, si possa avvertire un freddo improvviso e un lamento sottile portato dal vento, come se la banshee, priva ormai di una famiglia da avvisare, continuasse comunque la sua veglia per abitudine antica.",
+    en:{"title": "The Banshee of the O'Moores", "place": "Rock of Dunamase — Laois", "text": "The ruins perched on the Rock of Dunamase were for centuries the stronghold of the O'Moore clan, lords of Laois, before Oliver Cromwell reduced it to rubble. It is said every noble family in Ireland has its own banshee, a female spirit whose sharp cry announces the imminent death of a member of the household, and the O'Moores' was among the most feared: she was heard wailing along the walls the night before a clan chief fell in battle. Locals say that even today, if you stand alone among the fallen stones at dusk, you may feel a sudden chill and a thin lament carried on the wind, as if the banshee, with no family left to warn, still keeps her ancient vigil out of habit."}
+  },
+  {
+    id:"puck", title:"Il Re Pooka di Killorglin", place:"Killorglin — Kerry",
+    cats:["creature"], x:65.6, y:420.0,
+    scene:{mood:"gold", main:"goat", accent:"#c2712f"},
+    text:"Il Pooka è uno degli spiriti più imprevedibili del folklore irlandese: una creatura mutaforma capace di apparire come cavallo nero, capra o folletto, che può portare fortuna o rovina secondo il proprio capriccio. Nella cittadina di Killorglin si racconta che, secoli fa, un branco di capre selvatiche in fuga dalle truppe di Cromwell avvertì gli abitanti dell'arrivo dei soldati correndo impazzita per le strade: da allora, ogni agosto, la città cattura una capra di montagna e la incorona 'Re Puck' su un trono innalzato in piazza per tre giorni di festa, in onore di quell'antico avvertimento. Alcuni anziani del posto, però, sussurrano che quella prima capra non fosse una capra qualunque, ma il Pooka stesso, apparso in quella forma per un suo scopo misterioso, e che il vero re della festa non sieda mai davvero sul trono, ma osservi la folla nascosto tra la gente.",
+    en:{"title": "The Puck King of Killorglin", "place": "Killorglin — Kerry", "text": "The Pooka is one of the most unpredictable spirits in Irish folklore: a shapeshifting creature that can appear as a black horse, a goat, or a small imp, capable of bringing luck or ruin according to its own whim. In the town of Killorglin, it is said that centuries ago a herd of wild goats fleeing Cromwell's troops warned the townspeople of the soldiers' approach by rushing wildly through the streets: ever since, every August, the town captures a mountain goat and crowns it 'King Puck' on a raised throne in the square for three days of festival, honouring that ancient warning. Some of the town's elders, though, whisper that the first goat was no ordinary goat at all, but the Pooka itself, appearing in that form for some mysterious purpose of its own — and that the festival's true king never really sits on the throne, but watches the crowd hidden among the people."}
+  },
+  {
+    id:"cuchulainn", title:"Setanta e il Cane di Culann", place:"Dún Dealgan, Dundalk — Louth",
+    cats:["creature","reali"], x:312.7, y:185.3,
+    scene:{mood:"night", main:"hound", accent:"#c2712f"},
+    text:"Da bambino il piccolo Setanta, nipote del re dell'Ulster, si presentò da solo al banchetto del fabbro Culann, arrivando in ritardo. Non sapeva che Culann avesse lasciato libero il proprio cane, una bestia enorme e feroce allevata apposta per sbranare chiunque si avvicinasse senza permesso. Quando il cane gli si scagliò contro, Setanta lo uccise a mani nude, lanciandogli contro una palla con tale forza da conficcargliela in gola. Vedendo la disperazione di Culann, rimasto senza guardiano, il ragazzo si offrì di allevare un nuovo cucciolo e, nel frattempo, di fare lui stesso da guardiano alla casa. Da quel giorno fu chiamato Cú Chulainn, 'il Cane di Culann', e crebbe fino a diventare il più temuto guerriero dell'Ulster, capace, in battaglia, di entrare in un delirio di furia chiamato ríastrad che gli deformava il corpo in una forma quasi mostruosa.",
+    en:{"title": "Setanta and Culann's Hound", "place": "Dún Dealgan, Dundalk — Louth", "text": "As a boy, young Setanta, nephew of the King of Ulster, arrived alone and late to a feast at the smith Culann's house. He did not know Culann had let loose his guard dog, an enormous, ferocious beast bred specifically to tear apart anyone approaching without permission. When the hound charged at him, Setanta killed it with his bare hands, hurling a ball at it with such force that it lodged in its throat. Seeing Culann's despair at losing his guardian, the boy offered to raise a new pup and, in the meantime, to guard the house himself. From that day he was called Cú Chulainn, 'the Hound of Culann', and grew to become Ulster's most feared warrior, capable in battle of entering a berserk fury called the ríastrad that twisted his body into an almost monstrous shape."}
+  },
+  {
+    id:"graceomalley", title:"Granuaile, Regina dei Mari", place:"Clare Island, Clew Bay — Mayo",
+    cats:["reali"], x:53.3, y:207.7,
+    scene:{mood:"mist", main:"ship", accent:"#e9dcbb"},
+    text:"Grace O'Malley, Gráinne Mhaol nella sua lingua, comandò per decenni una flotta di navi da guerra e da commercio lungo la costa selvaggia del Mayo, imponendo pedaggi ai mercanti che attraversavano le sue acque e non esitando a saccheggiare chi si rifiutava di pagare. Si narra che, tornata da un lungo viaggio e trovata la porta del castello di Howth chiusa perché la famiglia era a cena, rapisse per rappresaglia il giovane erede della casata, restituendolo solo dopo che il signore locale promise di tenere per sempre la propria tavola aperta agli ospiti inattesi, promessa che la famiglia Howth rispetta ancora oggi. Nel 1593 Granuaile navigò fino a Londra per incontrare di persona la regina Elisabetta I, rifiutandosi di inchinarsi perché, disse, non riconosceva in lei alcuna regina superiore a se stessa.",
+    en:{"title": "Granuaile, Queen of the Seas", "place": "Clare Island, Clew Bay — Mayo", "text": "Grace O'Malley — Gráinne Mhaol in her own tongue — commanded a fleet of warships and trading vessels along the wild Mayo coast for decades, levying tolls on merchants who crossed her waters and never hesitating to raid those who refused to pay. It is said that once, returning from a long voyage and finding the gates of Howth Castle shut because the family was at dinner, she took revenge by kidnapping the young heir of the household, returning him only after the local lord promised to always keep his table open to unexpected guests — a promise the Howth family still honours today. In 1593 Granuaile sailed all the way to London to meet Queen Elizabeth I in person, refusing to bow, because, she said, she recognised no queen above herself."}
+  },
+  {
+    id:"brianboru", title:"Il Corvo di Clontarf", place:"Clontarf — Dublino",
+    cats:["reali","fantasmi"], x:329.3, y:263.8,
+    scene:{mood:"night", main:"raven", accent:"#241d12"},
+    text:"Nel Venerdì Santo del 1014, il vecchio Alto Re Brian Boru, che aveva unito sotto di sé quasi tutta l'Irlanda, affrontò a Clontarf un'alleanza di re vichinghi e ribelli irlandesi. Troppo anziano per combattere in prima persona, Brian pregò nella propria tenda mentre la battaglia infuriava sulla spiaggia, e fu proprio lì che un guerriero vichingo in fuga, Brodir, lo sorprese e lo uccise con l'ascia. Gli irlandesi vinsero comunque la battaglia, spezzando per sempre il potere vichingo sull'isola, ma pagarono la vittoria con la vita del loro re. Si dice che nella notte prima dello scontro, sopra l'accampamento di Brian, i corvi della dea della guerra Mórrígan volassero in cerchi silenziosi, presagio che i veterani lessero fin troppo bene, e che ancora oggi, ogni Venerdì Santo, uno stormo scuro si raduni sulla baia di Dublino.",
+    en:{"title": "The Raven of Clontarf", "place": "Clontarf — Dublin", "text": "On Good Friday in 1014, the aging High King Brian Boru, who had united nearly all of Ireland under his rule, faced an alliance of Viking kings and Irish rebels at Clontarf. Too old to fight in person, Brian prayed in his tent while the battle raged on the shore, and it was there that a fleeing Viking warrior, Brodir, surprised and killed him with an axe. The Irish won the battle anyway, breaking Viking power over the island forever, but paid for the victory with their king's life. It is said that the night before the battle, ravens belonging to Mórrígan, goddess of war, circled silently above Brian's camp — an omen the veterans read all too well — and that even today, every Good Friday, a dark flock still gathers over Dublin Bay."}
+  },
+  {
+    id:"croagh", title:"San Patrizio e i Serpenti", place:"Croagh Patrick — Mayo",
+    cats:["maghi","misteri"], x:74.8, y:214.7,
+    scene:{mood:"dawn", main:"mountain", accent:"#3f8079"},
+    text:"Sulla cima della 'montagna sacra' che domina la baia di Clew, San Patrizio digiunò per quaranta giorni e quaranta notti nel 441, come Mosè sul Sinai, per ottenere da Dio la grazia di giudicare personalmente gli irlandesi nel giorno del Giudizio. Fu lì, secondo la leggenda più famosa dell'isola, che suonò una campana d'argento e scacciò in mare tutti i serpenti d'Irlanda, liberando per sempre la terra da ogni creatura velenosa: i naturalisti spiegano oggi che l'Irlanda non ebbe mai serpenti nemmeno prima dell'ultima era glaciale, ma i pellegrini preferiscono la versione del santo. Ogni anno, l'ultima domenica di luglio, decine di migliaia di persone salgono ancora il sentiero roccioso fino alla vetta, molti scalzi per penitenza, ripetendo un cammino di fede che si intreccia con riti pre-cristiani legati al dio Lugh assai più antichi dello stesso Patrizio.",
+    en:{"title": "Saint Patrick and the Serpents", "place": "Croagh Patrick — Mayo", "text": "On the summit of the 'holy mountain' overlooking Clew Bay, Saint Patrick fasted for forty days and forty nights in 441, like Moses on Sinai, to win from God the grace of personally judging the Irish on Judgement Day. It was there, according to the island's most famous legend, that he rang a silver bell and drove every serpent in Ireland into the sea, freeing the land forever from any venomous creature: naturalists today explain that Ireland never had snakes even before the last ice age, but pilgrims prefer the saint's version. Every year, on the last Sunday of July, tens of thousands still climb the rocky path to the summit, many barefoot as penance, retracing a path of faith intertwined with pre-Christian rites tied to the god Lugh, far older than Patrick himself."}
+  },
+  {
+    id:"cailleach_loughcrew", title:"Il Trono della Cailleach", place:"Loughcrew, Sliabh na Caillí — Meath",
+    cats:["maghi","creature"], x:259.5, y:218.0,
+    scene:{mood:"mist", main:"stones", second:"wisp", accent:"#5a76b8", accent2:"#e9dcbb", tx2:60, ty2:0, scale2:0.4},
+    text:"Sulle colline di Loughcrew, disseminate di tombe a corridoio ancora più antiche di Newgrange, si racconta che la Cailleach, l'antica dea-strega creatrice del paesaggio irlandese, volasse da un colle all'altro con un grembiule pieno di massi, lasciandone cadere uno a ogni passo per costruire il mondo con le proprie mani. Sulla cima più alta, chiamata ancora oggi Sliabh na Caillí, resta una grande pietra scavata a forma di sedile: il 'Trono della Strega'. Chi vi si siede, dicono gli anziani della zona, riceve in dono un desiderio, ma deve fare attenzione a formularlo con cura, perché la Cailleach concede sempre esattamente ciò che le viene chiesto, parola per parola, e mai un briciolo di più di quanto richiesto, punendo con la lettera del desiderio chi ne aveva frainteso lo spirito.",
+    en:{"title": "The Hag's Throne", "place": "Loughcrew, Sliabh na Caillí — Meath", "text": "On the hills of Loughcrew, scattered with passage tombs even older than Newgrange, it is said the Cailleach, the ancient witch-goddess who shaped the Irish landscape, flew from hill to hill with an apron full of boulders, dropping one with every step to build the world with her own hands. On the highest summit, still called Sliabh na Caillí, a great stone carved into a seat remains: the 'Hag's Chair'. Whoever sits upon it, the elders of the area say, is granted a wish — but must word it with great care, for the Cailleach always grants exactly what is asked, word for word, never a crumb more than requested, punishing with the letter of the wish anyone who had misunderstood its spirit."}
+  },
+  {
+    id:"rathcroghan", title:"La Grotta dei Gatti", place:"Oweynagat, Rathcroghan — Roscommon",
+    cats:["misteri","creature"], x:166.2, y:218.0,
+    scene:{mood:"night", main:"cave", accent:"#3a2a4a"},
+    text:"Sotto la pianura reale di Rathcroghan, antica capitale della regina Medb, si apre una fenditura naturale nella roccia chiamata Oweynagat, 'la grotta dei gatti': è considerata da secoli una delle porte dell'Otherworld, il regno degli spiriti e degli dèi. Da questa fenditura, narra la tradizione, ogni anno alla vigilia di Samhain, l'antico capodanno celtico che diede origine a Halloween, emergevano creature mostruose, uccelli dal fiato velenoso e la stessa dea della guerra Mórrígan, per riversarsi sul mondo dei vivi durante la notte in cui il confine tra i due regni si assottigliava fino a scomparire. I contadini della zona, ancora oggi, evitano di avvicinarsi troppo all'imboccatura della grotta dopo il tramonto del 31 ottobre, per timore di incrociare ciò che ne esce.",
+    en:{"title": "The Cave of the Cats", "place": "Oweynagat, Rathcroghan — Roscommon", "text": "Beneath the royal plain of Rathcroghan, ancient capital of Queen Medb, a natural fissure in the rock called Oweynagat, 'the cave of the cats', opens into the earth: for centuries it has been considered one of the gateways to the Otherworld, the realm of spirits and gods. From this fissure, tradition says, every year on the eve of Samhain, the ancient Celtic new year that gave rise to Halloween, monstrous creatures emerged, birds with poisonous breath, and even the war goddess Mórrígan herself, pouring into the world of the living during the one night when the border between the two realms grew thin enough to vanish. Local farmers, even today, avoid going near the cave's mouth after sunset on the thirty-first of October, for fear of meeting whatever comes out of it."}
+  },
+  {
+    id:"oisin", title:"Oisín e Niamh dai Capelli d'Oro", place:"Verso il mare d'occidente — Sligo",
+    cats:["maghi","misteri"], x:126.0, y:160.0,
+    scene:{mood:"dawn", main:"horse", second:"wave", accent:"#e9d9a0", accent2:"#3f8079", tx2:10, ty2:45, scale2:0.9},
+    text:"Niamh dai Capelli d'Oro, principessa di Tír na nÓg, la Terra dell'Eterna Giovinezza, cavalcò fuori dal mare su un cavallo bianco per portare con sé il poeta guerriero Oisín, figlio di Fionn mac Cumhaill, di cui si era innamorata. Vissero insieme felici per quelli che a Oisín sembravano tre anni, finché la nostalgia dell'Irlanda non lo spinse a chiedere di tornare, solo per un breve saluto ai vecchi compagni. Niamh acconsentì, ma lo avvertì di non toccare mai terra con i piedi. Tornato in Irlanda, Oisín scoprì che erano trascorsi trecento anni: i Fianna erano polvere, il mondo irriconoscibile. Cadendo per caso da cavallo mentre aiutava alcuni uomini a spostare un macigno, toccò il suolo e invecchiò all'istante di trecento anni, diventando un vecchio cieco che raccontò le proprie storie a San Patrizio in persona.",
+    en:{"title": "Oisín and Niamh of the Golden Hair", "place": "Toward the Western Sea — Sligo", "text": "Niamh of the Golden Hair, princess of Tír na nÓg, the Land of Eternal Youth, rode out of the sea on a white horse to carry off the poet-warrior Oisín, son of Fionn mac Cumhaill, with whom she had fallen in love. They lived happily together for what felt to Oisín like three years, until homesickness for Ireland drove him to ask to return, just for a brief farewell to his old companions. Niamh agreed, but warned him never to let his feet touch the ground. Back in Ireland, Oisín discovered three hundred years had passed: the Fianna were dust, the world unrecognisable. Falling by accident from his horse while helping some men move a boulder, he touched the earth and instantly aged three hundred years, becoming a blind old man who told his stories to Saint Patrick himself."}
+  },
+  {
+    id:"loughgur", title:"Il Cerchio di Pietra sul Lago", place:"Lough Gur — Limerick",
+    cats:["misteri","tesori"], x:157.7, y:368.3,
+    scene:{mood:"mist", main:"stones", accent:"#c9a341"},
+    text:"Lough Gur, un lago a forma di ferro di cavallo circondato dal più grande cerchio di pietre d'Irlanda, è considerato uno dei luoghi abitati senza interruzione più a lungo dell'intera isola, per oltre seimila anni. La leggenda locale narra che sul fondo del lago dorma ancora Gearóid Iarla, un conte normanno-irlandese e mago capace di trasformarsi in uccello, che vi fu imprigionato da un incantesimo dopo aver spaventato a morte la propria giovane sposa con una delle sue metamorfosi. Si dice che ogni sette anni Gearóid emerga dalle acque cavalcando un cavallo bianco ferrato d'argento, e che il giorno in cui i ferri di quel cavallo si saranno del tutto consumati sul fondale, il conte tornerà definitivamente a governare la valle, riportando con sé un'epoca di abbondanza dimenticata.",
+    en:{"title": "The Stone Circle on the Lake", "place": "Lough Gur — Limerick", "text": "Lough Gur, a horseshoe-shaped lake ringed by Ireland's largest stone circle, is considered one of the longest continuously inhabited places on the whole island, for over six thousand years. Local legend says that at the bottom of the lake still sleeps Gearóid Iarla, a Norman-Irish earl and wizard able to transform into a bird, who was trapped there by a spell after one of his shapeshifting tricks frightened his young bride to death. It is said that every seven years Gearóid rises from the waters riding a white horse shod with silver, and that the day those horseshoes finally wear away on the lakebed, the earl will return for good to rule the valley, bringing with him a forgotten age of abundance."}
+  },
+  {
+    id:"cailleach_beara", title:"La Vecchia di Beara", place:"Penisola di Beara — Cork",
+    cats:["maghi","creature"], x:57.0, y:475.4,
+    scene:{mood:"dawn", main:"hag", accent:"#5a76b8"},
+    text:"All'estremità della selvaggia penisola di Beara, una roccia dal profilo simile a un volto di donna incappucciata guarda immobile verso l'oceano da tempo immemorabile: è la Cailleach Bhéara, la Vecchia di Beara, una delle incarnazioni più antiche della dea-strega che avrebbe modellato l'intera Irlanda. Si narra che abbia vissuto sette vite umane, sposando e seppellendo sette mariti, ringiovanendo ogni volta che lo desiderava semplicemente bevendo a una particolare sorgente segreta, finché un giorno, stanca di un'eternità di perdite, scelse di trasformarsi in pietra proprio lì, sulla costa, per continuare a vegliare sul mare in eterno senza più dover soffrire. I pescatori della zona lasciano ancora piccole offerte ai suoi piedi prima di salpare, chiedendole di placare le tempeste che lei stessa, si dice, può scatenare con un solo sospiro.",
+    en:{"title": "The Hag of Beara", "place": "Beara Peninsula — Cork", "text": "At the far tip of the wild Beara Peninsula, a rock shaped like a hooded woman's face has stared unmoving out to sea since time immemorial: this is the Cailleach Bhéara, the Hag of Beara, one of the oldest incarnations of the witch-goddess said to have shaped the whole of Ireland. Legend says she lived seven human lifetimes, marrying and burying seven husbands, growing young again each time she wished simply by drinking from a certain secret spring, until one day, weary of an eternity of loss, she chose to turn to stone right there on the coast, so she could keep watch over the sea forever without having to suffer any more. Local fishermen still leave small offerings at her feet before setting sail, asking her to calm the storms she herself, it is said, can summon with a single sigh."}
+  },
+  {
+    id:"kilkenny", title:"I Gatti di Kilkenny", place:"Kilkenny",
+    cats:["creature"], x:252.5, y:351.3,
+    scene:{mood:"night", main:"cats", accent:"#0c140f"},
+    text:"Durante una rivolta del 1798, si racconta, un gruppo di soldati annoiati di stanza a Kilkenny prese l'abitudine crudele di legare per la coda due gatti e appenderli a un filo per farli combattere. Quando un ufficiale, avvertito del gioco, si avvicinò per fermarlo, un soldato ebbe appena il tempo di tagliare il filo con la sciabola per evitare la punizione: i due animali, secondo la leggenda diventata poi filastrocca popolare, avevano già combattuto con tale ferocia da divorarsi a vicenda quasi per intero, lasciando sul terreno soltanto le due code recise. Da questo racconto macabro nacque il detto dei 'Kilkenny cats', usato ancora oggi in inglese per descrivere due rivali che si combattono fino alla reciproca rovina totale, senza che nessuno dei due possa dirsi davvero vincitore.",
+    en:{"title": "The Cats of Kilkenny", "place": "Kilkenny", "text": "During an uprising in 1798, it is said, a group of soldiers stationed in Kilkenny took up the cruel habit of tying two cats together by the tail and hanging them over a line to fight. When an officer, alerted to the game, approached to put a stop to it, one soldier barely had time to cut the line with his sabre to avoid punishment: the two animals, according to the legend that later became a popular rhyme, had already fought with such ferocity that they had devoured each other almost entirely, leaving on the ground nothing but their two severed tails. From this gruesome tale came the saying 'Kilkenny cats', still used in English today to describe two rivals who fight each other to mutual ruin, with neither able to claim true victory."}
+  },
+  {
+    id:"charlesfort", title:"La Dama Bianca di Charles Fort", place:"Charles Fort, Kinsale — Cork",
+    cats:["fantasmi"], x:160.6, y:469.9,
+    scene:{mood:"duskghost", main:"ruin", second:"wisp", accent:"#3a3a3a", accent2:"#9a4a68", tx2:35, ty2:0, scale2:0.55},
+    text:"Nella fortezza a forma di stella di Charles Fort, affacciata sul porto di Kinsale, si narra che la figlia del primo governatore, Bridget, si sposò proprio il giorno in cui suo marito, un giovane ufficiale, prese servizio come sentinella notturna per la prima volta. Volendo fargli una sorpresa romantica travestita da soldato, Bridget si avvicinò al suo posto di guardia nell'oscurità: il marito, non riconoscendola e temendo un disertore o una spia, sparò senza esitare, uccidendola sul colpo. Distrutto dal rimorso, l'uomo si tolse la vita gettandosi dalle mura poco dopo. Da allora i soldati di guarnigione, per generazioni, hanno raccontato di aver visto una figura femminile vestita di bianco vagare silenziosa lungo i bastioni nelle notti di luna, ancora in cerca dello sposo perduto in quella prima, tragica notte di nozze.",
+    en:{"title": "The White Lady of Charles Fort", "place": "Charles Fort, Kinsale — Cork", "text": "At the star-shaped fortress of Charles Fort overlooking Kinsale harbour, it is said the first governor's daughter, Bridget, married on the very day her new husband, a young officer, took up his first night post as sentry. Wanting to surprise him romantically, Bridget dressed as a soldier and approached his post in the dark: her husband, not recognising her and fearing a deserter or a spy, fired without hesitation, killing her instantly. Overcome with remorse, the man took his own life shortly after by throwing himself from the walls. Ever since, generations of the garrison's soldiers have told of seeing a woman in white walking silently along the ramparts on moonlit nights, still searching for the groom lost on that first, tragic wedding night."}
+  },
+  {
+    id:"malahide", title:"Il Giullare di Malahide", place:"Castello di Malahide — Dublino",
+    cats:["fantasmi","reali"], x:333.0, y:252.9,
+    scene:{mood:"duskghost", main:"castle", second:"wisp", accent:"#e9dcbb", accent2:"#9a4a68", tx2:30, ty2:0, scale2:0.55},
+    text:"Il castello di Malahide, dimora della famiglia Talbot per quasi ottocento anni, ospitò per secoli un giullare di corte di nome Puck, un nano gobbo profondamente innamorato, senza speranza, di una dama della casata. Quando fu scoperto a spiarla in un momento intimo, i parenti della donna, furiosi, lo uccisero seduta stante nella stanza detta ancora oggi 'la camera del giullare'. Prima di morire, si narra, Puck pronunciò una maledizione e insieme una promessa: sarebbe rimasto per sempre a proteggere il castello, e nessuna Talbot sarebbe mai stata infelice in amore finché lui fosse rimasto. Ancora oggi il suo volto sogghignante è scolpito su un pannello della stanza, e i membri della famiglia raccontano di percepirne la presenza vigile, mai minacciosa, ogni volta che il castello attraversa momenti difficili.",
+    en:{"title": "The Jester of Malahide", "place": "Malahide Castle — Dublin", "text": "Malahide Castle, home to the Talbot family for nearly eight hundred years, once housed a court jester named Puck, a hunchbacked dwarf hopelessly in love with a lady of the household. When he was caught spying on her in a private moment, her furious relatives killed him on the spot, in the room still known today as 'the jester's chamber'. Before dying, it is said, Puck spoke both a curse and a promise: he would remain forever to protect the castle, and no Talbot woman would ever be unlucky in love as long as he stayed. His grinning face is still carved into a panel in that room today, and family members say they can still sense his watchful, never threatening presence whenever the castle passes through difficult times."}
+  },
+  {
+    id:"hookhead", title:"Il Faro di Dubhán", place:"Hook Head — Wexford",
+    cats:["misteri"], x:275.7, y:416.8,
+    scene:{mood:"dawn", main:"lighthouse", accent:"#c9a341"},
+    text:"Sulla punta rocciosa di Hook Head si erge quello che è considerato il faro operativo più antico del mondo, con una storia di segnali luminosi che risale a più di millecinquecento anni fa, quando il monaco gallese San Dubhán vi si stabilì da eremita. Dubhán, vedendo quante navi si spezzavano contro gli scogli nascosti nella nebbia, iniziò ad accendere ogni notte un fuoco d'avvertimento in cima alla scogliera, il primo di una lunga catena di guardiani del faro che si sarebbe tramandata per secoli. La leggenda racconta che un tempo la punta di Hook Head fosse abitata anche da una sirena, capace di calmare le tempeste con il proprio canto in cambio di offerte lasciate dai pescatori sulla riva, e che l'ultima delle sue apparizioni coincida, non a caso, con l'arrivo della prima luce artificiale del santo.",
+    en:{"title": "The Lighthouse of Dubhán", "place": "Hook Head — Wexford", "text": "On the rocky point of Hook Head stands what is considered the oldest operating lighthouse in the world, with a history of guiding lights stretching back more than fifteen hundred years, to when the Welsh monk Saint Dubhán settled there as a hermit. Seeing how many ships broke apart on the hidden rocks in the fog, Dubhán began lighting a warning fire atop the cliff every night, the first in a long line of lighthouse keepers passed down for centuries. Legend tells that Hook Head was once also home to a mermaid, able to calm storms with her song in exchange for offerings left by fishermen on the shore, and that her last appearance coincided, not by chance, with the arrival of the saint's first artificial light."}
+  },
+  {
+    id:"slane", title:"Il Castello che Ispirò Dracula", place:"Castello di Slane — Meath",
+    cats:["fantasmi","misteri"], x:318.0, y:207.0,
+    scene:{mood:"night", main:"castle", second:"bat", accent:"#241d12", accent2:"#5a76b8", tx2:60, ty2:5, scale2:0.4},
+    text:"Non lontano da Newgrange, sulle rive del Boyne, sorge il castello di Slane, dimora della famiglia Conyngham fin dal Settecento. Gli storici della letteratura ricordano che Bram Stoker, l'autore irlandese di 'Dracula', frequentò gli ambienti aristocratici legati a questa zona della valle del Boyne e conosceva bene le rovine, i cimiteri diroccati e le colline cave della regione, che secondo molti studiosi avrebbero ispirato l'atmosfera gotica del suo capolavoro più di qualunque castello della Transilvania mai visitato di persona. Gli abitanti della zona amano raccontare che, nelle sere di nebbia sul fiume, le sagome delle torri di Slane contro la luna sembrino davvero uscite da un romanzo, e qualche guida locale giura, non senza malizia, che uno dei conti della famiglia Conyngham fosse la reale, discreta ispirazione per il conte più famoso della letteratura horror.",
+    en:{"title": "The Castle that Inspired Dracula", "place": "Slane Castle — Meath", "text": "Not far from Newgrange, on the banks of the Boyne, stands Slane Castle, home of the Conyngham family since the eighteenth century. Literary historians recall that Bram Stoker, the Irish author of 'Dracula', moved in aristocratic circles connected to this stretch of the Boyne Valley and knew well its ruins, crumbling graveyards, and hollow hills, which many scholars believe inspired the gothic atmosphere of his masterpiece far more than any castle in Transylvania he ever actually visited. Locals love to say that on foggy evenings over the river, the silhouettes of Slane's towers against the moon truly look as if they stepped out of a novel, and some local guides claim, not without mischief, that one of the Conyngham counts was the real, discreet inspiration for horror literature's most famous count."}
+  },
+  {
+    id:"moytura", title:"Le Quattro Reliquie dei Tuatha Dé Danann", place:"Cong, Moytura — Mayo",
+    cats:["tesori","maghi"], x:102.4, y:242.7,
+    scene:{mood:"gold", main:"cauldron", second:"sword", accent:"#c9a341", accent2:"#8a7431", tx2:60, ty2:0, scale2:0.42},
+    text:"Quando il Popolo della Dea Danu giunse in Irlanda avvolto in una nube magica, portò con sé da quattro città leggendarie altrettanti oggetti di potere assoluto: la Lia Fáil, la pietra che riconosceva i veri re a Tara; la Lancia di Lugh, che garantiva la vittoria a chiunque la impugnasse in battaglia; la Spada di Nuada, capace di tagliare qualsiasi armatura una volta sguainata; e il Calderone del Dagda, da cui nessun commensale si allontanava mai insoddisfatto, tanta era l'abbondanza di cibo che sgorgava senza fine dal suo fondo. Fu proprio nella piana di Moytura, vicino a Cong, che questi tesori vennero usati nella grande battaglia contro i Fomori, i giganti del mare, in uno scontro che gli antichi cronisti irlandesi descrissero come la guerra decisiva tra l'ordine e il caos primordiale per il possesso stesso dell'isola.",
+    en:{"title": "The Four Treasures of the Tuatha Dé Danann", "place": "Cong, Moytura — Mayo", "text": "When the People of the goddess Danu arrived in Ireland wrapped in a magic mist, they brought with them from four legendary cities four objects of absolute power: the Lia Fáil, the stone that recognised true kings at Tara; the Spear of Lugh, which guaranteed victory to whoever wielded it in battle; the Sword of Nuada, able to cut through any armour once drawn; and the Cauldron of the Dagda, from which no guest ever left unsatisfied, so endless was the abundance of food that flowed from its depths. It was on the plain of Moytura, near Cong, that these treasures were used in the great battle against the Fomorians, the giants of the sea, a clash ancient Irish chroniclers described as the decisive war between order and primordial chaos for possession of the island itself."}
+  },
+  {
+    id:"craglea", title:"Aoibheall di Craglea", place:"Craglea, Killaloe — Clare",
+    cats:["fantasmi","maghi"], x:164.5, y:332.1,
+    scene:{mood:"duskghost", main:"stones", second:"wisp", accent:"#5a76b8", accent2:"#9a4a68", tx2:60, ty2:5, scale2:0.4},
+    text:"Sulla collina boscosa di Craglea, sopra Killaloe, viveva Aoibheall, la banshee protettrice del clan Dál gCais e del suo più celebre discendente, il futuro Alto Re Brian Boru. Si narra che la notte prima della battaglia di Clontarf, Aoibheall apparve in sogno a Brian per avvertirlo che quella sarebbe stata la sua ultima notte in vita, offrendogli in cambio la certezza che la sua stirpe avrebbe governato l'Irlanda per generazioni. Brian scelse comunque di guidare i suoi uomini in battaglia, accettando il patto. Ancora oggi, quando il vento soffia con un particolare lamento tra gli alberi di Craglea, gli abitanti di Killaloe dicono che sia la voce di Aoibheall, che da mille anni continua a vegliare sulla discendenza del re che scelse l'onore alla vita eterna.",
+    en:{"title": "Aoibheall of Craglea", "place": "Craglea, Killaloe — Clare", "text": "On the wooded hill of Craglea, above Killaloe, lived Aoibheall, the banshee protector of the Dál gCais clan and its most famous descendant, the future High King Brian Boru. It is said that the night before the Battle of Clontarf, Aoibheall appeared to Brian in a dream to warn him it would be his last night alive, offering in exchange the certainty his line would rule Ireland for generations. Brian chose to lead his men into battle anyway, accepting the bargain. Even today, when the wind blows through the trees of Craglea with a particular moan, the people of Killaloe say it is Aoibheall's voice, still watching over the descendants of the king who chose honour over eternal life, a thousand years on."}
+  },
+  {
+    id:"moher", title:"Mal e le Scogliere di Moher", place:"Scogliere di Moher — Clare",
+    cats:["creature","misteri"], x:91.6, y:315.9,
+    scene:{mood:"mist", main:"cliff", second:"hag", accent:"#2d4a44", accent2:"#241d12", tx2:80, ty2:2, scale2:0.4},
+    text:"Le scogliere di Moher, che precipitano per oltre duecento metri a strapiombo sull'Atlantico, devono il proprio nome, secondo la leggenda, a una strega di mare chiamata Mal, innamorata non corrisposta dell'eroe Cú Chulainn. Quando questi la respinse, Mal lo inseguì per tutta l'Irlanda trasformandosi infine in un enorme mostro marino pur di raggiungerlo lungo la costa del Clare. Cú Chulainn, vistala emergere dalle onde, balzò da una sporgenza di roccia all'altra lungo la scogliera per sfuggirle, finché Mal, saltando a sua volta per raggiungerlo, mancò l'appiglio e precipitò sugli scogli sottostanti, morendo sul colpo: quel punto della costa è ancora oggi chiamato 'Hag's Head', la Testa della Strega, primo promontorio della celebre scogliera, e nelle giornate di foschia marina qualcuno giura di scorgerne ancora il profilo tra la nebbia.",
+    en:{"title": "Mal and the Cliffs of Moher", "place": "Cliffs of Moher — Clare", "text": "The Cliffs of Moher, plunging over two hundred metres straight down into the Atlantic, owe their name, according to legend, to a sea-witch called Mal, hopelessly in love with the hero Cú Chulainn. When he rejected her, Mal pursued him across all of Ireland, finally transforming into an enormous sea monster just to reach him along the Clare coast. Seeing her rise from the waves, Cú Chulainn leapt from one rocky ledge to another along the cliff to escape her, until Mal, leaping in turn to catch him, missed her footing and plunged onto the rocks below, dying instantly: that point of the coast is still called 'Hag's Head' today, the first headland of the famous cliffs, and on misty sea days some say they can still make out her outline in the fog."}
+  }
+];
+
+/* ---------- Itinerario: ordine di visita che attraversa l'intera isola ---------- */
+const ROUTE = ["brianboru","malahide","newgrange","tara","salmon","slane","cailleach_loughcrew","cuchulainn","causeway","dunluce","dobharchu","diarmuid","maeve","oisin","rathcroghan","croagh","graceomalley","moytura","poulnabrone","moher","craglea","loughgur","skellig","puck","cailleach_beara","blarney","charlesfort","hookhead","kilkenny","cashel","dunamase","leap","lir"];
+const visited = new Set();
+
+/* ---------- Mappa dell'Irlanda (contorno da dati geografici reali, semplificato) ---------- */
+const ISLAND_PATH = "M25.9,437.7 L51.2,425.6 L51.6,422.0 L52.1,421.1 L51.7,425.2 L55.8,423.9 L54.5,421.5 L57.0,415.1 L57.8,418.4 L66.3,416.7 L64.5,414.4 L67.8,412.8 L52.3,414.7 L54.5,419.0 L50.7,414.5 L35.4,418.9 L34.5,415.5 L31.4,417.8 L28.5,414.8 L26.7,416.3 L30.4,417.9 L22.9,415.8 L23.9,418.9 L16.3,420.2 L14.0,419.1 L15.8,417.0 L14.4,413.5 L17.2,410.7 L14.6,410.3 L19.5,406.3 L19.2,409.5 L22.3,410.4 L23.0,403.1 L36.5,396.1 L39.0,399.9 L36.3,403.6 L42.6,401.8 L47.3,397.0 L45.3,393.8 L48.4,393.0 L47.7,398.6 L52.9,403.4 L69.1,400.4 L58.7,398.3 L58.2,394.8 L59.1,397.5 L62.5,393.7 L60.8,393.7 L61.9,384.5 L53.7,380.2 L72.7,372.5 L73.1,364.7 L77.6,360.3 L101.4,361.6 L118.6,353.4 L124.2,355.6 L123.4,353.1 L126.4,350.5 L141.5,348.8 L145.7,351.5 L149.9,350.5 L133.4,345.9 L125.8,347.7 L127.6,341.3 L124.9,338.9 L127.2,336.8 L127.6,334.9 L126.2,333.5 L127.2,335.9 L120.1,339.5 L117.6,349.1 L111.3,355.7 L104.5,355.6 L100.4,359.6 L98.3,357.9 L103.4,353.1 L92.5,357.8 L80.5,349.8 L83.0,353.2 L71.7,356.5 L72.0,360.2 L54.1,363.2 L75.4,348.4 L78.1,340.4 L86.8,339.4 L86.9,332.2 L91.5,329.0 L90.4,323.8 L97.7,317.3 L88.2,315.8 L102.5,290.7 L112.1,293.8 L115.9,291.3 L113.8,289.1 L122.4,290.8 L116.8,288.4 L125.7,286.7 L128.2,291.3 L126.5,284.9 L130.4,281.2 L119.5,281.4 L124.3,280.3 L122.7,279.8 L125.9,278.9 L123.8,278.2 L128.1,275.4 L127.2,274.9 L84.6,281.3 L81.4,276.1 L83.4,274.0 L82.3,273.0 L78.0,280.1 L76.7,277.5 L79.0,272.3 L77.2,269.2 L82.7,266.3 L79.1,264.0 L82.6,261.5 L78.1,261.7 L78.1,265.8 L80.6,267.0 L77.0,268.0 L72.8,265.3 L77.0,264.0 L75.2,260.9 L69.1,270.8 L61.1,270.4 L61.7,272.6 L61.3,273.1 L58.8,271.2 L61.0,269.2 L59.9,267.8 L59.1,270.2 L56.4,268.0 L57.8,263.1 L64.9,260.2 L62.7,258.4 L64.2,256.9 L59.5,260.7 L58.0,257.6 L62.4,256.1 L57.0,256.3 L57.8,261.9 L56.4,261.9 L56.5,257.6 L55.9,257.4 L52.8,263.3 L44.4,256.6 L35.1,258.5 L39.7,252.2 L47.1,251.7 L42.8,250.9 L43.3,248.2 L46.4,250.2 L48.0,250.7 L48.2,250.3 L40.5,246.9 L39.4,245.0 L41.7,245.4 L41.9,245.3 L35.4,240.0 L43.1,240.2 L40.0,237.7 L42.1,237.2 L49.5,241.2 L52.9,240.4 L45.5,233.0 L60.8,233.2 L58.5,231.5 L58.9,231.3 L58.2,230.9 L58.3,230.7 L65.3,235.2 L71.8,234.9 L73.9,233.4 L65.6,234.2 L56.0,228.0 L56.6,214.3 L75.3,209.7 L80.3,212.1 L82.8,209.2 L76.7,207.7 L82.4,202.8 L78.9,201.7 L82.3,200.5 L79.0,199.5 L81.6,198.6 L80.8,197.8 L66.4,197.5 L56.6,202.2 L55.7,201.2 L53.8,201.0 L53.8,200.7 L56.8,193.3 L52.9,196.1 L54.3,197.8 L52.5,200.6 L45.7,195.7 L44.8,188.5 L30.6,188.3 L35.7,183.1 L42.2,185.0 L51.6,181.2 L55.0,185.7 L52.1,191.1 L56.0,189.5 L54.1,193.6 L61.6,189.9 L62.3,191.3 L64.5,191.5 L63.3,194.0 L64.0,195.7 L64.9,195.9 L64.2,188.5 L63.1,191.3 L62.1,189.0 L60.5,189.1 L62.4,186.1 L55.1,185.7 L58.6,184.2 L56.3,179.1 L59.7,178.2 L60.9,176.1 L59.1,174.7 L61.6,173.6 L59.7,171.8 L61.5,171.6 L59.0,171.5 L58.4,174.3 L57.0,173.1 L57.6,176.2 L54.9,177.6 L51.8,177.5 L50.1,172.4 L57.0,170.5 L50.7,162.8 L53.2,163.6 L55.4,160.9 L48.7,157.0 L48.9,162.6 L42.8,165.5 L45.6,167.0 L42.7,170.7 L45.4,172.8 L40.1,173.2 L43.3,162.5 L41.9,160.3 L45.5,158.1 L41.6,155.6 L44.6,156.1 L42.5,154.2 L44.4,150.5 L50.0,146.8 L52.5,151.4 L58.0,151.8 L56.0,156.9 L50.7,157.3 L56.1,158.8 L60.8,157.4 L58.5,153.2 L61.4,150.2 L68.0,153.9 L69.4,152.9 L59.7,147.7 L64.0,142.5 L95.1,148.7 L98.1,144.6 L104.3,147.1 L104.7,151.6 L107.9,150.0 L107.6,154.1 L106.0,155.8 L105.4,155.7 L104.3,156.5 L104.3,156.7 L103.8,156.9 L104.5,156.9 L105.5,155.9 L106.5,156.1 L107.4,154.7 L109.0,154.5 L106.8,158.2 L112.8,162.3 L112.9,170.1 L114.9,160.4 L113.2,159.6 L116.3,158.5 L119.1,148.5 L128.4,148.7 L136.0,153.7 L148.2,151.4 L154.0,159.3 L159.5,158.2 L150.8,153.5 L151.8,149.3 L161.9,150.8 L154.3,147.2 L155.1,144.1 L157.9,146.1 L160.0,145.1 L153.4,142.6 L149.5,145.6 L146.7,141.1 L155.1,133.8 L159.6,132.6 L155.5,135.3 L155.6,135.8 L156.8,136.5 L160.8,133.4 L162.5,126.8 L164.7,129.1 L182.2,123.2 L177.0,119.9 L181.4,117.2 L180.5,114.4 L184.8,111.5 L184.8,107.8 L188.9,109.3 L186.3,107.2 L188.4,104.7 L174.9,110.8 L176.9,106.6 L175.7,105.2 L162.9,115.1 L169.2,109.2 L168.5,106.6 L164.4,109.2 L165.9,105.5 L165.5,104.6 L162.8,110.3 L161.1,106.6 L153.7,110.2 L149.5,105.0 L150.8,108.2 L146.8,108.6 L138.5,103.6 L137.5,98.3 L142.3,97.5 L141.9,93.8 L148.8,89.2 L153.4,88.7 L159.0,91.2 L165.0,91.7 L156.2,87.8 L161.9,87.2 L165.2,90.8 L166.5,89.5 L163.9,86.7 L155.1,83.0 L165.5,79.7 L172.3,82.0 L176.9,78.8 L178.5,76.6 L172.0,81.0 L168.0,76.6 L173.3,77.1 L174.1,75.2 L163.4,72.6 L163.5,68.2 L170.2,67.9 L162.8,61.7 L167.5,61.2 L164.3,57.9 L165.2,55.0 L166.0,55.7 L166.9,58.1 L166.7,59.2 L166.9,59.6 L173.3,53.3 L172.0,55.8 L173.1,58.8 L175.0,56.1 L172.9,50.4 L175.8,41.7 L186.8,41.3 L184.4,43.9 L187.0,46.6 L188.0,42.0 L195.1,40.0 L198.1,33.4 L201.4,35.5 L198.3,38.6 L204.7,38.2 L206.3,40.2 L203.4,42.1 L206.1,40.8 L207.8,41.3 L204.1,44.8 L207.6,45.6 L209.8,39.0 L206.2,36.5 L206.6,33.5 L212.5,29.7 L210.5,36.9 L211.2,39.5 L218.3,41.0 L219.4,49.2 L221.6,41.9 L217.8,37.2 L218.9,33.7 L217.4,34.0 L217.5,37.4 L218.8,39.1 L218.3,40.7 L211.8,34.8 L214.8,29.6 L224.0,27.1 L226.2,32.8 L225.1,37.9 L232.5,45.9 L231.5,49.8 L223.9,54.4 L223.2,56.6 L229.4,57.2 L220.2,66.9 L224.7,65.9 L235.9,55.4 L231.8,54.2 L232.2,51.4 L237.1,53.7 L235.0,50.7 L236.5,44.5 L229.6,37.1 L232.4,32.0 L231.7,26.1 L239.0,26.9 L244.0,22.1 L248.2,25.4 L244.9,26.3 L252.3,27.1 L241.1,15.3 L243.1,14.0 L256.2,18.5 L259.3,25.1 L276.4,32.2 L258.4,43.6 L251.2,56.2 L266.7,55.4 L271.6,48.3 L273.3,37.5 L290.4,40.4 L308.6,30.3 L339.7,36.9 L342.5,43.8 L339.9,53.8 L346.9,55.4 L344.8,63.4 L350.2,66.1 L359.2,79.7 L358.0,82.4 L363.3,84.8 L364.7,89.7 L363.8,84.6 L359.7,79.7 L364.4,80.2 L367.1,85.6 L365.7,92.9 L351.9,101.8 L350.5,105.3 L353.1,106.5 L350.9,109.4 L363.3,101.2 L375.1,101.3 L379.2,105.9 L383.7,123.5 L386.0,124.8 L380.6,144.1 L377.5,138.1 L375.2,136.5 L378.5,130.8 L376.8,119.4 L367.4,113.1 L364.6,118.5 L372.3,122.5 L368.0,122.9 L371.7,131.4 L367.4,139.1 L375.7,137.7 L379.2,146.8 L372.8,154.6 L370.8,152.6 L369.2,157.2 L366.9,154.0 L357.4,155.0 L357.3,150.3 L354.5,154.1 L356.7,155.3 L352.2,159.5 L353.7,164.4 L352.0,171.9 L339.7,182.2 L336.3,180.0 L338.6,179.1 L337.1,177.3 L332.2,177.0 L323.8,171.4 L323.9,171.4 L335.4,172.0 L336.9,175.0 L335.4,172.0 L322.9,171.1 L320.9,166.7 L320.5,166.8 L322.3,170.8 L330.6,180.0 L334.5,180.7 L336.8,185.0 L334.0,187.5 L317.4,181.2 L317.6,183.8 L313.9,183.2 L319.7,185.7 L316.3,191.1 L317.5,197.9 L326.7,202.3 L325.0,208.7 L328.2,210.2 L325.7,218.1 L328.5,230.3 L338.4,240.3 L338.6,244.5 L334.5,245.2 L331.8,246.7 L337.2,248.0 L334.4,252.6 L333.5,249.9 L329.5,251.3 L335.1,253.8 L334.6,259.0 L340.7,260.9 L340.4,264.0 L335.2,260.6 L327.3,264.1 L330.3,265.9 L328.2,265.6 L326.0,265.7 L330.9,266.4 L329.1,269.6 L337.5,274.8 L336.3,281.0 L341.5,296.7 L340.6,309.2 L344.4,312.8 L340.0,326.2 L333.7,333.4 L333.9,341.6 L327.6,352.0 L330.0,362.6 L318.2,381.7 L317.8,389.6 L310.6,390.2 L309.9,385.4 L306.6,388.8 L310.2,389.8 L312.6,395.8 L315.6,393.9 L316.7,400.3 L321.3,402.4 L317.8,410.6 L300.3,411.2 L292.2,405.3 L285.0,405.9 L288.7,401.5 L288.2,399.7 L282.6,405.4 L283.6,410.5 L276.1,417.0 L277.7,407.3 L272.8,402.0 L271.8,408.7 L274.3,410.2 L268.8,415.7 L262.7,416.5 L265.0,411.8 L261.8,411.1 L264.0,413.5 L239.1,416.1 L230.0,422.6 L227.4,419.4 L223.7,419.3 L225.3,421.3 L223.3,424.6 L231.3,425.4 L227.5,433.2 L219.3,435.3 L216.7,439.8 L209.4,439.5 L210.4,435.8 L207.4,434.4 L208.6,439.5 L202.3,444.1 L206.8,447.0 L197.1,449.4 L194.7,452.2 L196.8,453.7 L192.4,455.8 L178.1,457.7 L178.3,453.2 L183.5,451.1 L181.4,448.9 L184.0,444.7 L176.3,445.3 L182.0,447.7 L173.4,451.6 L173.6,444.0 L172.2,446.3 L168.0,443.8 L166.5,444.6 L165.5,444.2 L164.3,444.1 L163.9,444.3 L171.6,447.2 L170.9,452.5 L175.1,452.4 L173.1,454.2 L175.4,455.8 L173.4,455.8 L172.7,456.6 L171.5,455.3 L170.8,455.2 L170.4,454.6 L168.4,455.2 L172.7,456.7 L176.5,455.5 L176.8,457.1 L172.1,461.2 L175.1,462.5 L172.0,467.2 L164.4,471.1 L164.4,468.0 L160.8,466.7 L163.8,470.0 L161.9,472.5 L159.6,468.6 L153.0,469.3 L151.8,466.1 L151.5,465.7 L150.6,465.3 L150.2,464.6 L150.6,465.6 L151.6,465.9 L153.0,469.8 L159.5,469.2 L156.3,476.3 L157.7,481.1 L155.5,476.7 L148.4,477.4 L148.0,474.7 L147.0,474.3 L140.7,476.1 L146.7,477.1 L144.4,485.4 L132.2,478.8 L133.9,481.7 L131.0,481.9 L133.0,484.5 L126.8,490.4 L121.5,484.0 L122.3,486.7 L117.3,488.3 L112.4,484.1 L115.4,489.3 L110.7,492.3 L111.2,489.6 L111.0,487.9 L110.6,487.8 L107.8,495.7 L103.6,493.9 L98.0,498.0 L94.6,497.2 L97.0,495.7 L97.0,494.1 L95.3,495.6 L93.9,494.4 L99.5,489.7 L92.9,494.5 L91.5,492.5 L94.3,488.1 L89.8,486.5 L91.4,488.6 L89.8,490.8 L76.8,495.2 L75.9,491.4 L74.4,491.9 L66.4,500.5 L67.3,496.4 L63.5,500.4 L61.4,496.3 L75.2,488.6 L83.5,479.5 L69.5,486.6 L63.2,488.8 L60.6,488.6 L89.2,471.8 L91.0,466.6 L86.4,467.2 L83.5,462.9 L82.9,467.6 L75.5,472.6 L69.8,470.3 L69.4,473.4 L56.5,475.1 L54.4,479.8 L46.9,483.0 L37.5,484.1 L37.9,479.8 L45.5,477.6 L42.9,472.4 L51.6,470.9 L53.5,467.4 L49.1,467.3 L51.0,465.1 L58.4,461.3 L59.3,462.1 L58.5,462.3 L58.1,463.9 L58.3,464.1 L60.9,459.5 L65.0,461.4 L62.4,458.7 L69.8,452.2 L75.9,451.3 L81.9,447.6 L82.0,446.8 L68.4,450.8 L59.0,457.5 L59.9,455.1 L56.7,452.5 L57.1,456.5 L40.4,464.7 L41.5,461.5 L32.9,459.1 L36.5,457.8 L36.9,453.6 L34.3,451.4 L35.8,449.8 L24.3,458.9 L24.9,451.2 L20.3,451.5 L19.6,447.2 L31.1,444.0 L29.1,440.8 L36.0,436.6 L29.8,439.7 L25.9,437.7 Z";
+
+/* ---------- Rendering mappa ---------- */
+const svg = document.getElementById('mapSvg');
+svg.innerHTML = `
+  <path class="isle" d="${ISLAND_PATH}"/>
+  <path class="isle-texture" d="M60,77 Q150,116 240,90"/>
+  <path class="isle-texture" d="M40,231 Q150,270 260,244"/>
+  <path class="isle-texture" d="M60,386 Q150,411 230,386"/>
+`;
+STORIES.forEach(s=>{
+  const primary = s.cats[0];
+  const color = CATS[primary].color;
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","marker");
+  g.setAttribute("data-id", s.id);
+  g.setAttribute("data-cats", s.cats.join(","));
+  g.innerHTML = `
+    <circle class="pulse" cx="${s.x}" cy="${s.y}" r="3.5" style="stroke:${color}"></circle>
+    <circle class="dot" cx="${s.x}" cy="${s.y}" r="3.5" style="fill:${color}"></circle>
+    <text x="${s.x+6}" y="${s.y+2.5}">${s.title}</text>
+  `;
+  g.addEventListener('click', ()=>{
+    if(itineraryActive){
+      const idx = ROUTE.indexOf(s.id);
+      if(idx>=0) goToStop(idx);
+    }
+    openStory(s.id);
+  });
+  svg.appendChild(g);
+});
+
+/* ---------- Filtri ---------- */
+const filtersEl = document.getElementById('filters');
+let activeCat = "all";
+function renderFilters(){
+  let html = `<div class="chip" data-cat="all" data-active="1">Tutte</div>`;
+  for(const k in CATS){
+    html += `<div class="chip" data-cat="${k}">${CATS[k].label}</div>`;
+  }
+  filtersEl.innerHTML = html;
+  filtersEl.querySelectorAll('.chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      activeCat = ch.getAttribute('data-cat');
+      filtersEl.querySelectorAll('.chip').forEach(c=>c.removeAttribute('data-active'));
+      ch.setAttribute('data-active','1');
+      applyFilter();
+    });
+  });
+}
+function applyFilter(){
+  document.querySelectorAll('.marker').forEach(m=>{
+    const cats = m.getAttribute('data-cats').split(",");
+    const show = activeCat==="all" || cats.includes(activeCat);
+    m.classList.toggle('dim', !show);
+  });
+  document.querySelectorAll('.story-item').forEach(it=>{
+    const cats = it.getAttribute('data-cats').split(",");
+    const show = activeCat==="all" || cats.includes(activeCat);
+    it.classList.toggle('hidden', !show);
+  });
+}
+renderFilters();
+function updateStats(){
+  const txt = visited.size>0
+    ? `${STORIES.length} leggende · ${visited.size} scoperte in questa visita`
+    : `${STORIES.length} leggende da tutte le province d'Irlanda`;
+  document.getElementById('statsLine').textContent = txt;
+}
+updateStats();
+
+/* ---------- Elenco leggende ---------- */
+const listEl = document.getElementById('list');
+listEl.innerHTML = STORIES.map(s=>{
+  const primary = s.cats[0];
+  return `<div class="story-item" data-id="${s.id}" data-cats="${s.cats.join(",")}">
+    <div class="dotcat" style="background:${CATS[primary].color}"></div>
+    <div class="meta">
+      <div class="t">${s.title}</div>
+      <div class="p">${s.place}</div>
+    </div>
+  </div>`;
+}).join("");
+listEl.querySelectorAll('.story-item').forEach(it=>{
+  it.addEventListener('click', ()=>{
+    const id = it.getAttribute('data-id');
+    if(itineraryActive){
+      const idx = ROUTE.indexOf(id);
+      if(idx>=0) goToStop(idx);
+    }
+    openStory(id);
+  });
+});
+
+/* ---------- Dettaglio leggenda ---------- */
+const overlay = document.getElementById('overlay');
+const cardInner = document.getElementById('cardInner');
+let currentStoryId = null;
+let currentLang = 'it';
+
+function openStory(id){
+  const s = STORIES.find(x=>x.id===id);
+  if(!s) return;
+  currentStoryId = id;
+  visited.add(id);
+  const m = svg.querySelector(`.marker[data-id="${id}"]`);
+  if(m) m.classList.add('visited');
+  updateStats();
+
+  const useEn = currentLang === 'en';
+  const title = useEn ? s.en.title : s.title;
+  const place = useEn ? s.en.place : s.place;
+  const text  = useEn ? s.en.text  : s.text;
+  const tags = s.cats.map(c=>`<span class="tag" style="background:${CATS[c].color}">${useEn?CATS[c].label_en:CATS[c].label}</span>`).join("");
+  let nav = "";
+  if(itineraryActive){
+    const idx = itineraryIndex;
+    const prevLabel = useEn ? "◀ Previous" : "◀ Precedente";
+    const nextLabel = useEn ? "Next ▶" : "Successiva ▶";
+    const stopLabel = useEn ? `Stop ${idx+1} of ${ROUTE.length}` : `Tappa ${idx+1} di ${ROUTE.length}`;
+    nav = `<div class="modalNav">
+      <button id="modalPrev" ${idx===0?'disabled':''}>${prevLabel}</button>
+      <span class="stopn">${stopLabel}</span>
+      <button id="modalNext" ${idx===ROUTE.length-1?'disabled':''}>${nextLabel}</button>
+    </div>`;
+  }
+  cardInner.innerHTML = `
+    <button class="langBtn" id="langBtn" title="${useEn?'Passa all\'italiano':'Switch to English'}">${useEn?'IT':'EN'}</button>
+    <button class="closeBtn" id="closeBtn">✕</button>
+    <div class="illus">${buildScene(s.scene)}</div>
+    <div class="content">
+      <div class="tagrow">${tags}</div>
+      <h3>${title}</h3>
+      <div class="place">${place}</div>
+      <p>${text}</p>
+      ${nav}
+    </div>
+  `;
+  overlay.classList.add('show');
+  document.getElementById('closeBtn').addEventListener('click', closeStory);
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    currentLang = currentLang === 'it' ? 'en' : 'it';
+    openStory(currentStoryId);
+  });
+  if(itineraryActive){
+    const mp = document.getElementById('modalPrev');
+    const mn = document.getElementById('modalNext');
+    if(mp) mp.addEventListener('click', ()=>{ prevStop(); openStory(ROUTE[itineraryIndex]); });
+    if(mn) mn.addEventListener('click', ()=>{ nextStop(); openStory(ROUTE[itineraryIndex]); });
+  }
+}
+function closeStory(){ overlay.classList.remove('show'); }
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeStory(); });
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape') closeStory();
+  if(itineraryActive && overlay.classList.contains('show')){
+    if(e.key==='ArrowRight' && itineraryIndex<ROUTE.length-1){ nextStop(); openStory(ROUTE[itineraryIndex]); }
+    if(e.key==='ArrowLeft' && itineraryIndex>0){ prevStop(); openStory(ROUTE[itineraryIndex]); }
+  }
+});
+
+/* ---------- Modalità Itinerario ---------- */
+let itineraryActive = false;
+let itineraryIndex = 0;
+
+function drawRouteLine(){
+  let line = svg.querySelector('#routeLine');
+  if(!line){
+    line = document.createElementNS("http://www.w3.org/2000/svg","path");
+    line.setAttribute("id","routeLine");
+    line.setAttribute("class","route-line");
+    const firstMarker = svg.querySelector('.marker');
+    svg.insertBefore(line, firstMarker);
+  }
+  const d = "M" + ROUTE.map(id=>{
+    const s = STORIES.find(x=>x.id===id);
+    return `${s.x},${s.y}`;
+  }).join(" L");
+  line.setAttribute("d", d);
+}
+function removeRouteLine(){
+  const line = svg.querySelector('#routeLine');
+  if(line) line.remove();
+}
+function renderStopNumbers(){
+  ROUTE.forEach((id,i)=>{
+    const m = svg.querySelector(`.marker[data-id="${id}"]`);
+    if(!m || m.querySelector('.stopnum')) return;
+    const s = STORIES.find(x=>x.id===id);
+    const bg = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    bg.setAttribute("class","stopnum-bg");
+    bg.setAttribute("cx", s.x); bg.setAttribute("cy", s.y-8); bg.setAttribute("r","5");
+    const txt = document.createElementNS("http://www.w3.org/2000/svg","text");
+    txt.setAttribute("class","stopnum");
+    txt.setAttribute("x", s.x); txt.setAttribute("y", s.y-6);
+    txt.textContent = i+1;
+    m.appendChild(bg);
+    m.appendChild(txt);
+  });
+}
+function updateCurrentHighlight(){
+  document.querySelectorAll('.marker').forEach(m=>m.classList.remove('current'));
+  const m = svg.querySelector(`.marker[data-id="${ROUTE[itineraryIndex]}"]`);
+  if(m) m.classList.add('current');
+}
+function updateItineraryBar(){
+  const s = STORIES.find(x=>x.id===ROUTE[itineraryIndex]);
+  document.getElementById('stopCounter').textContent = `Tappa ${itineraryIndex+1} di ${ROUTE.length}`;
+  document.getElementById('stopTitle').textContent = `${s.title} — ${s.place}`;
+  document.getElementById('prevStopBtn').disabled = itineraryIndex===0;
+  document.getElementById('nextStopBtn').disabled = itineraryIndex===ROUTE.length-1;
+}
+function goToStop(i){
+  itineraryIndex = Math.max(0, Math.min(ROUTE.length-1, i));
+  updateCurrentHighlight();
+  updateItineraryBar();
+}
+function nextStop(){ if(itineraryIndex<ROUTE.length-1) goToStop(itineraryIndex+1); }
+function prevStop(){ if(itineraryIndex>0) goToStop(itineraryIndex-1); }
+
+function startItinerary(){
+  itineraryActive = true;
+  itineraryIndex = 0;
+  document.body.classList.add('itinerary-mode');
+  drawRouteLine();
+  renderStopNumbers();
+  updateCurrentHighlight();
+  updateItineraryBar();
+  document.getElementById('itineraryBar').classList.add('show');
+  document.getElementById('startItineraryBtn').style.display = 'none';
+  document.getElementById('mapSvg').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function exitItinerary(){
+  itineraryActive = false;
+  document.body.classList.remove('itinerary-mode');
+  removeRouteLine();
+  document.querySelectorAll('.marker').forEach(m=>m.classList.remove('current'));
+  document.getElementById('itineraryBar').classList.remove('show');
+  document.getElementById('startItineraryBtn').style.display = '';
+}
+
+document.getElementById('startItineraryBtn').addEventListener('click', startItinerary);
+document.getElementById('exitItineraryBtn').addEventListener('click', exitItinerary);
+document.getElementById('prevStopBtn').addEventListener('click', prevStop);
+document.getElementById('nextStopBtn').addEventListener('click', nextStop);
+document.getElementById('readStopBtn').addEventListener('click', ()=>openStory(ROUTE[itineraryIndex]));
+</script>
+</body>
+</html>
