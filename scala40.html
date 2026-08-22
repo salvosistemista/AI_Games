@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scala 40 PWA</title>
+    
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Scala%2040%22%2C%22short_name%22%3A%22Scala40%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231a472a%22%2C%22theme_color%22%3A%22%231a472a%22%7D">
+    
+    <style>
+        :root {
+            --table-green: #1a472a;
+            --card-w: 60px;
+            --card-h: 90px;
+            --ui-bg: rgba(0, 0, 0, 0.7);
+        }
+        * { box-sizing: border-box; user-select: none; font-family: sans-serif; }
+        body { 
+            margin: 0; padding: 0; background-color: var(--table-green); 
+            color: white; overflow: hidden; display: flex; flex-direction: column; height: 100vh;
+        }
+        
+        #top-bar { display: flex; justify-content: space-between; padding: 10px; background: var(--ui-bg); font-size: 14px;}
+        #game-area { flex: 1; display: flex; flex-direction: column; position: relative; }
+        
+        #ai-area { height: 70px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.2); }
+        .card-back { width: 40px; height: 60px; background: repeating-linear-gradient(45deg, #606dbc, #606dbc 5px, #465298 5px, #465298 10px); border: 2px solid white; border-radius: 4px; margin: 0 -15px; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
+
+        #table-area { flex: 1; display: flex; flex-direction: column; padding: 10px; overflow-y: auto; }
+        .decks { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        .deck-slot { width: var(--card-w); height: var(--card-h); border: 2px dashed rgba(255,255,255,0.4); border-radius: 5px; position: relative; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.3s;}
+        
+        .highlight-draw { box-shadow: 0 0 15px #2ecc71; border-color: #2ecc71; animation: pulse-green 1s infinite alternate; }
+        @keyframes pulse-green { from { box-shadow: 0 0 5px #2ecc71; } to { box-shadow: 0 0 20px #2ecc71; } }
+
+        #melds-area { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;}
+        .meld-group { display: flex; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; }
+        .meld-group .card { margin: 0 -10px; }
+
+        #player-area { height: 160px; background: var(--ui-bg); padding: 10px; display: flex; flex-direction: column; align-items: center;}
+        #player-hand { display: flex; gap: 5px; overflow-x: auto; max-width: 100%; padding: 10px 0; }
+        
+        .card { 
+            width: var(--card-w); height: var(--card-h); background: white; border-radius: 5px; 
+            color: black; display: flex; flex-direction: column; justify-content: space-between; 
+            padding: 5px; font-weight: bold; font-size: 16px; box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
+            cursor: pointer; transition: transform 0.1s; flex-shrink: 0;
+        }
+        .card.red { color: #d00; }
+        .card.joker { color: #8e44ad; }
+        .card.selected { transform: translateY(-15px); box-shadow: 0 0 10px yellow; border: 2px solid yellow; }
+        .card .suit { font-size: 20px; text-align: center; }
+        
+        .controls { display: flex; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; justify-content: center;}
+        button { padding: 8px 12px; background: #2c3e50; color: white; border: 1px solid #34495e; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px;}
+        button:active { background: #1a252f; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-sort { background: #8e44ad; border-color: #9b59b6; }
+        
+        #options-menu { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; flex-direction: column; justify-content: center; align-items: center; gap: 20px;}
+        .menu-title { font-size: 24px; font-weight: bold; margin-bottom: 20px;}
+        .menu-btn { padding: 15px 30px; font-size: 18px; width: 200px; text-align: center; }
+
+        #turn-indicator { font-weight: bold; color: yellow; }
+    </style>
+</head>
+<body>
+
+    <div id="top-bar">
+        <span>Scala 40 AI</span>
+        <span id="turn-indicator">Turno: Giocatore</span>
+        <button onclick="toggleMenu()">⚙️</button>
+    </div>
+
+    <div id="game-area">
+        <div id="ai-area"></div>
+
+        <div id="table-area">
+            <div class="decks">
+                <div class="deck-slot" id="stock-pile" onclick="drawCard('stock')">Mazzo</div>
+                <div class="deck-slot" id="discard-pile" onclick="drawCard('discard')">Scarti</div>
+            </div>
+            <div id="melds-area"></div>
+        </div>
+
+        <div id="player-area">
+            <div class="controls">
+                <button class="btn-sort" onclick="setSortPref('suit')">S⇅</button>
+                <button class="btn-sort" onclick="setSortPref('rank')">V⇅</button>
+                <button id="btn-cala" onclick="playMeld()">Cala</button>
+                <button id="btn-scarta" onclick="discardCard()">Scarta</button>
+            </div>
+            <div id="player-hand"></div>
+        </div>
+    </div>
+
+    <div id="options-menu">
+        <div class="menu-title">Opzioni</div>
+        <button class="menu-btn" onclick="toggleFullscreen()">Schermo Intero</button>
+        <button class="menu-btn" style="background:#c0392b;" onclick="resetGame()">Nuova Partita</button>
+        <button class="menu-btn" onclick="toggleMenu()">Chiudi Menu</button>
+    </div>
+
+<script>
+const swCode = `
+self.addEventListener('install', (e) => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
+self.addEventListener('fetch', (e) => {
+    e.respondWith(fetch(e.request).catch(() => new Response("Offline mode active.")));
+});
+`;
+const blob = new Blob([swCode], { type: 'application/javascript' });
+navigator.serviceWorker.register(URL.createObjectURL(blob));
+
+const SUITS = ['♥', '♦', '♣', '♠'];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const VALUES = {'A':11, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':10, 'Q':10, 'K':10, 'Jolly':25};
+
+let state = {
+    deck: [], discard: [],
+    hands: { player: [], ai: [] },
+    melds: [], 
+    turn: 'player', 
+    hasOpened: { player: false, ai: false },
+    hasDrawn: false,
+    sortPref: 'suit' 
+};
+
+let selectedCards = [];
+let aiThinking = false;
+
+function init() {
+    const savedState = localStorage.getItem('scala40_save');
+    if (savedState) {
+        state = JSON.parse(savedState);
+        if(!state.sortPref) state.sortPref = 'suit';
+    } else {
+        startNewGame();
+    }
+    renderAll();
+    checkAITurn();
+}
+
+function verifyDeckComposition(deck) {
+    if (deck.length !== 108) {
+        console.error(`Errore nel mazzo: attese 108 carte, trovate ${deck.length}`);
+        return false;
+    }
+    const jokers = deck.filter(c => c.rank === 'Jolly');
+    if (jokers.length !== 4) {
+        console.error(`Errore Jolly: attesi 4 Jolly, trovati ${jokers.length}`);
+        return false;
+    }
+    return true;
+}
+
+function startNewGame() {
+    aiThinking = false;
+    state = { 
+        deck: [], discard: [], hands: { player: [], ai: [] }, 
+        melds: [], turn: 'player', hasOpened: { player: false, ai: false }, 
+        hasDrawn: false, sortPref: state.sortPref || 'suit' 
+    };
+    
+    for(let d=0; d<2; d++){
+        for(let s of SUITS) {
+            for(let r of RANKS) {
+                state.deck.push({ id: Math.random().toString(36).substr(2, 9), suit: s, rank: r, val: VALUES[r] });
+            }
+        }
+        state.deck.push({ id: Math.random().toString(36).substr(2, 9), suit: '🃏', rank: 'Jolly', val: VALUES['Jolly'] });
+        state.deck.push({ id: Math.random().toString(36).substr(2, 9), suit: '🃏', rank: 'Jolly', val: VALUES['Jolly'] });
+    }
+
+    verifyDeckComposition(state.deck);
+    shuffle(state.deck);
+
+    for(let i=0; i<13; i++) {
+        state.hands.player.push(state.deck.pop());
+        state.hands.ai.push(state.deck.pop());
+    }
+    
+    state.discard.push(state.deck.pop());
+    saveState();
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function saveState() {
+    localStorage.setItem('scala40_save', JSON.stringify(state));
+}
+
+function recycleDiscardPile() {
+    if (state.discard.length <= 1) return;
+    const topDiscard = state.discard.pop();
+    const oldDiscard = state.discard;
+    state.discard = [topDiscard];
+    shuffle(oldDiscard);
+    state.deck = oldDiscard.concat(state.deck);
+}
+
+function drawCard(source) {
+    if (state.turn !== 'player' || state.hasDrawn) return;
+    
+    if (source === 'stock') {
+        if (state.deck.length === 0) recycleDiscardPile();
+        if (state.deck.length > 0) {
+            state.hands.player.push(state.deck.pop());
+            state.hasDrawn = true;
+        }
+    } else if (source === 'discard' && state.discard.length > 0) {
+        if(state.hasOpened.player) {
+            state.hands.player.push(state.discard.pop());
+            state.hasDrawn = true;
+        } else {
+            alert("Devi aver già aperto per pescare dagli scarti!");
+            return;
+        }
+    }
+    saveState();
+    renderAll();
+}
+
+function toggleCardSelection(cardId) {
+    if(state.turn !== 'player') return;
+    const idx = selectedCards.indexOf(cardId);
+    if(idx > -1) selectedCards.splice(idx, 1);
+    else selectedCards.push(cardId);
+    renderAll();
+}
+
+function setSortPref(pref) {
+    state.sortPref = pref;
+    saveState();
+    renderAll();
+}
+
+function isValidMeld(cards) {
+    if (!cards || cards.length < 3) return false;
+    const jokers = cards.filter(c => c.rank === 'Jolly');
+    if (jokers.length > 1) return false;
+
+    const nonJokers = cards.filter(c => c.rank !== 'Jolly');
+    if (nonJokers.length === 0) return false;
+
+    // 1. Tris / Quartetto
+    if (cards.length <= 4) {
+        const firstRank = nonJokers[0].rank;
+        const sameRank = nonJokers.every(c => c.rank === firstRank);
+        const uniqueSuits = new Set(nonJokers.map(c => c.suit)).size === nonJokers.length;
+        if (sameRank && uniqueSuits) return true;
+    }
+
+    // 2. Scala
+    const firstSuit = nonJokers[0].suit;
+    if (!nonJokers.every(c => c.suit === firstSuit)) return false;
+
+    const checkSeq = (useHighAce) => {
+        const indices = nonJokers.map(c => {
+            let idx = RANKS.indexOf(c.rank);
+            if (c.rank === 'A' && useHighAce) return 13;
+            return idx;
+        }).sort((a, b) => a - b);
+
+        for (let i = 0; i < indices.length - 1; i++) {
+            if (indices[i] === indices[i+1]) return false;
+        }
+
+        let jokersLeft = jokers.length;
+        for (let i = 0; i < indices.length - 1; i++) {
+            let gap = indices[i+1] - indices[i] - 1;
+            if (gap < 0 || gap > jokersLeft) return false;
+            jokersLeft -= gap;
+        }
+
+        let minIdx = indices[0];
+        let maxIdx = indices[indices.length - 1];
+        let span = maxIdx - minIdx + 1;
+        if (span + jokersLeft !== cards.length) return false;
+
+        let lowerBound = useHighAce ? 1 : 0;
+        let upperBound = useHighAce ? 13 : 12;
+
+        let startMin = Math.max(lowerBound, maxIdx - cards.length + 1);
+        let startMax = Math.min(minIdx, upperBound - cards.length + 1);
+
+        return startMin <= startMax;
+    };
+
+    if (checkSeq(false)) return true;
+    if (nonJokers.some(c => c.rank === 'A') && checkSeq(true)) return true;
+
+    return false;
+}
+
+function isSequenceMeld(cards) {
+    if (!cards || cards.length < 3) return false;
+    const nonJokers = cards.filter(c => c.rank !== 'Jolly');
+    if (nonJokers.length === 0) return false;
+    const firstSuit = nonJokers[0].suit;
+    return nonJokers.every(c => c.suit === firstSuit) && isValidMeld(cards);
+}
+
+function sortSequenceMeld(meld) {
+    if (!isSequenceMeld(meld)) return meld;
+
+    const nonJokers = meld.filter(c => c.rank !== 'Jolly');
+    const hasJoker = meld.some(c => c.rank === 'Jolly');
+
+    let useHighAce = false;
+    if (nonJokers.some(c => c.rank === 'A')) {
+        const ranksWithoutAce = nonJokers.filter(c => c.rank !== 'A').map(c => c.rank);
+        if (ranksWithoutAce.some(r => ['J', 'Q', 'K', '10'].includes(r))) {
+            useHighAce = true;
+        }
+    }
+
+    let sortedNonJokers = [...nonJokers].sort((a, b) => {
+        let idxA = RANKS.indexOf(a.rank);
+        let idxB = RANKS.indexOf(b.rank);
+        if (a.rank === 'A' && useHighAce) idxA = 13;
+        if (b.rank === 'A' && useHighAce) idxB = 13;
+        return idxA - idxB;
+    });
+
+    if (!hasJoker) return sortedNonJokers;
+
+    let jokerCard = meld.find(c => c.rank === 'Jolly');
+    let getIdx = (c) => (c.rank === 'A' && useHighAce) ? 13 : RANKS.indexOf(c.rank);
+
+    for (let i = 0; i < sortedNonJokers.length - 1; i++) {
+        if (getIdx(sortedNonJokers[i+1]) - getIdx(sortedNonJokers[i]) > 1) {
+            sortedNonJokers.splice(i + 1, 0, jokerCard);
+            return sortedNonJokers;
+        }
+    }
+
+    if (getIdx(sortedNonJokers[sortedNonJokers.length - 1]) === 13) {
+        sortedNonJokers.unshift(jokerCard);
+    } else {
+        sortedNonJokers.push(jokerCard);
+    }
+
+    return sortedNonJokers;
+}
+
+function canAttachCardToMeld(card, meld) {
+    if (isValidMeld([card, ...meld])) return 'start';
+    if (isValidMeld([...meld, card])) return 'end';
+    return false;
+}
+
+function getSubsets(arr, minSize = 3) {
+    let results = [];
+    function backtrack(start, current) {
+        if (current.length >= minSize) {
+            results.push([...current]);
+        }
+        for (let i = start; i < arr.length; i++) {
+            current.push(arr[i]);
+            backtrack(i + 1, current);
+            current.pop();
+        }
+    }
+    backtrack(0, []);
+    return results.sort((a, b) => b.length - a.length);
+}
+
+function extractMelds(cards) {
+    if (!cards || cards.length < 3) return null;
+
+    let workingCards = [...cards];
+    let foundMelds = [];
+    let foundAny = true;
+
+    while (foundAny && workingCards.length >= 3) {
+        foundAny = false;
+        const subsets = getSubsets(workingCards, 3);
+        
+        for (let sub of subsets) {
+            if (isValidMeld(sub)) {
+                foundMelds.push(sub);
+                const usedIds = new Set(sub.map(c => c.id));
+                workingCards = workingCards.filter(c => !usedIds.has(c.id));
+                foundAny = true;
+                break;
+            }
+        }
+    }
+
+    return foundMelds.length > 0 ? foundMelds : null;
+}
+
+function playMeld() {
+    if (state.turn !== 'player' || !state.hasDrawn || selectedCards.length < 1) return;
+    
+    const cardsToPlay = state.hands.player.filter(c => selectedCards.includes(c.id));
+    let playedAny = false;
+
+    if (cardsToPlay.length >= 3) {
+        const extractedMelds = extractMelds(cardsToPlay);
+        if (extractedMelds) {
+            let points = cardsToPlay.reduce((sum, c) => sum + c.val, 0);
+            
+            if (!state.hasOpened.player && points < 40) {
+                alert(`Hai selezionato combinazioni per ${points} punti, ma la prima calata deve valere almeno 40 punti!`);
+                return;
+            }
+            
+            state.hasOpened.player = true;
+            extractedMelds.forEach(m => state.melds.push(m));
+            
+            state.hands.player = state.hands.player.filter(c => !selectedCards.includes(c.id));
+            selectedCards = [];
+            playedAny = true;
+        }
+    }
+
+    if (!playedAny) {
+        if (!state.hasOpened.player) {
+            alert("Devi aver già aperto (almeno 40 punti) per poter attaccare le carte alle combinazioni sul tavolo!");
+            return;
+        }
+
+        let remainingCards = [...cardsToPlay];
+        let attachedInLoop = true;
+
+        while (attachedInLoop && remainingCards.length > 0) {
+            attachedInLoop = false;
+            for (let i = 0; i < remainingCards.length; i++) {
+                let card = remainingCards[i];
+                for (let meld of state.melds) {
+                    let pos = canAttachCardToMeld(card, meld);
+                    if (pos === 'start') {
+                        meld.unshift(card);
+                        remainingCards.splice(i, 1);
+                        attachedInLoop = true;
+                        playedAny = true;
+                        break;
+                    } else if (pos === 'end') {
+                        meld.push(card);
+                        remainingCards.splice(i, 1);
+                        attachedInLoop = true;
+                        playedAny = true;
+                        break;
+                    }
+                }
+                if (attachedInLoop) break;
+            }
+        }
+
+        if (playedAny) {
+            let attachedIds = cardsToPlay.filter(c => !remainingCards.includes(c)).map(c => c.id);
+            state.hands.player = state.hands.player.filter(c => !attachedIds.includes(c.id));
+            selectedCards = remainingCards.map(c => c.id);
+        } else {
+            alert("Le carte selezionate non formano combinazioni valide e non possono essere attaccate alle combinazioni presenti sul tavolo.");
+            return;
+        }
+    }
+
+    if (state.hands.player.length === 0) return handleWin('Giocatore');
+    saveState();
+    renderAll();
+}
+
+function discardCard() {
+    if (state.turn !== 'player' || !state.hasDrawn || selectedCards.length !== 1) return;
+    
+    const cardId = selectedCards[0];
+    const cardIdx = state.hands.player.findIndex(c => c.id === cardId);
+    const cardToDiscard = state.hands.player[cardIdx];
+
+    if (cardToDiscard.rank === 'Jolly') {
+        alert("Non puoi scartare un Jolly!");
+        return;
+    }
+    
+    state.discard.push(cardToDiscard);
+    state.hands.player.splice(cardIdx, 1);
+    selectedCards = [];
+    state.hasDrawn = false;
+    
+    if (state.hands.player.length === 0) return handleWin('Giocatore');
+    
+    state.turn = 'ai';
+    saveState();
+    renderAll();
+    checkAITurn();
+}
+
+function isValidCombination(cards) {
+    return isValidMeld(cards);
+}
+
+function aiTurn() {
+    if (state.turn !== 'ai') {
+        aiThinking = false;
+        return;
+    }
+    
+    if (state.deck.length === 0) recycleDiscardPile();
+    if (state.deck.length > 0) {
+        state.hands.ai.push(state.deck.pop());
+    }
+
+    let aiHand = state.hands.ai;
+    let foundMelds = extractMelds(aiHand);
+
+    if (foundMelds && foundMelds.length > 0) {
+        let totalVal = foundMelds.flat().reduce((a, b) => a + b.val, 0);
+        if (state.hasOpened.ai || totalVal >= 40) {
+            state.hasOpened.ai = true;
+            foundMelds.forEach(m => {
+                state.melds.push(m);
+                let idsToRem = m.map(c => c.id);
+                state.hands.ai = state.hands.ai.filter(c => !idsToRem.includes(c.id));
+            });
+        }
+    }
+
+    if (state.hasOpened.ai) {
+        let attached = true;
+        while (attached) {
+            attached = false;
+            for (let i = state.hands.ai.length - 1; i >= 0; i--) {
+                let card = state.hands.ai[i];
+                for (let meld of state.melds) {
+                    let pos = canAttachCardToMeld(card, meld);
+                    if (pos === 'start') {
+                        meld.unshift(card);
+                        state.hands.ai.splice(i, 1);
+                        attached = true;
+                        break;
+                    } else if (pos === 'end') {
+                        meld.push(card);
+                        state.hands.ai.splice(i, 1);
+                        attached = true;
+                        break;
+                    }
+                }
+                if (attached) break;
+            }
+        }
+    }
+
+    if (state.hands.ai.length === 0) return handleWin('Computer');
+
+    state.hands.ai.sort((a,b) => b.val - a.val);
+    
+    let discardIdx = state.hands.ai.findIndex(c => c.rank !== 'Jolly');
+    if (discardIdx === -1) discardIdx = 0;
+
+    state.discard.push(state.hands.ai.splice(discardIdx, 1)[0]);
+
+    if (state.hands.ai.length === 0) return handleWin('Computer');
+
+    state.turn = 'player';
+    state.hasDrawn = false;
+    aiThinking = false;
+    saveState();
+    renderAll();
+}
+
+function checkAITurn() {
+    if (state.turn === 'ai' && !aiThinking) {
+        aiThinking = true;
+        setTimeout(aiTurn, 1200);
+    }
+}
+
+function handleWin(winner) {
+    aiThinking = false;
+    alert(`${winner} ha CHIUSO! Partita finita.`);
+    localStorage.removeItem('scala40_save');
+    startNewGame();
+    renderAll();
+}
+
+function renderAll() {
+    const statusText = state.turn === 'player' 
+        ? (state.hasDrawn ? 'Turno: Tuo (Gioca o Scarta)' : 'Turno: Tuo (PESCA UNA CARTA!)') 
+        : 'Turno: Computer sta pensando...';
+    document.getElementById('turn-indicator').innerText = statusText;
+    
+    const stockPile = document.getElementById('stock-pile');
+    const discardPile = document.getElementById('discard-pile');
+    
+    if(state.turn === 'player' && !state.hasDrawn) {
+        stockPile.classList.add('highlight-draw');
+        discardPile.classList.add('highlight-draw');
+    } else {
+        stockPile.classList.remove('highlight-draw');
+        discardPile.classList.remove('highlight-draw');
+    }
+
+    if (state.discard.length > 0) {
+        discardPile.innerHTML = createCardHTML(state.discard[state.discard.length-1]);
+    } else {
+        discardPile.innerHTML = 'Scarti';
+    }
+    
+    const aiArea = document.getElementById('ai-area');
+    aiArea.innerHTML = '';
+    state.hands.ai.forEach(() => {
+        aiArea.innerHTML += `<div class="card-back"></div>`;
+    });
+    
+    const meldsArea = document.getElementById('melds-area');
+    meldsArea.innerHTML = '';
+    state.melds.forEach(meld => {
+        let displayMeld = sortSequenceMeld(meld);
+        let groupHtml = '<div class="meld-group">';
+        displayMeld.forEach(c => groupHtml += createCardHTML(c));
+        groupHtml += '</div>';
+        meldsArea.innerHTML += groupHtml;
+    });
+
+    const playerHand = document.getElementById('player-hand');
+    playerHand.innerHTML = '';
+    
+    let sortedHand = [...state.hands.player].sort((a,b) => {
+        if (a.rank === 'Jolly') return 1;
+        if (b.rank === 'Jolly') return -1;
+        if(state.sortPref === 'suit') {
+            if (a.suit !== b.suit) return a.suit.localeCompare(b.suit);
+            return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+        } else {
+            if (a.rank !== b.rank) return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+            return a.suit.localeCompare(b.suit);
+        }
+    });
+
+    sortedHand.forEach(c => {
+        let isSelected = selectedCards.includes(c.id) ? 'selected' : '';
+        let colorClass = c.rank === 'Jolly' ? 'joker' : ((c.suit === '♥' || c.suit === '♦') ? 'red' : '');
+        let rankDisplay = c.rank === 'Jolly' ? 'JOKER' : c.rank;
+        playerHand.innerHTML += `
+            <div class="card ${colorClass} ${isSelected}" onclick="toggleCardSelection('${c.id}')">
+                <div style="font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
+                <div class="suit">${c.suit}</div>
+                <div style="text-align: right; transform: rotate(180deg); font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
+            </div>`;
+    });
+    
+    const canPlay = state.turn === 'player' && state.hasDrawn;
+    const minSelection = state.hasOpened.player ? 1 : 3;
+    document.getElementById('btn-cala').disabled = !(canPlay && selectedCards.length >= minSelection);
+    
+    const isSingleJokerSelected = selectedCards.length === 1 && state.hands.player.find(c => c.id === selectedCards[0])?.rank === 'Jolly';
+    document.getElementById('btn-scarta').disabled = !(canPlay && selectedCards.length === 1 && !isSingleJokerSelected);
+}
+
+function createCardHTML(c) {
+    let colorClass = c.rank === 'Jolly' ? 'joker' : ((c.suit === '♥' || c.suit === '♦') ? 'red' : '');
+    let rankDisplay = c.rank === 'Jolly' ? 'JOKER' : c.rank;
+    return `
+        <div class="card ${colorClass}">
+            <div style="font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
+            <div class="suit">${c.suit}</div>
+            <div style="text-align: right; transform: rotate(180deg); font-size: ${c.rank === 'Jolly' ? '10px' : '16px'}">${rankDisplay}</div>
+        </div>`;
+}
+
+function toggleMenu() {
+    const menu = document.getElementById('options-menu');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function resetGame() {
+    if(confirm("Vuoi cancellare il salvataggio e ricominciare?")) {
+        localStorage.removeItem('scala40_save');
+        startNewGame();
+        renderAll();
+        toggleMenu();
+    }
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+    } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
+    toggleMenu();
+}
+
+init();
+
+</script>
+</body>
+</html>
