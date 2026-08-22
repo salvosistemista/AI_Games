@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Frankenstein: Il Moderno Prometeo</title>
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkZyYW5rZW5zdGVpbjogSWwgTW9kZXJubyBQcm9tZXRlbyIsCiAgInNob3J0X25hbWUiOiAiRnJhbmtlbnN0ZWluIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZDBkMGQiLAogICJ0aGVtZV9jb2xvciI6ICIjM2I4MmY2IgogfQ==">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --panel-bg: #1a1815;
+            --text-color: #d4c5b9;
+            --accent-color: #8c2d19;
+            --gold-color: #c9a054;
+            --alert-color: #3b82f6;
+            --purple-color: #8b5cf6;
+            --green-color: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Georgia', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            background-color: var(--panel-bg);
+            border-left: 1px solid #332d27;
+            border-right: 1px solid #332d27;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.9);
+            position: relative;
+        }
+
+        /* Top Header Controls */
+        #header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            color: var(--gold-color);
+            border-bottom: 1px solid #332d27;
+            padding-bottom: 6px;
+        }
+
+        .header-title {
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+        }
+
+        .btn-small {
+            background: #26221d;
+            color: var(--text-color);
+            border: 1px solid var(--gold-color);
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 0.75rem;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .btn-small:active {
+            background: var(--accent-color);
+        }
+
+        /* Status Bar */
+        #status-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            background: #11100e;
+            padding: 8px;
+            border: 1px solid #332d27;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.7rem;
+        }
+
+        /* Arctic Resource Panel */
+        #arctic-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            background: #0b141d;
+            padding: 6px 8px;
+            border: 1px solid #1e3a8a;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 0.72rem;
+            color: #93c5fd;
+        }
+
+        .resource-val {
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .meter-title {
+            color: var(--gold-color);
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .bar-bg {
+            background: #222;
+            height: 7px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        #sospetto-fill { background-color: var(--accent-color); }
+        #sanita-fill { background-color: var(--purple-color); }
+        #freddo-fill { background-color: var(--alert-color); }
+
+        /* Story Box */
+        #story-box {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #332d27;
+            padding: 14px;
+            background: #141210;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        .hallucination {
+            color: #ef4444;
+            font-style: italic;
+        }
+
+        .paranoia-text {
+            color: #a855f7;
+            font-style: italic;
+        }
+
+        .arctic-text {
+            color: #38bdf8;
+            font-style: italic;
+        }
+
+        .chapter-header {
+            color: var(--gold-color);
+            border-bottom: 1px solid var(--gold-color);
+            padding-bottom: 4px;
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        /* Action Buttons */
+        #choices-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button.btn-choice {
+            background: #26221d;
+            color: var(--text-color);
+            border: 1px solid var(--gold-color);
+            padding: 11px 13px;
+            font-family: inherit;
+            font-size: 0.88rem;
+            border-radius: 4px;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        button.btn-choice:active {
+            background: var(--accent-color);
+            color: #fff;
+            border-color: #f59e0b;
+        }
+
+        button.btn-choice.paranoiac {
+            border-color: #8b5cf6;
+            color: #d8b4fe;
+        }
+
+        button.btn-choice.arctic {
+            border-color: #38bdf8;
+        }
+
+        /* Toast notification */
+        #save-toast {
+            position: absolute;
+            top: 45px;
+            right: 20px;
+            background: rgba(201, 160, 84, 0.95);
+            color: #0d0d0d;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="header-controls">
+        <span class="header-title" id="atto-indicator">Atto I: La Creazione</span>
+        <div>
+            <button class="btn-small" onclick="resetGame()">Nuova Partita</button>
+        </div>
+    </div>
+
+    <!-- Statistiche Principali -->
+    <div id="status-bar">
+        <div>
+            <div class="meter-title"><span>Sospetto</span> <span id="sospetto-val">0%</span></div>
+            <div class="bar-bg"><div id="sospetto-fill" class="bar-fill"></div></div>
+        </div>
+        <div>
+            <div class="meter-title"><span>Sanità</span> <span id="sanita-val">100%</span></div>
+            <div class="bar-bg"><div id="sanita-fill" class="bar-fill"></div></div>
+        </div>
+        <div>
+            <div class="meter-title"><span>Gelo</span> <span id="freddo-val">0%</span></div>
+            <div class="bar-bg"><div id="freddo-fill" class="bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- Risorse Atto III (Artide) -->
+    <div id="arctic-bar" style="display: none;">
+        <div>🍖 Cibo: <span id="cibo-val" class="resource-val">5</span> raz.</div>
+        <div>🪵 Legna: <span id="legna-val" class="resource-val">3</span> un.</div>
+        <div>🐾 Distanza: <span id="distanza-val" class="resource-val">10</span> leghe</div>
+    </div>
+
+    <div id="save-toast">Partita Salvata</div>
+    <div id="story-box"></div>
+    <div id="choices-box"></div>
+</div>
+
+<script>
+    const SAVE_KEY = "frankenstein_game_save_v3";
+
+    const defaultState = {
+        atto: 1,
+        sospetto: 10,
+        sanita: 100,
+        freddo: 0,
+        // Componenti Atto I
+        cervello: null,
+        corpo: null,
+        conduttore: null,
+        reagente: null,
+        mostroForza: 0,
+        mostroIntelletto: 0,
+        // Inventario
+        inventario: [],
+        // Indagini Atto II
+        indizi: [],
+        giustineSalvata: false,
+        nodoAttuale: "casa_frankenstein",
+        scenaPrecedente: null,
+        currentScene: "lab_hub",
+        // Atto III - Sopravvivenza & Inseguimento
+        cibo: 5,
+        legna: 3,
+        distanzaMostro: 10, // Leghe tra Victor e il Mostro
+        turniArtide: 0
+    };
+
+    let state = JSON.parse(JSON.stringify(defaultState));
+
+    function loadSave() {
+        try {
+            const savedData = localStorage.getItem(SAVE_KEY);
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                state = Object.assign({}, defaultState, parsed);
+            }
+        } catch (e) {
+            console.warn("Impossibile accedere a localStorage:", e);
+        }
+    }
+
+    function triggerSave() {
+        try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+            showSaveToast();
+        } catch (e) {
+            console.warn("Impossibile salvare su localStorage:", e);
+        }
+    }
+
+    function showSaveToast() {
+        const toast = document.getElementById('save-toast');
+        if (!toast) return;
+        toast.style.opacity = '1';
+        setTimeout(() => { toast.style.opacity = '0'; }, 1000);
+    }
+
+    function resetGame() {
+        if (confirm("Vuoi cancellare i progressi e iniziare una nuova avventura?")) {
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+            state = JSON.parse(JSON.stringify(defaultState));
+            updateUI();
+        }
+    }
+
+    function addInventory(item) {
+        if (!state.inventario.includes(item)) state.inventario.push(item);
+    }
+
+    function removeInventory(item) {
+        state.inventario = state.inventario.filter(i => i !== item);
+    }
+
+    function addIndizio(indizio) {
+        if (!state.indizi.includes(indizio)) state.indizi.push(indizio);
+    }
+
+    // Funzione Turni Artide
+    function consumoTurno(costoCibo = 1, costoLegna = 1, variazioneDistanza = 0) {
+        state.turniArtide += 1;
+        state.distanzaMostro = Math.max(0, state.distanzaMostro + variazioneDistanza);
+
+        // Consumo cibo
+        if (state.cibo >= costoCibo) {
+            state.cibo -= costoCibo;
+        } else {
+            state.cibo = 0;
+            state.sanita = Math.max(0, state.sanita - 15);
+            state.freddo = Math.min(100, state.freddo + 15);
+        }
+
+        // Consumo legna e difesa dal gelo
+        if (state.legna >= costoLegna) {
+            state.legna -= costoLegna;
+            state.freddo = Math.min(100, state.freddo + 5);
+        } else {
+            state.legna = 0;
+            state.freddo = Math.min(100, state.freddo + 25);
+        }
+    }
+
+    // SCENARI NARRATIVI
+    const story = {
+        // --- ATTO I ---
+        lab_hub: {
+            text: () => {
+                let html = `<div class="chapter-header">Laboratorio di Ingolstadt</div>`;
+                if (state.sanita < 50) {
+                    html += `La penombra della soffitta danza minacciosa. <span class='hallucination'>I barattoli di vetro contenenti feti sotto spirito sembrano seguire ogni tuo movimento con occhi vitrei.</span> Il tavolo chirurgico al centro della stanza attende la materia prima.`;
+                } else {
+                    html += `La soffitta dell'antica torre alchemica è inondata dal profumo di vetriolo e formaldeide. Al centro giace il tavolo da autopsia in pietra. Dalle finestre ad arco scorgi i tetti bagnati di Ingolstadt sotto una pioggia torrenziale.`;
+                }
+                html += `<br><br><strong>Stato Assemblaggio:</strong><br>`;
+                html += `• Cranio/Cervello: ${state.cervello ? state.cervello.toUpperCase() : "<em>Mancante</em>"}<br>`;
+                html += `• Tessuto Corporeo: ${state.corpo ? state.corpo.toUpperCase() : "<em>Mancante</em>"}<br>`;
+                html += `• Conduttore: ${state.conduttore ? state.conduttore.toUpperCase() : "<em>Mancante</em>"}<br>`;
+                html += `• Catalizzatore: ${state.reagente ? state.reagente.toUpperCase() : "<em>Mancante</em>"}`;
+                return html;
+            },
+            choices: [
+                { text: "Uscisci verso il Cimitero Monumentale", next: "cimitero_entrata" },
+                { text: "Intrufolati nel Teatro Anatomico dell'Università", next: "anatomia_entrata" },
+                { text: "Avventurati nei vicoli del Mercato Nero", next: "mercato_entrata" },
+                { text: "Consulta il Diario di Rame ed esamina l'Inventario", next: "diario_rame" },
+                { 
+                    text: "⚡ Inizia l'Inoculazione Galvanica (Richiede tutti i componenti)", 
+                    next: "procedura_galvanica",
+                    condition: () => state.cervello && state.corpo && state.conduttore && state.reagente
+                }
+            ]
+        },
+
+        cimitero_entrata: {
+            text: () => `<div class="chapter-header">I Cancelli del Cimitero</div>
+La nebbia avvolge le croci in ferro battuto. Il cancello principale è incatenato, ma conosci una breccia sul retro della recinzione. Senti i passi cadenzati della pattuglia cittadina lungo il perimetro.`,
+            choices: [
+                { text: "Scavalca la breccia ed esplora le tombe comuni (Sospetto +15%, Sanità -10%)", next: "cimitero_tombe_comuni" },
+                { text: "Forza il lucchetto della Cripta della Famiglia von Kraft (Sospetto +25%)", next: "cimitero_cripta", condition: () => state.inventario.includes("Piede di Porco") },
+                { text: "Torna indietro al Laboratorio", next: "lab_hub" }
+            ]
+        },
+
+        cimitero_tombe_comuni: {
+            onEnter: () => { state.sospetto += 15; state.sanita -= 10; },
+            text: () => `<div class="chapter-header">Fosse Comuni</div>Sotto la pioggia torrenziale disseppellisci la carcassa di un giustiziato. I muscoli sono massicci, ideali per la forza fisica.`,
+            choices: [
+                { text: "Raccogli il Torso Robusto del Giustiziato", next: "lab_hub", onSelect: () => { state.corpo = "Robusto (Alta Forza)"; } },
+                { text: "Abbandona il cimitero senza toccare nulla", next: "lab_hub" }
+            ]
+        },
+
+        cimitero_cripta: {
+            onEnter: () => { state.sospetto += 25; state.sanita -= 15; },
+            text: () => `<div class="chapter-header">Cripta von Kraft</div>L'aria stantia profuma di incenso e putrefazione. Sul sarcofago riposa la salma di un celebre spadaccino e stratega.`,
+            choices: [
+                { text: "Preleva il Cranio e il Cervello dello Stratega", next: "lab_hub", onSelect: () => { state.cervello = "Stratega (Elevato Intelletto)"; } },
+                { text: "Ritorna all'esterno", next: "cimitero_entrata" }
+            ]
+        },
+
+        anatomia_entrata: {
+            text: () => `<div class="chapter-header">Università di Ingolstadt</div>Ti muovi lungo i corridoi deserti dove un tempo ascoltavi le lezioni del Professor Krempe.`,
+            choices: [
+                { text: "Entra nel Deposito Autoptico (Sanità -5%)", next: "anatomia_deposito" },
+                { text: "Fruga negli armadi del Laboratorio Chimico", next: "anatomia_chimica" },
+                { text: "Ritorna al Laboratorio", next: "lab_hub" }
+            ]
+        },
+
+        anatomia_deposito: {
+            onEnter: () => { state.sospetto += 15; },
+            text: () => `<div class="chapter-header">Deposito Autoptico</div>Su un tavolo isolato c'è il corpo di un brillante professore di matematica.`,
+            choices: [
+                { text: "Asporta il Cervello dell'Accademico", next: "lab_hub", onSelect: () => { state.cervello = "Accademico (Massima Razionalità)"; } },
+                { text: "Preleva Bobine di Rame Bifilare", next: "lab_hub", onSelect: () => { addInventory("Bobine di Rame"); state.conduttore = "Bobine di Rame"; } }
+            ]
+        },
+
+        anatomia_chimica: {
+            text: () => `<div class="chapter-header">Laboratorio Chimico</div>Trovi reagenti ad alta concentrazione per la stimolazione muscolare.`,
+            choices: [
+                { text: "Preleva la Soluzione di Acido Alchemico", next: "lab_hub", onSelect: () => { state.reagente = "Acido Alchemico"; } },
+                { text: "Sottrai un flacone di Tintura di Oppio", next: "anatomia_chimica", condition: () => !state.inventario.includes("Tintura di Oppio"), onSelect: () => addInventory("Tintura di Oppio") },
+                { text: "Torna al corridoio", next: "anatomia_entrata" }
+            ]
+        },
+
+        mercato_entrata: {
+            text: () => `<div class="chapter-header">I Vicoli Oscuri</div>Nelle stradine vicine al porto fluviale si concentrano i trafficanti di salme.`,
+            choices: [
+                { text: "Acquista un Piede di Porco", next: "mercato_entrata", condition: () => !state.inventario.includes("Piede di Porco"), onSelect: () => addInventory("Piede di Porco") },
+                { text: "Compra Conduttori in Ferro Magnetico", next: "lab_hub", onSelect: () => { state.conduttore = "Ferro Magnetico"; } },
+                { text: "Ritorna al Laboratorio", next: "lab_hub" }
+            ]
+        },
+
+        diario_rame: {
+            text: () => `<div class="chapter-header">Diario di Rame - Appunti di Victor</div>Sanità: ${state.sanita}% | Sospetto: ${state.sospetto}%`,
+            choices: [
+                { text: "Usa Tintura di Oppio (+30% Sanità)", next: "diario_rame", condition: () => state.inventario.includes("Tintura di Oppio"), onSelect: () => { removeInventory("Tintura di Oppio"); state.sanita = Math.min(100, state.sanita + 30); } },
+                { text: "Chiudi il Diario", next: "lab_hub" }
+            ]
+        },
+
+        procedura_galvanica: {
+            text: () => `<div class="chapter-header">La Notte della Creazione</div>Un fulmine apocalittico sferza la guglia della torre. L'energia galvanica investe la carne!`,
+            choices: [{ text: "Osserva il risveglio della Creatura...", next: "risveglio_creatura" }]
+        },
+
+        risveglio_creatura: {
+            onEnter: () => {
+                state.mostroForza = (state.corpo && state.corpo.includes("Robusto")) ? 50 : 30;
+                state.mostroIntelletto = (state.cervello && state.cervello.includes("Accademico")) ? 50 : 25;
+                state.atto = 2;
+                state.sospetto = 10;
+            },
+            text: () => `<div class="chapter-header">Il Risveglio del Mostro</div>Un rantolo profondo scuote il torace della creatura. Un occhio opaco si spalanca nel buio. Sopraffatto dall'orrore, fuggi nella notte piovosa...`,
+            choices: [{ text: "Prosegui verso l'Atto II: Ginevra", next: "atto2_map_hub" }]
+        },
+
+        // --- ATTO II ---
+        atto2_map_hub: {
+            onEnter: () => {
+                state.atto = 2;
+                state.currentScene = "atto2_map_hub";
+            },
+            text: () => {
+                let html = `<div class="chapter-header">Ginevra - Mappa Investigativa</div>
+Tuo fratello minore William è stato strangolato nei boschi di Pleinpalais. L'innocente Justine Moritz è accusata del delitto dopo il ritrovamento di un ritratto nello spacco della sua veste. Devi indagare tra i luoghi chiave della città.`;
+
+                if (state.sanita < 40) {
+                    html += `<p class="paranoia-text">⚡ La tua mente vacilla. Senti sussurri alle tue spalle e le ombre sui muri assumono le forme grottesche della Creatura.</p>`;
+                }
+                return html;
+            },
+            choices: [
+                { 
+                    text: "🏘️ Vai a Casa Frankenstein (Rifugio & Studio)", 
+                    next: "atto2_casa_frankenstein",
+                    onSelect: () => { state.nodoAttuale = "casa_frankenstein"; state.sanita = Math.min(100, state.sanita + 5); } 
+                },
+                { 
+                    text: "⚖️ Vai al Tribunale (Processo a Justine Moritz)", 
+                    next: "atto2_processo_justine",
+                    onSelect: () => { state.nodoAttuale = "processo_justine"; } 
+                },
+                { 
+                    text: "🌲 Viaggia verso la Valle di Chamounix (Gelo +15%, Sanità -10%)", 
+                    next: "atto2_valle_chamounix",
+                    onSelect: () => { 
+                        state.nodoAttuale = "valle_chamounix"; 
+                        state.freddo = Math.min(100, state.freddo + 15);
+                        state.sanita = Math.max(0, state.sanita - 10);
+                    } 
+                }
+            ]
+        },
+
+        atto2_casa_frankenstein: {
+            text: () => `<div class="chapter-header">Casa Frankenstein - Ginevra</div>Padre e la tua fidanzata Elizabeth piangono la morte di William. L'atmosfera è cupa e opprimente.`,
+            choices: [
+                { text: "Esamina la camera da letto di William", next: "atto2_camera_william" },
+                { text: "Parla con Elizabeth riguardo l'innocenza di Justine", next: "atto2_dialogo_elizabeth" },
+                { text: "Bevi un sedativo ed esamina le tue note (Ripristina Sanità +20%)", next: "atto2_casa_frankenstein", onSelect: () => { state.sanita = Math.min(100, state.sanita + 20); } },
+                { text: "Torna alla Mappa della Città", next: "atto2_map_hub" }
+            ]
+        },
+
+        atto2_camera_william: {
+            text: () => `<div class="chapter-header">Camera di William</div>La stanza del bambino è rimasta intatta. Sul letto c'è il suo diario giocattolo e una finestra sporge sul giardino posteriore.`,
+            choices: [
+                { 
+                    text: "Trova la catenina infranta del miniatura della Madre (Indizio Reale)", 
+                    next: "atto2_camera_william",
+                    condition: () => !state.indizi.includes("Catenina Infranta"),
+                    onSelect: () => { addIndizio("Catenina Infranta"); }
+                },
+                { text: "Torna nel Salone", next: "atto2_casa_frankenstein" }
+            ]
+        },
+
+        atto2_dialogo_elizabeth: {
+            text: () => `<div class="chapter-header">Colloquio con Elizabeth</div>Elizabeth scioglie in lacrime: "Justine è come una sorella per me, Victor. Non può essere stata lei!"`,
+            choices: [
+                { text: "Promettile che farai di tutto per salvarla", next: "atto2_casa_frankenstein", onSelect: () => { state.sanita = Math.min(100, state.sanita + 5); } }
+            ]
+        },
+
+        atto2_processo_justine: {
+            text: () => `<div class="chapter-header">Tribunale di Ginevra - Il Processo</div>I giudici austeri fissano la povera Justine Moritz. La folla la chiama 'assassina'.`,
+            choices: [
+                { text: "⚖️ Presenta le Prove per Scagionare Justine", next: "atto2_verdetto_justine" },
+                { text: "Parla in privato con Justine nella cella", next: "atto2_cella_justine" },
+                { text: "Abbandona il Tribunale", next: "atto2_map_hub" }
+            ]
+        },
+
+        atto2_cella_justine: {
+            text: () => `<div class="chapter-header">La Cella di Justine</div>Justine trema: "Un'ombra mostruosa mi ha aggredita nella notte!"`,
+            choices: [
+                { text: "Credi alla sua storia (Sanità +10%)", next: "atto2_processo_justine", onSelect: () => { addIndizio("Testimonianza Ombra Mostruosa"); state.sanita += 10; } }
+            ]
+        },
+
+        atto2_verdetto_justine: {
+            text: () => {
+                let txt = `<div class="chapter-header">Arringhe e Deduzioni</div>`;
+                if (state.indizi.includes("Testimonianza Ombra Mostruosa") && state.indizi.includes("Catenina Infranta")) {
+                    txt += `Grazie alle tue prove, Justine viene risparmiata dalla pena di morte e condannata solo all'esilio!`;
+                    state.giustineSalvata = true;
+                } else {
+                    txt += `Non hai abbastanza prove concrete. Justine viene condannata all'impiccagione.`;
+                    state.giustineSalvata = false;
+                }
+                return txt;
+            },
+            choices: [{ text: "Lascia il Tribunale e affronta la Valle di Chamounix", next: "atto2_map_hub" }]
+        },
+
+        atto2_valle_chamounix: {
+            text: () => `<div class="chapter-header">Valle di Chamounix & Monte Bianco</div>I mastodontici ghiacciai di Montanvert si erigono come cattedrali di ghiaccio.`,
+            choices: [
+                { text: "Sali verso il Glacier des Bois in solitudine", next: "atto2_incontro_creatura" },
+                { text: "Ritorna a Ginevra", next: "atto2_map_hub" }
+            ]
+        },
+
+        atto2_incontro_creatura: {
+            onEnter: () => { state.sanita = Math.max(10, state.sanita - 20); },
+            text: () => `<div class="chapter-header">Incontro sul Ghiacciaio</div>Una figura gigantesca avanza a velocità sovrumana sul ghiaccio. La Creatura pretenderà la creazione di una compagna o minaccerà di distruggere ogni cosa a te cara...`,
+            choices: [{ text: "Rifiuta la richiesta della Creatura e inseguila nell'Artide!", next: "atto3_inizio" }]
+        },
+
+        // --- ATTO III: ARTIDE - SOPRAVVIVENZA & INSEGUIMENTO ---
+        atto3_inizio: {
+            onEnter: () => {
+                state.atto = 3;
+                state.currentScene = "atto3_inizio";
+                state.cibo = 5;
+                state.legna = 3;
+                state.distanzaMostro = 10;
+                state.freddo = 20;
+            },
+            text: () => `<div class="chapter-header">Atto III: Deserto Bianco dell'Artide</div>
+Dopo l'uccisione di Elizabeth nella notte delle nozze, hai giurato vendetta eterna. Hai inseguito la Creatura attraverso la Russia e oltre il Circolo Polare Artico. 
+<br><br>
+Ti trovi su una slitta trainata da cani a guida dei ghiacci interminabili. La Creatura lascia traccia di sé precedendoti nel bianco.
+<br><br>
+<span class="arctic-text">❄️ Meccanica Sopravvivenza: Ogni turno consuma Cibo e Legna. Mantenere il Gelo basso è vitale per non morire di ipotermia. Riduci la distanza per il confronto finale!</span>`,
+            choices: [
+                { text: "🧊 Avanza nel Mare di Ghiaccio (Inizia l'Inseguimento)", next: "atto3_hub" }
+            ]
+        },
+
+        atto3_hub: {
+            text: () => {
+                let txt = `<div class="chapter-header">Artide - Accampamento nel Ghiaccio</div>`;
+                txt += `Le tempeste artiche sferzano i cani. La Creatura ti sbeffeggia lasciando incisioni sulla roccia ed incisioni sul ghiaccio.<br><br>`;
+                
+                if (state.distanzaMostro <= 3) {
+                    txt += `<strong style="color: #ef4444;">⚠️ Scorgi la sagoma spaventosa del Mostro all'orizzonte! È a soli ${state.distanzaMostro} leghe!</strong><br><br>`;
+                } else {
+                    txt += `Distanza attuale dalla Creatura: <strong>${state.distanzaMostro} leghe</strong>.<br><br>`;
+                }
+
+                if (state.freddo >= 70) {
+                    txt += `<span class="hallucination">❄️ Il tuo corpo trema in modo ininterrotto. Le estremità delle dita sono nere per il congelamento!</span><br>`;
+                }
+                return txt;
+            },
+            choices: [
+                { 
+                    text: "🛷 Forza l'andatura delle slitte (Distanza -3, Cibo -2, Legna -1, Gelo +10%)", 
+                    next: "atto3_evento",
+                    onSelect: () => { consumoTurno(2, 1, -3); }
+                },
+                { 
+                    text: "⛺ Allestisci il Campo & Raziona i viveri (Cibo -1, Legna -1, Gelo -15%, Sanità +10%)", 
+                    next: "atto3_hub",
+                    onSelect: () => { 
+                        consumoTurno(1, 1, 1); 
+                        state.freddo = Math.max(0, state.freddo - 15);
+                        state.sanita = Math.min(100, state.sanita + 10);
+                    }
+                },
+                { 
+                    text: "🎣 Caccia foche e raccogli legni galleggianti sul pack (Cibo +2, Legna +2, Gelo +15%)", 
+                    next: "atto3_caccia",
+                    onSelect: () => {
+                        consumoTurno(0, 0, 2);
+                        state.cibo += 2;
+                        state.legna += 2;
+                        state.freddo = Math.min(100, state.freddo + 15);
+                    }
+                },
+                {
+                    text: "🎯 Ingaggia il Confronto Finale (Richiede Distanza ≤ 2 leghe)",
+                    next: "atto3_confronto_finale",
+                    condition: () => state.distanzaMostro <= 2
+                }
+            ]
+        },
+
+        atto3_caccia: {
+            text: () => `<div class="chapter-header">Ricerca Risorse sul Ghiaccio</div>
+Trovi i resti di una baleniera abbandonata tra le banchise e riesci a pescare attraverso un foro nel ghiaccio. Recuperi viveri e legname essenziale per la notte.`,
+            choices: [
+                { text: "Ritorna all'Inseguimento", next: "atto3_hub" }
+            ]
+        },
+
+        atto3_evento: {
+            text: () => {
+                // Generazione di eventi casuali artici durante l'inseguimento
+                const eventi = [
+                    "Crepaccio improvviso! Un cane cade nelle profondità del ghiacciaio. Perdi tempo per rimettere in sesto i finimenti. (Distanza +1 lega)",
+                    "Tempesta di Neve imprevista! Il freddo penetra fin dentro le ossa. (Gelo +15%)",
+                    "Trovi un messaggio inciso sul tronco di un pino polare: 'Seguimi! Il mio spirito si nutre del tuo tormento!' (Sanità -10%)",
+                    "I cani corrono rapidi sulla banchisa compatta! Guadagni terreno sul Mostro! (Distanza -1 lega)"
+                ];
+                const index = Math.floor(Math.random() * eventi.length);
+                
+                if (index === 0) state.distanzaMostro += 1;
+                if (index === 1) state.freddo = Math.min(100, state.freddo + 15);
+                if (index === 2) state.sanita = Math.max(0, state.sanita - 10);
+                if (index === 3) state.distanzaMostro = Math.max(0, state.distanzaMostro - 1);
+
+                return `<div class="chapter-header">Imprevisto nei Ghiacci</div>${eventi[index]}`;
+            },
+            choices: [
+                { text: "Continua la marcia", next: "atto3_hub" }
+            ]
+        },
+
+        atto3_confronto_finale: {
+            text: () => {
+                let txt = `<div class="chapter-header">Il Confronto Finale tra i Ghiacci</div>
+La slitta scivola accanto alla nave del Capitan Walton bloccata tra i ghiacci. Di fronte a te, immensa e spettrale, la tua Creazione si erge sulla banquisa spezzata.<br><br>`;
+                
+                if (state.mostroIntelletto > 40) {
+                    txt += `La Creatura ti guarda senza rabbia, ma con un vuoto infinito:<br><em>"Victor... la nostra corsa finisce qui. Hai distrutto ogni possibilità di gioia per me, ed io ho distrutto la tua."</em><br><br>`;
+                } else {
+                    txt += `La Creatura emette un ruggito primordiale che fa tremare le lastre di ghiaccio circondanti:<br><em>"Vieni a compiere la tua vendetta, Creatore! O soccombi al freddo che hai inoculato nella mia anima!"</em><br><br>`;
+                }
+                return txt;
+            },
+            choices: [
+                { text: "⚔️ Tenta l'ultimo scontro mortale con la Creatura", next: "finale_duello" },
+                { text: "🕊️ Perdona la Creatura e chiedi perdono prima che il tuo cuore si fermi", next: "finale_assoluzione" }
+            ]
+        },
+
+        // FINALI DELL'AVVENTURA
+        finale_duello: {
+            text: () => `<div class="chapter-header">Finale: Il Destino sul Ghiaccio</div>
+Con le ultime forze vi scagliate l'uno contro l'altro. Lo scontro è furioso, ma le tue forze fisiche sono ormai esauste per il gelo polare. Cadendo sulla neve, esali l'ultimo respiro sotto gli occhi del Capitan Walton.<br><br>
+La Creatura piange sul tuo corpo gelato: <em>"Egli era il mio creatore... Ora la mia opera di morte è compiuta."</em> Scompare nei ghiacci del Nord per bruciare la sua stessa carne su una pira funeraria.
+<br><br><strong style="color:var(--gold-color);">FINE DELL'AVVENTURA - Finale Canonico</strong>`,
+            choices: [
+                { text: "🔄 Gioca di Nuovo dall'Atto I", next: "lab_hub", onSelect: () => { state = JSON.parse(JSON.stringify(defaultState)); } }
+            ]
+        },
+
+        finale_assoluzione: {
+            text: () => `<div class="chapter-header">Finale: L'Assoluzione del Prometeo</div>
+Getti la pistola nella neve. "Abbiamo sofferto abbastanza," mormori. La Creatura si siede al tuo fianco mentre il freddo spegne i tuoi sensi. Delle lacrime calde solcano la sua pelle rigida.<br><br>
+Per la prima volta dopo anni, la Creatura trova pace nel perdono del suo creatore prima che l'oscurità vi avvolga entrambi nel grande silenzio dell'Artide.
+<br><br><strong style="color:var(--gold-color);">FINE DELL'AVVENTURA - Finale della Riconciliazione</strong>`,
+            choices: [
+                { text: "🔄 Gioca di Nuovo dall'Atto I", next: "lab_hub", onSelect: () => { state = JSON.parse(JSON.stringify(defaultState)); } }
+            ]
+        },
+
+        finale_assoliuto_gelo: {
+            text: () => `<div class="chapter-header">Finale: Abbraccio del Gelo</div>
+<strong style="color: #ef4444;">GAME OVER - Morte per Ipotermia</strong><br><br>
+Il freddo polare ha superato le capacità di resistenza del tuo corpo. Ti accasci tra i cumuli di neve prima di poter raggiungere la Creatura. Il vento artico copre le tue tracce ed il tuo corpo diventa una sola cosa con il ghiaccio.`,
+            choices: [
+                { text: "🔄 Ricomincia dall'Atto I", next: "lab_hub", onSelect: () => { state = JSON.parse(JSON.stringify(defaultState)); } }
+            ]
+        }
+    };
+
+    function updateUI() {
+        const attiNomi = { 
+            1: "Atto I: La Creazione", 
+            2: "Atto II: Ginevra & Investigazione", 
+            3: "Atto III: Artide & Inseguimento" 
+        };
+        document.getElementById('atto-indicator').innerText = attiNomi[state.atto] || "Frankenstein";
+
+        // Gestione pannello Artide
+        const arcticBar = document.getElementById('arctic-bar');
+        if (state.atto === 3) {
+            arcticBar.style.display = 'grid';
+            document.getElementById('cibo-val').innerText = state.cibo;
+            document.getElementById('legna-val').innerText = state.legna;
+            document.getElementById('distanza-val').innerText = state.distanzaMostro;
+        } else {
+            arcticBar.style.display = 'none';
+        }
+
+        // Check Game Over per Sospetto (Atto I e II)
+        if (state.sospetto >= 100 && state.atto < 3) {
+            document.getElementById('story-box').innerHTML = `<div class="chapter-header">Arresto & Condanna</div>
+<strong style='color:#ef4444;'>GAME OVER</strong><br><br>I tuoi comportamenti ossessivi e le prove a tuo carico hanno spinto le autorità ad arrestarti. Sei stato giudicato incapace e rinchiuso in manicomio.`;
+            document.getElementById('choices-box').innerHTML = `<button class="btn-choice" onclick="resetGame()">Ricomincia da Capo</button>`;
+            return;
+        }
+
+        // Check Game Over per Gelo (Atto III)
+        if (state.freddo >= 100) {
+            state.currentScene = "finale_assoliuto_gelo";
+        }
+
+        // Display valori numerici barre
+        document.getElementById('sospetto-val').innerText = Math.min(Math.max(state.sospetto, 0), 100) + '%';
+        document.getElementById('sanita-val').innerText = Math.min(Math.max(state.sanita, 0), 100) + '%';
+        document.getElementById('freddo-val').innerText = Math.min(Math.max(state.freddo, 0), 100) + '%';
+
+        // Render Barre
+        document.getElementById('sospetto-fill').style.width = Math.min(Math.max(state.sospetto, 0), 100) + '%';
+        document.getElementById('sanita-fill').style.width = Math.min(Math.max(state.sanita, 0), 100) + '%';
+        document.getElementById('freddo-fill').style.width = Math.min(Math.max(state.freddo, 0), 100) + '%';
+
+        const scene = story[state.currentScene] || story["lab_hub"];
+        if (scene.onEnter) scene.onEnter();
+
+        document.getElementById('story-box').innerHTML = scene.text();
+
+        const choicesBox = document.getElementById('choices-box');
+        choicesBox.innerHTML = '';
+
+        scene.choices.forEach(c => {
+            if (c.condition && !c.condition()) return;
+
+            const btn = document.createElement('button');
+            btn.className = 'btn-choice';
+            
+            if (state.sanita < 40 && c.text.includes("🔮")) {
+                btn.classList.add('paranoiac');
+            }
+
+            if (state.atto === 3) {
+                btn.classList.add('arctic');
+            }
+
+            btn.innerHTML = c.text;
+            btn.onclick = () => {
+                if (c.onSelect) c.onSelect();
+                state.currentScene = c.next;
+                triggerSave();
+                updateUI();
+            };
+            choicesBox.appendChild(btn);
+        });
+    }
+
+    loadSave();
+    updateUI();
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swCode = `
+                const CACHE_NAME = 'frankenstein-v4';
+                self.addEventListener('install', event => self.skipWaiting());
+                self.addEventListener('activate', event => event.waitUntil(clients.claim()));
+                self.addEventListener('fetch', event => {
+                    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(err => {
+                console.log('SW offline ready');
+            });
+        });
+    }
+</script>
+</body>
+</html>
