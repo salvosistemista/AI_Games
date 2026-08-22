@@ -89,12 +89,27 @@
         .menu-btn { padding: 15px 30px; font-size: 18px; width: 200px; text-align: center; }
 
         #turn-indicator { font-weight: bold; color: yellow; }
+
+        /* Stili Finestre Modali In-Game */
+        #custom-dialog {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75); z-index: 200;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .dialog-box {
+            background: #2c3e50; border: 2px solid #34495e; border-radius: 8px;
+            padding: 20px; max-width: 320px; width: 100%; text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .dialog-msg { font-size: 15px; margin-bottom: 20px; line-height: 1.4; color: #fff; }
+        .dialog-btns { display: flex; gap: 10px; justify-content: center; }
+        .dialog-btns button { padding: 10px 20px; font-size: 14px; min-width: 80px; }
     </style>
 </head>
 <body>
 
     <div id="top-bar">
-        <span>Scala 40 (v.1.04)</span>
+        <span>Scala 40 (v.1.06)</span>
         <span id="turn-indicator">Turno: Giocatore</span>
         <button onclick="toggleMenu()">⚙️</button>
     </div>
@@ -128,6 +143,14 @@
         <button class="menu-btn" onclick="toggleMenu()">Chiudi Menu</button>
     </div>
 
+    <!-- Modale personalizzata in-game -->
+    <div id="custom-dialog">
+        <div class="dialog-box">
+            <div id="dialog-msg" class="dialog-msg"></div>
+            <div id="dialog-btns" class="dialog-btns"></div>
+        </div>
+    </div>
+
 <script>
 const swCode = `
 self.addEventListener('install', (e) => self.skipWaiting());
@@ -157,6 +180,40 @@ let state = {
 let selectedCards = [];
 let aiThinking = false;
 let pendingJoker = null;
+
+/* Sistema Pop-up custom in-game per preservare la modalità Schermo Intero */
+function showAlert(message) {
+    const dialog = document.getElementById('custom-dialog');
+    const msgEl = document.getElementById('dialog-msg');
+    const btnsEl = document.getElementById('dialog-btns');
+    
+    msgEl.innerText = message;
+    btnsEl.innerHTML = `<button onclick="closeDialog()">OK</button>`;
+    dialog.style.display = 'flex';
+}
+
+function showConfirm(message, onConfirm) {
+    const dialog = document.getElementById('custom-dialog');
+    const msgEl = document.getElementById('dialog-msg');
+    const btnsEl = document.getElementById('dialog-btns');
+    
+    msgEl.innerText = message;
+    btnsEl.innerHTML = `
+        <button style="background:#c0392b; border-color:#e74c3c;" id="confirm-yes-btn">Sì</button>
+        <button onclick="closeDialog()">No</button>
+    `;
+    
+    document.getElementById('confirm-yes-btn').onclick = () => {
+        closeDialog();
+        onConfirm();
+    };
+    
+    dialog.style.display = 'flex';
+}
+
+function closeDialog() {
+    document.getElementById('custom-dialog').style.display = 'none';
+}
 
 function init() {
     const savedState = localStorage.getItem('scala40_save');
@@ -254,7 +311,7 @@ function drawCard(source) {
             state.hasDrawn = true;
             state.lastDrawnCardId = drawn.id;
         } else {
-            alert("Devi aver già aperto per pescare dagli scarti!");
+            showAlert("Devi aver già aperto per pescare dagli scarti!");
             return;
         }
     }
@@ -429,7 +486,7 @@ function canReplaceJokerInMeld(meldIndex, jokerCardIndex) {
 
 function tryReplaceJoker(meldIndex, jokerCardIndex) {
     if (!canReplaceJokerInMeld(meldIndex, jokerCardIndex)) {
-        alert("Non puoi raccogliere questo Jolly: devi aver aperto, aver pescato e possedere la carta naturale esatta in mano per sostituirlo.");
+        showAlert("Non puoi raccogliere questo Jolly: devi aver aperto, aver pescato e possedere la carta naturale esatta in mano per sostituirlo.");
         return;
     }
 
@@ -448,7 +505,7 @@ function tryReplaceJoker(meldIndex, jokerCardIndex) {
     state.hands.player.push(pendingJoker);
     selectedCards = [pendingJoker.id];
 
-    alert(`Hai raccolto il Jolly! Devi riutilizzarlo immediatamente in una combinazione o attaccandolo in questo turno.`);
+    showAlert(`Hai raccolto il Jolly! Devi riutilizzarlo immediatamente in una combinazione o attaccandolo in questo turno.`);
     saveState();
     renderAll();
 }
@@ -507,7 +564,7 @@ function playMeld() {
             let points = cardsToPlay.reduce((sum, c) => sum + c.val, 0);
             
             if (!state.hasOpened.player && points < 40) {
-                alert(`Hai selezionato combinazioni per ${points} punti, ma la prima calata deve valere almeno 40 punti!`);
+                showAlert(`Hai selezionato combinazioni per ${points} punti, ma la prima calata deve valere almeno 40 punti!`);
                 return;
             }
             
@@ -524,7 +581,7 @@ function playMeld() {
 
     if (!playedAny) {
         if (!state.hasOpened.player) {
-            alert("Devi aver già aperto (almeno 40 punti) per poter attaccare le carte alle combinazioni sul tavolo!");
+            showAlert("Devi aver già aperto (almeno 40 punti) per poter attaccare le carte alle combinazioni sul tavolo!");
             return;
         }
 
@@ -558,7 +615,7 @@ function playMeld() {
             selectedCards = selectedIds.filter(id => !successfullyAttachedIds.includes(id));
             playedAny = true;
         } else {
-            alert("Le carte selezionate non formano combinazioni valide e non possono essere attaccate alle combinazioni presenti sul tavolo.");
+            showAlert("Le carte selezionate non formano combinazioni valide e non possono essere attaccate alle combinazioni presenti sul tavolo.");
             return;
         }
     }
@@ -567,7 +624,7 @@ function playMeld() {
         if (!state.hands.player.some(c => c.id === pendingJoker.id)) {
             pendingJoker = null;
         } else {
-            alert("Hai ancora il Jolly raccolto in mano! Devi utilizzarlo prima di poter scartare o terminare il turno.");
+            showAlert("Hai ancora il Jolly raccolto in mano! Devi utilizzarlo prima di poter scartare o terminare il turno.");
             saveState();
             renderAll();
             return;
@@ -583,7 +640,7 @@ function discardCard() {
     if (state.turn !== 'player' || !state.hasDrawn || selectedCards.length !== 1) return;
     
     if (pendingJoker) {
-        alert("Hai un Jolly raccolto in sospeso! Devi assolutamente riutilizzarlo prima di poter scartare.");
+        showAlert("Hai un Jolly raccolto in sospeso! Devi assolutamente riutilizzarlo prima di poter scartare.");
         return;
     }
 
@@ -592,7 +649,7 @@ function discardCard() {
     const cardToDiscard = state.hands.player[cardIdx];
 
     if (cardToDiscard.rank === 'Jolly') {
-        alert("Non puoi scartare un Jolly!");
+        showAlert("Non puoi scartare un Jolly!");
         return;
     }
     
@@ -600,7 +657,7 @@ function discardCard() {
     state.hands.player.splice(cardIdx, 1);
     selectedCards = [];
     state.hasDrawn = false;
-    state.lastDrawnCardId = null; // Rimuove l'evidenziatore al momento dello scarto
+    state.lastDrawnCardId = null;
     
     if (state.hands.player.length === 0) return handleWin('Giocatore');
     
@@ -690,7 +747,7 @@ function checkAITurn() {
 function handleWin(winner) {
     aiThinking = false;
     pendingJoker = null;
-    alert(`${winner} ha CHIUSO! Partita finita.`);
+    showAlert(`${winner} ha CHIUSO! Partita finita.`);
     localStorage.removeItem('scala40_save');
     startNewGame();
     renderAll();
@@ -798,16 +855,16 @@ function toggleMenu() {
 }
 
 function resetGame() {
-    if(confirm("Vuoi cancellare il salvataggio e ricominciare?")) {
+    showConfirm("Vuoi cancellare il salvataggio e ricominciare?", () => {
         localStorage.removeItem('scala40_save');
         startNewGame();
         renderAll();
         toggleMenu();
-    }
+    });
 }
 
 function toggleFullscreen() {
-    if (!document.documentElement.requestFullscreen()) {
+    if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => console.log(err));
     } else {
         if (document.exitFullscreen) document.exitFullscreen();
