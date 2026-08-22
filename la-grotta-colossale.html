@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>La Grotta Colossale — Un'Avventura</title>
+<style>
+:root{
+  --cave-black:#0c0e0a;
+  --cave-dark:#181a14;
+  --stone:#3a352c;
+  --stone-light:#5a5140;
+  --parchment:#e6d7ae;
+  --parchment-dim:#c9b98a;
+  --lantern:#e3a13a;
+  --lantern-glow:#f4c463;
+  --moss:#5c7a4a;
+  --ember:#b8452e;
+  --gold:#d4af37;
+  font-size:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:var(--cave-black);
+  color:var(--parchment);
+  font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
+  overscroll-behavior:none;
+}
+#app{
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  max-width:560px;margin:0 auto;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(227,161,58,0.07), transparent 60%),
+    linear-gradient(180deg, var(--cave-dark) 0%, var(--cave-black) 100%);
+  position:relative;
+  border-left:1px solid #000;border-right:1px solid #000;
+}
+header{
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--stone);
+  background:linear-gradient(180deg, rgba(227,161,58,0.05), transparent);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#roomTitle{
+  font-size:1.05rem;letter-spacing:.03em;color:var(--lantern-glow);
+  text-shadow:0 0 12px rgba(227,161,58,0.35);
+  font-variant:small-caps;
+  margin:0;
+}
+#lampIndicator{
+  font-size:.72rem;color:var(--parchment-dim);display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.flame{
+  display:inline-block;width:8px;height:11px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 50% 70%, var(--lantern-glow), var(--ember) 90%);
+  box-shadow:0 0 6px var(--lantern-glow);
+  animation:flick 1.6s ease-in-out infinite;
+}
+@keyframes flick{
+  0%,100%{transform:scaleY(1) rotate(-1deg);opacity:1;}
+  30%{transform:scaleY(.85) rotate(2deg);opacity:.85;}
+  60%{transform:scaleY(1.08) rotate(-2deg);opacity:1;}
+}
+.flame.off{background:#333;box-shadow:none;animation:none;opacity:.5;}
+
+#log{
+  flex:1;overflow-y:auto;padding:16px 16px 8px;
+  font-size:1rem;line-height:1.55;
+}
+#log::-webkit-scrollbar{width:6px;}
+#log::-webkit-scrollbar-thumb{background:var(--stone-light);border-radius:3px;}
+.entry{margin-bottom:14px;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.entry.room-name{
+  color:var(--lantern-glow);font-variant:small-caps;font-size:1.15rem;letter-spacing:.03em;
+  border-bottom:1px solid var(--stone);padding-bottom:6px;margin-bottom:8px;
+}
+.entry.desc{color:var(--parchment);}
+.entry.msg{color:var(--parchment-dim);font-style:italic;}
+.entry.system{color:var(--moss);font-size:.85rem;text-align:center;}
+.entry.danger{color:var(--ember);font-weight:bold;}
+.entry .items-here{margin-top:6px;font-size:.92rem;color:var(--gold);}
+
+#actions{
+  padding:8px 12px 4px;border-top:1px solid var(--stone);flex-shrink:0;
+  max-height:38vh;overflow-y:auto;
+}
+.action-group-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--parchment-dim);opacity:.65;margin:6px 2px 3px;}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+button.opt{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(180deg,#2a251d,#1c1812);
+  border:1px solid var(--stone-light);
+  color:var(--parchment);
+  padding:9px 12px;border-radius:6px;font-size:.86rem;
+  cursor:pointer;flex:1 1 auto;min-width:44%;
+  transition:background .15s, transform .1s;
+  text-align:center;
+}
+button.opt:active{transform:scale(.96);background:linear-gradient(180deg,#3a3020,#241f16);}
+button.opt.exit{border-color:var(--moss);color:#cde0bd;}
+button.opt.special{border-color:var(--lantern);color:var(--lantern-glow);}
+button.opt.magic{border-color:var(--gold);color:var(--gold);font-style:italic;}
+button.opt.danger{border-color:var(--ember);color:#f2a48f;}
+button.opt.wide{min-width:100%;}
+
+#bottombar{
+  display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--stone);background:var(--cave-black);flex-shrink:0;
+}
+#bottombar button{
+  flex:1;font-family:'Segoe UI',system-ui,sans-serif;
+  background:#151310;border:1px solid var(--stone-light);color:var(--parchment-dim);
+  padding:9px 4px;border-radius:6px;font-size:.72rem;display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+#bottombar button .ic{font-size:1.05rem;}
+#bottombar button:active{background:#221c14;}
+
+.modal-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;
+}
+.modal-backdrop.hidden{display:none;}
+.modal{
+  background:linear-gradient(180deg,#211c15,#161310);
+  border:1px solid var(--stone-light);border-bottom:none;
+  border-radius:14px 14px 0 0;
+  width:100%;max-width:560px;max-height:82vh;overflow-y:auto;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation:slideup .2s ease;
+}
+@keyframes slideup{from{transform:translateY(30px);opacity:0;}to{transform:none;opacity:1;}}
+.modal h2{
+  margin:0 0 10px;color:var(--lantern-glow);font-variant:small-caps;font-size:1.2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.modal h2 .close{cursor:pointer;color:var(--parchment-dim);font-size:1.3rem;font-family:sans-serif;line-height:1;padding:2px 8px;}
+.inv-section-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--parchment-dim);margin:14px 0 6px;opacity:.7;}
+.inv-item{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.inv-item .name{flex:1;font-size:.95rem;}
+.inv-item .name .tag{font-size:.68rem;color:var(--gold);display:block;opacity:.8;}
+.inv-item button{
+  background:#2a251d;border:1px solid var(--stone-light);color:var(--parchment);
+  padding:6px 10px;border-radius:5px;font-size:.78rem;font-family:'Segoe UI',system-ui,sans-serif;
+}
+.empty-note{color:var(--parchment-dim);font-style:italic;font-size:.88rem;padding:8px 4px;}
+textarea#notesArea{
+  width:100%;min-height:40vh;background:#0f0d0a;color:var(--parchment);
+  border:1px solid var(--stone-light);border-radius:8px;padding:10px;font-family:inherit;font-size:.95rem;
+  resize:vertical;
+}
+.notes-hint{font-size:.75rem;color:var(--parchment-dim);margin-top:8px;opacity:.75;}
+#scoreModal .score-big{font-size:2.4rem;color:var(--gold);text-align:center;margin:6px 0 2px;font-variant:small-caps;}
+#scoreModal .score-sub{text-align:center;color:var(--parchment-dim);margin-bottom:14px;}
+#scoreModal .treasure-row{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;}
+#scoreModal .treasure-row.got{color:var(--gold);}
+#scoreModal .treasure-row.missing{color:#5a5140;}
+
+#winScreen{
+  position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 30%, #2a2110, #0c0e0a 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
+}
+#winScreen.hidden{display:none;}
+#winScreen h1{color:var(--gold);font-variant:small-caps;font-size:1.8rem;text-shadow:0 0 20px rgba(212,175,55,.5);margin-bottom:6px;}
+#winScreen p{color:var(--parchment);line-height:1.6;max-width:420px;}
+#winScreen button{margin-top:20px;}
+
+@media (min-width:601px){
+  body{background:#000;}
+  #app{border-left:1px solid var(--stone);border-right:1px solid var(--stone);box-shadow:0 0 60px rgba(0,0,0,.8);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="roomTitle">La Grotta Colossale</h1>
+    <div id="lampIndicator"><span class="flame off" id="flameIcon"></span><span id="lampText">Lampada spenta</span></div>
+  </header>
+
+  <div id="log"></div>
+
+  <div id="actions"></div>
+
+  <div id="bottombar">
+    <button id="btnInv"><span class="ic">🎒</span>Zaino</button>
+    <button id="btnLook"><span class="ic">👁</span>Guarda</button>
+    <button id="btnHint"><span class="ic">💡</span>Aiuto</button>
+    <button id="btnScore"><span class="ic">📜</span>Diario</button>
+    <button id="btnNotes"><span class="ic">✎</span>Appunti [A]</button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="invModal">
+    <div class="modal">
+      <h2>Il tuo zaino <span class="close" data-close="invModal">✕</span></h2>
+      <div class="inv-section-title">Cosa porti con te</div>
+      <div id="invCarried"></div>
+      <div class="inv-section-title">Qui a terra</div>
+      <div id="invHere"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="notesModal">
+    <div class="modal">
+      <h2>I tuoi appunti <span class="close" data-close="notesModal">✕</span></h2>
+      <textarea id="notesArea" placeholder="Scrivi qui mappe, indizi, parole magiche trovate, cose da ricordare..."></textarea>
+      <div class="notes-hint">Gli appunti restano salvati anche se chiudi il gioco o ricominci l'avventura.</div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scoreModal">
+    <div class="modal" id="scoreModalInner">
+      <h2>Diario dell'avventuriero <span class="close" data-close="scoreModal">✕</span></h2>
+      <div id="scoreContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal">
+    <div class="modal">
+      <h2 id="confirmTitle">Sei sicuro?</h2>
+      <p id="confirmText" style="color:var(--parchment-dim);line-height:1.5;"></p>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="opt danger wide" id="confirmYes">Sì, procedi</button>
+        <button class="opt wide" id="confirmNo">No, torna indietro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winScreen" class="hidden">
+    <h1>350 su 350!</h1>
+    <p>Hai riportato in superficie tutti e sette i tesori della Grotta Colossale. Il tuo nome verrà ricordato tra gli speleologi più coraggiosi che abbiano mai acceso una lampada a carburo in queste gallerie. L'avventura, per te, è completa — un punteggio perfetto.</p>
+    <button class="opt special wide" id="btnWinRestart">Ricomincia una nuova discesa</button>
+    <button class="opt wide" id="btnWinContinue" style="margin-top:8px;">Continua a esplorare comunque</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============== DATI DI GIOCO ============== */
+
+var TREASURES = {
+  sbarra_argento:{name:"una sbarra d'argento", tag:"Tesoro"},
+  collana_gioielli:{name:"una collana di gioielli scintillanti", tag:"Tesoro"},
+  forziere_pirata:{name:"un forziere di monete d'oro", tag:"Tesoro"},
+  tappeto_persiano:{name:"un pregiato tappeto persiano", tag:"Tesoro"},
+  diamanti:{name:"un pugno di diamanti grezzi", tag:"Tesoro"},
+  pepita_oro:{name:"una grossa pepita d'oro", tag:"Tesoro"},
+  smeraldo:{name:"un enorme smeraldo", tag:"Tesoro"}
+};
+var TREASURE_IDS = Object.keys(TREASURES);
+var POINTS_PER_TREASURE = 50;
+
+var ITEMS = {
+  chiavi:{name:"un mazzo di chiavi arrugginite"},
+  lampada:{name:"una lampada a carburo"},
+  cibo:{name:"delle provviste da speleologo"},
+  borraccia:{name:"una borraccia d'acqua"},
+  gabbia:{name:"una piccola gabbia di vimini, vuota"},
+  uccellino:{name:"un uccellino che ti guarda fiducioso"},
+  verga_nera:{name:"una sottile verga di metallo nero"}
+};
+// aggiungi tesori alla lista oggetti unica
+Object.keys(TREASURES).forEach(function(k){ ITEMS[k]=TREASURES[k]; });
+
+function isTreasure(id){ return !!TREASURES[id]; }
+
+/* Ogni stanza: name, desc(state)->string, exits:[{label,to,requires?}], actions:[{id,label,cls,condition,run}], items:[ids] */
+var ROOMS = {
+
+outside:{
+  name:"Fuori dall'edificio",
+  dark:false,
+  desc:function(s){
+    return "Sei alla fine di uno stretto sentiero, davanti a un piccolo edificio di mattoni. Intorno a te si estende una fitta foresta. Un ruscello sgorga dall'edificio e scompare, gorgogliando, in una vallata in discesa.";
+  },
+  exits:[
+    {label:"Entra nell'edificio", to:"building"},
+    {label:"Segui il ruscello nella vallata", to:"valley"}
+  ]
+},
+
+building:{
+  name:"Dentro l'edificio",
+  dark:false,
+  desc:function(s){
+    var t="Sei dentro un piccolo rifugio in pietra usato dagli speleologi. Su un tavolo di legno riconosci l'attrezzatura di chi è sceso in queste grotte prima di te.";
+    if(s.deposited.length>0){ t+=" In un angolo hai accumulato i tesori che sei riuscito a riportare in superficie."; }
+    return t;
+  },
+  items:["chiavi","lampada","cibo","borraccia"],
+  exits:[
+    {label:"Esci all'aperto", to:"outside"}
+  ],
+  actions:[
+    {id:"deposita", label:"Deposita i tesori raccolti", cls:"special",
+      condition:function(s){ return s.inventory.some(isTreasure); },
+      run:function(s){
+        var depositedNow=[];
+        s.inventory = s.inventory.filter(function(id){
+          if(isTreasure(id)){ s.deposited.push(id); depositedNow.push(id); return false; }
+          return true;
+        });
+        var names = depositedNow.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("msg", "Deponi con cura " + names + " nell'angolo del rifugio. Il loro peso lascia il tuo zaino, ma resteranno per sempre nella tua avventura.");
+        if(s.deposited.length >= TREASURE_IDS.length){
+          setTimeout(showWinScreen, 400);
+        }
+      }
+    }
+  ]
+},
+
+valley:{
+  name:"Vallata del ruscello",
+  dark:false,
+  desc:function(s){ return "Sei in una piccola vallata boscosa. Il ruscello scende gorgogliando tra le rocce verso una zona più scoscesa, dove intuisci il rumore dell'acqua che precipita più in basso."; },
+  exits:[
+    {label:"Risali verso l'edificio", to:"outside"},
+    {label:"Segui il ruscello verso valle", to:"streambed"}
+  ]
+},
+
+streambed:{
+  name:"Presso la grata di ferro",
+  dark:false,
+  desc:function(s){
+    var t="Il ruscello scompare qui in una fenditura nella roccia, sbarrata da una robusta grata di ferro arrugginito.";
+    t += s.flags.grateOpen ? " La grata è ora spalancata: un pozzo buio scende nell'oscurità." : " La grata è chiusa con un pesante lucchetto.";
+    return t;
+  },
+  exits:[
+    {label:"Risali la vallata", to:"valley"}
+  ],
+  actions:[
+    {id:"apri_grata", label:"Apri la grata con le chiavi", cls:"special",
+      condition:function(s){ return !s.flags.grateOpen && s.inventory.indexOf("chiavi")>-1; },
+      run:function(s){ s.flags.grateOpen=true; log("msg","Con un cigolio arrugginito, le chiavi girano nel lucchetto. La grata si apre, rivelando un pozzo buio che scende nella roccia."); }
+    },
+    {id:"grata_bloccata_hint", label:"Osserva la grata chiusa", cls:"",
+      condition:function(s){ return !s.flags.grateOpen && s.inventory.indexOf("chiavi")===-1; },
+      run:function(s){ log("msg","La grata è chiusa da un lucchetto robusto. Ti serve qualcosa per aprirlo — forse delle chiavi, lasciate da qualche parte nel rifugio in superficie."); }
+    },
+    {id:"scendi_grata", label:"Scendi attraverso la grata", cls:"exit",
+      condition:function(s){ return s.flags.grateOpen; },
+      run:function(s){ go("debris_room"); }
+    }
+  ]
+},
+
+debris_room:{
+  name:"Sala dei Detriti",
+  dark:true,
+  desc:function(s){
+    var t="Sei ai piedi del pozzo, in una sala ingombra di detriti caduti dall'apertura sopra di te. Un cunicolo basso prosegue in discesa.";
+    if(!s.discovered.xyzzy){ t+=" Su una parete, qualcuno ha inciso con cura una strana parola: XYZZY."; }
+    return t;
+  },
+  exits:[
+    {label:"Risali verso la grata", to:"streambed"},
+    {label:"Striscia nel cunicolo basso", to:"cobble_crawl"}
+  ],
+  actions:[
+    {id:"scopri_xyzzy", label:"Osserva l'iscrizione sulla parete", cls:"",
+      condition:function(s){ return !s.discovered.xyzzy; },
+      run:function(s){ s.discovered.xyzzy=true; log("msg","Ripeti a bassa voce la parola incisa: 'XYZZY'. Senti come un fremito nell'aria — hai imparato una parola magica. Ora potrai usarla per spostarti rapidamente tra qui e il rifugio in superficie."); }
+    }
+  ]
+},
+
+cobble_crawl:{
+  name:"Cunicolo di Ciottoli",
+  dark:true,
+  desc:function(s){ return "Un cunicolo stretto, il pavimento coperto di piccoli ciottoli levigati dall'acqua. Prosegue verso una camera più ampia da cui provengono cinguettii."; },
+  items:["gabbia"],
+  exits:[
+    {label:"Torna alla Sala dei Detriti", to:"debris_room"},
+    {label:"Avanza verso i cinguettii", to:"bird_chamber"}
+  ]
+},
+
+bird_chamber:{
+  name:"Camera degli Uccellini",
+  dark:true,
+  desc:function(s){
+    if(s.flags.birdCaught) return "Questa piccola camera rotonda, un tempo nido di un uccellino dai colori vivaci, è ora silenziosa.";
+    return "Una piccola camera rotonda. Un uccellino minuscolo, dai colori vivaci, saltella nervoso su una sporgenza di roccia, osservandoti con attenzione.";
+  },
+  exits:[
+    {label:"Torna al cunicolo di ciottoli", to:"cobble_crawl"},
+    {label:"Prosegui verso la Sala delle Nebbie", to:"hall_of_mists"}
+  ],
+  actions:[
+    {id:"cattura_uccello", label:"Cattura l'uccellino con la gabbia", cls:"special",
+      condition:function(s){ return !s.flags.birdCaught && s.inventory.indexOf("gabbia")>-1; },
+      run:function(s){
+        if(s.inventory.indexOf("verga_nera")>-1){
+          log("msg","Ti avvicini con la gabbia, ma l'uccellino vede la verga di metallo nero nella tua mano — la scambia per un serpente! — e vola via terrorizzato, sparendo tra le rocce.");
+          return;
+        }
+        s.flags.birdCaught=true;
+        s.inventory.push("uccellino");
+        log("msg","Ti avvicini piano piano con la gabbia aperta. L'uccellino, incuriosito, ci salta dentro senza esitare. Lo hai catturato!");
+      }
+    },
+    {id:"no_gabbia_hint", label:"Prova ad avvicinarti all'uccellino", cls:"",
+      condition:function(s){ return !s.flags.birdCaught && s.inventory.indexOf("gabbia")===-1; },
+      run:function(s){ log("msg","L'uccellino scatta via appena ti avvicini a mani nude. Forse una gabbia ti aiuterebbe a catturarlo senza spaventarlo."); }
+    }
+  ]
+},
+
+hall_of_mists:{
+  name:"Sala delle Nebbie",
+  dark:true,
+  desc:function(s){ return "Un'immensa caverna, il soffitto perso nel buio sopra di te. Da qualche parte, una cascata riempie l'aria di una nebbia fredda e sottile. Un pozzo scende ripido verso una zona più profonda; un cornicione stretto corre invece verso est."; },
+  items:["sbarra_argento"],
+  exits:[
+    {label:"Torna verso la Camera degli Uccellini", to:"bird_chamber"},
+    {label:"Scendi nel pozzo, verso Y2", to:"y2_hub"},
+    {label:"Segui il cornicione verso est", to:"bottomless_pit"}
+  ]
+},
+
+bottomless_pit:{
+  name:"Il Baratro Senza Fondo",
+  dark:true,
+  desc:function(s){ return "Il cornicione termina qui, sull'orlo di un baratro che sembra non avere fondo. Lasci cadere un sasso e non lo senti mai atterrare. Non c'è nulla da recuperare qui — solo il vuoto, e la tua prudenza."; },
+  exits:[
+    {label:"Torna indietro, con cautela", to:"hall_of_mists"}
+  ],
+  actions:[
+    {id:"salta", label:"Salta nel baratro", cls:"danger",
+      condition:function(s){ return true; },
+      run:function(s){
+        confirmAction(
+          "Salta nel baratro senza fondo?",
+          "Non c'è alcuna ragione per farlo, e nessun modo di sapere dove — o se — atterrerai. È una scelta puramente sconsiderata.",
+          function(){ triggerDeath("Ti lasci cadere nel baratro. Cadi... cadi... e il buio ti inghiotte per sempre. Non era davvero una buona idea."); }
+        );
+      }
+    }
+  ]
+},
+
+y2_hub:{
+  name:"Y2 — Grande Incrocio",
+  dark:true,
+  desc:function(s){ return "Ti trovi in un ampio incrocio di gallerie, un vero nodo della grotta. Percorsi diversi si diramano in ogni direzione: uno stretto labirinto di cunicoli, un canyon verso una sala illuminata da un bagliore rossastro, un passaggio verso una stanza priva di ogni luce, e un sentiero che scende verso il rumore di acqua trattenuta."; },
+  exits:[
+    {label:"Risali verso la Sala delle Nebbie", to:"hall_of_mists"},
+    {label:"Entra nel labirinto di cunicoli", to:"twisty_maze"},
+    {label:"Vai verso il bagliore rossastro", to:"dragon_room"},
+    {label:"Vai verso la Stanza Buia", to:"dark_room"},
+    {label:"Scendi verso la riserva d'acqua", to:"reservoir"}
+  ]
+},
+
+twisty_maze:{
+  name:"Labirinto di Cunicoli",
+  dark:true,
+  desc:function(s){
+    if(s.flags.mazeMarked) return "Sei di nuovo nel cunicolo che hai contrassegnato. Riconosci il tuo segnale a terra — da qui sai come uscire.";
+    return "Sei in un labirinto di stretti cunicoli, tutti uguali. Ogni parete, ogni curva sembra identica alle altre. È facile perdere completamente l'orientamento qui dentro.";
+  },
+  items:["verga_nera"],
+  actions:[
+    {id:"m_nord", label:"Vai a Nord", cls:"",
+      condition:function(s){ return !s.flags.mazeMarked; },
+      run:function(s){ log("msg","Cammini a tentoni tra i cunicoli... e ti ritrovi esattamente nello stesso punto, o forse in uno identico. Impossibile dirlo."); }
+    },
+    {id:"m_sud", label:"Vai a Sud", cls:"",
+      condition:function(s){ return !s.flags.mazeMarked; },
+      run:function(s){ log("msg","Svolti in un altro cunicolo indistinguibile dagli altri. Sei ancora perso nel labirinto."); }
+    },
+    {id:"m_est", label:"Vai a Est", cls:"",
+      condition:function(s){ return !s.flags.mazeMarked; },
+      run:function(s){ log("msg","Un altro passaggio stretto e identico ai precedenti. Non hai idea di quanta strada tu abbia davvero fatto."); }
+    },
+    {id:"m_ovest", label:"Vai a Ovest", cls:"",
+      condition:function(s){ return !s.flags.mazeMarked; },
+      run:function(s){ log("msg","Gira e rigira, sei sempre in un cunicolo che sembra identico al precedente. Ti serve un modo per riconoscere dove sei già stato."); }
+    },
+    {id:"m_hint", label:"Fermati e rifletti", cls:"special",
+      condition:function(s){ return !s.flags.mazeMarked; },
+      run:function(s){ log("msg","Ti fermi un istante. Ti viene un'idea: se lasciassi a terra un oggetto dal tuo zaino, potresti usarlo come segnale per riconoscere questo punto tra tutti gli altri, identici. Apri lo zaino e lascia qualcosa qui."); }
+    },
+    {id:"m_esci", label:"Segui il tuo segnale verso l'uscita", cls:"exit",
+      condition:function(s){ return s.flags.mazeMarked; },
+      run:function(s){ go("bedquilt"); }
+    }
+  ]
+},
+
+bedquilt:{
+  name:"Sala Trapunta",
+  dark:true,
+  desc:function(s){ return "Una serie di piccole camere irregolari, ognuna diversa dall'altra — a differenza del labirinto che ti ha portato qui, qui ogni angolo si distingue facilmente. In una nicchia scorgi qualcosa che luccica."; },
+  items:["forziere_pirata"],
+  exits:[
+    {label:"Torna nel labirinto", to:"twisty_maze"},
+    {label:"Prosegui verso la Sala a Groviera", to:"swiss_cheese"}
+  ]
+},
+
+swiss_cheese:{
+  name:"Sala a Groviera",
+  dark:true,
+  desc:function(s){ return "Una sala forata da innumerevoli piccoli passaggi, come una groviera di roccia. La luce della tua lampada danza tra i mille buchi nelle pareti."; },
+  items:["collana_gioielli"],
+  exits:[
+    {label:"Torna a Bedquilt", to:"bedquilt"},
+    {label:"Vai verso Y2, il grande incrocio", to:"y2_hub"}
+  ]
+},
+
+dragon_room:{
+  name:"Sala del Drago",
+  dark:true,
+  desc:function(s){
+    if(s.flags.dragonDead) return "La grande sala è ora silenziosa. Ai tuoi piedi giace la carcassa immobile del drago. Sotto di essa scorgi il bordo di un tappeto finemente intessuto.";
+    return "Un enorme drago verde, addormentato ma vigile, blocca l'unico passaggio oltre questa sala illuminata da un bagliore rossastro proveniente da crepe nella roccia. Sotto le sue zampe intuisci qualcosa di prezioso.";
+  },
+  exits:[
+    {label:"Torna verso Y2", to:"y2_hub"}
+  ],
+  actions:[
+    {id:"prendi_tappeto", label:"Prendi il tappeto persiano", cls:"special",
+      condition:function(s){ return s.flags.dragonDead && s.inventory.indexOf("tappeto_persiano")===-1 && (ROOMS.dragon_room.items.indexOf("tappeto_persiano")>-1); },
+      run:function(s){ takeItem("tappeto_persiano"); }
+    },
+    {id:"affronta_drago", label:"Affronta il drago a mani nude", cls:"danger",
+      condition:function(s){ return !s.flags.dragonDead; },
+      run:function(s){
+        confirmAction(
+          "Affrontare il drago a mani nude?",
+          "Non hai armi. Solo il coraggio — o l'incoscienza — di uno speleologo che non vuole tornare indietro.",
+          function(){
+            s.flags.dragonDead=true;
+            log("msg","Ti lanci a mani nude contro il drago. In modo del tutto inverosimile — ma è pur sempre una leggenda — riesci a sopraffarlo. Il drago crolla a terra, sconfitto. Ora il passaggio oltre la sala è libero, e sotto la carcassa scorgi un tappeto persiano.");
+          }
+        );
+      }
+    },
+    {id:"esci_canyon", label:"Prosegui oltre, nel canyon", cls:"exit",
+      condition:function(s){ return s.flags.dragonDead; },
+      run:function(s){ go("secret_canyon"); }
+    }
+  ]
+},
+
+secret_canyon:{
+  name:"Canyon Segreto",
+  dark:true,
+  desc:function(s){ return "Uno stretto canyon di roccia levigata, aperto grazie alla sconfitta del drago. Il rumore di acqua corrente proviene da davanti a te."; },
+  exits:[
+    {label:"Torna alla Sala del Drago", to:"dragon_room"},
+    {label:"Prosegui verso il Ponte del Troll", to:"troll_bridge"}
+  ]
+},
+
+troll_bridge:{
+  name:"Il Ponte del Troll",
+  dark:true,
+  desc:function(s){
+    if(s.flags.trollPaid) return "Il ponte di pietra attraversa la profonda fessura senza ostacoli. Il troll, soddisfatto del pedaggio ricevuto, si è ritirato sotto l'arcata a sonnecchiare.";
+    return "Un ponte di pietra attraversa una profonda fessura nella roccia. Un troll enorme ne blocca il passaggio, con la mano tesa: 'Nessuno attraversa senza pagare il pedaggio! Un tesoro, o niente passaggio!'";
+  },
+  exits:[
+    {label:"Torna al canyon", to:"secret_canyon"}
+  ],
+  actions:[
+    {id:"paga_troll", label:"Offri un tesoro al troll", cls:"special",
+      condition:function(s){ return !s.flags.trollPaid && s.inventory.some(isTreasure); },
+      run:function(s){
+        var idx = s.inventory.findIndex(isTreasure);
+        var id = s.inventory[idx];
+        s.inventory.splice(idx,1);
+        s.flags.trollPaid=true;
+        log("msg","Porgi al troll " + ITEMS[id].name + ". Il suo volto si illumina di soddisfazione. 'Affare fatto!' brontola, facendosi da parte per lasciarti passare per sempre.");
+      }
+    },
+    {id:"troll_no_tesoro", label:"Prova a passare senza pagare", cls:"",
+      condition:function(s){ return !s.flags.trollPaid && !s.inventory.some(isTreasure); },
+      run:function(s){ log("msg","Il troll ti blocca con un braccio grosso come un tronco. 'Niente tesoro, niente passaggio!' Ti serve un tesoro da offrirgli — forse ne hai lasciato uno indietro, da qualche parte nella grotta."); }
+    },
+    {id:"attraversa_ponte", label:"Attraversa il ponte", cls:"exit",
+      condition:function(s){ return s.flags.trollPaid; },
+      run:function(s){ go("far_side"); }
+    }
+  ]
+},
+
+far_side:{
+  name:"Oltre il Ponte del Troll",
+  dark:true,
+  desc:function(s){ return "Dall'altro lato del ponte, la galleria si allarga. Un sentiero sale verso un bagliore arancione intenso; un altro scende verso una fessura profonda nella roccia."; },
+  exits:[
+    {label:"Torna al Ponte del Troll", to:"troll_bridge"},
+    {label:"Sali verso il bagliore arancione", to:"volcano_view"},
+    {label:"Scendi verso la fessura", to:"chasm"}
+  ]
+},
+
+volcano_view:{
+  name:"Vista sul Vulcano",
+  dark:false,
+  desc:function(s){ return "Una sporgenza di roccia si affaccia su un'immensa caverna vulcanica. Fiumi di lava scorrono lontano, in basso, illuminando ogni cosa di un bagliore rossastro che rende inutile persino la tua lampada. Lo spettacolo toglie il fiato."; },
+  exits:[
+    {label:"Torna indietro", to:"far_side"}
+  ]
+},
+
+chasm:{
+  name:"La Fessura Profonda",
+  dark:true,
+  desc:function(s){
+    if(s.flags.chasmBridged) return "Un sottile ponte scintillante, simile a cristallo, attraversa ora la fessura da un lato all'altro. Puoi attraversarlo con sicurezza.";
+    return "Una fessura larga e profonda ti separa dal resto della galleria. Non c'è modo di saltarla, e non hai corde. Serve qualcos'altro.";
+  },
+  exits:[
+    {label:"Torna indietro", to:"far_side"}
+  ],
+  actions:[
+    {id:"agita_verga", label:"Agita la verga nera verso la fessura", cls:"special",
+      condition:function(s){ return !s.flags.chasmBridged && s.inventory.indexOf("verga_nera")>-1; },
+      run:function(s){ s.flags.chasmBridged=true; log("msg","Alzi la verga di metallo nero verso la fessura e la agiti lentamente. Con un bagliore improvviso, un sottile ponte simile a cristallo si materializza da un lato all'altro dell'abisso."); }
+    },
+    {id:"no_verga_hint", label:"Osserva la fessura", cls:"",
+      condition:function(s){ return !s.flags.chasmBridged && s.inventory.indexOf("verga_nera")===-1; },
+      run:function(s){ log("msg","La fessura è troppo larga per saltarla. Forse un oggetto trovato altrove nella grotta potrebbe aiutarti ad attraversarla in modo... non convenzionale."); }
+    },
+    {id:"attraversa_fessura", label:"Attraversa il ponte di cristallo", cls:"exit",
+      condition:function(s){ return s.flags.chasmBridged; },
+      run:function(s){ go("mountain_king_hall"); }
+    }
+  ]
+},
+
+mountain_king_hall:{
+  name:"Sala del Re della Montagna",
+  dark:true,
+  desc:function(s){
+    if(s.flags.snakeGone) return "La grande sala, un tempo custodita da un serpente enorme, è ora tranquilla. Il passaggio oltre è libero.";
+    return "Una sala maestosa, colonne naturali di roccia svettano verso l'alto. Un serpente enorme, dalle squame scure, si erge tra te e un passaggio sul lato opposto, sibilando minaccioso.";
+  },
+  exits:[
+    {label:"Torna verso la fessura", to:"chasm"}
+  ],
+  actions:[
+    {id:"usa_uccello", label:"Libera l'uccellino contro il serpente", cls:"special",
+      condition:function(s){ return !s.flags.snakeGone && s.inventory.indexOf("uccellino")>-1; },
+      run:function(s){
+        s.flags.snakeGone=true;
+        s.inventory.splice(s.inventory.indexOf("uccellino"),1);
+        log("msg","Apri la gabbia e liberi l'uccellino verso il serpente. Con un guizzo di colori, il piccolo uccello volteggia intorno alla testa del serpente, becchettandolo senza sosta, finché il grande rettile, infastidito e confuso, si ritira sibilando tra le rocce. Il passaggio è libero — ma il tuo piccolo amico è volato via nell'oscurità, libero anche lui."); }
+    },
+    {id:"no_uccello_hint", label:"Cerca di affrontare il serpente", cls:"",
+      condition:function(s){ return !s.flags.snakeGone && s.inventory.indexOf("uccellino")===-1; },
+      run:function(s){ log("msg","Il serpente è troppo grande e veloce per affrontarlo a mani nude. Forse una piccola creatura, agile e rapida, potrebbe distrarlo dove tu non riesci."); }
+    },
+    {id:"vai_diamanti", label:"Prosegui verso il passaggio", cls:"exit",
+      condition:function(s){ return s.flags.snakeGone; },
+      run:function(s){ go("diamond_room"); }
+    }
+  ]
+},
+
+diamond_room:{
+  name:"Sala dei Diamanti",
+  dark:true,
+  desc:function(s){ return "Una piccola grotta le cui pareti scintillano: incastonati nella roccia grezza, decine di piccoli diamanti riflettono la luce della tua lampada come stelle."; },
+  items:["diamanti"],
+  exits:[
+    {label:"Torna alla Sala del Re della Montagna", to:"mountain_king_hall"}
+  ]
+},
+
+reservoir:{
+  name:"La Riserva d'Acqua",
+  dark:true,
+  desc:function(s){
+    var t="Una vasta caverna allagata, l'acqua trattenuta da un'antica diga di pietra. Una grande valvola arrugginita sporge dal muro.";
+    if(s.flags.damOpen) t=" La diga è stata aperta: l'acqua è defluita, e sul fondo fangoso della caverna, ora asciutto, luccica qualcosa.";
+    return t;
+  },
+  items:["pepita_oro"],
+  exits:[
+    {label:"Torna verso Y2", to:"y2_hub"}
+  ],
+  actions:[
+    {id:"gira_valvola", label:"Gira la valvola della diga", cls:"special",
+      condition:function(s){ return !s.flags.damOpen; },
+      run:function(s){ s.flags.damOpen=true; log("msg","Con grande sforzo, riesci a girare la valvola arrugginita. Con un boato, l'acqua defluisce attraverso un canale nascosto, prosciugando la caverna. Sul fondo fangoso scorgi il bagliore inconfondibile dell'oro."); }
+    }
+  ]
+},
+
+dark_room:{
+  name:"Stanza Buia",
+  dark:true,
+  desc:function(s){
+    var t="Una piccola stanza spoglia, stranamente priva di echi. Anche con la lampada accesa, senti che c'è qualcosa di particolare in questo luogo.";
+    if(!s.discovered.plugh){ t+=" Su una pietra levigata al centro della stanza sono incise due parole antiche: PLUGH e PLOVER."; }
+    return t;
+  },
+  exits:[
+    {label:"Torna verso Y2", to:"y2_hub"}
+  ],
+  actions:[
+    {id:"scopri_parole", label:"Leggi le parole incise sulla pietra", cls:"",
+      condition:function(s){ return !s.discovered.plugh; },
+      run:function(s){
+        s.discovered.plugh=true; s.discovered.plover=true;
+        log("msg","Pronunci a bassa voce le due parole: 'PLUGH... PLOVER...' Un fremito ti attraversa. Hai imparato due nuove parole magiche: PLUGH ti riporterà rapidamente al rifugio in superficie, e PLOVER apre un varco verso una piccola sala nascosta — ma solo se le tue mani sono libere da ogni peso.");
+      }
+    }
+  ]
+},
+
+plover_room:{
+  name:"Sala di Plover",
+  dark:true,
+  desc:function(s){ return "Una piccola sala segreta, raggiungibile solo attraverso una fessura strettissima. Su un piedistallo di roccia riposa un enorme smeraldo, che pulsa di una luce verde smorzata."; },
+  items:["smeraldo"],
+  exits:[
+    {label:"Torna alla Stanza Buia", to:"dark_room"}
+  ]
+}
+
+};
+
+/* ============== SUGGERIMENTI CONTESTUALI ============== */
+function getHint(s){
+  var r=s.room;
+  if(r==="streambed" && !s.flags.grateOpen) return "La grata è chiusa a chiave. Controlla il tuo zaino: forse hai già raccolto qualcosa di utile nel rifugio in superficie.";
+  if(r==="bird_chamber" && !s.flags.birdCaught) return "Ti serve una gabbia per catturare l'uccellino senza spaventarlo. E se porti con te qualcosa che somiglia a un serpente, meglio lasciarlo a terra prima di avvicinarti.";
+  if(r==="twisty_maze" && !s.flags.mazeMarked) return "Tutti questi cunicoli sono identici. Prova ad aprire lo zaino e a lasciare qui un oggetto qualsiasi: potrebbe aiutarti a riconoscere il posto.";
+  if(r==="dragon_room" && !s.flags.dragonDead) return "Il drago blocca la strada. A volte, nelle vecchie leggende, il coraggio conta più delle armi.";
+  if(r==="troll_bridge" && !s.flags.trollPaid) return "Il troll vuole un tesoro come pedaggio. Se non ne hai uno con te, potresti averne lasciato uno in qualche sala che hai già visitato — torna a recuperarlo.";
+  if(r==="chasm" && !s.flags.chasmBridged) return "Questa fessura non si attraversa a piedi. Hai trovato per caso, nel labirinto di cunicoli, qualche oggetto insolito?";
+  if(r==="mountain_king_hall" && !s.flags.snakeGone) return "Nessun umano affronta un serpente simile a mani nude. Forse una piccola creatura alata potrebbe fare al caso tuo.";
+  if(r==="reservoir" && !s.flags.damOpen) return "Prova a girare la valvola sulla diga.";
+  if(r==="dark_room" && !s.discovered.plugh) return "C'è una pietra incisa al centro della stanza. Vale la pena leggerla.";
+  if(r==="dark_room" && s.discovered.plover) return "Se vuoi raggiungere la Sala di Plover, ricorda: la fessura è strettissima. Devi avere le mani completamente libere — nessun oggetto nello zaino.";
+  if(s.inventory.length===0 && s.deposited.length<TREASURE_IDS.length) return "Il tuo zaino è vuoto. Esplora le sale della grotta: molte nascondono tesori o strumenti utili.";
+  if(s.inventory.some(isTreasure)) return "Porti con te dei tesori! Ricorda di riportarli nel rifugio in superficie e depositarli, per farli contare davvero nella tua avventura.";
+  return "Se qualcosa sembra bloccato, ricorda che puoi sempre aprire lo zaino e posare a terra ciò che porti con te — a volte è proprio questo il segreto per proseguire. E puoi tornare sui tuoi passi in ogni momento: nessuna porta si chiude per sempre.";
+}
+
+/* ============== STATO E MOTORE ============== */
+var state = null;
+var STORAGE_KEY = "grotta_colossale_save_v1";
+var NOTES_KEY = "grotta_colossale_appunti_v1";
+
+function freshState(){
+  return {
+    room:"outside",
+    previousRoom:"outside",
+    inventory:[],
+    deposited:[],
+    flags:{
+      grateOpen:false, birdCaught:false, mazeMarked:false,
+      dragonDead:false, trollPaid:false, chasmBridged:false,
+      snakeGone:false, damOpen:false, lampOn:false
+    },
+    discovered:{ xyzzy:false, plugh:false, plover:false },
+    roomItemsOverride:{} // per oggetti presi/lasciati, sovrascrive ROOMS[x].items
+  };
+}
+
+function getRoomItems(roomId){
+  if(state.roomItemsOverride.hasOwnProperty(roomId)) return state.roomItemsOverride[roomId];
+  return (ROOMS[roomId].items || []).slice();
+}
+function setRoomItems(roomId, arr){
+  state.roomItemsOverride[roomId] = arr;
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ var loaded = JSON.parse(raw);
+      // fusione difensiva con stato fresco, per compatibilità futura
+      var fresh = freshState();
+      for(var k in fresh){ if(loaded[k]===undefined) loaded[k]=fresh[k]; }
+      return loaded;
+    }
+  }catch(e){}
+  return freshState();
+}
+
+function log(cls, text){
+  var d=document.createElement("div");
+  d.className="entry "+cls;
+  d.textContent=text;
+  document.getElementById("log").appendChild(d);
+  d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+function takeItem(id){
+  var items = getRoomItems(state.room);
+  var idx = items.indexOf(id);
+  if(idx>-1){
+    items.splice(idx,1);
+    setRoomItems(state.room, items);
+    state.inventory.push(id);
+    log("msg","Prendi "+ITEMS[id].name+".");
+    render();
+    saveState();
+  }
+}
+function dropItem(id){
+  var idx = state.inventory.indexOf(id);
+  if(idx>-1){
+    state.inventory.splice(idx,1);
+    var items = getRoomItems(state.room);
+    items.push(id);
+    setRoomItems(state.room, items);
+    log("msg","Lasci "+ITEMS[id].name+" a terra.");
+    if(state.room==="twisty_maze" && !state.flags.mazeMarked){
+      state.flags.mazeMarked=true;
+      log("msg","Nel lasciare l'oggetto, ti accorgi che ora puoi riconoscere questo punto tra tutti gli altri, identici. Hai trovato il modo di orientarti nel labirinto!");
+    }
+    render();
+    saveState();
+  }
+}
+function toggleLamp(){
+  if(state.inventory.indexOf("lampada")===-1){
+    log("msg","Non hai una lampada con te.");
+    return;
+  }
+  state.flags.lampOn = !state.flags.lampOn;
+  log("msg", state.flags.lampOn ? "Accendi la lampada. Una fiamma calda illumina i dintorni." : "Spegni la lampada per risparmiarla.");
+  render();
+  saveState();
+}
+
+function go(to){
+  state.previousRoom = state.room;
+  state.room = to;
+  render(true);
+  saveState();
+}
+
+function confirmAction(title, text, onYes){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").textContent = text;
+  openModal("confirmModal");
+  var yes = document.getElementById("confirmYes");
+  var no = document.getElementById("confirmNo");
+  function cleanup(){ yes.onclick=null; no.onclick=null; closeModal("confirmModal"); }
+  yes.onclick=function(){ cleanup(); onYes(); render(); saveState(); };
+  no.onclick=function(){ cleanup(); };
+}
+
+function triggerDeath(text){
+  log("danger", text);
+  setTimeout(function(){
+    confirmAction("Sei morto.", text + "\n\nLa tua avventura in questa discesa finisce qui. Vuoi ricominciare?", function(){
+      resetGame();
+    });
+    // forziamo un solo pulsante utile: rinominare tramite testo già chiaro
+  }, 200);
+}
+
+function resetGame(){
+  state = freshState();
+  document.getElementById("log").innerHTML="";
+  document.getElementById("winScreen").classList.add("hidden");
+  render(true);
+  saveState();
+  log("system","— Una nuova discesa nella Grotta Colossale ha inizio —");
+}
+
+/* ============== RENDER ============== */
+function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+
+function el(tag, cls, text){
+  var e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function makeBtn(label, cls, onclick){
+  var b=document.createElement("button");
+  b.className="opt"+(cls?" "+cls:"");
+  b.textContent=label;
+  b.onclick=onclick;
+  return b;
+}
+
+function render(isNewRoomEntry){
+  var room = ROOMS[state.room];
+  document.getElementById("roomTitle").textContent = room.name;
+
+  var flameIcon=document.getElementById("flameIcon");
+  var lampText=document.getElementById("lampText");
+  if(state.inventory.indexOf("lampada")>-1){
+    flameIcon.className = "flame"+(state.flags.lampOn?"":" off");
+    lampText.textContent = state.flags.lampOn ? "Lampada accesa" : "Lampada spenta";
+  } else {
+    flameIcon.className="flame off";
+    lampText.textContent="Nessuna lampada";
+  }
+
+  var isDark = room.dark && !state.flags.lampOn;
+
+  if(isNewRoomEntry){
+    log("room-name", room.name);
+    if(isDark){
+      log("desc","È tutto buio pesto. Potresti essere divorato da un orso grufolante — o semplicemente inciampare in una fenditura. Meglio accendere una luce prima di procedere.");
+    } else {
+      log("desc", room.desc(state));
+      var here = getRoomItems(state.room).filter(function(id){ return state.inventory.indexOf(id)===-1; });
+      if(here.length>0){
+        var names = here.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("desc","Qui a terra noti: "+names+".");
+      }
+    }
+  }
+
+  var actionsDiv = document.getElementById("actions");
+  actionsDiv.innerHTML="";
+
+  if(isDark){
+    var row = el("div","btn-row");
+    if(state.inventory.indexOf("lampada")>-1){
+      row.appendChild(makeBtn("Accendi la lampada","special",function(){ toggleLamp(); log("desc", room.desc(state)); var here=getRoomItems(state.room).filter(function(id){return state.inventory.indexOf(id)===-1;}); if(here.length>0){log("desc","Qui a terra noti: "+here.map(function(id){return ITEMS[id].name;}).join(", ")+".");} }));
+    }
+    row.appendChild(makeBtn("Torna indietro, a tentoni","exit",function(){ go(state.previousRoom); }));
+    actionsDiv.appendChild(row);
+    return;
+  }
+
+  // azioni speciali della stanza
+  var actions = (room.actions||[]).filter(function(a){ return a.condition(state); });
+  if(actions.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Cosa puoi fare qui"));
+    var arow = el("div","btn-row");
+    actions.forEach(function(a){
+      arow.appendChild(makeBtn(a.label, "opt "+(a.cls||""), function(act){
+        return function(){ act.run(state); render(); saveState(); };
+      }(a)));
+    });
+    actionsDiv.appendChild(arow);
+  }
+
+  // oggetti da prendere
+  var here = getRoomItems(state.room);
+  if(here.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Oggetti qui"));
+    var irow = el("div","btn-row");
+    here.forEach(function(id){
+      if(id==="tappeto_persiano" && !state.flags.dragonDead) return; // gestito da azione dedicata
+      irow.appendChild(makeBtn("Prendi: "+ITEMS[id].name, "", function(itemId){
+        return function(){ takeItem(itemId); };
+      }(id)));
+    });
+    if(irow.children.length>0) actionsDiv.appendChild(irow);
+  }
+
+  // parole magiche
+  var magicRow = el("div","btn-row");
+  var showedMagic=false;
+  if(state.discovered.xyzzy && (state.room==="building" || state.room==="debris_room")){
+    var target = state.room==="building" ? "debris_room" : "building";
+    magicRow.appendChild(makeBtn("Pronuncia XYZZY","magic",function(){ log("msg","XYZZY!"); go(target); }));
+    showedMagic=true;
+  }
+  if(state.discovered.plugh && (state.room==="building" || state.room==="dark_room")){
+    var target2 = state.room==="building" ? "dark_room" : "building";
+    magicRow.appendChild(makeBtn("Pronuncia PLUGH","magic",function(){ log("msg","PLUGH!"); go(target2); }));
+    showedMagic=true;
+  }
+  if(state.discovered.plover && (state.room==="dark_room" || state.room==="plover_room")){
+    if(state.room==="dark_room"){
+      magicRow.appendChild(makeBtn("Pronuncia PLOVER","magic",function(){
+        if(state.inventory.length>0){
+          log("msg","Pronunci PLOVER, ma la fessura è troppo stretta per te e per tutto ciò che porti con te. Devi avere le mani completamente libere: apri lo zaino e lascia tutto qui prima di riprovare.");
+        } else {
+          log("msg","PLOVER!"); go("plover_room");
+        }
+      }));
+    } else {
+      magicRow.appendChild(makeBtn("Pronuncia PLOVER","magic",function(){ log("msg","PLOVER!"); go("dark_room"); }));
+    }
+    showedMagic=true;
+  }
+  if(showedMagic){
+    actionsDiv.appendChild(el("div","action-group-label","Parole magiche"));
+    actionsDiv.appendChild(magicRow);
+  }
+
+  // uscite
+  var exits = (room.exits||[]).filter(function(ex){ return !ex.requires || ex.requires(state); });
+  if(exits.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Dove vuoi andare"));
+    var erow = el("div","btn-row");
+    exits.forEach(function(ex){
+      erow.appendChild(makeBtn(ex.label,"exit",function(exit){
+        return function(){ go(exit.to); };
+      }(ex)));
+    });
+    actionsDiv.appendChild(erow);
+  }
+}
+
+/* ============== INVENTARIO / MODALI ============== */
+function renderInventoryModal(){
+  var carried = document.getElementById("invCarried");
+  var here = document.getElementById("invHere");
+  carried.innerHTML=""; here.innerHTML="";
+
+  if(state.inventory.length===0){
+    carried.appendChild(el("div","empty-note","Non porti nulla con te."));
+  } else {
+    state.inventory.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Tesoro"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var actionsWrap = document.createElement("div");
+      var btnDrop = document.createElement("button");
+      btnDrop.textContent="Lascia qui";
+      btnDrop.onclick=function(){ dropItem(id); renderInventoryModal(); };
+      actionsWrap.appendChild(btnDrop);
+      if(id==="lampada"){
+        var btnToggle=document.createElement("button");
+        btnToggle.style.marginLeft="6px";
+        btnToggle.textContent = state.flags.lampOn ? "Spegni" : "Accendi";
+        btnToggle.onclick=function(){ toggleLamp(); renderInventoryModal(); };
+        actionsWrap.appendChild(btnToggle);
+      }
+      row.appendChild(actionsWrap);
+      carried.appendChild(row);
+    });
+  }
+
+  var roomItems = getRoomItems(state.room).filter(function(id){
+    if(id==="tappeto_persiano" && !state.flags.dragonDead) return false;
+    return true;
+  });
+  if(roomItems.length===0){
+    here.appendChild(el("div","empty-note","Non c'è nulla a terra qui."));
+  } else {
+    roomItems.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Tesoro"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var btnTake=document.createElement("button");
+      btnTake.textContent="Prendi";
+      btnTake.onclick=function(){ takeItem(id); renderInventoryModal(); };
+      row.appendChild(btnTake);
+      here.appendChild(row);
+    });
+  }
+}
+
+function renderScoreModal(){
+  var c = document.getElementById("scoreContent");
+  c.innerHTML="";
+  var score = state.deposited.length * POINTS_PER_TREASURE;
+  var big = el("div","score-big", score+" / "+(TREASURE_IDS.length*POINTS_PER_TREASURE));
+  c.appendChild(big);
+  c.appendChild(el("div","score-sub", state.deposited.length+" di "+TREASURE_IDS.length+" tesori riportati in superficie"));
+  TREASURE_IDS.forEach(function(id){
+    var got = state.deposited.indexOf(id)>-1;
+    var row = el("div","treasure-row "+(got?"got":"missing"));
+    row.appendChild(el("span","", got ? "✓ "+ITEMS[id].name : "? tesoro non ancora trovato"));
+    c.appendChild(row);
+  });
+}
+
+function showWinScreen(){
+  document.getElementById("winScreen").classList.remove("hidden");
+}
+
+/* ============== NOTE ============== */
+function loadNotes(){
+  try{ return localStorage.getItem(NOTES_KEY) || ""; }catch(e){ return ""; }
+}
+function saveNotes(){
+  try{ localStorage.setItem(NOTES_KEY, document.getElementById("notesArea").value); }catch(e){}
+}
+
+/* ============== EVENTI UI ============== */
+document.getElementById("btnInv").onclick=function(){ renderInventoryModal(); openModal("invModal"); };
+document.getElementById("btnLook").onclick=function(){ render(true); };
+document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
+document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
+document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
+
+document.querySelectorAll("[data-close]").forEach(function(b){
+  b.onclick=function(){
+    var id=b.getAttribute("data-close");
+    if(id==="notesModal") saveNotes();
+    closeModal(id);
+  };
+});
+document.querySelectorAll(".modal-backdrop").forEach(function(bd){
+  bd.addEventListener("click", function(e){
+    if(e.target===bd){
+      if(bd.id==="notesModal") saveNotes();
+      closeModal(bd.id);
+    }
+  });
+});
+document.getElementById("notesArea").addEventListener("input", function(){
+  clearTimeout(window.__notesTimer);
+  window.__notesTimer=setTimeout(saveNotes, 400);
+});
+
+document.getElementById("btnWinRestart").onclick=function(){ resetGame(); };
+document.getElementById("btnWinContinue").onclick=function(){ document.getElementById("winScreen").classList.add("hidden"); };
+
+// scorciatoia tastiera solo per "A" (appunti), richiesta esplicita — nessun altro input da tastiera è previsto
+document.addEventListener("keydown", function(e){
+  if(e.key==="a" || e.key==="A"){
+    document.getElementById("notesArea").value = loadNotes();
+    openModal("notesModal");
+  }
+});
+
+/* ============== AVVIO ============== */
+state = loadState();
+render(true);
+if(state.deposited.length===0 && state.inventory.length===0 && state.room==="outside"){
+  log("system","Benvenuto nella Grotta Colossale. Scegli sempre tra i pulsanti mostrati per muoverti ed agire — non serve digitare nulla. Se qualcosa sembra bloccato, apri lo Zaino [🎒] e ricorda che puoi sempre posare ciò che porti con te.");
+}
+
+})();
+</script>
+</body>
+</html>
