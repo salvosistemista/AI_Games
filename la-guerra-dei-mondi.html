@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>La Guerra dei Mondi — Un'Avventura</title>
+<style>
+:root{
+  --night:#0a0908;
+  --deep:#141210;
+  --ash:#2e2823;
+  --ash-light:#4a4038;
+  --parchment:#d8d2c4;
+  --parchment-dim:#a89f8e;
+  --toxic:#7a9a4e;
+  --toxic-glow:#a3c96f;
+  --heatray:#c0392b;
+  --heatray-glow:#e0604a;
+  --rust:#8a6a4a;
+  font-size:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:var(--night);
+  color:var(--parchment);
+  font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
+  overscroll-behavior:none;
+}
+#app{
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  max-width:560px;margin:0 auto;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(122,154,78,0.06), transparent 60%),
+    linear-gradient(180deg, var(--deep) 0%, var(--night) 100%);
+  position:relative;
+  border-left:1px solid #000;border-right:1px solid #000;
+}
+header{
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--ash-light);
+  background:linear-gradient(180deg, rgba(192,57,43,0.05), transparent);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#roomTitle{
+  font-size:1.05rem;letter-spacing:.03em;color:var(--heatray-glow);
+  text-shadow:0 0 12px rgba(192,57,43,0.25);
+  font-variant:small-caps;
+  margin:0;
+}
+#lampIndicator{
+  font-size:.72rem;color:var(--parchment-dim);display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.flame{
+  display:inline-block;width:8px;height:11px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 50% 70%, var(--toxic-glow), var(--toxic) 90%);
+  box-shadow:0 0 6px var(--toxic-glow);
+}
+#log{
+  flex:1;overflow-y:auto;padding:16px 16px 8px;
+  font-size:1rem;line-height:1.55;
+}
+#log::-webkit-scrollbar{width:6px;}
+#log::-webkit-scrollbar-thumb{background:var(--ash-light);border-radius:3px;}
+.entry{margin-bottom:14px;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.entry.room-name{
+  color:var(--heatray-glow);font-variant:small-caps;font-size:1.15rem;letter-spacing:.03em;
+  border-bottom:1px solid var(--ash-light);padding-bottom:6px;margin-bottom:8px;
+}
+.entry.desc{color:var(--parchment);}
+.entry.msg{color:var(--parchment-dim);font-style:italic;}
+.entry.system{color:var(--toxic-glow);font-size:.85rem;text-align:center;}
+.entry.danger{color:var(--heatray-glow);font-weight:bold;}
+
+#actions{
+  padding:8px 12px 4px;border-top:1px solid var(--ash-light);flex-shrink:0;
+  max-height:38vh;overflow-y:auto;
+}
+.action-group-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--parchment-dim);opacity:.65;margin:6px 2px 3px;}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+button.opt{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(180deg,#2e2823,#1a1611);
+  border:1px solid var(--ash-light);
+  color:var(--parchment);
+  padding:9px 12px;border-radius:6px;font-size:.86rem;
+  cursor:pointer;flex:1 1 auto;min-width:44%;
+  transition:background .15s, transform .1s;
+  text-align:center;
+}
+button.opt:active{transform:scale(.96);background:linear-gradient(180deg,#3a3228,#221d16);}
+button.opt.exit{border-color:var(--rust);color:#d9c3a8;}
+button.opt.special{border-color:var(--toxic-glow);color:var(--toxic-glow);}
+button.opt.magic{border-color:var(--heatray-glow);color:var(--heatray-glow);font-style:italic;}
+button.opt.danger{border-color:var(--heatray);color:#f2a48f;}
+button.opt.wide{min-width:100%;}
+
+#bottombar{
+  display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--ash-light);background:var(--night);flex-shrink:0;
+}
+#bottombar button{
+  flex:1;font-family:'Segoe UI',system-ui,sans-serif;
+  background:#151310;border:1px solid var(--ash-light);color:var(--parchment-dim);
+  padding:10px 2px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+}
+#bottombar button .ic{font-size:1.35rem;}
+#bottombar button:active{background:#221c14;}
+
+.modal-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;
+}
+.modal-backdrop.hidden{display:none;}
+.modal{
+  background:linear-gradient(180deg,#1c1712,#120f0b);
+  border:1px solid var(--ash-light);border-bottom:none;
+  border-radius:14px 14px 0 0;
+  width:100%;max-width:560px;max-height:82vh;overflow-y:auto;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation:slideup .2s ease;
+}
+@keyframes slideup{from{transform:translateY(30px);opacity:0;}to{transform:none;opacity:1;}}
+.modal h2{
+  margin:0 0 10px;color:var(--heatray-glow);font-variant:small-caps;font-size:1.2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.modal h2 .close{cursor:pointer;color:var(--parchment-dim);font-size:1.3rem;font-family:sans-serif;line-height:1;padding:2px 8px;}
+.inv-section-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--parchment-dim);margin:14px 0 6px;opacity:.7;}
+.inv-item{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.inv-item .name{flex:1;font-size:.95rem;}
+.inv-item .name .tag{font-size:.68rem;color:var(--heatray-glow);display:block;opacity:.8;}
+.inv-item button{
+  background:#2e2823;border:1px solid var(--ash-light);color:var(--parchment);
+  padding:6px 10px;border-radius:5px;font-size:.78rem;font-family:'Segoe UI',system-ui,sans-serif;
+}
+.empty-note{color:var(--parchment-dim);font-style:italic;font-size:.88rem;padding:8px 4px;}
+textarea#notesArea{
+  width:100%;min-height:40vh;background:#0a0806;color:var(--parchment);
+  border:1px solid var(--ash-light);border-radius:8px;padding:10px;font-family:inherit;font-size:.95rem;
+  resize:vertical;
+}
+.notes-hint{font-size:.75rem;color:var(--parchment-dim);margin-top:8px;opacity:.75;}
+#scoreModal .score-big{font-size:2.4rem;color:var(--heatray-glow);text-align:center;margin:6px 0 2px;font-variant:small-caps;}
+#scoreModal .score-sub{text-align:center;color:var(--parchment-dim);margin-bottom:14px;}
+#scoreModal .treasure-row{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;}
+#scoreModal .treasure-row.got{color:var(--heatray-glow);}
+#scoreModal .treasure-row.missing{color:#4a4038;}
+
+#winScreen{
+  position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 30%, #241c0c, #0a0908 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
+}
+#winScreen.hidden{display:none;}
+#winScreen h1{color:var(--heatray-glow);font-variant:small-caps;font-size:1.8rem;text-shadow:0 0 20px rgba(192,57,43,.5);margin-bottom:6px;}
+#winScreen p{color:var(--parchment);line-height:1.6;max-width:420px;}
+#winScreen button{margin-top:20px;}
+
+@media (min-width:601px){
+  body{background:#000;}
+  #app{border-left:1px solid var(--ash-light);border-right:1px solid var(--ash-light);box-shadow:0 0 60px rgba(0,0,0,.8);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="roomTitle">La Guerra dei Mondi</h1>
+    <div id="lampIndicator"><span class="flame" id="flameIcon"></span><span id="lampText">Ancora vivo</span></div>
+  </header>
+
+  <div id="log"></div>
+
+  <div id="actions"></div>
+
+  <div id="bottombar">
+    <button id="btnInv" aria-label="Zaino"><span class="ic">🎒</span></button>
+    <button id="btnLook" aria-label="Guarda"><span class="ic">👁</span></button>
+    <button id="btnHint" aria-label="Aiuto"><span class="ic">💡</span></button>
+    <button id="btnScore" aria-label="Diario"><span class="ic">📜</span></button>
+    <button id="btnNotes" aria-label="Appunti"><span class="ic">✎</span></button>
+    <button id="btnOptions" aria-label="Opzioni"><span class="ic">⚙️</span></button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="invModal">
+    <div class="modal">
+      <h2>Il tuo zaino <span class="close" data-close="invModal">✕</span></h2>
+      <div class="inv-section-title">Cosa porti con te</div>
+      <div id="invCarried"></div>
+      <div class="inv-section-title">Qui a terra</div>
+      <div id="invHere"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="notesModal">
+    <div class="modal">
+      <h2>I tuoi appunti <span class="close" data-close="notesModal">✕</span></h2>
+      <textarea id="notesArea" placeholder="Scrivi qui mappe, indizi, cose da ricordare..."></textarea>
+      <div class="notes-hint">Gli appunti restano salvati anche se chiudi il gioco o ricominci l'avventura.</div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scoreModal">
+    <div class="modal" id="scoreModalInner">
+      <h2>Diario del sopravvissuto <span class="close" data-close="scoreModal">✕</span></h2>
+      <div id="scoreContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="optionsModal">
+    <div class="modal">
+      <h2>Opzioni <span class="close" data-close="optionsModal">✕</span></h2>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="opt wide" id="btnRestartOpt">🔄 Ricomincia l'avventura</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="opt wide" id="btnFullscreenOpt">⛶ Schermo intero</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal">
+    <div class="modal">
+      <h2 id="confirmTitle">Sei sicuro?</h2>
+      <p id="confirmText" style="color:var(--parchment-dim);line-height:1.5;"></p>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="opt danger wide" id="confirmYes">Sì, procedi</button>
+        <button class="opt wide" id="confirmNo">No, torna indietro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winScreen" class="hidden">
+    <h1>Sopravvissuto.</h1>
+    <p>I Tripodi giacciono immobili, uccisi non dall'uomo ma dai più umili batteri della Terra. Sei tornato a casa portando con te sette ricordi di ciò che hai vissuto e perduto. Il mondo non sarà mai più lo stesso, ma tu — contro ogni previsione — sei ancora vivo, e non sei più solo.</p>
+    <button class="opt special wide" id="btnWinRestart">Ricomincia una nuova invasione</button>
+    <button class="opt wide" id="btnWinContinue" style="margin-top:8px;">Continua a esplorare comunque</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============== DATI DI GIOCO ============== */
+
+var TREASURES = {
+  foto_moglie:{name:"una fotografia di tua moglie", tag:"Ricordo"},
+  orologio_da_tasca:{name:"l'orologio da tasca di tuo padre", tag:"Ricordo"},
+  giornale_ultimo_numero:{name:"l'ultimo numero del giornale, prima del silenzio", tag:"Ricordo"},
+  bussola_ottone:{name:"una bussola di ottone", tag:"Ricordo"},
+  libro_poesie:{name:"un piccolo libro di poesie, ormai consumato", tag:"Ricordo"},
+  lettera_moglie:{name:"una lettera scritta per tua moglie, mai spedita", tag:"Ricordo"},
+  medaglia_curato:{name:"la medaglietta del curato", tag:"Ricordo"}
+};
+var TREASURE_IDS = Object.keys(TREASURES);
+var POINTS_PER_TREASURE = 50;
+
+var ITEMS = {
+  panno_bagnato:{name:"un panno bagnato"},
+  falce_arrugginita:{name:"una falce arrugginita"},
+  pentola_metallo:{name:"una pentola di metallo"}
+};
+Object.keys(TREASURES).forEach(function(k){ ITEMS[k]=TREASURES[k]; });
+
+function isTreasure(id){ return !!TREASURES[id]; }
+
+var ROOMS = {
+
+casa_narratore:{
+  name:"Casa, presso Woking",
+  dark:false,
+  desc:function(s){ return "Una tranquilla sera di giugno, come tante altre. Sul comodino, una fotografia di tua moglie ti sorride. Nessuno, in questo momento, immagina cosa stia per cadere dal cielo sopra Horsell Common."; },
+  items:["foto_moglie"],
+  exits:[{label:"Esci in giardino", to:"giardino_casa"}]
+},
+
+giardino_casa:{
+  name:"Il Tuo Giardino",
+  dark:false,
+  desc:function(s){ return "Una notte limpida. Attraverso il tuo piccolo telescopio, hai osservato per giorni delle strane luci verdastre sulla superficie di Marte. Questa notte, qualcosa attraversa il cielo come una stella cadente — ma troppo lenta, troppo grande, per essere davvero una stella."; },
+  exits:[
+    {label:"Torna in casa", to:"casa_narratore"},
+    {label:"Cammina verso Horsell Common", to:"horsell_common"}
+  ]
+},
+
+horsell_common:{
+  name:"Horsell Common",
+  dark:false,
+  desc:function(s){ return "Una brughiera sabbiosa, ora segnata da un'enorme voragine ancora fumante. Una piccola folla curiosa si è già radunata intorno al bordo del cratere, incuriosita più che spaventata."; },
+  exits:[
+    {label:"Torna verso casa", to:"giardino_casa"},
+    {label:"Avvicinati al cratere", to:"cratere_cilindro"}
+  ]
+},
+
+cratere_cilindro:{
+  name:"Il Cratere del Cilindro",
+  dark:false,
+  desc:function(s){
+    if(s.flags.cilindroAperto) return "Il grande cilindro metallico giace immobile nel cratere, il coperchio ormai completamente svitato. Un silenzio innaturale è calato sulla brughiera.";
+    return "Un enorme cilindro metallico, ancora caldo, riposa sul fondo del cratere. Un lato sta lentamente girando su se stesso, come un tappo a vite che si sta svitando dall'interno.";
+  },
+  exits:[
+    {label:"Torna a Horsell Common", to:"horsell_common"},
+    {label:"Ritirati verso il bosco", to:"bosco_vicino", requires:function(s){ return s.flags.cilindroAperto; }}
+  ],
+  actions:[
+    {id:"osserva_apertura", label:"Osserva da vicino il cilindro che si apre", cls:"special",
+      condition:function(s){ return !s.flags.cilindroAperto; },
+      run:function(s){
+        s.flags.cilindroAperto=true;
+        log("msg","Il coperchio si svita completamente e cade con un tonfo metallico. Dall'interno emerge qualcosa di grigio, umido, che si contorce lentamente — tentacoli, occhi luccicanti, una forma che non appartiene a questo mondo. La folla, inorridita, comincia ad arretrare in silenzio.");
+      }
+    }
+  ]
+},
+
+bosco_vicino:{
+  name:"Il Bosco Vicino",
+  dark:false,
+  desc:function(s){ return "Un boschetto poco distante dal cratere, dove decine di persone si sono rifugiate a osservare da lontano. In lontananza, un bagliore accecante e un ronzio metallico squarciano l'aria: qualcosa, dentro quel cratere, si sta muovendo."; },
+  exits:[
+    {label:"Torna verso il cratere", to:"cratere_cilindro"},
+    {label:"Dirigiti verso la stazione di Woking", to:"stazione_woking"}
+  ]
+},
+
+stazione_woking:{
+  name:"Stazione di Woking",
+  dark:false,
+  desc:function(s){ return "La stazione ferroviaria, presa d'assalto da una folla sempre più spaventata. Un banco di giornali abbandonato mostra ancora le notizie di ieri — un mondo che, tra poche ore, non esisterà più."; },
+  items:["giornale_ultimo_numero"],
+  exits:[
+    {label:"Torna al bosco", to:"bosco_vicino"},
+    {label:"Esci sulla strada principale", to:"strada_woking"}
+  ]
+},
+
+strada_woking:{
+  name:"Strada Principale di Woking",
+  dark:false,
+  desc:function(s){ return "Una struttura metallica alta come una torre di chiesa emerge lentamente da dietro i tetti, camminando su tre zampe snodate con una grazia innaturale e terrificante: il primo Tripode marziano. La gente fugge urlando in ogni direzione."; },
+  exits:[
+    {label:"Torna alla stazione", to:"stazione_woking"},
+    {label:"Segui la folla verso il campo aperto", to:"campo_deliberazione"}
+  ]
+},
+
+campo_deliberazione:{
+  name:"Il Campo della Deliberazione",
+  dark:false,
+  desc:function(s){
+    if(s.flags.primoAttacco) return "Il campo aperto, ora deserto e bruciato. Non è rimasto nulla della delegazione che, poco fa, si è avvicinata al Tripode con una bandiera bianca in segno di pace.";
+    return "Da lontano, osservi un gruppo di uomini avvicinarsi cautamente a un Tripode fermo, sventolando una bandiera bianca. Sembra un tentativo disperato di comunicare, di negoziare, di fermare l'incubo con le buone maniere.";
+  },
+  exits:[
+    {label:"Torna verso la strada", to:"strada_woking"},
+    {label:"Allontanati attraverso i campi", to:"fuga_orme_marziane", requires:function(s){ return s.flags.primoAttacco; }}
+  ],
+  actions:[
+    {id:"osserva_delegazione", label:"Osserva la delegazione avvicinarsi con la bandiera bianca", cls:"special",
+      condition:function(s){ return !s.flags.primoAttacco; },
+      run:function(s){
+        s.flags.primoAttacco=true;
+        log("danger","Un fascio di luce invisibile e silenzioso attraversa l'aria. Dove c'era la delegazione, ora c'è solo fumo ed erba bruciata. Il Raggio della Morte non conosce trattative. In quell'istante capisci, con orrore assoluto, che nessuna resistenza umana potrà fermare ciò che è arrivato dal cielo.");
+      }
+    }
+  ]
+},
+
+fuga_orme_marziane:{
+  name:"In Fuga tra i Campi",
+  dark:false,
+  desc:function(s){
+    if(s.flags.fugaCompletata) return "I campi aperti, i solchi ancora freschi dove ti sei nascosto poco fa. Il Tripode è ormai lontano, la sua sagoma solo un ricordo all'orizzonte.";
+    return "Corri attraverso campi coltivati, il terreno che trema a ogni passo di un Tripode che si avvicina, alto sopra le siepi. Non c'è modo di batterlo in velocità, e nessun luogo dove ripararsi davvero, a parte i solchi profondi del campo arato.";
+  },
+  exits:[
+    {label:"Torna verso il campo della deliberazione", to:"campo_deliberazione"},
+    {label:"Prosegui verso il fiume", to:"fiume_bollente", requires:function(s){ return s.flags.fugaCompletata; }}
+  ],
+  actions:[
+    {id:"nasconditi_solchi", label:"Gettati nei solchi del campo e resta immobile", cls:"special",
+      condition:function(s){ return !s.flags.fugaCompletata; },
+      run:function(s){
+        s.flags.fugaCompletata=true;
+        log("msg","Ti getti a terra tra i solchi arati, il viso premuto contro la terra fredda, trattenendo il respiro. I passi del Tripode scuotono il suolo a pochi metri da te, poi si allontanano lentamente. Sei ancora vivo — per pura fortuna, e per essere rimasto immobile.");
+      }
+    },
+    {id:"affronta_tripode_1", label:"Tenta di affrontare il Tripode a viso aperto", cls:"danger",
+      condition:function(s){ return !s.flags.fugaCompletata; },
+      run:function(s){
+        confirmAction(
+          "Affrontare un Tripode a mani nude?",
+          "Non hai armi capaci di scalfire una macchina che ha appena disintegrato una delegazione intera con un solo raggio invisibile.",
+          function(){ triggerDeath("Ti fai avanti, quasi senza pensarci — forse per un impulso di coraggio, forse di disperazione. Il Raggio della Morte non lascia il tempo di pentirsene. Il tuo viaggio finisce qui, tra i campi di Surrey."); }
+        );
+      }
+    }
+  ]
+},
+
+fiume_bollente:{
+  name:"Il Fiume in Ebollizione",
+  dark:false,
+  desc:function(s){ return "Il corso d'acqua che un tempo scorreva tranquillo ora ribolle e fuma: il Raggio della Morte, usato poco lontano, ha scaldato l'intero letto del fiume. Attraversarlo qui significherebbe morte certa per ustioni."; },
+  exits:[
+    {label:"Torna tra i campi", to:"fuga_orme_marziane"},
+    {label:"Cerca un passaggio più a monte", to:"ponte_alternativo"}
+  ]
+},
+
+ponte_alternativo:{
+  name:"Un Ponte di Pietra, Più a Monte",
+  dark:false,
+  desc:function(s){ return "Un vecchio ponte di pietra, l'acqua qui ancora fredda e tranquilla, lontana abbastanza dal punto colpito dal raggio. Riesci ad attraversare senza pericolo."; },
+  exits:[
+    {label:"Torna verso il fiume in ebollizione", to:"fiume_bollente"},
+    {label:"Prosegui verso una casa in rovina", to:"casa_diroccata_1"}
+  ]
+},
+
+casa_diroccata_1:{
+  name:"Prima Casa in Rovina",
+  dark:false,
+  desc:function(s){ return "Una casa colonica, il tetto sfondato da una caduta di detriti. Tra le macerie, qualcuno ha lasciato indietro alcuni oggetti nella fretta di fuggire."; },
+  items:["orologio_da_tasca","panno_bagnato"],
+  exits:[
+    {label:"Torna al ponte", to:"ponte_alternativo"},
+    {label:"Scendi verso la cantina", to:"cantina_nascondiglio_1"}
+  ]
+},
+
+cantina_nascondiglio_1:{
+  name:"Cantina della Prima Casa",
+  dark:false,
+  desc:function(s){ return "Una cantina bassa e stretta, l'accesso ridotto a una fessura tra macerie crollate — esattamente il tipo di rifugio in cui, dicono, ci si può nascondere per giorni senza essere visti dall'alto."; },
+  exits:[
+    {label:"Torna nella casa", to:"casa_diroccata_1"},
+    {label:"Prosegui verso il villaggio", to:"villaggio_devastato"}
+  ],
+  actions:[
+    {id:"stringiti_fessura", label:"Stringiti nella fessura tra le macerie per passare", cls:"special",
+      condition:function(s){ return !s.flags.cantina1Superata; },
+      run:function(s){
+        if(s.inventory.length>1){
+          log("msg","Tra tutto ciò che porti con te, non riesci a passare per quella fessura strettissima. Lascia qualcosa qui prima di riprovare — porta solo l'indispensabile.");
+          return;
+        }
+        s.flags.cantina1Superata=true;
+        log("msg","Ti stringi con fatica nella fessura e riesci a passare dall'altra parte, in un cunicolo che riemerge oltre le macerie, verso l'aperto.");
+      }
+    }
+  ]
+},
+
+villaggio_devastato:{
+  name:"Un Villaggio Devastato",
+  dark:false,
+  desc:function(s){ return "Le rovine di quello che era un piccolo villaggio tranquillo. Tra le macerie di un negozio di ferramenta, trovi ancora qualche attrezzo utile. In lontananza, un bagliore rossastro sembra diffondersi lentamente sui campi vicini."; },
+  items:["bussola_ottone","falce_arrugginita"],
+  exits:[
+    {label:"Torna alla cantina", to:"cantina_nascondiglio_1"},
+    {label:"Avanza verso il bagliore rossastro", to:"erba_rossa_campi"}
+  ]
+},
+
+erba_rossa_campi:{
+  name:"Campi Invasi dall'Erba Rossa",
+  dark:false,
+  desc:function(s){ return "Un'erba color sangue, portata dai cilindri marziani, ha invaso completamente i campi, densa e viscida come alghe. Cresce a vista d'occhio, soffocando ogni altra pianta, rendendo il terreno quasi impraticabile a piedi."; },
+  exits:[
+    {label:"Torna al villaggio", to:"villaggio_devastato"},
+    {label:"Apri un varco verso la vallata", to:"fumo_nero_vallata", requires:function(s){ return s.inventory.indexOf("falce_arrugginita")>-1; }}
+  ],
+  actions:[
+    {id:"erba_senza_falce", label:"Cerca di farti largo tra l'erba rossa a mani nude", cls:"",
+      condition:function(s){ return s.inventory.indexOf("falce_arrugginita")===-1; },
+      run:function(s){ log("msg","L'erba rossa è troppo fitta e viscida per aprirti un passaggio a mani nude. Ti servirebbe uno strumento tagliente."); }
+    }
+  ]
+},
+
+fumo_nero_vallata:{
+  name:"La Vallata del Fumo Nero",
+  dark:false,
+  desc:function(s){ return "Una vallata intera è sommersa da una densa nube di fumo nero, rilasciata da un proiettile marziano poco lontano — un gas così pesante che striscia lungo il terreno, letale a ogni respiro diretto."; },
+  exits:[
+    {label:"Torna tra l'erba rossa", to:"erba_rossa_campi"},
+    {label:"Aggira la vallata lungo il crinale", to:"rifugio_collina"}
+  ],
+  actions:[
+    {id:"attraversa_fumo_panno", label:"Copri naso e bocca con il panno bagnato e attraversa in fretta", cls:"special",
+      condition:function(s){ return !s.flags.fumoSuperato && s.inventory.indexOf("panno_bagnato")>-1; },
+      run:function(s){ s.flags.fumoSuperato=true; log("msg","Con il panno bagnato premuto contro naso e bocca, attraversi di corsa la nube tossica, gli occhi che bruciano, i polmoni che si contraggono — ma riesci a uscirne dall'altro lato, ancora vivo."); }
+    },
+    {id:"attraversa_fumo_senza", label:"Attraversa la nube senza alcuna protezione", cls:"danger",
+      condition:function(s){ return !s.flags.fumoSuperato; },
+      run:function(s){
+        confirmAction(
+          "Attraversare il Fumo Nero senza protezione?",
+          "Il gas marziano è descritto come letale al primo respiro. Senza nulla che protegga naso e bocca, sarebbe un azzardo estremo.",
+          function(){ triggerDeath("I tuoi polmoni si riempiono del gas pesante prima ancora di renderti conto del pericolo. Il tuo viaggio finisce qui, nella vallata del Fumo Nero."); }
+        );
+      }
+    }
+  ]
+},
+
+rifugio_collina:{
+  name:"Rifugio in Cima alla Collina",
+  dark:false,
+  desc:function(s){ return "Un piccolo promontorio, abbastanza alto da offrire una vista — terribile — sulla portata reale dell'invasione: colonne di fumo si alzano da decine di villaggi, e altri Tripodi, in lontananza, avanzano verso Londra."; },
+  items:["libro_poesie"],
+  exits:[
+    {label:"Torna verso la vallata del fumo", to:"fumo_nero_vallata"},
+    {label:"Scendi verso una figura solitaria in lontananza", to:"incontro_curato"}
+  ]
+},
+
+incontro_curato:{
+  name:"Incontro con il Curato",
+  dark:false,
+  desc:function(s){ return "Un uomo di chiesa, il colletto strappato, gli occhi sbarrati, vaga tra le rovine parlando da solo di castighi divini e fine del mondo. È chiaramente terrorizzato oltre ogni ragione — ma anche solo, come te, e forse potreste aiutarvi a vicenda."; },
+  exits:[
+    {label:"Torna sulla collina", to:"rifugio_collina"},
+    {label:"Prosegui insieme al curato verso Leatherhead", to:"leatherhead_distrutta"}
+  ]
+},
+
+leatherhead_distrutta:{
+  name:"Leatherhead in Rovina",
+  dark:false,
+  desc:function(s){ return "La cittadina dove avevi mandato tua moglie per metterla al sicuro, ora in gran parte distrutta. Tra le macerie di quella che riconosci come la casa dove alloggiava, trovi una lettera mai spedita — la tua, scritta prima di tutto questo."; },
+  items:["lettera_moglie"],
+  exits:[
+    {label:"Torna dal curato", to:"incontro_curato"},
+    {label:"Continua a cercare notizie di lei", to:"ricerca_moglie"}
+  ]
+},
+
+ricerca_moglie:{
+  name:"In Cerca di Notizie",
+  dark:false,
+  desc:function(s){ return "Chiedi a ogni sopravvissuto che incroci, mostri la fotografia a chiunque incontri. Nessuno ha visto tua moglie. Nessuno sa dirti se sia fuggita in tempo, o se sia rimasta intrappolata da qualche parte in questo incubo. L'incertezza è forse la cosa più dura da sopportare."; },
+  exits:[
+    {label:"Torna a Leatherhead", to:"leatherhead_distrutta"},
+    {label:"Prosegui verso una seconda casa in rovina", to:"casa_diroccata_2"}
+  ],
+  actions:[
+    {id:"accetta_incertezza", label:"Accetta di non poter sapere, per ora, e vai avanti", cls:"special",
+      condition:function(s){ return !s.flags.moglieRicercata; },
+      run:function(s){ s.flags.moglieRicercata=true; log("msg","Ti costringi ad andare avanti, portando con te la lettera mai spedita e la speranza — flebile, ma ancora viva — di rivederla un giorno."); }
+    }
+  ]
+},
+
+casa_diroccata_2:{
+  name:"Seconda Casa in Rovina",
+  dark:false,
+  desc:function(s){ return "Una casa più grande, semicrollata contro il fianco di una collina, vicino ai sobborghi di Londra. Il curato, sempre più agitato, ti segue da vicino. In cucina trovi una pesante pentola di metallo, ancora utilizzabile."; },
+  items:["pentola_metallo"],
+  exits:[
+    {label:"Torna dalla ricerca", to:"ricerca_moglie"},
+    {label:"Scendi nella cantina", to:"cantina_nascondiglio_2"}
+  ]
+},
+
+cantina_nascondiglio_2:{
+  name:"Cantina della Seconda Casa",
+  dark:false,
+  desc:function(s){
+    if(s.flags.curatoCalmato) return "La cantina, ora silenziosa. Il curato siede immobile in un angolo, gli occhi fissi nel vuoto, finalmente tranquillo.";
+    return "Una cantina più ampia della prima, con una piccola apertura verso l'esterno da cui filtra luce grigia. Il curato, chiuso qui dentro da ore, comincia a mormorare sempre più forte, sull'orlo di un urlo isterico che potrebbe rivelare la vostra posizione a chiunque — o a qualcosa — stia ascoltando fuori.";
+  },
+  exits:[
+    {label:"Torna nella casa", to:"casa_diroccata_2"},
+    {label:"Avvicinati all'apertura verso l'esterno", to:"tripode_ispezione", requires:function(s){ return s.flags.curatoCalmato; }}
+  ],
+  actions:[
+    {id:"calma_curato", label:"Calma il curato terrorizzato prima che urli", cls:"special",
+      condition:function(s){ return !s.flags.curatoCalmato; },
+      run:function(s){
+        s.flags.curatoCalmato=true;
+        log("msg","Gli parli a bassa voce, con calma, cercando di ancorarlo alla realtà. Gli prendi le mani, gli chiedi di respirare piano insieme a te. Lentamente, il suo mormorio si placa. Per ora, siete al sicuro — ma sai che la sua calma è fragile, e potrebbe incrinarsi di nuovo in qualsiasi momento.");
+      }
+    }
+  ]
+},
+
+tripode_ispezione:{
+  name:"L'Ispezione del Tripode",
+  dark:false,
+  desc:function(s){ return "Attraverso la piccola apertura, vedi l'ombra inconfondibile di un Tripode che si è fermato proprio sopra le macerie della casa. Un lungo tentacolo metallico scende, tastando cumuli di detriti a pochi metri da voi, cercando sopravvissuti."; },
+  exits:[
+    {label:"Torna nella cantina", to:"cantina_nascondiglio_2"},
+    {label:"Aspetta immobile finché il Tripode si allontana", to:"fuga_cantina", requires:function(s){ return s.flags.ispezioneSuperata; }}
+  ],
+  actions:[
+    {id:"resta_immobile", label:"Resta immobile, trattenendo il respiro, in totale silenzio", cls:"special",
+      condition:function(s){ return !s.flags.ispezioneSuperata; },
+      run:function(s){
+        if(s.inventory.indexOf("pentola_metallo")>-1){
+          log("msg","Un tuo movimento fa tintinnare la pentola di metallo che porti con te. Il tentacolo si ferma per un istante, come in ascolto. Lascia immediatamente qualcosa di rumoroso qui, prima che sia troppo tardi.");
+          return;
+        }
+        s.flags.ispezioneSuperata=true;
+        log("msg","Restate entrambi immobili, in un silenzio quasi insopportabile, mentre il tentacolo tasta le macerie a pochi centimetri da voi. Dopo quella che sembra un'eternità, si ritira. I passi pesanti del Tripode si allontanano lentamente all'orizzonte.");
+      }
+    },
+    {id:"esci_guardare", label:"Sporgiti a guardare meglio cosa sta succedendo", cls:"danger",
+      condition:function(s){ return !s.flags.ispezioneSuperata; },
+      run:function(s){
+        confirmAction(
+          "Sporgerti a guardare, con il Tripode così vicino?",
+          "Il tentacolo sta già tastando le macerie a pochi passi da te. Farti vedere ora significherebbe la fine.",
+          function(){ triggerDeath("Ti sporgi appena oltre il riparo, e il tentacolo si blocca all'istante, puntato dritto verso di te. Non c'è tempo di ritrarsi. Il tuo viaggio finisce qui, in una cantina nei sobborghi di Londra."); }
+        );
+      }
+    }
+  ]
+},
+
+fuga_cantina:{
+  name:"Fuori dalla Cantina",
+  dark:false,
+  desc:function(s){ return "Riemergi tra le macerie, l'aria fredda del crepuscolo sul viso. Del curato, nella confusione della fuga successiva, resta solo un piccolo oggetto personale, caduto durante il tragitto — non hai il coraggio di chiederti cosa gli sia realmente accaduto."; },
+  items:["medaglia_curato"],
+  exits:[{label:"Dirigiti verso la periferia di Londra", to:"periferia_londra"}]
+},
+
+periferia_londra:{
+  name:"Periferia di Londra",
+  dark:false,
+  desc:function(s){ return "Strade che un tempo erano piene di vita, ora completamente deserte. Nessun rumore di traffico, nessuna voce — solo il vento che muove tende strappate alle finestre spalancate."; },
+  exits:[
+    {label:"Torna verso la cantina", to:"fuga_cantina"},
+    {label:"Addentrati verso il centro di Londra", to:"londra_deserta"}
+  ]
+},
+
+londra_deserta:{
+  name:"Londra Deserta",
+  dark:false,
+  desc:function(s){ return "Il cuore dell'Impero, silenzioso come non lo è mai stato. L'erba rossa marziana si arrampica ormai anche sui muri dei palazzi più importanti, ricoprendo statue e monumenti come un sudario vivente."; },
+  exits:[
+    {label:"Torna verso la periferia", to:"periferia_londra"},
+    {label:"Scendi verso il Tamigi", to:"thames_abbandonato"}
+  ]
+},
+
+thames_abbandonato:{
+  name:"Il Tamigi Abbandonato",
+  dark:false,
+  desc:function(s){ return "Barche alla deriva, abbandonate in fretta. In lontananza, macchine marziane più piccole — le 'macchine ausiliarie' — si muovono lente lungo la riva opposta, raccogliendo qualcosa dal terreno con movimenti meccanici precisi."; },
+  exits:[
+    {label:"Torna verso Londra", to:"londra_deserta"},
+    {label:"Avanza con cautela lungo la riva", to:"tripode_morente"}
+  ]
+},
+
+tripode_morente:{
+  name:"Un Tripode Immobile",
+  dark:false,
+  desc:function(s){
+    if(s.discovered.tripodeMorto) return "Il grande Tripode giace ancora lì, silenzioso e immobile come una statua di metallo arrugginito, ormai innocuo.";
+    return "Un Tripode, tra tutti quelli che hai visto, è fermo in una posizione innaturale — piegato, immobile da ore, forse da giorni. Nessun raggio, nessun movimento. Solo silenzio.";
+  },
+  exits:[
+    {label:"Torna verso il fiume", to:"thames_abbandonato"},
+    {label:"Avvicinati al campo marziano principale", to:"campo_marziano_finale", requires:function(s){ return s.discovered.tripodeMorto; }}
+  ],
+  actions:[
+    {id:"osserva_tripode_morto", label:"Osserva da vicino il Tripode immobile", cls:"special",
+      condition:function(s){ return !s.discovered.tripodeMorto; },
+      run:function(s){
+        s.discovered.tripodeMorto=true;
+        log("msg","Ti avvicini con cautela, pronto a fuggire al minimo segno di movimento. Ma non succede nulla. Attraverso una fessura nella cupola metallica, scorgi qualcosa di grigio e immobile all'interno — qualunque cosa pilotasse questa macchina, è morta.");
+      }
+    }
+  ]
+},
+
+campo_marziano_finale:{
+  name:"Il Campo Marziano",
+  dark:false,
+  desc:function(s){
+    if(s.flags.causaFineScoperta) return "Il grande accampamento marziano, ormai un cimitero silenzioso di metallo e macchine immobili.";
+    return "Decine di Tripodi e macchine marziane, tutti fermi, tutti silenziosi, disposti come se il tempo si fosse fermato a metà di un movimento. Nell'aria aleggia un fetore dolciastro e insopportabile.";
+  },
+  exits:[
+    {label:"Torna verso il Tripode immobile", to:"tripode_morente"},
+    {label:"Torna verso casa", to:"ritorno_casa", requires:function(s){ return s.flags.causaFineScoperta; }}
+  ],
+  actions:[
+    {id:"scopri_causa", label:"Scopri la causa di questo silenzio innaturale", cls:"special",
+      condition:function(s){ return !s.flags.causaFineScoperta; },
+      run:function(s){
+        s.flags.causaFineScoperta=true;
+        log("msg","Ti avvicini a uno dei corpi marziani, esposto fuori dalla sua macchina. Non ci sono ferite, non ci sono segni di battaglia. Sono morti — uccisi non da alcuna arma umana, ma dai più umili batteri di questo pianeta, contro i quali non avevano alcuna difesa. Loro, che avevano conquistato il cielo tra due mondi, sono stati sconfitti da qualcosa che nessun essere umano aveva mai considerato un'arma.");
+      }
+    }
+  ]
+},
+
+ritorno_casa:{
+  name:"Il Ritorno a Casa",
+  dark:false,
+  desc:function(s){
+    var t="Cammini per l'ultima volta verso la tua casa presso Woking, non sapendo davvero cosa aspettarti. Il mondo che ritrovi non è più lo stesso di prima — ma è ancora un mondo, ed è ancora il tuo.";
+    if(s.deposited.length>0) t+=" Sul comodino, custodisci con cura i ricordi che hai portato con te attraverso tutto questo.";
+    return t;
+  },
+  exits:[],
+  actions:[
+    {id:"deposita", label:"Custodisci per sempre questi ricordi", cls:"special",
+      condition:function(s){ return s.inventory.some(isTreasure); },
+      run:function(s){
+        var depositedNow=[];
+        s.inventory = s.inventory.filter(function(id){
+          if(isTreasure(id)){ s.deposited.push(id); depositedNow.push(id); return false; }
+          return true;
+        });
+        var names = depositedNow.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("msg", "Posi con cura, sul comodino di quella che fu una serata tranquilla come tante, "+names+". Ogni oggetto è un frammento di ciò che hai attraversato.");
+        if(s.deposited.length >= TREASURE_IDS.length){
+          setTimeout(showWinScreen, 400);
+        }
+      }
+    }
+  ]
+}
+
+};
+
+/* ============== SUGGERIMENTI CONTESTUALI ============== */
+function getHint(s){
+  var r=s.room;
+  if(r==="cratere_cilindro" && !s.flags.cilindroAperto) return "Qualcosa sta per accadere in quel cilindro. Vale la pena osservare, anche se fa paura.";
+  if(r==="campo_deliberazione" && !s.flags.primoAttacco) return "Osserva cosa succede alla delegazione: capirai molto su cosa aspettarti da qui in avanti.";
+  if(r==="fuga_orme_marziane" && !s.flags.fugaCompletata) return "Non puoi battere un Tripode in velocità. Cerca un modo per nasconderti, restando immobile.";
+  if(r==="cantina_nascondiglio_1") return "La fessura è troppo stretta per chi porta troppo con sé. Lascia qualcosa prima di provare a passare.";
+  if(r==="erba_rossa_campi" && s.inventory.indexOf("falce_arrugginita")===-1) return "Ti servirebbe uno strumento tagliente per aprirti un varco tra l'erba rossa. Hai controllato le rovine del villaggio?";
+  if(r==="fumo_nero_vallata" && !s.flags.fumoSuperato) return "Il Fumo Nero è letale a respirarlo direttamente. Qualcosa di bagnato, premuto su naso e bocca, potrebbe proteggerti — oppure puoi sempre aggirare la vallata.";
+  if(r==="cantina_nascondiglio_2" && !s.flags.curatoCalmato) return "Il curato è troppo agitato. Se non lo calmi, rischia di tradire la vostra posizione.";
+  if(r==="tripode_ispezione" && !s.flags.ispezioneSuperata) return "Resta immobile e in silenzio. Se porti con te qualcosa di rumoroso, però, potrebbe tradirti: controlla lo zaino.";
+  if(r==="tripode_morente" && !s.discovered.tripodeMorto) return "Quel Tripode è insolitamente fermo. Merita un'osservazione più da vicino.";
+  if(r==="campo_marziano_finale" && !s.flags.causaFineScoperta) return "Il silenzio di questo luogo nasconde una risposta. Cerca di scoprirla.";
+  if(s.inventory.some(isTreasure)) return "Porti con te dei ricordi preziosi. Ricorda di custodirli una volta tornato a casa, per farli contare davvero.";
+  return "Se qualcosa sembra bloccato, ricorda che puoi sempre aprire lo zaino e posare a terra ciò che porti con te. E puoi sempre tornare sui tuoi passi: mai buttarti allo scoperto quando un Tripode è vicino.";
+}
+
+/* ============== STATO E MOTORE ============== */
+var state = null;
+var STORAGE_KEY = "guerra_dei_mondi_save_v1";
+var NOTES_KEY = "guerra_dei_mondi_appunti_v1";
+
+function freshState(){
+  return {
+    room:"casa_narratore",
+    previousRoom:"casa_narratore",
+    inventory:[],
+    deposited:[],
+    flags:{
+      cilindroAperto:false, primoAttacco:false, fugaCompletata:false,
+      cantina1Superata:false, fumoSuperato:false, moglieRicercata:false,
+      curatoCalmato:false, ispezioneSuperata:false, causaFineScoperta:false
+    },
+    discovered:{ tripodeMorto:false },
+    roomItemsOverride:{}
+  };
+}
+
+function getRoomItems(roomId){
+  if(state.roomItemsOverride.hasOwnProperty(roomId)) return state.roomItemsOverride[roomId];
+  return (ROOMS[roomId].items || []).slice();
+}
+function setRoomItems(roomId, arr){
+  state.roomItemsOverride[roomId] = arr;
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ var loaded = JSON.parse(raw);
+      var fresh = freshState();
+      for(var k in fresh){ if(loaded[k]===undefined) loaded[k]=fresh[k]; }
+      return loaded;
+    }
+  }catch(e){}
+  return freshState();
+}
+
+function log(cls, text){
+  var d=document.createElement("div");
+  d.className="entry "+cls;
+  d.textContent=text;
+  document.getElementById("log").appendChild(d);
+  d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+function takeItem(id){
+  var items = getRoomItems(state.room);
+  var idx = items.indexOf(id);
+  if(idx>-1){
+    items.splice(idx,1);
+    setRoomItems(state.room, items);
+    state.inventory.push(id);
+    log("msg","Prendi "+ITEMS[id].name+".");
+    render();
+    saveState();
+  }
+}
+function dropItem(id){
+  var idx = state.inventory.indexOf(id);
+  if(idx>-1){
+    state.inventory.splice(idx,1);
+    var items = getRoomItems(state.room);
+    items.push(id);
+    setRoomItems(state.room, items);
+    log("msg","Lasci "+ITEMS[id].name+" a terra.");
+    render();
+    saveState();
+  }
+}
+
+function go(to){
+  state.previousRoom = state.room;
+  state.room = to;
+  render(true);
+  saveState();
+}
+
+function confirmAction(title, text, onYes){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").textContent = text;
+  openModal("confirmModal");
+  var yes = document.getElementById("confirmYes");
+  var no = document.getElementById("confirmNo");
+  function cleanup(){ yes.onclick=null; no.onclick=null; closeModal("confirmModal"); }
+  yes.onclick=function(){ cleanup(); onYes(); render(); saveState(); };
+  no.onclick=function(){ cleanup(); };
+}
+
+function triggerDeath(text){
+  log("danger", text);
+  setTimeout(function(){
+    confirmAction("Non sei sopravvissuto.", text + "\n\nVuoi ricominciare l'avventura?", function(){
+      resetGame();
+    });
+  }, 200);
+}
+
+function resetGame(){
+  state = freshState();
+  document.getElementById("log").innerHTML="";
+  document.getElementById("winScreen").classList.add("hidden");
+  render(true);
+  saveState();
+  log("system","— Una nuova invasione ha inizio, in una tranquilla sera di giugno —");
+}
+
+/* ============== RENDER ============== */
+function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+
+function el(tag, cls, text){
+  var e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function makeBtn(label, cls, onclick){
+  var b=document.createElement("button");
+  b.className="opt"+(cls?" "+cls:"");
+  b.textContent=label;
+  b.onclick=onclick;
+  return b;
+}
+
+function render(isNewRoomEntry){
+  var room = ROOMS[state.room];
+  document.getElementById("roomTitle").textContent = room.name;
+
+  if(isNewRoomEntry){
+    log("room-name", room.name);
+    log("desc", room.desc(state));
+    var here = getRoomItems(state.room).filter(function(id){ return state.inventory.indexOf(id)===-1; });
+    if(here.length>0){
+      var names = here.map(function(id){return ITEMS[id].name;}).join(", ");
+      log("desc","Qui a terra noti: "+names+".");
+    }
+  }
+
+  var actionsDiv = document.getElementById("actions");
+  actionsDiv.innerHTML="";
+
+  var actions = (room.actions||[]).filter(function(a){ return a.condition(state); });
+  if(actions.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Cosa puoi fare qui"));
+    var arow = el("div","btn-row");
+    actions.forEach(function(a){
+      arow.appendChild(makeBtn(a.label, "opt "+(a.cls||""), function(act){
+        return function(){ act.run(state); render(); saveState(); };
+      }(a)));
+    });
+    actionsDiv.appendChild(arow);
+  }
+
+  var here = getRoomItems(state.room);
+  if(here.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Oggetti qui"));
+    var irow = el("div","btn-row");
+    here.forEach(function(id){
+      irow.appendChild(makeBtn("Prendi: "+ITEMS[id].name, "", function(itemId){
+        return function(){ takeItem(itemId); };
+      }(id)));
+    });
+    if(irow.children.length>0) actionsDiv.appendChild(irow);
+  }
+
+  var exits = (room.exits||[]).filter(function(ex){ return !ex.requires || ex.requires(state); });
+  if(exits.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Dove vuoi andare"));
+    var erow = el("div","btn-row");
+    exits.forEach(function(ex){
+      erow.appendChild(makeBtn(ex.label,"exit",function(exit){
+        return function(){ go(exit.to); };
+      }(ex)));
+    });
+    actionsDiv.appendChild(erow);
+  }
+}
+
+/* ============== INVENTARIO / MODALI ============== */
+function renderInventoryModal(){
+  var carried = document.getElementById("invCarried");
+  var here = document.getElementById("invHere");
+  carried.innerHTML=""; here.innerHTML="";
+
+  if(state.inventory.length===0){
+    carried.appendChild(el("div","empty-note","Non porti nulla con te."));
+  } else {
+    state.inventory.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Ricordo"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var actionsWrap = document.createElement("div");
+      var btnDrop = document.createElement("button");
+      btnDrop.textContent="Lascia qui";
+      btnDrop.onclick=function(){ dropItem(id); renderInventoryModal(); };
+      actionsWrap.appendChild(btnDrop);
+      row.appendChild(actionsWrap);
+      carried.appendChild(row);
+    });
+  }
+
+  var roomItems = getRoomItems(state.room);
+  if(roomItems.length===0){
+    here.appendChild(el("div","empty-note","Non c'è nulla a terra qui."));
+  } else {
+    roomItems.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Ricordo"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var btnTake=document.createElement("button");
+      btnTake.textContent="Prendi";
+      btnTake.onclick=function(){ takeItem(id); renderInventoryModal(); };
+      row.appendChild(btnTake);
+      here.appendChild(row);
+    });
+  }
+}
+
+function renderScoreModal(){
+  var c = document.getElementById("scoreContent");
+  c.innerHTML="";
+  var score = state.deposited.length * POINTS_PER_TREASURE;
+  var big = el("div","score-big", score+" / "+(TREASURE_IDS.length*POINTS_PER_TREASURE));
+  c.appendChild(big);
+  c.appendChild(el("div","score-sub", state.deposited.length+" di "+TREASURE_IDS.length+" ricordi portati a casa"));
+  TREASURE_IDS.forEach(function(id){
+    var got = state.deposited.indexOf(id)>-1;
+    var row = el("div","treasure-row "+(got?"got":"missing"));
+    row.appendChild(el("span","", got ? "✓ "+ITEMS[id].name : "? ricordo non ancora trovato"));
+    c.appendChild(row);
+  });
+}
+
+function showWinScreen(){
+  document.getElementById("winScreen").classList.remove("hidden");
+}
+
+/* ============== NOTE ============== */
+function loadNotes(){
+  try{ return localStorage.getItem(NOTES_KEY) || ""; }catch(e){ return ""; }
+}
+function saveNotes(){
+  try{ localStorage.setItem(NOTES_KEY, document.getElementById("notesArea").value); }catch(e){}
+}
+
+/* ============== OPZIONI (RICOMINCIA / SCHERMO INTERO) ============== */
+function doRestartConfirm(){
+  confirmAction(
+    "Ricominciare l'avventura?",
+    "Perderai la posizione attuale, l'inventario e i ricordi custoditi. I tuoi appunti restano salvati. Vuoi davvero ricominciare da capo?",
+    function(){ resetGame(); }
+  );
+}
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    var elFs = document.documentElement;
+    if(elFs.requestFullscreen){ elFs.requestFullscreen().catch(function(){}); }
+  } else {
+    if(document.exitFullscreen){ document.exitFullscreen().catch(function(){}); }
+  }
+}
+function updateFullscreenLabel(){
+  var btn = document.getElementById("btnFullscreenOpt");
+  if(!btn) return;
+  btn.textContent = document.fullscreenElement ? "⛶ Esci da schermo intero" : "⛶ Schermo intero";
+}
+document.addEventListener("fullscreenchange", updateFullscreenLabel);
+
+/* ============== EVENTI UI ============== */
+document.getElementById("btnInv").onclick=function(){ renderInventoryModal(); openModal("invModal"); };
+document.getElementById("btnLook").onclick=function(){ render(true); };
+document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
+document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
+document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
+document.getElementById("btnOptions").onclick=function(){ updateFullscreenLabel(); openModal("optionsModal"); };
+document.getElementById("btnRestartOpt").onclick=function(){ closeModal("optionsModal"); doRestartConfirm(); };
+document.getElementById("btnFullscreenOpt").onclick=function(){ toggleFullscreen(); };
+
+document.querySelectorAll("[data-close]").forEach(function(b){
+  b.onclick=function(){
+    var id=b.getAttribute("data-close");
+    if(id==="notesModal") saveNotes();
+    closeModal(id);
+  };
+});
+document.querySelectorAll(".modal-backdrop").forEach(function(bd){
+  bd.addEventListener("click", function(e){
+    if(e.target===bd){
+      if(bd.id==="notesModal") saveNotes();
+      closeModal(bd.id);
+    }
+  });
+});
+document.getElementById("notesArea").addEventListener("input", function(){
+  clearTimeout(window.__notesTimer);
+  window.__notesTimer=setTimeout(saveNotes, 400);
+});
+
+document.getElementById("btnWinRestart").onclick=function(){ resetGame(); };
+document.getElementById("btnWinContinue").onclick=function(){ document.getElementById("winScreen").classList.add("hidden"); };
+
+document.addEventListener("keydown", function(e){
+  if(e.key==="a" || e.key==="A"){
+    document.getElementById("notesArea").value = loadNotes();
+    openModal("notesModal");
+  }
+  if(e.key==="r" || e.key==="R"){
+    doRestartConfirm();
+  }
+});
+
+/* ============== AVVIO ============== */
+state = loadState();
+render(true);
+if(state.deposited.length===0 && state.inventory.length===0 && state.room==="casa_narratore"){
+  log("system","Benvenuto ne La Guerra dei Mondi. Scegli sempre tra i pulsanti mostrati per muoverti ed agire — non serve digitare nulla. Se qualcosa sembra bloccato, apri lo Zaino [🎒] e ricorda che puoi sempre posare ciò che porti con te. Attenzione: alcune scelte esplicitamente rischiose possono portare alla morte — ma vengono sempre segnalate chiaramente prima.");
+}
+
+})();
+</script>
+</body>
+</html>
