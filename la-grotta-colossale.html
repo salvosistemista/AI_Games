@@ -192,6 +192,7 @@ textarea#notesArea{
     <button id="btnHint"><span class="ic">💡</span>Aiuto</button>
     <button id="btnScore"><span class="ic">📜</span>Diario</button>
     <button id="btnNotes"><span class="ic">✎</span>Appunti [A]</button>
+    <button id="btnRestart"><span class="ic">🔄</span>Ricomincia [R]</button>
   </div>
 
   <div class="modal-backdrop hidden" id="invModal">
@@ -1103,6 +1104,13 @@ document.getElementById("btnLook").onclick=function(){ render(true); };
 document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
 document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
 document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
+document.getElementById("btnRestart").onclick=function(){
+  confirmAction(
+    "Ricominciare l'avventura?",
+    "Perderai la posizione attuale, l'inventario e i tesori depositati. I tuoi appunti restano salvati. Vuoi davvero ricominciare da capo?",
+    function(){ resetGame(); }
+  );
+};
 
 document.querySelectorAll("[data-close]").forEach(function(b){
   b.onclick=function(){
@@ -1127,11 +1135,14 @@ document.getElementById("notesArea").addEventListener("input", function(){
 document.getElementById("btnWinRestart").onclick=function(){ resetGame(); };
 document.getElementById("btnWinContinue").onclick=function(){ document.getElementById("winScreen").classList.add("hidden"); };
 
-// scorciatoia tastiera solo per "A" (appunti), richiesta esplicita — nessun altro input da tastiera è previsto
+// scorciatoie tastiera solo per "A" (appunti) e "R" (ricomincia), richieste esplicitamente — nessun altro input da tastiera è previsto
 document.addEventListener("keydown", function(e){
   if(e.key==="a" || e.key==="A"){
     document.getElementById("notesArea").value = loadNotes();
     openModal("notesModal");
+  }
+  if(e.key==="r" || e.key==="R"){
+    document.getElementById("btnRestart").click();
   }
 });
 
