@@ -104,15 +104,15 @@ button.opt.danger{border-color:var(--coral);color:#f2a48f;}
 button.opt.wide{min-width:100%;}
 
 #bottombar{
-  display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
   border-top:1px solid var(--plank-light);background:var(--night-sea);flex-shrink:0;
 }
 #bottombar button{
-  flex:1 1 30%;font-family:'Segoe UI',system-ui,sans-serif;
-  background:#12100b;border:1px solid var(--plank-light);color:var(--sand-dim);
-  padding:8px 4px;border-radius:6px;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;
+  flex:1;font-family:'Segoe UI',system-ui,sans-serif;
+  background:#151310;border:1px solid var(--plank-light);color:var(--sand-dim);
+  padding:10px 2px;border-radius:6px;display:flex;align-items:center;justify-content:center;
 }
-#bottombar button .ic{font-size:1.05rem;}
+#bottombar button .ic{font-size:1.35rem;}
 #bottombar button:active{background:#221c14;}
 
 .modal-backdrop{
@@ -185,12 +185,12 @@ textarea#notesArea{
   <div id="actions"></div>
 
   <div id="bottombar">
-    <button id="btnInv"><span class="ic">🎒</span>Zaino</button>
-    <button id="btnLook"><span class="ic">👁</span>Guarda</button>
-    <button id="btnHint"><span class="ic">💡</span>Aiuto</button>
-    <button id="btnScore"><span class="ic">📜</span>Diario</button>
-    <button id="btnNotes"><span class="ic">✎</span>Appunti [A]</button>
-    <button id="btnRestart"><span class="ic">🔄</span>Ricomincia [R]</button>
+    <button id="btnInv" aria-label="Zaino"><span class="ic">🎒</span></button>
+    <button id="btnLook" aria-label="Guarda"><span class="ic">👁</span></button>
+    <button id="btnHint" aria-label="Aiuto"><span class="ic">💡</span></button>
+    <button id="btnScore" aria-label="Diario"><span class="ic">📜</span></button>
+    <button id="btnNotes" aria-label="Appunti"><span class="ic">✎</span></button>
+    <button id="btnOptions" aria-label="Opzioni"><span class="ic">⚙️</span></button>
   </div>
 
   <div class="modal-backdrop hidden" id="invModal">
@@ -215,6 +215,18 @@ textarea#notesArea{
     <div class="modal" id="scoreModalInner">
       <h2>Diario del bucaniere <span class="close" data-close="scoreModal">✕</span></h2>
       <div id="scoreContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="optionsModal">
+    <div class="modal">
+      <h2>Opzioni <span class="close" data-close="optionsModal">✕</span></h2>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="opt wide" id="btnRestartOpt">🔄 Ricomincia l'avventura</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="opt wide" id="btnFullscreenOpt">⛶ Schermo intero</button>
+      </div>
     </div>
   </div>
 
@@ -925,13 +937,30 @@ document.getElementById("btnLook").onclick=function(){ render(true); };
 document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
 document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
 document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
-document.getElementById("btnRestart").onclick=function(){
+function doRestartConfirm(){
   confirmAction(
     "Ricominciare l'avventura?",
     "Perderai la posizione attuale, l'inventario e i tesori depositati. I tuoi appunti restano salvati. Vuoi davvero ricominciare da capo?",
     function(){ resetGame(); }
   );
-};
+}
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    var elFs = document.documentElement;
+    if(elFs.requestFullscreen){ elFs.requestFullscreen().catch(function(){}); }
+  } else {
+    if(document.exitFullscreen){ document.exitFullscreen().catch(function(){}); }
+  }
+}
+function updateFullscreenLabel(){
+  var btn = document.getElementById("btnFullscreenOpt");
+  if(!btn) return;
+  btn.textContent = document.fullscreenElement ? "⛶ Esci da schermo intero" : "⛶ Schermo intero";
+}
+document.addEventListener("fullscreenchange", updateFullscreenLabel);
+document.getElementById("btnOptions").onclick=function(){ updateFullscreenLabel(); openModal("optionsModal"); };
+document.getElementById("btnRestartOpt").onclick=function(){ closeModal("optionsModal"); doRestartConfirm(); };
+document.getElementById("btnFullscreenOpt").onclick=function(){ toggleFullscreen(); };
 
 document.querySelectorAll("[data-close]").forEach(function(b){
   b.onclick=function(){
@@ -963,7 +992,7 @@ document.addEventListener("keydown", function(e){
     openModal("notesModal");
   }
   if(e.key==="r" || e.key==="R"){
-    document.getElementById("btnRestart").click();
+    doRestartConfirm();
   }
 });
 

@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>L'Isola del Tesoro — Un'Avventura</title>
+<style>
+:root{
+  --night:#0b0e12;
+  --deep:#141a20;
+  --wood:#2e2416;
+  --wood-light:#4d3d26;
+  --parchment:#e6d7ae;
+  --parchment-dim:#c2b189;
+  --tan:#c9a66b;
+  --tan-glow:#e0c078;
+  --sea:#3f6d72;
+  --blood:#a13328;
+  --gold:#c9a227;
+  font-size:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:var(--night);
+  color:var(--parchment);
+  font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
+  overscroll-behavior:none;
+}
+#app{
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  max-width:560px;margin:0 auto;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(201,166,107,0.07), transparent 60%),
+    linear-gradient(180deg, var(--deep) 0%, var(--night) 100%);
+  position:relative;
+  border-left:1px solid #000;border-right:1px solid #000;
+}
+header{
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--wood-light);
+  background:linear-gradient(180deg, rgba(201,166,107,0.05), transparent);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#roomTitle{
+  font-size:1.05rem;letter-spacing:.03em;color:var(--tan-glow);
+  text-shadow:0 0 12px rgba(201,166,107,0.3);
+  font-variant:small-caps;
+  margin:0;
+}
+#lampIndicator{
+  font-size:.72rem;color:var(--parchment-dim);display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.flame{
+  display:inline-block;width:8px;height:11px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 50% 70%, var(--tan-glow), var(--gold) 90%);
+  box-shadow:0 0 6px var(--tan-glow);
+  animation:flick 1.6s ease-in-out infinite;
+}
+@keyframes flick{
+  0%,100%{transform:scaleY(1) rotate(-1deg);opacity:1;}
+  30%{transform:scaleY(.85) rotate(2deg);opacity:.85;}
+  60%{transform:scaleY(1.08) rotate(-2deg);opacity:1;}
+}
+.flame.off{background:#333;box-shadow:none;animation:none;opacity:.5;}
+
+#log{
+  flex:1;overflow-y:auto;padding:16px 16px 8px;
+  font-size:1rem;line-height:1.55;
+}
+#log::-webkit-scrollbar{width:6px;}
+#log::-webkit-scrollbar-thumb{background:var(--wood-light);border-radius:3px;}
+.entry{margin-bottom:14px;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.entry.room-name{
+  color:var(--tan-glow);font-variant:small-caps;font-size:1.15rem;letter-spacing:.03em;
+  border-bottom:1px solid var(--wood-light);padding-bottom:6px;margin-bottom:8px;
+}
+.entry.desc{color:var(--parchment);}
+.entry.msg{color:var(--parchment-dim);font-style:italic;}
+.entry.system{color:var(--sea);font-size:.85rem;text-align:center;}
+.entry.danger{color:var(--blood);font-weight:bold;}
+
+#actions{
+  padding:8px 12px 4px;border-top:1px solid var(--wood-light);flex-shrink:0;
+  max-height:38vh;overflow-y:auto;
+}
+.action-group-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--parchment-dim);opacity:.65;margin:6px 2px 3px;}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+button.opt{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(180deg,#2e2416,#1c150e);
+  border:1px solid var(--wood-light);
+  color:var(--parchment);
+  padding:9px 12px;border-radius:6px;font-size:.86rem;
+  cursor:pointer;flex:1 1 auto;min-width:44%;
+  transition:background .15s, transform .1s;
+  text-align:center;
+}
+button.opt:active{transform:scale(.96);background:linear-gradient(180deg,#3a2f1c,#241b10);}
+button.opt.exit{border-color:var(--sea);color:#bcdcdb;}
+button.opt.special{border-color:var(--tan-glow);color:var(--tan-glow);}
+button.opt.magic{border-color:var(--gold);color:var(--gold);font-style:italic;}
+button.opt.danger{border-color:var(--blood);color:#f2a48f;}
+button.opt.wide{min-width:100%;}
+
+#bottombar{
+  display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--wood-light);background:var(--night);flex-shrink:0;
+}
+#bottombar button{
+  flex:1;font-family:'Segoe UI',system-ui,sans-serif;
+  background:#151310;border:1px solid var(--wood-light);color:var(--parchment-dim);
+  padding:10px 2px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+}
+#bottombar button .ic{font-size:1.35rem;}
+#bottombar button:active{background:#221c14;}
+
+.modal-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;
+}
+.modal-backdrop.hidden{display:none;}
+.modal{
+  background:linear-gradient(180deg,#211a10,#15100a);
+  border:1px solid var(--wood-light);border-bottom:none;
+  border-radius:14px 14px 0 0;
+  width:100%;max-width:560px;max-height:82vh;overflow-y:auto;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation:slideup .2s ease;
+}
+@keyframes slideup{from{transform:translateY(30px);opacity:0;}to{transform:none;opacity:1;}}
+.modal h2{
+  margin:0 0 10px;color:var(--tan-glow);font-variant:small-caps;font-size:1.2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.modal h2 .close{cursor:pointer;color:var(--parchment-dim);font-size:1.3rem;font-family:sans-serif;line-height:1;padding:2px 8px;}
+.inv-section-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--parchment-dim);margin:14px 0 6px;opacity:.7;}
+.inv-item{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.inv-item .name{flex:1;font-size:.95rem;}
+.inv-item .name .tag{font-size:.68rem;color:var(--gold);display:block;opacity:.8;}
+.inv-item button{
+  background:#2e2416;border:1px solid var(--wood-light);color:var(--parchment);
+  padding:6px 10px;border-radius:5px;font-size:.78rem;font-family:'Segoe UI',system-ui,sans-serif;
+}
+.empty-note{color:var(--parchment-dim);font-style:italic;font-size:.88rem;padding:8px 4px;}
+textarea#notesArea{
+  width:100%;min-height:40vh;background:#0a0d10;color:var(--parchment);
+  border:1px solid var(--wood-light);border-radius:8px;padding:10px;font-family:inherit;font-size:.95rem;
+  resize:vertical;
+}
+.notes-hint{font-size:.75rem;color:var(--parchment-dim);margin-top:8px;opacity:.75;}
+#scoreModal .score-big{font-size:2.4rem;color:var(--gold);text-align:center;margin:6px 0 2px;font-variant:small-caps;}
+#scoreModal .score-sub{text-align:center;color:var(--parchment-dim);margin-bottom:14px;}
+#scoreModal .treasure-row{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;}
+#scoreModal .treasure-row.got{color:var(--gold);}
+#scoreModal .treasure-row.missing{color:#4d3d26;}
+
+#winScreen{
+  position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 30%, #241c0c, #0b0e12 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
+}
+#winScreen.hidden{display:none;}
+#winScreen h1{color:var(--gold);font-variant:small-caps;font-size:1.8rem;text-shadow:0 0 20px rgba(201,162,39,.5);margin-bottom:6px;}
+#winScreen p{color:var(--parchment);line-height:1.6;max-width:420px;}
+#winScreen button{margin-top:20px;}
+
+@media (min-width:601px){
+  body{background:#000;}
+  #app{border-left:1px solid var(--wood-light);border-right:1px solid var(--wood-light);box-shadow:0 0 60px rgba(0,0,0,.8);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="roomTitle">L'Isola del Tesoro</h1>
+    <div id="lampIndicator"><span class="flame off" id="flameIcon"></span><span id="lampText">Nessuna torcia</span></div>
+  </header>
+
+  <div id="log"></div>
+
+  <div id="actions"></div>
+
+  <div id="bottombar">
+    <button id="btnInv" aria-label="Zaino"><span class="ic">🎒</span></button>
+    <button id="btnLook" aria-label="Guarda"><span class="ic">👁</span></button>
+    <button id="btnHint" aria-label="Aiuto"><span class="ic">💡</span></button>
+    <button id="btnScore" aria-label="Diario"><span class="ic">📜</span></button>
+    <button id="btnNotes" aria-label="Appunti"><span class="ic">✎</span></button>
+    <button id="btnOptions" aria-label="Opzioni"><span class="ic">⚙️</span></button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="invModal">
+    <div class="modal">
+      <h2>Il tuo zaino <span class="close" data-close="invModal">✕</span></h2>
+      <div class="inv-section-title">Cosa porti con te</div>
+      <div id="invCarried"></div>
+      <div class="inv-section-title">Qui a terra</div>
+      <div id="invHere"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="notesModal">
+    <div class="modal">
+      <h2>I tuoi appunti <span class="close" data-close="notesModal">✕</span></h2>
+      <textarea id="notesArea" placeholder="Scrivi qui mappe, indizi, cose da ricordare..."></textarea>
+      <div class="notes-hint">Gli appunti restano salvati anche se chiudi il gioco o ricominci l'avventura.</div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scoreModal">
+    <div class="modal" id="scoreModalInner">
+      <h2>Diario di bordo di Jim <span class="close" data-close="scoreModal">✕</span></h2>
+      <div id="scoreContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="optionsModal">
+    <div class="modal">
+      <h2>Opzioni <span class="close" data-close="optionsModal">✕</span></h2>
+      <div class="btn-row" style="margin-top:4px;">
+        <button class="opt wide" id="btnRestartOpt">🔄 Ricomincia l'avventura</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="opt wide" id="btnFullscreenOpt">⛶ Schermo intero</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal">
+    <div class="modal">
+      <h2 id="confirmTitle">Sei sicuro?</h2>
+      <p id="confirmText" style="color:var(--parchment-dim);line-height:1.5;"></p>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="opt danger wide" id="confirmYes">Sì, procedi</button>
+        <button class="opt wide" id="confirmNo">No, torna indietro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winScreen" class="hidden">
+    <h1>Il tesoro del Capitano Flint!</h1>
+    <p>Hai riportato in Inghilterra tutti e sette i tesori nascosti dal Capitano Flint. La Locanda dell'Ammiraglio Benbow non sarà mai più la stessa: la tua famiglia non dovrà più preoccuparsi del domani, e la tua avventura — tra il vecchio Capitano Bones, Long John Silver e il povero Ben Gunn — resterà per sempre la storia più incredibile mai raccontata da queste parti.</p>
+    <button class="opt special wide" id="btnWinRestart">Ricomincia una nuova avventura</button>
+    <button class="opt wide" id="btnWinContinue" style="margin-top:8px;">Continua a esplorare comunque</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============== DATI DI GIOCO ============== */
+
+var TREASURES = {
+  collana_perle_capitano:{name:"la collana di perle del Capitano Bones", tag:"Tesoro"},
+  specchio_ornato_nave:{name:"uno specchio dalla cornice dorata", tag:"Tesoro"},
+  calice_oro_antico:{name:"un antico calice d'oro", tag:"Tesoro"},
+  moneta_oro_spagnola:{name:"un sacco di monete d'oro spagnole", tag:"Tesoro"},
+  barre_argento:{name:"alcune barre d'argento massiccio", tag:"Tesoro"},
+  gioielli_capitano_flint:{name:"i gioielli personali del Capitano Flint", tag:"Tesoro"},
+  corona_pirata:{name:"una corona d'oro tempestata di rubini", tag:"Tesoro"}
+};
+var TREASURE_IDS = Object.keys(TREASURES);
+var POINTS_PER_TREASURE = 50;
+
+var ITEMS = {
+  cannocchiale:{name:"un vecchio cannocchiale di ottone"},
+  mappa_del_tesoro:{name:"la mappa del tesoro del Capitano Flint"},
+  pistola:{name:"una pistola a pietra focaia, carica"},
+  formaggio:{name:"una forma di formaggio stagionato"},
+  pala:{name:"una pala robusta"},
+  torcia:{name:"una torcia"}
+};
+Object.keys(TREASURES).forEach(function(k){ ITEMS[k]=TREASURES[k]; });
+
+function isTreasure(id){ return !!TREASURES[id]; }
+
+var ROOMS = {
+
+/* ===== ATTO 1 — LA LOCANDA ===== */
+
+sala_locanda:{
+  name:"Locanda dell'Ammiraglio Benbow",
+  dark:false,
+  desc:function(s){
+    var t="Sei nella sala comune della locanda di famiglia, sulla costa dell'Inghilterra. Il vecchio Capitano Bones siede nel suo angolo abituale, con la sua fiaschetta di rum e i suoi racconti di mare.";
+    if(s.flags.bonesDead) t="La sala comune della locanda è insolitamente silenziosa. La sedia d'angolo, un tempo occupata dal vecchio Capitano, è ora vuota.";
+    if(s.deposited.length>0) t+=" In un angolo custodisci con orgoglio i tesori che sei riuscito a riportare a casa.";
+    return t;
+  },
+  exits:[
+    {label:"Sali alla camera del Capitano", to:"camera_capitano"},
+    {label:"Vai in cucina", to:"cucina_locanda"},
+    {label:"Vai nella tua stanza", to:"camera_jim"},
+    {label:"Esci sulla strada", to:"strada_esterna"}
+  ],
+  actions:[
+    {id:"ascolta_cieco", label:"Ascolta: qualcuno bussa alla porta con un bastone", cls:"special",
+      condition:function(s){ return s.flags.blackDogVisited && !s.flags.bonesDead; },
+      run:function(s){
+        s.flags.bonesDead=true;
+        log("msg","Un mendicante cieco, dal bastone che picchietta sinistro sul selciato, entra tastando i muri. Si avvicina al Capitano Bones e gli preme qualcosa nel palmo della mano — un piccolo disco nero, il temuto 'punto nero' dei pirati. Il Capitano impallidisce, si porta una mano al petto, e crolla a terra, il cuore che ha ceduto per lo spavento. Il cieco svanisce di nuovo nella notte, con lo stesso picchiettio inquietante.");
+      }
+    },
+    {id:"deposita", label:"Metti al sicuro i tesori portati a casa", cls:"special",
+      condition:function(s){ return s.inventory.some(isTreasure); },
+      run:function(s){
+        var depositedNow=[];
+        s.inventory = s.inventory.filter(function(id){
+          if(isTreasure(id)){ s.deposited.push(id); depositedNow.push(id); return false; }
+          return true;
+        });
+        var names = depositedNow.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("msg", "Metti al sicuro, nella cassaforte della locanda, "+names+". Tua madre, vedendo quel luccichio, si porta le mani al volto senza dire nulla.");
+        if(s.deposited.length >= TREASURE_IDS.length){
+          setTimeout(showWinScreen, 400);
+        }
+      }
+    }
+  ]
+},
+
+camera_capitano:{
+  name:"Camera del Capitano Bones",
+  dark:false,
+  desc:function(s){
+    if(s.flags.chestOpened) return "La camera del Capitano, spoglia e disordinata come sempre. Il suo vecchio baule di marinaio è ora aperto, svuotato di ciò che nascondeva.";
+    if(s.flags.bonesDead) return "La stanza del Capitano, ora silenziosa per sempre. Il suo vecchio baule di marinaio, rinforzato con fasce di ferro, è chiuso ai piedi del letto.";
+    return "La camera che il Capitano Bones affitta da mesi. Un pesante baule di marinaio, rinforzato con fasce di ferro, sta chiuso ai piedi del letto sfatto.";
+  },
+  exits:[
+    {label:"Torna nella sala comune", to:"sala_locanda"}
+  ],
+  actions:[
+    {id:"apri_baule", label:"Apri il baule del Capitano", cls:"special",
+      condition:function(s){ return s.flags.bonesDead && !s.flags.chestOpened; },
+      run:function(s){
+        s.flags.chestOpened=true;
+        var items = ROOMS.camera_capitano.items || [];
+        items = items.concat(["mappa_del_tesoro","collana_perle_capitano"]);
+        state.roomItemsOverride["camera_capitano"]=items;
+        log("msg","Con le mani che ti tremano un poco, sollevi il coperchio del baule. Tra vestiti vecchi e strumenti da marinaio, trovi una collana di perle avvolta in un panno, e sul fondo, ripiegata più volte, una mappa disegnata a mano — con una grande X segnata in rosso."); }
+    },
+    {id:"baule_chiuso_hint", label:"Osserva il baule chiuso", cls:"",
+      condition:function(s){ return !s.flags.bonesDead; },
+      run:function(s){ log("msg","Il Capitano è ancora di sotto, vivo e vegeto — non è certo il momento di frugare tra le sue cose."); }
+    }
+  ]
+},
+
+cucina_locanda:{
+  name:"Cucina della Locanda",
+  dark:false,
+  desc:function(s){ return "La piccola cucina di famiglia, profumo di pane appena sfornato. Tua madre lavora instancabile, come ogni giorno, nonostante i tempi difficili."; },
+  exits:[{label:"Torna nella sala comune", to:"sala_locanda"}]
+},
+
+camera_jim:{
+  name:"La Tua Stanza",
+  dark:false,
+  desc:function(s){ return "La tua piccola stanza sotto il tetto. Sul davanzale della finestra riposa un vecchio cannocchiale di ottone, appartenuto a tuo padre."; },
+  items:["cannocchiale"],
+  exits:[{label:"Torna nella sala comune", to:"sala_locanda"}]
+},
+
+strada_esterna:{
+  name:"Strada Costiera",
+  dark:false,
+  desc:function(s){ return "La strada sterrata che corre lungo la costa, davanti alla locanda. Il vento del mare porta con sé odore di sale e presagi."; },
+  exits:[
+    {label:"Torna alla locanda", to:"sala_locanda"},
+    {label:"Verso la scogliera", to:"scogliera_vicina"},
+    {label:"Verso il villaggio", to:"villaggio"}
+  ],
+  actions:[
+    {id:"osserva_cane_nero", label:"Osserva lo strano marinaio che parla col Capitano", cls:"special",
+      condition:function(s){ return !s.flags.blackDogVisited; },
+      run:function(s){
+        s.flags.blackDogVisited=true;
+        log("msg","Un marinaio sconosciuto, con due dita mancanti da una mano, si accosta al Capitano Bones proprio davanti alla locanda. Parlano concitati — 'Cane Nero', lo chiama qualcuno — poi lo sconosciuto si allontana in fretta, come inseguito da un fantasma. Il Capitano rientra pallido come un lenzuolo, borbottando di 'punti neri' e vecchi conti in sospeso."); }
+    }
+  ]
+},
+
+scogliera_vicina:{
+  name:"Scogliera Vicino alla Locanda",
+  dark:false,
+  desc:function(s){ return "Una scogliera a picco sul mare, poco distante da casa. Le onde si infrangono rumorose contro le rocce, sotto un cielo grigio e carico di pioggia."; },
+  exits:[{label:"Torna sulla strada", to:"strada_esterna"}]
+},
+
+villaggio:{
+  name:"Villaggio",
+  dark:false,
+  desc:function(s){ return "Il piccolo villaggio di pescatori più vicino a casa vostra. Tra le casette basse, riconosci quella del dottor Livesey e, poco oltre, il grande cancello della tenuta del Cavaliere Trelawney."; },
+  exits:[
+    {label:"Torna sulla strada costiera", to:"strada_esterna"},
+    {label:"Vai dal Cavaliere Trelawney", to:"casa_trelawney"}
+  ]
+},
+
+casa_trelawney:{
+  name:"Tenuta del Cavaliere Trelawney",
+  dark:false,
+  desc:function(s){
+    if(s.flags.expeditionPlanned) return "Lo studio del Cavaliere, mappe nautiche ancora sparse sul grande tavolo. La spedizione è ormai partita da tempo: qui restano solo i ricordi dei preparativi febbrili.";
+    return "Lo studio del Cavaliere Trelawney, ricco di mappe nautiche e trofei di caccia. Il dottor Livesey è seduto accanto al caminetto, pensieroso.";
+  },
+  exits:[
+    {label:"Torna al villaggio", to:"villaggio"},
+    {label:"Parti per il porto di Bristol", to:"porto_bristol", requires:function(s){ return s.flags.expeditionPlanned; }}
+  ],
+  actions:[
+    {id:"mostra_mappa", label:"Mostra la mappa al Cavaliere Trelawney", cls:"special",
+      condition:function(s){ return !s.flags.expeditionPlanned && s.inventory.indexOf("mappa_del_tesoro")>-1; },
+      run:function(s){
+        s.flags.expeditionPlanned=true;
+        s.inventory.push("pistola");
+        log("msg","Il Cavaliere Trelawney studia la mappa con gli occhi che gli brillano d'avidità ed entusiasmo. 'Un vero tesoro di pirati!' esclama. 'Noleggeremo una nave subito!' Il dottor Livesey, più cauto, ti porge comunque una pistola carica: 'Non si sa mai chi incontreremo per mare.' La spedizione è decisa: si parte per Bristol."); }
+    },
+    {id:"trelawney_no_mappa", label:"Parla con il Cavaliere e il Dottore", cls:"",
+      condition:function(s){ return !s.flags.expeditionPlanned && s.inventory.indexOf("mappa_del_tesoro")===-1; },
+      run:function(s){ log("msg","Il Cavaliere e il dottor Livesey ti ascoltano volentieri, ma senza una prova concreta — una mappa, un indizio — è difficile convincerli a organizzare una spedizione così costosa."); }
+    }
+  ]
+},
+
+/* ===== ATTO 2 — LA TRAVERSATA ===== */
+
+porto_bristol:{
+  name:"Porto di Bristol",
+  dark:false,
+  desc:function(s){ return "Il porto brulica di marinai, casse di provviste e il profumo di catrame e salsedine. Ormeggiata al molo principale, l'Hispaniola aspetta di salpare verso il tesoro."; },
+  exits:[
+    {label:"Torna dal Cavaliere Trelawney", to:"casa_trelawney"},
+    {label:"Sali a bordo dell'Hispaniola", to:"ponte_nave"}
+  ]
+},
+
+ponte_nave:{
+  name:"Ponte dell'Hispaniola",
+  dark:false,
+  desc:function(s){
+    var t="Il ponte della nave, le vele gonfie di vento. Il cuoco di bordo, un uomo dalla gamba di legno che tutti chiamano Long John Silver, saluta l'equipaggio con un sorriso che non ti convince del tutto.";
+    if(s.flags.landed) t="Il ponte della nave, ancorata ora al largo dell'isola. Le vele sono ammainate, e l'aria è carica di attesa.";
+    return t;
+  },
+  exits:[
+    {label:"Scendi nella stiva", to:"stiva_nave"},
+    {label:"Vai in cambusa", to:"cambusa_nave"},
+    {label:"Vai nella cabina del Capitano Smollett", to:"cabina_capitano_smollett"},
+    {label:"Sbarca sull'isola", to:"spiaggia_isola"}
+  ]
+},
+
+stiva_nave:{
+  name:"Stiva della Nave",
+  dark:false,
+  desc:function(s){ return "La pancia buia della nave, tra casse di provviste e un enorme barile di mele ancora mezzo pieno, lasciato aperto da qualche marinaio distratto."; },
+  exits:[{label:"Risali sul ponte", to:"ponte_nave"}],
+  actions:[
+    {id:"nascondi_barile", label:"Nasconditi nel barile delle mele", cls:"special",
+      condition:function(s){ return !s.discovered.mutiny; },
+      run:function(s){
+        if(s.inventory.length>1){
+          log("msg","Provi a infilarti nel barile, ma tra tutto ciò che porti con te fai troppo rumore e rischi di farti scoprire. Meglio lasciare qui qualcosa prima di riprovare.");
+          return;
+        }
+        s.discovered.mutiny=true;
+        log("msg","Rannicchiato in silenzio tra le mele, senti Long John Silver parlare sottovoce con altri marinai. Le sue parole ti gelano il sangue: sta pianificando un ammutinamento, non appena il tesoro sarà a bordo, per uccidere il Capitano Smollett e tutti i fedeli all'equipaggio. Devi avvertire qualcuno, e in fretta.");
+      }
+    }
+  ]
+},
+
+cambusa_nave:{
+  name:"Cambusa",
+  dark:false,
+  desc:function(s){ return "La piccola cucina di bordo, regno indiscusso di Long John Silver quando non intrattiene l'equipaggio con le sue storie. Su una mensola riposa una forma di formaggio stagionato."; },
+  items:["formaggio"],
+  exits:[{label:"Risali sul ponte", to:"ponte_nave"}]
+},
+
+cabina_capitano_smollett:{
+  name:"Cabina del Capitano Smollett",
+  dark:false,
+  desc:function(s){ return "La cabina ordinata del Capitano Smollett, uomo severo ma leale. Uno specchio dalla cornice dorata, retaggio del precedente proprietario della nave, è appeso alla parete."; },
+  items:["specchio_ornato_nave"],
+  exits:[{label:"Risali sul ponte", to:"ponte_nave"}],
+  actions:[
+    {id:"avverti_capitano", label:"Avverti il Capitano Smollett del complotto", cls:"special",
+      condition:function(s){ return s.discovered.mutiny && !s.flags.warnedCaptain; },
+      run:function(s){
+        s.flags.warnedCaptain=true;
+        log("msg","Racconti tutto al Capitano Smollett, che ti ascolta senza battere ciglio. 'Lo sospettavo,' dice infine. 'Terremo gli occhi aperti, e gli uomini fedeli pronti. Bel lavoro, ragazzo.' Ti senti un po' più al sicuro, sapendo di non essere il solo a conoscere la verità."); }
+    }
+  ]
+},
+
+/* ===== ATTO 3 — L'ISOLA ===== */
+
+spiaggia_isola:{
+  name:"Spiaggia dell'Isola",
+  dark:false,
+  desc:function(s){ state.flags.landed=true; return "I vostri piedi affondano finalmente nella sabbia calda dell'isola del tesoro. Dietro di te, l'Hispaniola resta ancorata al largo. Davanti, una palude costiera e un fitto bosco di pini si contendono l'orizzonte."; },
+  exits:[
+    {label:"Torna a bordo dell'Hispaniola", to:"ponte_nave"},
+    {label:"Verso la palude costiera", to:"palude_costiera"},
+    {label:"Verso il bosco di pini", to:"bosco_pini"}
+  ]
+},
+
+palude_costiera:{
+  name:"Palude Costiera",
+  dark:false,
+  desc:function(s){ return "Una palude bassa e maleodorante corre lungo la costa, brulicante di zanzare. In lontananza, tra gli alberi, scorgi il profilo squadrato di un vecchio fortino di legno."; },
+  exits:[
+    {label:"Torna alla spiaggia", to:"spiaggia_isola"},
+    {label:"Verso il fortino", to:"fortino_palizzata"}
+  ]
+},
+
+bosco_pini:{
+  name:"Bosco di Pini",
+  dark:false,
+  desc:function(s){ return "Un bosco di alti pini, il terreno coperto di aghi secchi che attutiscono ogni passo. Il canto degli uccelli si interrompe bruscamente ogni volta che avanzi, come se qualcuno vi stesse osservando."; },
+  exits:[
+    {label:"Torna alla spiaggia", to:"spiaggia_isola"},
+    {label:"Prosegui verso l'interno", to:"sentiero_interno"}
+  ]
+},
+
+sentiero_interno:{
+  name:"Sentiero Interno",
+  dark:false,
+  desc:function(s){ return "Un sentiero appena visibile si snoda tra la vegetazione fitta dell'interno dell'isola, verso il cuore sconosciuto di questa terra."; },
+  exits:[
+    {label:"Torna al bosco di pini", to:"bosco_pini"},
+    {label:"Verso il fortino", to:"fortino_palizzata"},
+    {label:"Sali sulla collina di vedetta", to:"collina_vedetta"}
+  ]
+},
+
+fortino_palizzata:{
+  name:"Il Fortino",
+  dark:false,
+  desc:function(s){ return "Un vecchio fortino di tronchi, costruito chissà quando da qualche naufrago dimenticato. Tra gli attrezzi lasciati all'interno trovi una pala robusta e una torcia ancora utilizzabile."; },
+  items:["pala","torcia"],
+  exits:[
+    {label:"Torna alla palude costiera", to:"palude_costiera"},
+    {label:"Torna al sentiero interno", to:"sentiero_interno"},
+    {label:"Addentrati nella palude della febbre", to:"palude_febbre"}
+  ]
+},
+
+collina_vedetta:{
+  name:"Collina di Vedetta",
+  dark:false,
+  desc:function(s){
+    var t="Da questa piccola altura domini gran parte dell'isola. Il vento è forte, e la vista si perde fino al mare aperto.";
+    if(s.inventory.indexOf("cannocchiale")>-1) t+=" Con il tuo cannocchiale, riesci a distinguere in lontananza una collina più alta, dalla cima appuntita come un cannocchiale rovesciato — quella che i marinai chiamano 'Spalla del Cannocchiale'.";
+    return t;
+  },
+  exits:[{label:"Torna al sentiero interno", to:"sentiero_interno"}]
+},
+
+palude_febbre:{
+  name:"Palude della Febbre",
+  dark:false,
+  desc:function(s){ return "Un acquitrino denso e insalubre, l'aria pesante di miasmi che i marinai più anziani chiamano 'febbre della palude'. Bisogna attraversarlo in fretta, portando il minor peso possibile."; },
+  exits:[{label:"Torna al fortino", to:"fortino_palizzata"}],
+  actions:[
+    {id:"attraversa_palude", label:"Attraversa in fretta la palude", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){
+        if(s.inventory.length>2){
+          log("msg","Provi ad affrettare il passo, ma il fango ti risucchia gli stivali e il peso che porti ti rallenta pericolosamente. Meglio alleggerire lo zaino prima di riprovare ad attraversare.");
+          return;
+        }
+        go("altura_cannone");
+      }
+    }
+  ]
+},
+
+altura_cannone:{
+  name:"Spalla del Cannocchiale",
+  dark:false,
+  desc:function(s){
+    var t="Un'altura rocciosa che i marinai chiamano 'Spalla del Cannocchiale'. Ai tuoi piedi, uno scheletro sbiancato dal sole giace disteso in una posizione innaturale, come se le sue stesse ossa indicassero una direzione precisa.";
+    return t;
+  },
+  exits:[
+    {label:"Torna alla palude della febbre", to:"palude_febbre"},
+    {label:"Segui la direzione indicata dallo scheletro", to:"albero_alto"}
+  ],
+  actions:[
+    {id:"osserva_scheletro", label:"Osserva con attenzione lo scheletro", cls:"",
+      condition:function(s){ return !s.discovered.direzione; },
+      run:function(s){ s.discovered.direzione=true; log("msg","Ti accorgi con un brivido che le braccia dello scheletro, per quanto consumate dal tempo, puntano ancora con precisione verso un grande albero solitario in lontananza. Qualcuno — forse lo stesso Capitano Flint — l'ha lasciato lì apposta, come macabra indicazione."); }
+    }
+  ]
+},
+
+albero_alto:{
+  name:"L'Albero Alto",
+  dark:false,
+  desc:function(s){ return "Un albero enorme svetta solitario sopra tutti gli altri, esattamente dove indicava lo scheletro. La sua ombra copre un ampio tratto di terreno smosso."; },
+  exits:[
+    {label:"Torna alla Spalla del Cannocchiale", to:"altura_cannone"},
+    {label:"Scava dove indica la mappa", to:"buca_vuota", requires:function(s){ return s.inventory.indexOf("mappa_del_tesoro")>-1; }}
+  ],
+  actions:[
+    {id:"no_mappa_hint", label:"Cerca di orientarti senza una mappa", cls:"",
+      condition:function(s){ return s.inventory.indexOf("mappa_del_tesoro")===-1; },
+      run:function(s){ log("msg","Senza la mappa del Capitano Flint, non hai modo di sapere esattamente dove scavare. Dovresti procurartela — forse è ancora nel baule del vecchio Capitano Bones, alla locanda."); }
+    }
+  ]
+},
+
+buca_vuota:{
+  name:"La Buca Vuota",
+  dark:false,
+  desc:function(s){
+    if(s.flags.pitEmpty) return "La grande buca scavata sotto l'albero resta lì, vuota e silenziosa, monito di un tesoro che qualcun altro ha già portato via.";
+    return "Il terreno sotto l'albero è chiaramente smosso, come se qualcosa fosse stato sepolto qui — e forse già dissotterrato.";
+  },
+  exits:[
+    {label:"Torna all'albero alto", to:"albero_alto"},
+    {label:"Prosegui verso la scogliera meridionale", to:"scogliera_sud"}
+  ],
+  actions:[
+    {id:"scava_buca", label:"Scava con la pala", cls:"special",
+      condition:function(s){ return !s.flags.pitEmpty && s.inventory.indexOf("pala")>-1; },
+      run:function(s){
+        s.flags.pitEmpty=true;
+        var here = getRoomItems("buca_vuota");
+        setRoomItems("buca_vuota", []);
+        log("msg","Scavi con foga crescente, il cuore che batte forte... ma la buca è vuota. Completamente vuota. Qualcuno ha già portato via il tesoro del Capitano Flint, lasciando solo terra smossa e la tua delusione. Forse chi ha vissuto su quest'isola più a lungo di chiunque altro potrebbe sapere dove sia finito.");
+      }
+    },
+    {id:"scava_no_pala", label:"Osserva il terreno smosso", cls:"",
+      condition:function(s){ return !s.flags.pitEmpty && s.inventory.indexOf("pala")===-1; },
+      run:function(s){ log("msg","Ti servirebbe una pala per scavare qui."); }
+    }
+  ]
+},
+
+scogliera_sud:{
+  name:"Scogliera Meridionale",
+  dark:false,
+  desc:function(s){ return "Un tratto di costa rocciosa a sud dell'isola. Il rumore delle onde è quasi assordante qui. Diversi sentieri si diramano tra le rocce: uno scende verso una piccola spiaggia, un altro verso una grotta buia, un altro ancora verso una baia riparata a nord."; },
+  exits:[
+    {label:"Torna alla buca vuota", to:"buca_vuota"},
+    {label:"Scendi verso la piccola spiaggia", to:"spiaggia_sud"},
+    {label:"Entra nella grotta buia", to:"grotta_ben_gunn"},
+    {label:"Vai verso la baia a nord", to:"baia_nord"}
+  ]
+},
+
+spiaggia_sud:{
+  name:"Piccola Spiaggia Meridionale",
+  dark:false,
+  desc:function(s){ return "Una piccola insenatura tranquilla, riparata dal vento. Un tratto di sabbia più scura del resto attira la tua attenzione."; },
+  exits:[{label:"Torna alla scogliera", to:"scogliera_sud"}],
+  actions:[
+    {id:"scava_spiaggia", label:"Scava nella sabbia scura con la pala", cls:"special",
+      condition:function(s){ return s.inventory.indexOf("pala")>-1 && ROOMS.spiaggia_sud.items.indexOf("calice_oro_antico")===-1 && !state.flags.chaliceFound; },
+      run:function(s){
+        state.flags.chaliceFound=true;
+        var items = getRoomItems("spiaggia_sud");
+        items.push("calice_oro_antico");
+        setRoomItems("spiaggia_sud", items);
+        log("msg","La pala colpisce presto qualcosa di duro: un antico calice d'oro, sepolto da chissà quale naufragio dimenticato, riemerge dalla sabbia scura."); }
+    },
+    {id:"scava_spiaggia_no_pala", label:"Osserva la sabbia scura", cls:"",
+      condition:function(s){ return s.inventory.indexOf("pala")===-1 && !state.flags.chaliceFound; },
+      run:function(s){ log("msg","Qualcosa sembra sepolto qui. Ti servirebbe una pala per scavare."); }
+    }
+  ]
+},
+
+grotta_ben_gunn:{
+  name:"Grotta di Ben Gunn",
+  dark:false,
+  desc:function(s){
+    if(s.flags.benGunnFriend) return "La grotta accogliente di Ben Gunn, ormai tuo amico fidato. Un piccolo passaggio più stretto si apre sul fondo, verso il cuore della roccia.";
+    return "Una grotta nascosta tra le rocce. Un uomo selvatico, vestito di stracci e capre, ti osserva con occhi sgranati e diffidenti. 'Formaggio...' mormora, quasi tra sé. 'È tanto che non assaggio formaggio...'";
+  },
+  exits:[{label:"Torna alla scogliera", to:"scogliera_sud"}].concat([]),
+  actions:[
+    {id:"offri_formaggio", label:"Offri il formaggio a Ben Gunn", cls:"special",
+      condition:function(s){ return !s.flags.benGunnFriend && s.inventory.indexOf("formaggio")>-1; },
+      run:function(s){
+        s.inventory.splice(s.inventory.indexOf("formaggio"),1);
+        s.flags.benGunnFriend=true;
+        log("msg","Ben Gunn afferra il formaggio con le mani tremanti e lo divora in pochi istanti, le lacrime agli occhi. 'Anni... anni che sogno questo momento!' Poi ti guarda con rinnovata fiducia. 'Tu non sei come gli altri. Vieni, ti mostrerò un segreto che nemmeno Silver conosce.' Ti indica un passaggio stretto sul fondo della grotta."); }
+    },
+    {id:"ben_gunn_no_formaggio", label:"Prova a parlare con Ben Gunn", cls:"",
+      condition:function(s){ return !s.flags.benGunnFriend && s.inventory.indexOf("formaggio")===-1; },
+      run:function(s){ log("msg","Ben Gunn continua a borbottare di formaggio, troppo distratto e diffidente per ascoltarti davvero. Forse un po' di cibo lo convincerebbe a fidarsi di te."); }
+    },
+    {id:"entra_cunicolo", label:"Segui Ben Gunn nel passaggio stretto", cls:"exit",
+      condition:function(s){ return s.flags.benGunnFriend; },
+      run:function(s){ go("cunicolo_grotta"); }
+    }
+  ]
+},
+
+cunicolo_grotta:{
+  name:"Cunicolo Stretto",
+  dark:true,
+  desc:function(s){ return "Un passaggio strettissimo scavato nella roccia, dove è impossibile procedere portando con sé troppo peso."; },
+  exits:[{label:"Torna alla grotta di Ben Gunn", to:"grotta_ben_gunn"}],
+  actions:[
+    {id:"striscia_cunicolo", label:"Striscia attraverso il cunicolo", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){
+        if(s.inventory.length>1){
+          log("msg","Il passaggio è troppo stretto per te e tutto ciò che porti. Qui dentro puoi avere con te solo la torcia, nient'altro: lascia il resto prima di riprovare.");
+          return;
+        }
+        go("caverna_tesoro");
+      }
+    }
+  ]
+},
+
+caverna_tesoro:{
+  name:"La Vera Caverna del Tesoro",
+  dark:true,
+  desc:function(s){ return "Una camera segreta scavata nella roccia, dove Ben Gunn ha trasportato pazientemente, sacco dopo sacco, l'intero tesoro del Capitano Flint prima ancora che voi sbarcaste sull'isola. Monete, argento e gioielli scintillano alla luce della tua torcia."; },
+  items:["moneta_oro_spagnola","barre_argento","gioielli_capitano_flint","corona_pirata"],
+  exits:[{label:"Torna al cunicolo", to:"cunicolo_grotta"}]
+},
+
+baia_nord:{
+  name:"Baia Settentrionale",
+  dark:false,
+  desc:function(s){
+    if(s.flags.israelHandsDefeated) return "La baia riparata a nord, dove l'Hispaniola è ora ormeggiata in sicurezza. L'equipaggio fedele lavora tranquillo sul ponte.";
+    return "Una baia riparata a nord dell'isola. L'Hispaniola vi è ancorata, ma sul ponte scorgi Israel Hands, uno dei pirati ammutinati, che sorveglia con fare minaccioso, un coltello alla cintura.";
+  },
+  exits:[
+    {label:"Torna alla scogliera", to:"scogliera_sud"},
+    {label:"Vai verso il molo di partenza", to:"molo_ritorno", requires:function(s){ return s.flags.israelHandsDefeated; }}
+  ],
+  actions:[
+    {id:"affronta_pistola", label:"Punta la pistola contro Israel Hands", cls:"special",
+      condition:function(s){ return !s.flags.israelHandsDefeated && s.inventory.indexOf("pistola")>-1; },
+      run:function(s){
+        s.flags.israelHandsDefeated=true;
+        log("msg","Israel Hands vede la pistola puntata contro di lui e il suo ghigno svanisce all'istante. Getta il coltello a terra, alza le mani, e si arrende senza troppa convinzione. La nave, finalmente, torna in mani sicure.");
+      }
+    },
+    {id:"affronta_no_pistola", label:"Prova ad avvicinarti disarmato", cls:"",
+      condition:function(s){ return !s.flags.israelHandsDefeated && s.inventory.indexOf("pistola")===-1; },
+      run:function(s){ log("msg","Israel Hands stringe il coltello e ti guarda con un ghigno storto. Senza un'arma in mano, avvicinarti sarebbe pura follia."); }
+    },
+    {id:"affronta_disarmato_temerario", label:"Affrontalo comunque, a mani nude", cls:"danger",
+      condition:function(s){ return !s.flags.israelHandsDefeated; },
+      run:function(s){
+        confirmAction(
+          "Affrontare Israel Hands disarmato?",
+          "È un pirata navigato, con un coltello in pugno, e tu non hai alcuna arma. Non è certo un'idea saggia.",
+          function(){ triggerDeath("Ti lanci contro Israel Hands senza pensarci due volte. Il coltello del pirata è più veloce delle tue mani nude. La tua avventura finisce qui, sulla baia settentrionale dell'isola."); }
+        );
+      }
+    }
+  ]
+},
+
+molo_ritorno:{
+  name:"Molo di Partenza",
+  dark:false,
+  desc:function(s){ return "Il piccolo molo improvvisato, ora che l'Hispaniola è di nuovo in mani fidate. L'equipaggio superstite carica le ultime provviste, pronto a salpare per l'Inghilterra."; },
+  exits:[{label:"Torna alla baia settentrionale", to:"baia_nord"}],
+  actions:[
+    {id:"salpa_casa", label:"Salpa verso casa, verso l'Inghilterra", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){
+        log("msg","L'Hispaniola lascia l'isola alle spalle, le vele gonfie di un vento finalmente favorevole. Dopo settimane di navigazione, la costa familiare dell'Inghilterra appare all'orizzonte, e con essa la vecchia Locanda dell'Ammiraglio Benbow.");
+        go("sala_locanda");
+      }
+    }
+  ]
+}
+
+};
+
+/* ============== SUGGERIMENTI CONTESTUALI ============== */
+function getHint(s){
+  var r=s.room;
+  if(r==="sala_locanda" && s.flags.blackDogVisited && !s.flags.bonesDead) return "Qualcosa sta per succedere alla locanda. Fermati ad ascoltare con attenzione.";
+  if(r==="strada_esterna" && !s.flags.blackDogVisited) return "C'è qualcosa di strano che sta accadendo fuori dalla locanda. Vale la pena osservare con attenzione.";
+  if(r==="camera_capitano" && !s.flags.bonesDead) return "Il Capitano è ancora vivo. Forse dovresti prima scoprire cosa sta per succedergli, fuori sulla strada.";
+  if(r==="camera_capitano" && s.flags.bonesDead && !s.flags.chestOpened) return "Ora che il Capitano non c'è più, il suo baule potrebbe nascondere qualcosa di importante.";
+  if(r==="casa_trelawney" && !s.flags.expeditionPlanned) return "Ti servirebbe una prova concreta per convincere il Cavaliere a organizzare una spedizione — qualcosa come una mappa.";
+  if(r==="stiva_nave" && !s.discovered.mutiny) return "Il barile di mele sembra abbastanza grande da nasconderti dentro, se non porti troppo con te.";
+  if(r==="cabina_capitano_smollett" && s.discovered.mutiny && !s.flags.warnedCaptain) return "Hai scoperto qualcosa di grave. Il Capitano dovrebbe saperlo al più presto.";
+  if(r==="palude_febbre") return "Questa palude va attraversata in fretta. Se porti troppa roba con te, alleggerisci lo zaino prima di riprovare.";
+  if(r==="albero_alto" && s.inventory.indexOf("mappa_del_tesoro")===-1) return "Senza la mappa del Capitano Flint, non saprai mai dove scavare esattamente.";
+  if(r==="buca_vuota" && s.flags.pitEmpty) return "Il tesoro non è più qui. Qualcuno che conosce l'isola meglio di chiunque altro potrebbe sapere dove sia finito — forse vale la pena esplorare a fondo le grotte della costa meridionale.";
+  if(r==="grotta_ben_gunn" && !s.flags.benGunnFriend) return "Quell'uomo selvatico continua a nominare il formaggio. Hai qualcosa da mangiare nello zaino?";
+  if(r==="cunicolo_grotta") return "Questo passaggio è troppo stretto per chi porta troppa roba. Lascia tutto tranne la torcia prima di provare a strisciare.";
+  if(r==="baia_nord" && !s.flags.israelHandsDefeated) return "Israel Hands non si lascerà intimidire a mani nude. Ti servirebbe un'arma.";
+  if(s.inventory.some(isTreasure)) return "Porti con te dei tesori! Ricorda di riportarli alla locanda e metterli al sicuro, per farli contare davvero.";
+  return "Se qualcosa sembra bloccato, ricorda che puoi sempre aprire lo zaino e posare a terra ciò che porti con te. E puoi sempre tornare sui tuoi passi: nessun sentiero si chiude per sempre.";
+}
+
+/* ============== STATO E MOTORE ============== */
+var state = null;
+var STORAGE_KEY = "isola_del_tesoro_save_v1";
+var NOTES_KEY = "isola_del_tesoro_appunti_v1";
+
+function freshState(){
+  return {
+    room:"sala_locanda",
+    previousRoom:"sala_locanda",
+    inventory:[],
+    deposited:[],
+    flags:{
+      blackDogVisited:false, bonesDead:false, chestOpened:false,
+      expeditionPlanned:false, warnedCaptain:false, landed:false,
+      pitEmpty:false, chaliceFound:false, benGunnFriend:false,
+      israelHandsDefeated:false
+    },
+    discovered:{ mutiny:false, direzione:false },
+    roomItemsOverride:{}
+  };
+}
+
+function getRoomItems(roomId){
+  if(state.roomItemsOverride.hasOwnProperty(roomId)) return state.roomItemsOverride[roomId];
+  return (ROOMS[roomId].items || []).slice();
+}
+function setRoomItems(roomId, arr){
+  state.roomItemsOverride[roomId] = arr;
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ var loaded = JSON.parse(raw);
+      var fresh = freshState();
+      for(var k in fresh){ if(loaded[k]===undefined) loaded[k]=fresh[k]; }
+      return loaded;
+    }
+  }catch(e){}
+  return freshState();
+}
+
+function log(cls, text){
+  var d=document.createElement("div");
+  d.className="entry "+cls;
+  d.textContent=text;
+  document.getElementById("log").appendChild(d);
+  d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+function takeItem(id){
+  var items = getRoomItems(state.room);
+  var idx = items.indexOf(id);
+  if(idx>-1){
+    items.splice(idx,1);
+    setRoomItems(state.room, items);
+    state.inventory.push(id);
+    log("msg","Prendi "+ITEMS[id].name+".");
+    render();
+    saveState();
+  }
+}
+function dropItem(id){
+  var idx = state.inventory.indexOf(id);
+  if(idx>-1){
+    state.inventory.splice(idx,1);
+    var items = getRoomItems(state.room);
+    items.push(id);
+    setRoomItems(state.room, items);
+    log("msg","Lasci "+ITEMS[id].name+" a terra.");
+    render();
+    saveState();
+  }
+}
+
+function go(to){
+  state.previousRoom = state.room;
+  state.room = to;
+  render(true);
+  saveState();
+}
+
+function confirmAction(title, text, onYes){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").textContent = text;
+  openModal("confirmModal");
+  var yes = document.getElementById("confirmYes");
+  var no = document.getElementById("confirmNo");
+  function cleanup(){ yes.onclick=null; no.onclick=null; closeModal("confirmModal"); }
+  yes.onclick=function(){ cleanup(); onYes(); render(); saveState(); };
+  no.onclick=function(){ cleanup(); };
+}
+
+function triggerDeath(text){
+  log("danger", text);
+  setTimeout(function(){
+    confirmAction("Sei morto.", text + "\n\nLa tua avventura finisce qui. Vuoi ricominciare?", function(){
+      resetGame();
+    });
+  }, 200);
+}
+
+function resetGame(){
+  state = freshState();
+  document.getElementById("log").innerHTML="";
+  document.getElementById("winScreen").classList.add("hidden");
+  render(true);
+  saveState();
+  log("system","— Una nuova avventura sull'Isola del Tesoro ha inizio —");
+}
+
+/* ============== RENDER ============== */
+function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+
+function el(tag, cls, text){
+  var e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function makeBtn(label, cls, onclick){
+  var b=document.createElement("button");
+  b.className="opt"+(cls?" "+cls:"");
+  b.textContent=label;
+  b.onclick=onclick;
+  return b;
+}
+
+function render(isNewRoomEntry){
+  var room = ROOMS[state.room];
+  document.getElementById("roomTitle").textContent = room.name;
+
+  var flameIcon=document.getElementById("flameIcon");
+  var lampText=document.getElementById("lampText");
+  if(state.inventory.indexOf("torcia")>-1){
+    flameIcon.className = "flame";
+    lampText.textContent = "Torcia in mano";
+  } else {
+    flameIcon.className="flame off";
+    lampText.textContent="Nessuna torcia";
+  }
+
+  var isDark = room.dark && state.inventory.indexOf("torcia")===-1;
+
+  if(isNewRoomEntry){
+    log("room-name", room.name);
+    if(isDark){
+      log("desc","È tutto buio pesto qui dentro. Senza una fonte di luce è troppo pericoloso proseguire.");
+    } else {
+      log("desc", room.desc(state));
+      var here = getRoomItems(state.room).filter(function(id){ return state.inventory.indexOf(id)===-1; });
+      if(here.length>0){
+        var names = here.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("desc","Qui a terra noti: "+names+".");
+      }
+    }
+  }
+
+  var actionsDiv = document.getElementById("actions");
+  actionsDiv.innerHTML="";
+
+  if(isDark){
+    var row = el("div","btn-row");
+    row.appendChild(makeBtn("Torna indietro, a tentoni","exit",function(){ go(state.previousRoom); }));
+    actionsDiv.appendChild(row);
+    return;
+  }
+
+  var actions = (room.actions||[]).filter(function(a){ return a.condition(state); });
+  if(actions.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Cosa puoi fare qui"));
+    var arow = el("div","btn-row");
+    actions.forEach(function(a){
+      arow.appendChild(makeBtn(a.label, "opt "+(a.cls||""), function(act){
+        return function(){ act.run(state); render(); saveState(); };
+      }(a)));
+    });
+    actionsDiv.appendChild(arow);
+  }
+
+  var here = getRoomItems(state.room);
+  if(here.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Oggetti qui"));
+    var irow = el("div","btn-row");
+    here.forEach(function(id){
+      irow.appendChild(makeBtn("Prendi: "+ITEMS[id].name, "", function(itemId){
+        return function(){ takeItem(itemId); };
+      }(id)));
+    });
+    if(irow.children.length>0) actionsDiv.appendChild(irow);
+  }
+
+  var exits = (room.exits||[]).filter(function(ex){ return !ex.requires || ex.requires(state); });
+  if(exits.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Dove vuoi andare"));
+    var erow = el("div","btn-row");
+    exits.forEach(function(ex){
+      erow.appendChild(makeBtn(ex.label,"exit",function(exit){
+        return function(){ go(exit.to); };
+      }(ex)));
+    });
+    actionsDiv.appendChild(erow);
+  }
+}
+
+/* ============== INVENTARIO / MODALI ============== */
+function renderInventoryModal(){
+  var carried = document.getElementById("invCarried");
+  var here = document.getElementById("invHere");
+  carried.innerHTML=""; here.innerHTML="";
+
+  if(state.inventory.length===0){
+    carried.appendChild(el("div","empty-note","Non porti nulla con te."));
+  } else {
+    state.inventory.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Tesoro"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var actionsWrap = document.createElement("div");
+      var btnDrop = document.createElement("button");
+      btnDrop.textContent="Lascia qui";
+      btnDrop.onclick=function(){ dropItem(id); renderInventoryModal(); };
+      actionsWrap.appendChild(btnDrop);
+      row.appendChild(actionsWrap);
+      carried.appendChild(row);
+    });
+  }
+
+  var roomItems = getRoomItems(state.room);
+  if(roomItems.length===0){
+    here.appendChild(el("div","empty-note","Non c'è nulla a terra qui."));
+  } else {
+    roomItems.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Tesoro"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var btnTake=document.createElement("button");
+      btnTake.textContent="Prendi";
+      btnTake.onclick=function(){ takeItem(id); renderInventoryModal(); };
+      row.appendChild(btnTake);
+      here.appendChild(row);
+    });
+  }
+}
+
+function renderScoreModal(){
+  var c = document.getElementById("scoreContent");
+  c.innerHTML="";
+  var score = state.deposited.length * POINTS_PER_TREASURE;
+  var big = el("div","score-big", score+" / "+(TREASURE_IDS.length*POINTS_PER_TREASURE));
+  c.appendChild(big);
+  c.appendChild(el("div","score-sub", state.deposited.length+" di "+TREASURE_IDS.length+" tesori riportati a casa"));
+  TREASURE_IDS.forEach(function(id){
+    var got = state.deposited.indexOf(id)>-1;
+    var row = el("div","treasure-row "+(got?"got":"missing"));
+    row.appendChild(el("span","", got ? "✓ "+ITEMS[id].name : "? tesoro non ancora trovato"));
+    c.appendChild(row);
+  });
+}
+
+function showWinScreen(){
+  document.getElementById("winScreen").classList.remove("hidden");
+}
+
+/* ============== NOTE ============== */
+function loadNotes(){
+  try{ return localStorage.getItem(NOTES_KEY) || ""; }catch(e){ return ""; }
+}
+function saveNotes(){
+  try{ localStorage.setItem(NOTES_KEY, document.getElementById("notesArea").value); }catch(e){}
+}
+
+/* ============== EVENTI UI ============== */
+document.getElementById("btnInv").onclick=function(){ renderInventoryModal(); openModal("invModal"); };
+document.getElementById("btnLook").onclick=function(){ render(true); };
+document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
+document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
+document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
+function doRestartConfirm(){
+  confirmAction(
+    "Ricominciare l'avventura?",
+    "Perderai la posizione attuale, l'inventario e i tesori depositati. I tuoi appunti restano salvati. Vuoi davvero ricominciare da capo?",
+    function(){ resetGame(); }
+  );
+}
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    var elFs = document.documentElement;
+    if(elFs.requestFullscreen){ elFs.requestFullscreen().catch(function(){}); }
+  } else {
+    if(document.exitFullscreen){ document.exitFullscreen().catch(function(){}); }
+  }
+}
+function updateFullscreenLabel(){
+  var btn = document.getElementById("btnFullscreenOpt");
+  if(!btn) return;
+  btn.textContent = document.fullscreenElement ? "⛶ Esci da schermo intero" : "⛶ Schermo intero";
+}
+document.addEventListener("fullscreenchange", updateFullscreenLabel);
+document.getElementById("btnOptions").onclick=function(){ updateFullscreenLabel(); openModal("optionsModal"); };
+document.getElementById("btnRestartOpt").onclick=function(){ closeModal("optionsModal"); doRestartConfirm(); };
+document.getElementById("btnFullscreenOpt").onclick=function(){ toggleFullscreen(); };
+
+document.querySelectorAll("[data-close]").forEach(function(b){
+  b.onclick=function(){
+    var id=b.getAttribute("data-close");
+    if(id==="notesModal") saveNotes();
+    closeModal(id);
+  };
+});
+document.querySelectorAll(".modal-backdrop").forEach(function(bd){
+  bd.addEventListener("click", function(e){
+    if(e.target===bd){
+      if(bd.id==="notesModal") saveNotes();
+      closeModal(bd.id);
+    }
+  });
+});
+document.getElementById("notesArea").addEventListener("input", function(){
+  clearTimeout(window.__notesTimer);
+  window.__notesTimer=setTimeout(saveNotes, 400);
+});
+
+document.getElementById("btnWinRestart").onclick=function(){ resetGame(); };
+document.getElementById("btnWinContinue").onclick=function(){ document.getElementById("winScreen").classList.add("hidden"); };
+
+document.addEventListener("keydown", function(e){
+  if(e.key==="a" || e.key==="A"){
+    document.getElementById("notesArea").value = loadNotes();
+    openModal("notesModal");
+  }
+  if(e.key==="r" || e.key==="R"){
+    doRestartConfirm();
+  }
+});
+
+/* ============== AVVIO ============== */
+state = loadState();
+render(true);
+if(state.deposited.length===0 && state.inventory.length===0 && state.room==="sala_locanda"){
+  log("system","Benvenuto alla Locanda dell'Ammiraglio Benbow. Scegli sempre tra i pulsanti mostrati per muoverti ed agire — non serve digitare nulla. Se qualcosa sembra bloccato, apri lo Zaino [🎒] e ricorda che puoi sempre posare ciò che porti con te.");
+}
+
+})();
+</script>
+</body>
+</html>
