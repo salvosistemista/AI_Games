@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>L'Isola dei Sette Forzieri — Un'Avventura Piratesca</title>
+<style>
+:root{
+  --night-sea:#081018;
+  --deep-navy:#0f1c28;
+  --plank:#2b2015;
+  --plank-light:#4a3a24;
+  --sand:#e6d3a3;
+  --sand-dim:#c7b384;
+  --turquoise:#3ecfc0;
+  --turquoise-glow:#6ee8da;
+  --coral:#c1503a;
+  --gold:#d1a530;
+  font-size:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:var(--night-sea);
+  color:var(--sand);
+  font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
+  overscroll-behavior:none;
+}
+#app{
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  max-width:560px;margin:0 auto;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(62,207,192,0.08), transparent 60%),
+    linear-gradient(180deg, var(--deep-navy) 0%, var(--night-sea) 100%);
+  position:relative;
+  border-left:1px solid #000;border-right:1px solid #000;
+}
+header{
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--plank-light);
+  background:linear-gradient(180deg, rgba(62,207,192,0.06), transparent);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#roomTitle{
+  font-size:1.05rem;letter-spacing:.03em;color:var(--turquoise-glow);
+  text-shadow:0 0 12px rgba(62,207,192,0.3);
+  font-variant:small-caps;
+  margin:0;
+}
+#lampIndicator{
+  font-size:.72rem;color:var(--sand-dim);display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.flame{
+  display:inline-block;width:8px;height:11px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle at 50% 70%, var(--turquoise-glow), var(--turquoise) 90%);
+  box-shadow:0 0 6px var(--turquoise-glow);
+  animation:flick 1.6s ease-in-out infinite;
+}
+@keyframes flick{
+  0%,100%{transform:scaleY(1) rotate(-1deg);opacity:1;}
+  30%{transform:scaleY(.85) rotate(2deg);opacity:.85;}
+  60%{transform:scaleY(1.08) rotate(-2deg);opacity:1;}
+}
+.flame.off{background:#333;box-shadow:none;animation:none;opacity:.5;}
+
+#log{
+  flex:1;overflow-y:auto;padding:16px 16px 8px;
+  font-size:1rem;line-height:1.55;
+}
+#log::-webkit-scrollbar{width:6px;}
+#log::-webkit-scrollbar-thumb{background:var(--plank-light);border-radius:3px;}
+.entry{margin-bottom:14px;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.entry.room-name{
+  color:var(--turquoise-glow);font-variant:small-caps;font-size:1.15rem;letter-spacing:.03em;
+  border-bottom:1px solid var(--plank-light);padding-bottom:6px;margin-bottom:8px;
+}
+.entry.desc{color:var(--sand);}
+.entry.msg{color:var(--sand-dim);font-style:italic;}
+.entry.system{color:var(--turquoise);font-size:.85rem;text-align:center;}
+.entry.danger{color:var(--coral);font-weight:bold;}
+
+#actions{
+  padding:8px 12px 4px;border-top:1px solid var(--plank-light);flex-shrink:0;
+  max-height:38vh;overflow-y:auto;
+}
+.action-group-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--sand-dim);opacity:.65;margin:6px 2px 3px;}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+button.opt{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(180deg,#2b2015,#1c150e);
+  border:1px solid var(--plank-light);
+  color:var(--sand);
+  padding:9px 12px;border-radius:6px;font-size:.86rem;
+  cursor:pointer;flex:1 1 auto;min-width:44%;
+  transition:background .15s, transform .1s;
+  text-align:center;
+}
+button.opt:active{transform:scale(.96);background:linear-gradient(180deg,#3a2c1a,#241b10);}
+button.opt.exit{border-color:var(--turquoise);color:#bdeee6;}
+button.opt.special{border-color:var(--turquoise-glow);color:var(--turquoise-glow);}
+button.opt.magic{border-color:var(--gold);color:var(--gold);font-style:italic;}
+button.opt.danger{border-color:var(--coral);color:#f2a48f;}
+button.opt.wide{min-width:100%;}
+
+#bottombar{
+  display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--plank-light);background:var(--night-sea);flex-shrink:0;
+}
+#bottombar button{
+  flex:1 1 30%;font-family:'Segoe UI',system-ui,sans-serif;
+  background:#12100b;border:1px solid var(--plank-light);color:var(--sand-dim);
+  padding:8px 4px;border-radius:6px;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+#bottombar button .ic{font-size:1.05rem;}
+#bottombar button:active{background:#221c14;}
+
+.modal-backdrop{
+  position:absolute;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;
+}
+.modal-backdrop.hidden{display:none;}
+.modal{
+  background:linear-gradient(180deg,#1a2530,#0f1a22);
+  border:1px solid var(--plank-light);border-bottom:none;
+  border-radius:14px 14px 0 0;
+  width:100%;max-width:560px;max-height:82vh;overflow-y:auto;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation:slideup .2s ease;
+}
+@keyframes slideup{from{transform:translateY(30px);opacity:0;}to{transform:none;opacity:1;}}
+.modal h2{
+  margin:0 0 10px;color:var(--turquoise-glow);font-variant:small-caps;font-size:1.2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.modal h2 .close{cursor:pointer;color:var(--sand-dim);font-size:1.3rem;font-family:sans-serif;line-height:1;padding:2px 8px;}
+.inv-section-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--sand-dim);margin:14px 0 6px;opacity:.7;}
+.inv-item{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.inv-item .name{flex:1;font-size:.95rem;}
+.inv-item .name .tag{font-size:.68rem;color:var(--gold);display:block;opacity:.8;}
+.inv-item button{
+  background:#2b2015;border:1px solid var(--plank-light);color:var(--sand);
+  padding:6px 10px;border-radius:5px;font-size:.78rem;font-family:'Segoe UI',system-ui,sans-serif;
+}
+.empty-note{color:var(--sand-dim);font-style:italic;font-size:.88rem;padding:8px 4px;}
+textarea#notesArea{
+  width:100%;min-height:40vh;background:#0a0d10;color:var(--sand);
+  border:1px solid var(--plank-light);border-radius:8px;padding:10px;font-family:inherit;font-size:.95rem;
+  resize:vertical;
+}
+.notes-hint{font-size:.75rem;color:var(--sand-dim);margin-top:8px;opacity:.75;}
+#scoreModal .score-big{font-size:2.4rem;color:var(--gold);text-align:center;margin:6px 0 2px;font-variant:small-caps;}
+#scoreModal .score-sub{text-align:center;color:var(--sand-dim);margin-bottom:14px;}
+#scoreModal .treasure-row{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;}
+#scoreModal .treasure-row.got{color:var(--gold);}
+#scoreModal .treasure-row.missing{color:#4a3a24;}
+
+#winScreen{
+  position:absolute;inset:0;z-index:100;background:radial-gradient(ellipse at 50% 30%, #241c0c, #081018 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
+}
+#winScreen.hidden{display:none;}
+#winScreen h1{color:var(--gold);font-variant:small-caps;font-size:1.8rem;text-shadow:0 0 20px rgba(209,165,48,.5);margin-bottom:6px;}
+#winScreen p{color:var(--sand);line-height:1.6;max-width:420px;}
+#winScreen button{margin-top:20px;}
+
+@media (min-width:601px){
+  body{background:#000;}
+  #app{border-left:1px solid var(--plank-light);border-right:1px solid var(--plank-light);box-shadow:0 0 60px rgba(0,0,0,.8);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="roomTitle">L'Isola dei Sette Forzieri</h1>
+    <div id="lampIndicator"><span class="flame off" id="flameIcon"></span><span id="lampText">Nessuna torcia</span></div>
+  </header>
+
+  <div id="log"></div>
+
+  <div id="actions"></div>
+
+  <div id="bottombar">
+    <button id="btnInv"><span class="ic">🎒</span>Zaino</button>
+    <button id="btnLook"><span class="ic">👁</span>Guarda</button>
+    <button id="btnHint"><span class="ic">💡</span>Aiuto</button>
+    <button id="btnScore"><span class="ic">📜</span>Diario</button>
+    <button id="btnNotes"><span class="ic">✎</span>Appunti [A]</button>
+    <button id="btnRestart"><span class="ic">🔄</span>Ricomincia [R]</button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="invModal">
+    <div class="modal">
+      <h2>Il tuo zaino <span class="close" data-close="invModal">✕</span></h2>
+      <div class="inv-section-title">Cosa porti con te</div>
+      <div id="invCarried"></div>
+      <div class="inv-section-title">Qui a terra</div>
+      <div id="invHere"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="notesModal">
+    <div class="modal">
+      <h2>I tuoi appunti <span class="close" data-close="notesModal">✕</span></h2>
+      <textarea id="notesArea" placeholder="Scrivi qui mappe, indizi, parole magiche trovate, cose da ricordare..."></textarea>
+      <div class="notes-hint">Gli appunti restano salvati anche se chiudi il gioco o ricominci l'avventura.</div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scoreModal">
+    <div class="modal" id="scoreModalInner">
+      <h2>Diario del bucaniere <span class="close" data-close="scoreModal">✕</span></h2>
+      <div id="scoreContent"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal">
+    <div class="modal">
+      <h2 id="confirmTitle">Sei sicuro?</h2>
+      <p id="confirmText" style="color:var(--sand-dim);line-height:1.5;"></p>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="opt danger wide" id="confirmYes">Sì, procedi</button>
+        <button class="opt wide" id="confirmNo">No, torna indietro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winScreen" class="hidden">
+    <h1>Il tesoro è tuo!</h1>
+    <p>Hai ritrovato e riportato in salvo tutti e sette i forzieri e i gioielli nascosti sull'isola. La leggenda del pirata che tornò a casa con l'intero bottino comincia oggi, con te. Un tesoro degno delle vecchie mappe consumate dal sale e dal tempo.</p>
+    <button class="opt special wide" id="btnWinRestart">Salpa per una nuova avventura</button>
+    <button class="opt wide" id="btnWinContinue" style="margin-top:8px;">Continua a esplorare comunque</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============== DATI DI GIOCO ============== */
+
+var TREASURES = {
+  calice_argento:{name:"un calice d'argento cesellato", tag:"Tesoro"},
+  dobloni_oro:{name:"un sacchetto di dobloni d'oro", tag:"Tesoro"},
+  collana_perle:{name:"una collana di perle nere", tag:"Tesoro"},
+  corona_gemme:{name:"una corona tempestata di gemme", tag:"Tesoro"},
+  smeraldo_pirata:{name:"un enorme smeraldo grezzo", tag:"Tesoro"},
+  specchio_ornato:{name:"uno specchio dalla cornice d'oro", tag:"Tesoro"},
+  rubino_stella:{name:"un rubino stella scintillante", tag:"Tesoro"}
+};
+var TREASURE_IDS = Object.keys(TREASURES);
+var POINTS_PER_TREASURE = 50;
+
+var ITEMS = {
+  chiave_baule:{name:"una vecchia chiave arrugginita"},
+  torcia:{name:"una torcia"},
+  cracker:{name:"una galletta secca"},
+  bottiglia_rum:{name:"una bottiglia di rum"},
+  machete:{name:"un machete affilato"},
+  pala:{name:"una vecchia pala di legno"},
+  vecchia_mappa:{name:"una mappa del tesoro ingiallita"},
+  pappagallo:{name:"un pappagallo appollaiato sulla tua spalla"}
+};
+Object.keys(TREASURES).forEach(function(k){ ITEMS[k]=TREASURES[k]; });
+
+function isTreasure(id){ return !!TREASURES[id]; }
+
+var ROOMS = {
+
+camera_da_letto:{
+  name:"Camera da Letto",
+  dark:false,
+  desc:function(s){ return "Ti svegli nella tua camera, la tempesta della notte scorsa ancora nelle orecchie. Sul comodino trovi alcuni oggetti che non ricordi di aver mai posseduto."; },
+  items:["chiave_baule","torcia"],
+  exits:[{label:"Esci nel corridoio", to:"corridoio"}]
+},
+
+corridoio:{
+  name:"Corridoio di Casa",
+  dark:false,
+  desc:function(s){ return "Un corridoio semplice collega le stanze della casa. Da una porta socchiusa arriva un profumo di sale e di mare, che qui non dovrebbe esserci."; },
+  exits:[
+    {label:"Camera da letto", to:"camera_da_letto"},
+    {label:"Cucina", to:"cucina"},
+    {label:"Salotto", to:"salotto"},
+    {label:"Giardino", to:"giardino"}
+  ]
+},
+
+cucina:{
+  name:"Cucina",
+  dark:false,
+  desc:function(s){ return "Una piccola cucina in disordine. Su un ripiano trovi una galletta secca e una bottiglia impolverata che sembra contenere rum."; },
+  items:["cracker","bottiglia_rum"],
+  exits:[{label:"Torna nel corridoio", to:"corridoio"}]
+},
+
+salotto:{
+  name:"Salotto",
+  dark:false,
+  desc:function(s){
+    var t="Una vetrina vuota troneggia contro la parete del salotto, come se aspettasse qualcosa di prezioso da esporre.";
+    if(s.deposited.length>0){ t+=" Dentro, alcuni tesori scintillano già, al sicuro."; }
+    return t;
+  },
+  exits:[{label:"Torna nel corridoio", to:"corridoio"}],
+  actions:[
+    {id:"deposita", label:"Deposita i tesori nella vetrina", cls:"special",
+      condition:function(s){ return s.inventory.some(isTreasure); },
+      run:function(s){
+        var depositedNow=[];
+        s.inventory = s.inventory.filter(function(id){
+          if(isTreasure(id)){ s.deposited.push(id); depositedNow.push(id); return false; }
+          return true;
+        });
+        var names = depositedNow.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("msg", "Sistemi con cura nella vetrina " + names + ". Il vetro riflette la luce, ed è uno spettacolo che vale ogni pericolo affrontato.");
+        if(s.deposited.length >= TREASURE_IDS.length){
+          setTimeout(showWinScreen, 400);
+        }
+      }
+    }
+  ]
+},
+
+giardino:{
+  name:"Giardino",
+  dark:false,
+  desc:function(s){ return "Nel piccolo giardino dietro casa, un vortice di nebbia luminosa turbina lentamente sopra l'aiuola, come se fosse sempre stato lì, in attesa."; },
+  exits:[
+    {label:"Torna nel corridoio", to:"corridoio"},
+    {label:"Entra nel vortice di nebbia", to:"spiaggia"}
+  ]
+},
+
+spiaggia:{
+  name:"Spiaggia dell'Isola",
+  dark:false,
+  desc:function(s){ return "Attraversi il vortice e ti ritrovi su una spiaggia di sabbia dorata, sotto un cielo che non è più quello di casa tua. Onde turchesi si infrangono lente sulla riva. Un sentiero conduce verso l'interno dell'isola, e più lontano intuisci un vecchio molo di legno."; },
+  exits:[
+    {label:"Torna a casa attraverso il vortice", to:"giardino"},
+    {label:"Segui il sentiero costiero", to:"sentiero_costa"},
+    {label:"Vai verso il molo", to:"molo"}
+  ]
+},
+
+sentiero_costa:{
+  name:"Sentiero Costiero",
+  dark:false,
+  desc:function(s){ return "Un sentiero sabbioso corre lungo la costa. Da qui scorgi la sagoma scura di un relitto arenato tra gli scogli, una vecchia capanna più all'interno, e delle dune di sabbia più a sud."; },
+  exits:[
+    {label:"Torna alla spiaggia", to:"spiaggia"},
+    {label:"Vai verso il relitto", to:"relitto_nave"},
+    {label:"Vai verso la capanna", to:"capanna_abbandonata"},
+    {label:"Vai verso le dune a sud", to:"duna_mappa"}
+  ]
+},
+
+relitto_nave:{
+  name:"Il Relitto",
+  dark:false,
+  desc:function(s){
+    var t="Il relitto di un vecchio veliero, incagliato tra gli scogli da chissà quanti anni. Sul ponte marcio, un marinaio dorme un sonno pesante, russando forte.";
+    if(s.flags.sailorReady) t="Il relitto è silenzioso ora. Del marinaio non c'è più traccia qui: probabilmente ti aspetta già al molo, pronto a salpare.";
+    return t;
+  },
+  exits:[{label:"Torna al sentiero costiero", to:"sentiero_costa"}],
+  actions:[
+    {id:"apri_baule", label:"Apri il vecchio baule con la chiave", cls:"special",
+      condition:function(s){ return !s.flags.chestOpened && s.inventory.indexOf("chiave_baule")>-1; },
+      run:function(s){
+        s.flags.chestOpened=true;
+        var items = ROOMS.relitto_nave.items || [];
+        items = items.concat(["calice_argento","vecchia_mappa"]);
+        state.roomItemsOverride["relitto_nave"]=items;
+        log("msg","La chiave gira con uno scricchiolio nella serratura arrugginita. Dentro il baule trovi un calice d'argento cesellato e una mappa ingiallita, piegata più volte su se stessa.");
+      }
+    },
+    {id:"baule_no_chiave", label:"Osserva il vecchio baule chiuso", cls:"",
+      condition:function(s){ return !s.flags.chestOpened && s.inventory.indexOf("chiave_baule")===-1; },
+      run:function(s){ log("msg","Il baule è chiuso a chiave. Ti serve qualcosa per aprirlo — forse una vecchia chiave, dimenticata in qualche cassetto di casa tua."); }
+    },
+    {id:"dai_rum", label:"Dai la bottiglia di rum al marinaio addormentato", cls:"special",
+      condition:function(s){ return !s.flags.sailorReady && s.inventory.indexOf("bottiglia_rum")>-1; },
+      run:function(s){
+        s.inventory.splice(s.inventory.indexOf("bottiglia_rum"),1);
+        s.flags.sailorReady=true;
+        log("msg","Versi un sorso di rum tra le labbra del marinaio addormentato. Si sveglia di soprassalto, batte le palpebre, e un sorriso enorme gli si allarga sul volto. 'Per mille balene, proprio quello che ci voleva!' borbotta. Promette di aspettarti al molo, pronto a salpare non appena tu abbia raccolto il bottino."); }
+    },
+    {id:"marinaio_no_rum", label:"Prova a svegliare il marinaio", cls:"",
+      condition:function(s){ return !s.flags.sailorReady && s.inventory.indexOf("bottiglia_rum")===-1; },
+      run:function(s){ log("msg","Lo scuoti, ma il marinaio russa più forte che mai. Qualcosa di forte, tipo del buon rum, potrebbe farlo tornare tra i vivi."); }
+    }
+  ]
+},
+
+capanna_abbandonata:{
+  name:"Capanna Abbandonata",
+  dark:false,
+  desc:function(s){ return "Una piccola capanna di legno, il tetto sfondato dal tempo. Tra gli attrezzi arrugginiti trovi ancora qualcosa di utile."; },
+  items:["machete","pala"],
+  exits:[
+    {label:"Torna al sentiero costiero", to:"sentiero_costa"},
+    {label:"Addentrati nella giungla", to:"giungla_fitta", requires:function(s){ return s.inventory.indexOf("machete")>-1; }}
+  ],
+  actions:[
+    {id:"giungla_bloccata", label:"Osserva il muro di liane della giungla", cls:"",
+      condition:function(s){ return s.inventory.indexOf("machete")===-1; },
+      run:function(s){ log("msg","Un muro fittissimo di liane e rovi blocca ogni passaggio verso la giungla. Ti servirebbe una lama robusta per aprirti un varco."); }
+    }
+  ]
+},
+
+giungla_fitta:{
+  name:"Giungla Fitta",
+  dark:false,
+  desc:function(s){ return "Fendi liane e rami con il machete, aprendoti a fatica un varco in una giungla densa e rumorosa di insetti e uccelli invisibili."; },
+  exits:[
+    {label:"Torna alla capanna", to:"capanna_abbandonata"},
+    {label:"Prosegui verso la radura", to:"radura_serpente"}
+  ]
+},
+
+radura_serpente:{
+  name:"Radura del Serpente",
+  dark:false,
+  desc:function(s){ return "Una piccola radura silenziosa, il sole che filtra tra le foglie. Un grosso serpente giace acciambellato e addormentato proprio al centro del sentiero che prosegue oltre."; },
+  exits:[
+    {label:"Torna nella giungla", to:"giungla_fitta"}
+  ],
+  actions:[
+    {id:"supera_serpente", label:"Supera in punta di piedi il serpente addormentato", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){
+        if(s.inventory.indexOf("bottiglia_rum")>-1){
+          log("msg","Fai un passo, e la bottiglia di rum nel tuo zaino tintinna contro qualcos'altro. Il serpente apre di scatto un occhio! Ti ritiri appena in tempo. Forse dovresti lasciare a terra qualcosa che fa rumore, prima di riprovare.");
+          return;
+        }
+        go("grotta_pappagalli");
+      }
+    }
+  ]
+},
+
+grotta_pappagalli:{
+  name:"Grotta dei Pappagalli",
+  dark:false,
+  desc:function(s){
+    if(s.flags.parrotCaught) return "La piccola grotta all'ingresso della scogliera è tranquilla. Tra le rocce, qualcosa di rosso scintilla ancora.";
+    return "Una grotta bassa e ariosa, piena di pappagalli variopinti che schiamazzano tra le rocce. Uno in particolare, dalle piume verdi e blu, ti osserva con curiosità. Tra le rocce scorgi anche qualcosa di rosso e scintillante.";
+  },
+  items:["rubino_stella"],
+  exits:[
+    {label:"Torna alla radura", to:"radura_serpente"},
+    {label:"Prosegui verso la scogliera", to:"scogliera"}
+  ],
+  actions:[
+    {id:"cattura_pappagallo", label:"Offri la galletta al pappagallo curioso", cls:"special",
+      condition:function(s){ return !s.flags.parrotCaught && s.inventory.indexOf("cracker")>-1; },
+      run:function(s){
+        s.inventory.splice(s.inventory.indexOf("cracker"),1);
+        s.flags.parrotCaught=true;
+        s.inventory.push("pappagallo");
+        log("msg","Il pappagallo afferra la galletta dal tuo palmo e, soddisfatto, si appollaia sulla tua spalla. Sembra intenzionato a seguirti ovunque tu vada."); }
+    },
+    {id:"pappagallo_no_cracker", label:"Prova ad avvicinarti al pappagallo", cls:"",
+      condition:function(s){ return !s.flags.parrotCaught && s.inventory.indexOf("cracker")===-1; },
+      run:function(s){ log("msg","Il pappagallo si tiene a distanza, diffidente. Forse qualcosa da mangiare lo convincerebbe ad avvicinarsi."); }
+    }
+  ]
+},
+
+scogliera:{
+  name:"Sentiero della Scogliera",
+  dark:false,
+  desc:function(s){ return "Un sentiero stretto corre lungo il bordo di una scogliera a picco sul mare. Più avanti, un ponte di corde consumate attraversa un profondo canalone."; },
+  exits:[
+    {label:"Torna alla grotta dei pappagalli", to:"grotta_pappagalli"}
+  ],
+  actions:[
+    {id:"attraversa_ponte", label:"Attraversa il ponte di corde", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){
+        if(s.inventory.length>2){
+          log("msg","Metti un piede sul ponte, e le assi scricchiolano paurosamente sotto il tuo peso. Porti con te troppa roba — il ponte non reggerà. Apri lo zaino e lascia qui qualcosa prima di riprovare.");
+          return;
+        }
+        go("isolotto_interno");
+      }
+    }
+  ]
+},
+
+isolotto_interno:{
+  name:"Isolotto Interno",
+  dark:false,
+  desc:function(s){ return "Dall'altro lato del ponte di corde, un isolotto roccioso e silenzioso. Uno specchio dalla cornice dorata, chissà come finito qui, è appoggiato contro una roccia."; },
+  items:["specchio_ornato"],
+  exits:[
+    {label:"Torna al ponte di corde", to:"scogliera"},
+    {label:"Prosegui verso la laguna", to:"laguna_fantasma"}
+  ]
+},
+
+laguna_fantasma:{
+  name:"Laguna della Leggenda",
+  dark:false,
+  desc:function(s){ return "Una laguna nascosta, l'acqua immobile come vetro scuro. Su uno scoglio al centro, qualcosa scintilla di verde. L'aria qui è insolitamente fredda."; },
+  items:["smeraldo_pirata"],
+  exits:[
+    {label:"Torna all'isolotto", to:"isolotto_interno"},
+    {label:"Prosegui verso il cunicolo di roccia", to:"cunicolo_stretto"}
+  ],
+  actions:[
+    {id:"ascolta_fantasma", label:"Ascolta il sussurro che aleggia sulla laguna", cls:"special",
+      condition:function(s){ return !s.discovered.piastre; },
+      run:function(s){
+        s.discovered.piastre=true;
+        log("msg","Un sussurro freddo attraversa l'aria immobile, come la voce roca di un vecchio pirata da tempo scomparso: 'Piastre... piastre... solo chi conosce la parola potrà reclamare l'ultimo tesoro...' Poi il silenzio torna. Hai imparato la parola d'ordine: PIASTRE.");
+      }
+    }
+  ]
+},
+
+cunicolo_stretto:{
+  name:"Cunicolo di Roccia",
+  dark:true,
+  desc:function(s){ return "Uno stretto cunicolo scavato nella roccia viva scende verso il cuore dell'isola. Il passaggio è talmente angusto che è impossibile procedere portando con sé troppo peso."; },
+  exits:[
+    {label:"Torna alla laguna", to:"laguna_fantasma"}
+  ],
+  actions:[
+    {id:"striscia_cunicolo", label:"Striscia nel cunicolo verso il basso", cls:"special",
+      condition:function(s){ return true; },
+      run:function(s){
+        if(s.inventory.length>1){
+          log("msg","Provi a infilarti nel passaggio, ma tra zaino e oggetti resti incastrato. Qui dentro puoi portare solo la torcia, nient'altro: apri lo zaino e lascia il resto prima di riprovare.");
+          return;
+        }
+        go("sala_del_tesoro");
+      }
+    }
+  ]
+},
+
+sala_del_tesoro:{
+  name:"Sala del Tesoro",
+  dark:true,
+  desc:function(s){
+    if(s.flags.vaultOpened) return "La camera scavata nella roccia custodisce ancora i suoi ultimi segreti scintillanti, ora alla tua portata.";
+    return "Una piccola camera scavata nella roccia. Al centro, un forziere di ferro battuto è chiuso da una serratura strana, priva di buco per la chiave — sembra rispondere solo a una parola pronunciata ad alta voce.";
+  },
+  exits:[
+    {label:"Torna al cunicolo", to:"cunicolo_stretto"}
+  ],
+  actions:[
+    {id:"apri_forziere", label:"Pronuncia PIASTRE davanti al forziere", cls:"magic",
+      condition:function(s){ return !s.flags.vaultOpened && s.discovered.piastre; },
+      run:function(s){
+        if(s.inventory.indexOf("pappagallo")===-1){
+          log("msg","Pronunci tu stesso la parola, ma la serratura resta muta: sembra riconoscere solo una voce non umana. Forse un compagno con il dono della parola potrebbe ripeterla al posto tuo...");
+          return;
+        }
+        s.flags.vaultOpened=true;
+        var items = ROOMS.sala_del_tesoro.items || [];
+        items = items.concat(["collana_perle","corona_gemme"]);
+        state.roomItemsOverride["sala_del_tesoro"]=items;
+        log("msg","Il pappagallo sulla tua spalla, quasi per gioco, ripete a squarciagola: 'PIASTRE! PIASTRE!' La serratura scatta con un clangore metallico, e il forziere si spalanca, rivelando una collana di perle nere e una corona tempestata di gemme.");
+      }
+    },
+    {id:"forziere_muto", label:"Osserva il forziere silenzioso", cls:"",
+      condition:function(s){ return !s.flags.vaultOpened && !s.discovered.piastre; },
+      run:function(s){ log("msg","La serratura non ha buco per chiavi: sembra rispondere solo a una parola segreta, che ancora non conosci."); }
+    }
+  ]
+},
+
+duna_mappa:{
+  name:"Dune a Sud",
+  dark:false,
+  desc:function(s){ return "Dune di sabbia dorata si susseguono a perdita d'occhio, il vento che disegna e cancella continuamente le tracce sulla loro superficie."; },
+  exits:[
+    {label:"Torna al sentiero costiero", to:"sentiero_costa"}
+  ],
+  actions:[
+    {id:"scava", label:"Scava dove indica la mappa", cls:"special",
+      condition:function(s){ return !s.flags.dugTreasure && s.inventory.indexOf("vecchia_mappa")>-1 && s.inventory.indexOf("pala")>-1; },
+      run:function(s){
+        s.flags.dugTreasure=true;
+        var items = ROOMS.duna_mappa.items || [];
+        items = items.concat(["dobloni_oro"]);
+        state.roomItemsOverride["duna_mappa"]=items;
+        log("msg","Confronti la mappa con le dune davanti a te, conti i passi indicati, e cominci a scavare. La pala colpisce presto qualcosa di duro: un sacchetto pesante, pieno di dobloni d'oro."); }
+    },
+    {id:"scava_mappa_mancante", label:"Osserva le dune, cercando indizi", cls:"",
+      condition:function(s){ return !s.flags.dugTreasure && s.inventory.indexOf("vecchia_mappa")===-1; },
+      run:function(s){ log("msg","Senza una mappa, queste dune sembrano tutte uguali. Se solo avessi qualcosa che indicasse dove scavare..."); }
+    },
+    {id:"scava_no_pala", label:"Cerca qualcosa con cui scavare", cls:"",
+      condition:function(s){ return !s.flags.dugTreasure && s.inventory.indexOf("vecchia_mappa")>-1 && s.inventory.indexOf("pala")===-1; },
+      run:function(s){ log("msg","Sai dove scavare, ma a mani nude non farai molta strada. Ti servirebbe una pala."); }
+    }
+  ]
+},
+
+molo:{
+  name:"Il Vecchio Molo",
+  dark:false,
+  desc:function(s){
+    if(s.flags.sailorReady) return "Il marinaio ti aspetta accanto a una piccola barca legata al molo, canticchiando allegramente una vecchia canzone di mare.";
+    return "Un molo di legno consumato dal sale si protende sull'acqua turchese. Una piccola barca è legata qui, ma non c'è nessuno che sappia guidarla al posto tuo.";
+  },
+  exits:[{label:"Torna alla spiaggia", to:"spiaggia"}],
+  actions:[
+    {id:"salpa", label:"Salpa verso casa con il marinaio", cls:"special",
+      condition:function(s){ return s.flags.sailorReady; },
+      run:function(s){
+        log("msg","Il marinaio issa la vela con un ampio sorriso. La barca fende le onde turchesi, e in un istante che sembra durare un solo respiro, il vortice di nebbia vi riporta dritti nel tuo giardino, sani e salvi, con tutto ciò che avete portato con voi.");
+        go("salotto");
+      }
+    },
+    {id:"salpa_senza_marinaio", label:"Prova a salpare da solo", cls:"",
+      condition:function(s){ return !s.flags.sailorReady; },
+      run:function(s){ log("msg","Non hai la minima idea di come si guidi questa barca in mare aperto. Ti servirebbe qualcuno che sappia il fatto suo — magari quel marinaio addormentato sul relitto, se solo si svegliasse."); }
+    }
+  ]
+}
+
+};
+
+/* ============== SUGGERIMENTI CONTESTUALI ============== */
+function getHint(s){
+  var r=s.room;
+  if(r==="relitto_nave" && s.inventory.indexOf("chiave_baule")===-1 && !s.flags.chestOpened) return "Il baule sul relitto è chiuso a chiave. Hai controllato bene tra gli oggetti trovati nella tua camera da letto?";
+  if(r==="relitto_nave" && !s.flags.sailorReady) return "Il marinaio dorme un sonno pesante. Qualcosa di forte da bere potrebbe risvegliarlo — magari in cucina trovi l'occorrente.";
+  if(r==="capanna_abbandonata" && s.inventory.indexOf("machete")===-1) return "Ricorda di prendere gli attrezzi che trovi qui: potrebbero servirti per aprirti la strada nella giungla, o per scavare altrove.";
+  if(r==="radura_serpente") return "Il serpente si sveglia se sente rumori. Controlla il tuo zaino: forse porti qualcosa che tintinna, come una bottiglia di vetro.";
+  if(r==="grotta_pappagalli" && !s.flags.parrotCaught) return "Il pappagallo sembra affamato. Hai qualcosa da mangiare nello zaino?";
+  if(r==="scogliera") return "Il ponte di corde non regge troppo peso. Se hai più di due oggetti nello zaino, lasciane qualcuno qui prima di attraversare.";
+  if(r==="laguna_fantasma" && !s.discovered.piastre) return "C'è qualcosa da ascoltare, in questa laguna silenziosa. Fermati un momento.";
+  if(r==="cunicolo_stretto") return "Il cunicolo è troppo stretto per chi porta troppa roba. Lascia tutto tranne la torcia prima di provare a strisciare.";
+  if(r==="sala_del_tesoro" && !s.flags.vaultOpened && s.discovered.piastre && s.inventory.indexOf("pappagallo")===-1) return "La serratura non riconosce la tua voce. Forse una creatura capace di ripetere le parole, catturata altrove sull'isola, potrebbe aiutarti.";
+  if(r==="duna_mappa" && s.inventory.indexOf("vecchia_mappa")===-1) return "Senza una mappa non saprai mai dove scavare. Forse un vecchio baule chiuso, da qualche parte sull'isola, ne nasconde una.";
+  if(r==="molo" && !s.flags.sailorReady) return "Ti serve qualcuno che sappia guidare la barca. Hai già svegliato il marinaio sul relitto?";
+  if(s.inventory.some(isTreasure)) return "Porti con te dei tesori! Ricorda di riportarli a casa e depositarli nella vetrina del salotto, per farli contare davvero.";
+  return "Se qualcosa sembra bloccato, ricorda che puoi sempre aprire lo zaino e posare a terra ciò che porti con te. E puoi sempre tornare sui tuoi passi: nessun sentiero si chiude per sempre.";
+}
+
+/* ============== STATO E MOTORE ============== */
+var state = null;
+var STORAGE_KEY = "isola_sette_forzieri_save_v1";
+var NOTES_KEY = "isola_sette_forzieri_appunti_v1";
+
+function freshState(){
+  return {
+    room:"camera_da_letto",
+    previousRoom:"camera_da_letto",
+    inventory:[],
+    deposited:[],
+    flags:{
+      chestOpened:false, sailorReady:false, parrotCaught:false,
+      vaultOpened:false, dugTreasure:false
+    },
+    discovered:{ piastre:false },
+    roomItemsOverride:{}
+  };
+}
+
+function getRoomItems(roomId){
+  if(state.roomItemsOverride.hasOwnProperty(roomId)) return state.roomItemsOverride[roomId];
+  return (ROOMS[roomId].items || []).slice();
+}
+function setRoomItems(roomId, arr){
+  state.roomItemsOverride[roomId] = arr;
+}
+
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ var loaded = JSON.parse(raw);
+      var fresh = freshState();
+      for(var k in fresh){ if(loaded[k]===undefined) loaded[k]=fresh[k]; }
+      return loaded;
+    }
+  }catch(e){}
+  return freshState();
+}
+
+function log(cls, text){
+  var d=document.createElement("div");
+  d.className="entry "+cls;
+  d.textContent=text;
+  document.getElementById("log").appendChild(d);
+  d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+function takeItem(id){
+  var items = getRoomItems(state.room);
+  var idx = items.indexOf(id);
+  if(idx>-1){
+    items.splice(idx,1);
+    setRoomItems(state.room, items);
+    state.inventory.push(id);
+    log("msg","Prendi "+ITEMS[id].name+".");
+    render();
+    saveState();
+  }
+}
+function dropItem(id){
+  var idx = state.inventory.indexOf(id);
+  if(idx>-1){
+    state.inventory.splice(idx,1);
+    var items = getRoomItems(state.room);
+    items.push(id);
+    setRoomItems(state.room, items);
+    log("msg","Lasci "+ITEMS[id].name+" a terra.");
+    render();
+    saveState();
+  }
+}
+
+function go(to){
+  state.previousRoom = state.room;
+  state.room = to;
+  render(true);
+  saveState();
+}
+
+function confirmAction(title, text, onYes){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").textContent = text;
+  openModal("confirmModal");
+  var yes = document.getElementById("confirmYes");
+  var no = document.getElementById("confirmNo");
+  function cleanup(){ yes.onclick=null; no.onclick=null; closeModal("confirmModal"); }
+  yes.onclick=function(){ cleanup(); onYes(); render(); saveState(); };
+  no.onclick=function(){ cleanup(); };
+}
+
+function resetGame(){
+  state = freshState();
+  document.getElementById("log").innerHTML="";
+  document.getElementById("winScreen").classList.add("hidden");
+  render(true);
+  saveState();
+  log("system","— Una nuova avventura sull'Isola dei Sette Forzieri ha inizio —");
+}
+
+/* ============== RENDER ============== */
+function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+
+function el(tag, cls, text){
+  var e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function makeBtn(label, cls, onclick){
+  var b=document.createElement("button");
+  b.className="opt"+(cls?" "+cls:"");
+  b.textContent=label;
+  b.onclick=onclick;
+  return b;
+}
+
+function render(isNewRoomEntry){
+  var room = ROOMS[state.room];
+  document.getElementById("roomTitle").textContent = room.name;
+
+  var flameIcon=document.getElementById("flameIcon");
+  var lampText=document.getElementById("lampText");
+  if(state.inventory.indexOf("torcia")>-1){
+    flameIcon.className = "flame";
+    lampText.textContent = "Torcia in mano";
+  } else {
+    flameIcon.className="flame off";
+    lampText.textContent="Nessuna torcia";
+  }
+
+  var isDark = room.dark && state.inventory.indexOf("torcia")===-1;
+
+  if(isNewRoomEntry){
+    log("room-name", room.name);
+    if(isDark){
+      log("desc","È tutto buio pesto qui dentro. Senza una fonte di luce è troppo pericoloso proseguire.");
+    } else {
+      log("desc", room.desc(state));
+      var here = getRoomItems(state.room).filter(function(id){ return state.inventory.indexOf(id)===-1; });
+      if(here.length>0){
+        var names = here.map(function(id){return ITEMS[id].name;}).join(", ");
+        log("desc","Qui a terra noti: "+names+".");
+      }
+    }
+  }
+
+  var actionsDiv = document.getElementById("actions");
+  actionsDiv.innerHTML="";
+
+  if(isDark){
+    var row = el("div","btn-row");
+    row.appendChild(makeBtn("Torna indietro, a tentoni","exit",function(){ go(state.previousRoom); }));
+    actionsDiv.appendChild(row);
+    return;
+  }
+
+  var actions = (room.actions||[]).filter(function(a){ return a.condition(state); });
+  if(actions.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Cosa puoi fare qui"));
+    var arow = el("div","btn-row");
+    actions.forEach(function(a){
+      arow.appendChild(makeBtn(a.label, "opt "+(a.cls||""), function(act){
+        return function(){ act.run(state); render(); saveState(); };
+      }(a)));
+    });
+    actionsDiv.appendChild(arow);
+  }
+
+  var here = getRoomItems(state.room);
+  if(here.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Oggetti qui"));
+    var irow = el("div","btn-row");
+    here.forEach(function(id){
+      irow.appendChild(makeBtn("Prendi: "+ITEMS[id].name, "", function(itemId){
+        return function(){ takeItem(itemId); };
+      }(id)));
+    });
+    if(irow.children.length>0) actionsDiv.appendChild(irow);
+  }
+
+  var exits = (room.exits||[]).filter(function(ex){ return !ex.requires || ex.requires(state); });
+  if(exits.length>0){
+    actionsDiv.appendChild(el("div","action-group-label","Dove vuoi andare"));
+    var erow = el("div","btn-row");
+    exits.forEach(function(ex){
+      erow.appendChild(makeBtn(ex.label,"exit",function(exit){
+        return function(){ go(exit.to); };
+      }(ex)));
+    });
+    actionsDiv.appendChild(erow);
+  }
+}
+
+/* ============== INVENTARIO / MODALI ============== */
+function renderInventoryModal(){
+  var carried = document.getElementById("invCarried");
+  var here = document.getElementById("invHere");
+  carried.innerHTML=""; here.innerHTML="";
+
+  if(state.inventory.length===0){
+    carried.appendChild(el("div","empty-note","Non porti nulla con te."));
+  } else {
+    state.inventory.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Tesoro"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var actionsWrap = document.createElement("div");
+      var btnDrop = document.createElement("button");
+      btnDrop.textContent="Lascia qui";
+      btnDrop.onclick=function(){ dropItem(id); renderInventoryModal(); };
+      actionsWrap.appendChild(btnDrop);
+      row.appendChild(actionsWrap);
+      carried.appendChild(row);
+    });
+  }
+
+  var roomItems = getRoomItems(state.room);
+  if(roomItems.length===0){
+    here.appendChild(el("div","empty-note","Non c'è nulla a terra qui."));
+  } else {
+    roomItems.forEach(function(id){
+      var row = el("div","inv-item");
+      var nameWrap = el("div","name");
+      nameWrap.textContent = ITEMS[id].name;
+      if(isTreasure(id)){ var tag=el("span","tag","Tesoro"); nameWrap.appendChild(tag); }
+      row.appendChild(nameWrap);
+      var btnTake=document.createElement("button");
+      btnTake.textContent="Prendi";
+      btnTake.onclick=function(){ takeItem(id); renderInventoryModal(); };
+      row.appendChild(btnTake);
+      here.appendChild(row);
+    });
+  }
+}
+
+function renderScoreModal(){
+  var c = document.getElementById("scoreContent");
+  c.innerHTML="";
+  var score = state.deposited.length * POINTS_PER_TREASURE;
+  var big = el("div","score-big", score+" / "+(TREASURE_IDS.length*POINTS_PER_TREASURE));
+  c.appendChild(big);
+  c.appendChild(el("div","score-sub", state.deposited.length+" di "+TREASURE_IDS.length+" tesori riportati a casa"));
+  TREASURE_IDS.forEach(function(id){
+    var got = state.deposited.indexOf(id)>-1;
+    var row = el("div","treasure-row "+(got?"got":"missing"));
+    row.appendChild(el("span","", got ? "✓ "+ITEMS[id].name : "? tesoro non ancora trovato"));
+    c.appendChild(row);
+  });
+}
+
+function showWinScreen(){
+  document.getElementById("winScreen").classList.remove("hidden");
+}
+
+/* ============== NOTE ============== */
+function loadNotes(){
+  try{ return localStorage.getItem(NOTES_KEY) || ""; }catch(e){ return ""; }
+}
+function saveNotes(){
+  try{ localStorage.setItem(NOTES_KEY, document.getElementById("notesArea").value); }catch(e){}
+}
+
+/* ============== EVENTI UI ============== */
+document.getElementById("btnInv").onclick=function(){ renderInventoryModal(); openModal("invModal"); };
+document.getElementById("btnLook").onclick=function(){ render(true); };
+document.getElementById("btnHint").onclick=function(){ log("msg","💡 "+getHint(state)); document.getElementById("log").lastChild.scrollIntoView({behavior:"smooth",block:"end"}); };
+document.getElementById("btnScore").onclick=function(){ renderScoreModal(); openModal("scoreModal"); };
+document.getElementById("btnNotes").onclick=function(){ document.getElementById("notesArea").value = loadNotes(); openModal("notesModal"); };
+document.getElementById("btnRestart").onclick=function(){
+  confirmAction(
+    "Ricominciare l'avventura?",
+    "Perderai la posizione attuale, l'inventario e i tesori depositati. I tuoi appunti restano salvati. Vuoi davvero ricominciare da capo?",
+    function(){ resetGame(); }
+  );
+};
+
+document.querySelectorAll("[data-close]").forEach(function(b){
+  b.onclick=function(){
+    var id=b.getAttribute("data-close");
+    if(id==="notesModal") saveNotes();
+    closeModal(id);
+  };
+});
+document.querySelectorAll(".modal-backdrop").forEach(function(bd){
+  bd.addEventListener("click", function(e){
+    if(e.target===bd){
+      if(bd.id==="notesModal") saveNotes();
+      closeModal(bd.id);
+    }
+  });
+});
+document.getElementById("notesArea").addEventListener("input", function(){
+  clearTimeout(window.__notesTimer);
+  window.__notesTimer=setTimeout(saveNotes, 400);
+});
+
+document.getElementById("btnWinRestart").onclick=function(){ resetGame(); };
+document.getElementById("btnWinContinue").onclick=function(){ document.getElementById("winScreen").classList.add("hidden"); };
+
+// scorciatoie tastiera solo per "A" (appunti) e "R" (ricomincia), richieste esplicitamente — nessun altro input da tastiera è previsto
+document.addEventListener("keydown", function(e){
+  if(e.key==="a" || e.key==="A"){
+    document.getElementById("notesArea").value = loadNotes();
+    openModal("notesModal");
+  }
+  if(e.key==="r" || e.key==="R"){
+    document.getElementById("btnRestart").click();
+  }
+});
+
+/* ============== AVVIO ============== */
+state = loadState();
+render(true);
+if(state.deposited.length===0 && state.inventory.length===0 && state.room==="camera_da_letto"){
+  log("system","Benvenuto sull'Isola dei Sette Forzieri. Scegli sempre tra i pulsanti mostrati per muoverti ed agire — non serve digitare nulla. Se qualcosa sembra bloccato, apri lo Zaino [🎒] e ricorda che puoi sempre posare ciò che porti con te.");
+}
+
+})();
+</script>
+</body>
+</html>
