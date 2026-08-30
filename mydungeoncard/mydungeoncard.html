@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>My Dungeon Card</title>
+<meta name="description" content="Deckbuilding roguelike: esplora un dungeon in prima persona e combatti a colpi di carte.">
+<meta name="theme-color" content="#120e1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dungeon Card">
+<!-- manifest/icone collegati via JS solo se il file è ospitato (non file://), per restare puliti anche da soli -->
 <style>
 :root{
   --ink:#120e1f;
@@ -206,7 +212,9 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .poison-chip{display:flex; align-items:center; gap:3px; background:rgba(138,109,255,0.16); border:1px solid var(--purple); color:var(--purple); font-size:11px; font-weight:800; padding:2px 7px; border-radius:10px;}
 
 #enemy-stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; min-height:0; padding:6px 16px;}
-#enemy-sprite{font-size:76px; filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)); transition:transform .12s ease;}
+#enemy-sprite{font-size:76px; filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)); transition:transform .12s ease, filter .4s ease;}
+#enemy-sprite.phase2{filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(255,85,102,0.85)); animation:phase2Pulse 1.6s ease-in-out infinite;}
+@keyframes phase2Pulse{ 0%,100%{ filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 14px rgba(255,85,102,0.6)); } 50%{ filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 26px rgba(255,85,102,1)); } }
 #enemy-sprite.hit{animation:hitshake .28s ease;}
 @keyframes hitshake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px) rotate(-3deg);} 75%{transform:translateX(10px) rotate(3deg);} }
 #enemy-name{font-size:16px; font-weight:800; margin-top:6px;}
@@ -425,6 +433,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div class="opt-row"><span>🔊 Audio</span><div class="toggle on" id="toggle-audio"></div></div>
       <div class="opt-row"><span>⛶ Schermo intero</span><div class="toggle" id="toggle-fullscreen"></div></div>
       <div class="opt-row"><span>📳 Vibrazione (mobile)</span><div class="toggle on" id="toggle-vibrate"></div></div>
+      <button class="btn gem hidden" id="btn-install-app" style="margin-top:6px;">📲 Installa l'app</button>
       <div class="panel-actions">
         <button class="btn danger" id="btn-reset">Azzera progressi</button>
         <button class="btn ghost" id="btn-close-options">Chiudi</button>
@@ -773,12 +782,15 @@ const FLOOR_ENEMIES = {
 };
 const BOSSES = {
   1: {id:'ogre',   name:'Orco Sentinella', icon:'👹', hp:52, dmg:10, pattern:['attack','attack','defend','attack'],
-      line:'"Un altro topo nel mio labirinto. Che sia l\u2019ultimo."'},
+      line:'"Un altro topo nel mio labirinto. Che sia l\u2019ultimo."',
+      pattern2:['attack','attack','buff','attack'], phase2Line:'"IL SANGUE MI RENDE PIÙ FORTE!"'},
   2: {id:'wraith', name:'Spettro Incatenato', icon:'👻', hp:74, dmg:12, pattern:['attack','poison','attack','defend'],
-      line:'"Le catene non tratterranno il mio odio ancora per molto."'},
+      line:'"Le catene non tratterranno il mio odio ancora per molto."',
+      pattern2:['poison','attack','buff','attack'], phase2Line:'"LE CATENE SI SPEZZANO!"'},
   3: {id:'dragon', name:'Drago Nano', icon:'🐲', hp:105, dmg:15, pattern:['attack','attack','defend','buff','attack'],
       line:'"Piccola fiamma... lascia che ti spenga per sempre."',
-      lineRemember:'"Sento ancora il tuo odore... sei tornato a cadere, come già facesti una volta."'},
+      lineRemember:'"Sento ancora il tuo odore... sei tornato a cadere, come già facesti una volta."',
+      pattern2:['attack','buff','attack','attack'], phase2Line:'"IL VERO FUOCO SI RISVEGLIA!"'},
 };
 const MAX_FLOOR = 3; // usato solo per Run Breve
 
@@ -1769,7 +1781,7 @@ function startCombat(enemyId, kind){
   const maxEnergy = 3 + (hasRelic('lanterna')?1:0);
   const initialDraw = hasRelic('lanterna') ? 4 : 5;
   RUN.combat = {
-    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, isElite, nextIntent:null, buffed:false, vulnerableTurns:0, weakTurns:0 },
+    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, isElite, nextIntent:null, buffed:false, vulnerableTurns:0, weakTurns:0, phase2:false },
     drawPile: shuffle(RUN.deck.slice()),
     discardPile: [],
     hand: [],
@@ -1822,7 +1834,8 @@ function renderCombat(){
   $('en-hp-fill').style.width = clamp(e.hp/e.maxHp*100,0,100)+'%';
   $('en-hp-label').textContent = `${e.hp}/${e.maxHp}`;
   $('enemy-sprite').textContent = e.icon;
-  $('enemy-name').textContent = e.name + (e.isBoss?' 👑':(e.isElite?' 🗡️':''));
+  $('enemy-sprite').classList.toggle('phase2', !!e.phase2);
+  $('enemy-name').textContent = e.name + (e.isBoss?' 👑':(e.isElite?' 🗡️':'')) + (e.phase2?' ⚡':'');
   const pc = $('en-poison-chip');
   if(e.poison>0){ pc.classList.remove('hidden'); pc.textContent='☠️ '+e.poison; } else pc.classList.add('hidden');
   const vc = $('en-vulnerable-chip');
@@ -1871,6 +1884,21 @@ function floatNumber(kind, text){
 function shakeEnemy(){
   const s=$('enemy-sprite'); s.classList.remove('hit'); void s.offsetWidth; s.classList.add('hit');
 }
+function checkBossPhaseTransition(e){
+  if(!e || !e.isBoss || e.phase2 || e.hp<=0) return false;
+  const bossData = Object.values(BOSSES).find(b=>b.id===e.id);
+  if(!bossData || !bossData.pattern2) return false;
+  if(e.hp > e.maxHp*0.5) return false;
+  e.phase2 = true;
+  e.pattern = bossData.pattern2;
+  e.patternIdx = 0;
+  e.block = 0; // la trasformazione spazza via ogni difesa residua
+  shakeEnemy(); Audio1.hit(); vibrate([60,30,60,30,80]);
+  floatNumber('poison', '⚡ FASE 2!');
+  renderCombat();
+  toast(bossData.phase2Line || 'Il nemico si trasforma!');
+  return true;
+}
 
 function playCard(idx){
   if(!RUN || !RUN.combat || RUN.combat.busy) return;
@@ -1906,6 +1934,7 @@ function playCard(idx){
       RUN.hp = clamp(RUN.hp+totalApplied, 0, RUN.maxHp);
       floatNumber('heal','+'+totalApplied); Audio1.heal();
     }
+    checkBossPhaseTransition(e);
   }
   if(c.poison){
     const poisonAmt = c.poison + (hasRelic('fiala') ? 2 : 0);
@@ -1958,8 +1987,9 @@ function enemyTurn(){
     e.hp = clamp(e.hp-e.poison,0,e.maxHp);
     floatNumber('poison','-'+e.poison+' ☠️');
     e.poison = Math.max(0, e.poison-1);
+    if(e.hp<=0){ renderCombat(); setTimeout(()=>{ if(RUN) winCombat(); }, 500); return; }
+    checkBossPhaseTransition(e);
     renderCombat();
-    if(e.hp<=0){ setTimeout(()=>{ if(RUN) winCombat(); }, 500); return; }
   }
   setTimeout(()=>{
     if(!RUN || !RUN.combat) return;
@@ -2390,6 +2420,53 @@ window.addEventListener('keydown', (e)=>{
 ========================================================= */
 window.addEventListener('resize', ()=>{ if(SCREEN==='explore') resizeCanvas(); });
 window.addEventListener('orientationchange', ()=> setTimeout(()=>{ if(SCREEN==='explore') resizeCanvas(); },200));
+
+/* =========================================================
+   PWA — installazione e service worker (v1.4)
+========================================================= */
+// Iniettiamo manifest/icone via JS solo se il file è servito (http/https), mai su file://:
+// altrimenti il browser tenterebbe comunque il fetch e sporcherebbe la console di errori
+// per l'uso "singolo file, doppio click" che deve restare sempre pulito.
+if(location.protocol==='https:' || location.protocol==='http:'){
+  const head = document.head;
+  const link = (rel, href, extra)=>{
+    const el = document.createElement('link');
+    el.rel = rel; el.href = href;
+    if(extra) Object.assign(el, extra);
+    head.appendChild(el);
+  };
+  link('manifest', 'manifest.json');
+  link('icon', 'icon-192.png', {type:'image/png'});
+  link('apple-touch-icon', 'icon-192.png');
+}
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('btn-install-app');
+  if(btn) btn.classList.remove('hidden');
+});
+window.addEventListener('appinstalled', ()=>{
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('btn-install-app');
+  if(btn) btn.classList.add('hidden');
+  toast('My Dungeon Card installato! Lo trovi nella tua schermata Home.');
+});
+const installBtn = document.getElementById('btn-install-app');
+if(installBtn){
+  installBtn.onclick = async ()=>{
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.classList.add('hidden');
+  };
+}
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+  });
+}
 
 function boot(){
   loadMeta(); loadOpts();
