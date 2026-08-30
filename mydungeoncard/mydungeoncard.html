@@ -484,6 +484,8 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
     <div class="panel">
       <h2>📖 Codex del Dungeon</h2>
       <div class="desc">Ciò che hai scoperto esplorando, combattendo e scegliendo, run dopo run.</div>
+      <div class="codex-section">Traguardi <span id="codex-achievements-count"></span></div>
+      <div id="codex-achievements-list"></div>
       <div class="codex-section">Nemici <span id="codex-enemies-count"></span></div>
       <div id="codex-enemies-list"></div>
       <div class="codex-section">Reliquie <span id="codex-relics-count"></span></div>
@@ -572,7 +574,7 @@ const LS_META = 'mdc_meta_v1';
 const LS_SAVE = 'mdc_save_v1';
 const LS_OPTS = 'mdc_opts_v1';
 
-let Meta = { highScore:0, bestFloor:0, essence:0, talents:{}, deathLog:[], tutorialDone:{}, codex:{enemies:{},cards:{},relics:{},bivi:{}} };
+let Meta = { highScore:0, bestFloor:0, essence:0, talents:{}, deathLog:[], tutorialDone:{}, codex:{enemies:{},cards:{},relics:{},bivi:{}}, achievements:{} };
 let Settings = { audio:true, vibrate:true };
 
 function loadMeta(){ try{ const s=localStorage.getItem(LS_META); if(s) Meta=Object.assign(Meta, JSON.parse(s)); }catch(e){} }
@@ -703,6 +705,67 @@ const TALENTS = {
 };
 
 /* =========================================================
+   ACHIEVEMENTS (v1.5 — traguardi agganciati al Codex e alle run)
+   Ogni check riceve ctx = { run: RUN, victory: bool } e ritorna bool.
+========================================================= */
+const ACHIEVEMENTS = {
+  bestiario: { id:'bestiario', name:'Bestiario Completo', icon:'📖', reward:40,
+    desc:'Scopri tutti i nemici del dungeon nel Codex.',
+    check: ()=> {
+      const total = Object.keys(ENEMIES).length + Object.keys(ELITES).length + Object.keys(BOSSES).length;
+      return Object.keys((Meta.codex&&Meta.codex.enemies)||{}).length >= total;
+    } },
+  collezionista: { id:'collezionista', name:'Collezionista', icon:'🎴', reward:40,
+    desc:'Scopri tutte le carte base nel Codex.',
+    check: ()=> {
+      const total = Object.values(CARDS).filter(c=>!c.id.includes('_plus')).length;
+      const found = Object.keys((Meta.codex&&Meta.codex.cards)||{}).filter(id=>!id.includes('_plus')).length;
+      return found >= total;
+    } },
+  reliquiario: { id:'reliquiario', name:'Reliquiario', icon:'🔮', reward:40,
+    desc:'Scopri tutte le Reliquie del dungeon (anche in run diverse).',
+    check: ()=> Object.keys((Meta.codex&&Meta.codex.relics)||{}).length >= Object.keys(RELICS).length },
+  entrambevie: { id:'entrambevie', name:'Entrambe le Vie', icon:'🎭', reward:15,
+    desc:'Compi entrambe le scelte di uno stesso bivio, nel corso della tua carriera.',
+    check: ()=> Object.keys(BIVI).some(bid => Meta.codex && Meta.codex.bivi && Meta.codex.bivi[bid+'_a'] && Meta.codex.bivi[bid+'_b']) },
+  senzagraffio: { id:'senzagraffio', name:'Senza un Graffio', icon:'🛡️', reward:35,
+    desc:'Vinci una run senza mai subire danno, dall\u2019inizio alla fine.',
+    check: (ctx)=> ctx.victory && !ctx.run.flags.tookDamageEver },
+  fulmine: { id:'fulmine', name:'Colpo Fulmineo', icon:'⚡', reward:20,
+    desc:'Vinci un combattimento nel primo turno, senza subire un solo attacco.',
+    check: (ctx)=> !!ctx.run.flags.oneTurnKill },
+  conquista: { id:'conquista', name:'Dungeon Conquistato', icon:'🏆', reward:50,
+    desc:'Vinci una Run Completa: tutti e 3 gli Atti, 9 piani.',
+    check: (ctx)=> ctx.victory && ctx.run.mode==='completa' },
+  perunsoffio: { id:'perunsoffio', name:'Per un Soffio', icon:'💔', reward:25,
+    desc:'Vinci una run con 10 PF o meno rimasti.',
+    check: (ctx)=> ctx.victory && ctx.run.hp<=10 },
+  ricchezza: { id:'ricchezza', name:'Ricchezza Sfacciata', icon:'💰', reward:20,
+    desc:'Termina una run con almeno 200 monete d\u2019oro non spese.',
+    check: (ctx)=> ctx.run.gold>=200 },
+  trepatti: { id:'trepatti', name:'Tre Patti', icon:'⚗️', reward:30,
+    desc:'Ottieni 3 Reliquie in una singola run.',
+    check: (ctx)=> ctx.run.relics.length>=3 },
+};
+function checkAchievements(run, victory){
+  Meta.achievements = Meta.achievements || {};
+  const ctx = { run, victory };
+  const unlocked = [];
+  Object.values(ACHIEVEMENTS).forEach(a=>{
+    if(Meta.achievements[a.id]) return; // già sbloccato in passato
+    let ok = false;
+    try { ok = !!a.check(ctx); } catch(e){ ok = false; }
+    if(ok){
+      Meta.achievements[a.id] = true;
+      Meta.essence = (Meta.essence||0) + a.reward;
+      unlocked.push(a);
+    }
+  });
+  if(unlocked.length) saveMeta();
+  return unlocked;
+}
+
+/* =========================================================
    CHARACTERS (v1.2 — playstyle diversi)
 ========================================================= */
 const CHARACTERS = {
@@ -742,6 +805,7 @@ const BIVI = {
     text:'Una figura incappucciata offre uno scambio silenzioso: un po\u2019 della tua vitalità in cambio di conoscenza proibita.',
     choiceA:{ label:'🩸 Accetta (-8 PF)', effect: ()=>{
       RUN.hp = clamp(RUN.hp-8,0,RUN.maxHp);
+      markDamageTaken();
       updateExploreHud(); saveRun();
       if(RUN.hp<=0){ RUN.lastDeathCause='un patto avventato'; setTimeout(()=>{ if(RUN) endRun(false); },400); return; }
       openCardReward('Conoscenza Proibita','Scegli una carta da aggiungere al tuo mazzo.', '🕯️');
@@ -1035,6 +1099,7 @@ function newRun(characterId, mode){
   };
 }
 function hasRelic(id){ return !!(RUN && RUN.relics && RUN.relics.includes(id)); }
+function markDamageTaken(){ if(RUN && RUN.flags) RUN.flags.tookDamageEver = true; }
 function discoverCodex(kind, id){
   Meta.codex = Meta.codex || {enemies:{},cards:{},relics:{},bivi:{}};
   if(!Meta.codex[kind]) Meta.codex[kind] = {};
@@ -1402,6 +1467,7 @@ function triggerCellContent(){
     cell.resolved=true;
     const dmg = rand(5,12);
     RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp);
+    markDamageTaken();
     Audio1.hit(); vibrate([40,20,40]);
     openSimpleEvent('⚠️','Trappola!', `Una trappola scatta! Subisci ${dmg} danni.`);
     updateExploreHud();
@@ -1954,6 +2020,7 @@ function playCard(idx){
   if(c.cleanse){ cb.playerPoison = 0; }
   if(c.selfDmg){
     RUN.hp = clamp(RUN.hp-c.selfDmg, 0, RUN.maxHp);
+    markDamageTaken();
     floatNumber('dmg','-'+c.selfDmg); Audio1.hit(); vibrate(15);
   }
 
@@ -1999,7 +2066,7 @@ function enemyTurn(){
       if(e.weakTurns>0){ dmg = Math.round(dmg*0.75); }
       let toBlock = Math.min(cb.playerBlock, dmg);
       cb.playerBlock -= toBlock; dmg -= toBlock;
-      if(dmg>0){ RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp); floatNumber('dmg','-'+dmg); cb.tookDamage=true; Audio1.hit(); vibrate([30,20,30]); }
+      if(dmg>0){ RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp); markDamageTaken(); floatNumber('dmg','-'+dmg); cb.tookDamage=true; Audio1.hit(); vibrate([30,20,30]); }
       else { floatNumber('block','Bloccato!'); Audio1.block(); }
     } else if(move==='defend'){
       e.block += Math.round(e.dmg*0.9);
@@ -2016,6 +2083,7 @@ function enemyTurn(){
     // apply player poison DOT
     if(cb.playerPoison>0){
       RUN.hp = clamp(RUN.hp-cb.playerPoison,0,RUN.maxHp);
+      markDamageTaken();
       floatNumber('poison','-'+cb.playerPoison+' ☠️');
       cb.playerPoison = Math.max(0, cb.playerPoison-1);
       cb.tookDamage=true;
@@ -2041,6 +2109,7 @@ function winCombat(){
   const cb = RUN.combat; const wasBoss = cb.enemy.isBoss; const wasElite = cb.enemy.isElite;
   RUN.kills++;
   discoverCodex('enemies', cb.enemy.id);
+  if(cb.turn===1) RUN.flags.oneTurnKill = true;
   if(!cb.tookDamage){ RUN.streak++; RUN.bestStreak=Math.max(RUN.bestStreak,RUN.streak); } else { RUN.streak=0; }
   const act = actOf(RUN.mode, RUN.floor);
   const base = (wasBoss?60:(wasElite?35:15)) * act;
@@ -2123,6 +2192,7 @@ function endRun(victory){
     Meta.deathLog.push({ floor:RUN.floor, cause: RUN.lastDeathCause || 'il dungeon', deckSize:RUN.deck.length });
     if(Meta.deathLog.length>5) Meta.deathLog.shift();
   }
+  const unlockedAchievements = checkAchievements(RUN, victory);
   saveMeta();
   clearRun();
   $('screen-end').className = 'screen active ' + (victory?'victory':'defeat');
@@ -2130,7 +2200,10 @@ function endRun(victory){
   $('end-title').textContent = victory? (RUN.mode==='completa'?'Dungeon Conquistato!':'Vittoria!') : 'Sei Caduto...';
   const floorLabel = RUN.mode==='completa' ? `Atto ${actOf(RUN.mode,RUN.floor)}, Piano ${subFloorOf(RUN.mode,RUN.floor)}` : `Piano ${RUN.floor}`;
   const goldNote = essenceFromGold>0 ? ` (di cui ${essenceFromGold} dall'oro residuo)` : '';
-  $('end-sub').textContent = (victory? 'Hai conquistato il dungeon fino in fondo.' : `Sconfitto al ${floorLabel}, contro ${RUN.lastDeathCause||'il dungeon'}.`) + ` +${essenceEarned} ⚗️ Essenza${goldNote}.`;
+  const achievementNote = unlockedAchievements.length
+    ? ` 🏅 ${unlockedAchievements.length>1?'Nuovi traguardi':'Nuovo traguardo'}: ${unlockedAchievements.map(a=>a.icon+' '+a.name).join(', ')} (+${unlockedAchievements.reduce((s,a)=>s+a.reward,0)} ⚗️).`
+    : '';
+  $('end-sub').textContent = (victory? 'Hai conquistato il dungeon fino in fondo.' : `Sconfitto al ${floorLabel}, contro ${RUN.lastDeathCause||'il dungeon'}.`) + ` +${essenceEarned} ⚗️ Essenza${goldNote}.${achievementNote}`;
   $('end-score').textContent = RUN.score;
   $('end-floor').textContent = RUN.floor;
   $('end-kills').textContent = RUN.kills;
@@ -2162,7 +2235,7 @@ $('btn-pause-options').onclick = ()=>{ $('overlay-pause').classList.remove('acti
 $('btn-reset').onclick = ()=>{
   if(confirm('Azzerare record, Essenza, Talenti e run salvata? Questa azione non può essere annullata.')){
     localStorage.removeItem(LS_META); localStorage.removeItem(LS_SAVE);
-    Meta={highScore:0,bestFloor:0,essence:0,talents:{},deathLog:[],tutorialDone:{},codex:{enemies:{},cards:{},relics:{},bivi:{}}}; RUN=null;
+    Meta={highScore:0,bestFloor:0,essence:0,talents:{},deathLog:[],tutorialDone:{},codex:{enemies:{},cards:{},relics:{},bivi:{}},achievements:{}}; RUN=null;
     updateTitleMeta();
     $('overlay-options').classList.remove('active');
     toast('Progressi azzerati.');
@@ -2355,8 +2428,33 @@ function codexRow(icon, name, desc, discovered){
   `;
   return row;
 }
+function achievementRow(a, unlocked){
+  const row = document.createElement('div');
+  row.className = 'talent-row' + (unlocked?' owned':'');
+  row.innerHTML = `
+    <div class="talent-icon">${unlocked ? a.icon : '🔒'}</div>
+    <div class="talent-info">
+      <div class="talent-name">${a.name}</div>
+      <div class="talent-desc">${a.desc}</div>
+    </div>
+    ${unlocked ? '' : `<div style="font-size:11px; font-weight:800; color:var(--gold); flex-shrink:0; text-align:right;">+${a.reward}<br>⚗️</div>`}
+  `;
+  return row;
+}
 function renderCodexPanel(){
   Meta.codex = Meta.codex || {enemies:{},cards:{},relics:{},bivi:{}};
+  Meta.achievements = Meta.achievements || {};
+
+  const achWrap = $('codex-achievements-list'); achWrap.innerHTML='';
+  let achCount = 0;
+  const allAchievements = Object.values(ACHIEVEMENTS);
+  allAchievements.forEach(a=>{
+    const unlocked = !!Meta.achievements[a.id];
+    if(unlocked) achCount++;
+    achWrap.appendChild(achievementRow(a, unlocked));
+  });
+  $('codex-achievements-count').textContent = `(${achCount}/${allAchievements.length})`;
+
   const allEnemies = [...Object.values(ENEMIES), ...Object.values(ELITES), ...Object.values(BOSSES)];
   const eWrap = $('codex-enemies-list'); eWrap.innerHTML='';
   let eCount = 0;
