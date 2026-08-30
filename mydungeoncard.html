@@ -118,6 +118,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .talent-desc{font-size:11px; color:var(--parchment-dim); line-height:1.35; margin-top:2px;}
 .talent-buy{flex-shrink:0; padding:8px 12px; font-size:12px; border-radius:10px;}
 .essence-banner{display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(138,109,255,0.12); border:1px solid var(--purple); border-radius:12px; padding:10px; margin-bottom:14px; font-weight:800; font-size:15px; color:#c9bbff;}
+.gold-banner{display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(255,207,92,0.12); border:1px solid var(--gold); border-radius:12px; padding:8px; margin:10px 0 4px; font-weight:800; font-size:14px; color:var(--gold);}
 #title-death-fragment{font-size:11px; color:var(--parchment-dim); font-style:italic; margin-top:10px; max-width:88%; line-height:1.4; opacity:.85;}
 
 /* ---------- CHARACTER SELECT ---------- */
@@ -125,6 +126,16 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .char-header{text-align:center; padding:0 24px 10px;}
 .char-header h2{font-size:22px; color:var(--torch-2);}
 .char-header .desc{font-size:12px; color:var(--parchment-dim); margin-top:4px;}
+.mode-select{display:flex; gap:10px; padding:4px 18px 16px;}
+.mode-btn{
+  flex:1; text-align:left; cursor:pointer; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px;
+  background:rgba(255,255,255,0.03); color:var(--parchment-dim); font-family:inherit;
+}
+.mode-btn.active{border-color:var(--gem); background:rgba(77,226,199,0.10); color:var(--parchment);}
+.mode-btn.locked{opacity:.55;}
+.mode-title{font-size:13px; font-weight:800; color:inherit;}
+.mode-btn.active .mode-title{color:var(--gem);}
+.mode-sub{font-size:10px; margin-top:2px; line-height:1.3;}
 .char-card{display:flex; flex-direction:column; gap:8px; background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:14px; padding:14px; margin:8px 18px;}
 .char-card-top{display:flex; align-items:center; gap:12px;}
 .char-icon{width:52px; height:52px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0;}
@@ -155,7 +166,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 #viewport-wrap{flex:1; position:relative; min-height:0;}
 #viewport{width:100%; height:100%; display:block;}
 #minimap{position:absolute; top:10px; right:10px; border-radius:10px; border:1px solid var(--line); background:rgba(10,8,20,0.72); box-shadow:0 4px 14px rgba(0,0,0,.4);}
-#floor-tag{position:absolute; top:10px; left:10px; background:rgba(10,8,20,0.72); border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--torch-2);}
+#floor-tag{position:absolute; top:10px; left:10px; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:rgba(10,8,20,0.72); border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--torch-2);}
 #toast{
   position:absolute; left:50%; bottom:150px; transform:translateX(-50%) translateY(10px); opacity:0;
   background:rgba(15,11,26,0.92); border:1px solid var(--line); padding:10px 16px; border-radius:12px;
@@ -217,7 +228,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 #hand{display:flex; gap:8px; overflow-x:auto; overflow-y:visible; padding:16px 4px 8px; scroll-snap-type:x proximity;}
 #hand::-webkit-scrollbar{display:none;}
 .card{
-  flex:0 0 auto; width:104px; height:158px; border-radius:12px; position:relative; cursor:pointer;
+  flex:0 0 auto; width:104px; height:170px; border-radius:12px; position:relative; cursor:pointer;
   background:linear-gradient(160deg,#fbf3de,#f0e3c4); color:#2a1d0d; padding:10px 8px 7px; display:flex; flex-direction:column;
   box-shadow:0 6px 14px rgba(0,0,0,.4), inset 0 0 0 2px rgba(0,0,0,.06); border:2px solid #c9a45c;
   scroll-snap-align:start; transition:transform .12s ease, box-shadow .12s ease; -webkit-touch-callout:none;
@@ -240,8 +251,8 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .card .c-icon{font-size:24px; text-align:center; line-height:1; margin-top:2px; flex:0 0 auto;}
 .card .c-name{font-size:11px; font-weight:800; text-align:center; margin-top:5px; line-height:1.15; min-height:2.3em; display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
 .card .c-desc{
-  font-size:9px; line-height:1.28; text-align:center; color:#4a3a20; padding:0 1px; flex:1 1 auto; min-height:0;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; margin-top:2px;
+  font-size:9px; line-height:1.26; text-align:center; color:#4a3a20; padding:0 1px; flex:1 1 auto; min-height:0;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; overflow:hidden; margin-top:2px;
 }
 .card .c-type{
   flex:0 0 auto; font-size:8px; text-transform:uppercase; letter-spacing:.06em; opacity:.6; font-weight:800; text-align:center;
@@ -298,8 +309,18 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
   <!-- CHARACTER SELECT -->
   <div class="screen" id="screen-characters">
     <div class="char-header">
-      <h2>Scegli il tuo Eroe</h2>
-      <div class="desc">Ogni eroe ha un mazzo iniziale diverso: scegli il tuo stile di gioco.</div>
+      <h2>Prepara la tua Run</h2>
+      <div class="desc">Scegli la modalità e poi il tuo eroe.</div>
+    </div>
+    <div class="mode-select">
+      <button class="mode-btn active" id="mode-breve" data-mode="breve">
+        <div class="mode-title">⚡ Run Breve</div>
+        <div class="mode-sub">3 piani · un guardiano ciascuno</div>
+      </button>
+      <button class="mode-btn" id="mode-completa" data-mode="completa">
+        <div class="mode-title">🗺️ Run Completa</div>
+        <div class="mode-sub">9 piani · 3 Atti</div>
+      </button>
     </div>
     <div id="character-list"></div>
     <div class="menu-col" style="padding:6px 18px 0;">
@@ -388,6 +409,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div id="event-icon">💰</div>
       <h2 id="event-title">Tesoro!</h2>
       <div class="desc" id="event-desc">Hai trovato dell'oro.</div>
+      <div class="gold-banner hidden" id="event-gold-banner">💰 <span id="event-gold-amount">0</span> oro disponibili</div>
       <div class="reward-cards" id="event-cards"></div>
       <div class="panel-actions" id="event-actions">
         <button class="btn primary" id="btn-event-ok">Continua</button>
@@ -648,7 +670,7 @@ const RELICS = {
     patto:'+1 energia massima in combattimento. Peschi una carta in meno a inizio scontro.' },
   osso: { id:'osso', name:'Osso Fortunato', icon:'🍀',
     lore:'Appartenuto a chi, prima di te, ha quasi trovato la via d\u2019uscita.',
-    patto:'+25% oro trovato. I nemici hanno il 10% di PF in più.' },
+    patto:'+20% oro trovato. I nemici hanno il 10% di PF in più.' },
   cuore: { id:'cuore', name:'Cuore di Ferro', icon:'🛡️',
     lore:'Batte più lento, ma nulla lo spezza facilmente.',
     patto:'Inizi ogni combattimento con 5 Blocco gratuito. -5 PF massimi permanenti (subito).' },
@@ -661,6 +683,8 @@ const RELICS = {
    TALENTS (permanent cross-run unlocks — v1.1)
 ========================================================= */
 const TALENTS = {
+  run_completa: { id:'run_completa', name:'Sentiero Completo', icon:'🗺️', cost:60,
+    desc:'Sblocca la Run Completa: 9 piani in 3 Atti, con incontri Elite ed eventi speciali.' },
   cuore_robusto: { id:'cuore_robusto', name:'Cuore Robusto', icon:'❤️', cost:40,
     desc:'+10 PF massimi iniziali in ogni run futura.' },
   borsa: { id:'borsa', name:'Borsa Capiente', icon:'💰', cost:30,
@@ -753,14 +777,79 @@ const BOSSES = {
   2: {id:'wraith', name:'Spettro Incatenato', icon:'👻', hp:74, dmg:12, pattern:['attack','poison','attack','defend'],
       line:'"Le catene non tratterranno il mio odio ancora per molto."'},
   3: {id:'dragon', name:'Drago Nano', icon:'🐲', hp:105, dmg:15, pattern:['attack','attack','defend','buff','attack'],
-      line:'"Piccola fiamma... lascia che ti spenga per sempre."'},
+      line:'"Piccola fiamma... lascia che ti spenga per sempre."',
+      lineRemember:'"Sento ancora il tuo odore... sei tornato a cadere, come già facesti una volta."'},
 };
-const MAX_FLOOR = 3;
+const MAX_FLOOR = 3; // usato solo per Run Breve
+
+/* =========================================================
+   ATTI (v1.3 — Run Breve vs Run Completa)
+========================================================= */
+const ACT_LENGTH = 3;
+function actOf(mode, floor){ return mode==='completa' ? Math.ceil(floor/ACT_LENGTH) : floor; }
+function subFloorOf(mode, floor){ return mode==='completa' ? ((floor-1)%ACT_LENGTH)+1 : floor; }
+function maxFloorFor(mode){ return mode==='completa' ? ACT_LENGTH*3 : 3; }
+function floorSizeFor(mode, floor){
+  const sub = subFloorOf(mode, floor);
+  return 5 + (sub-1); // 5,6,7 — si "resetta" a ogni nuovo Atto
+}
+function exitTypeFor(mode, floor){
+  if(mode!=='completa') return 'boss'; // Run Breve: ogni piano ha un guardiano, come in v1.2
+  const sub = subFloorOf(mode, floor);
+  if(sub===ACT_LENGTH) return 'boss';
+  if(sub===ACT_LENGTH-1) return 'elite';
+  return 'stairs';
+}
+function enemyDifficultyMult(){
+  if(RUN.mode!=='completa') return 1 + (RUN.floor-1)*0.28;
+  const act = actOf(RUN.mode, RUN.floor), sub = subFloorOf(RUN.mode, RUN.floor);
+  return 1 + (act-1)*0.32 + (sub-1)*0.14;
+}
+function bossDifficultyMult(){
+  if(RUN.mode!=='completa') return 1 + (RUN.floor-1)*0.15;
+  const act = actOf(RUN.mode, RUN.floor);
+  return 1 + (act-1)*0.30;
+}
+function eliteDifficultyMult(){
+  const act = actOf(RUN.mode, RUN.floor);
+  return 1 + (act-1)*0.22;
+}
+
+/* =========================================================
+   ELITES (v1.3 — incontro opzionale a metà Atto, solo Run Completa)
+========================================================= */
+const ELITES = {
+  1: {id:'shadowhunter', name:'Cacciatore di Ombre', icon:'🗡️', hp:34, dmg:9, pattern:['attack','attack','defend'],
+      line:'"Ti ho fiutato tre corridoi fa."', lore:'Si muove tra le fiaccole spente, dove la luce non arriva mai in tempo.'},
+  2: {id:'chainreaper', name:'Carnefice Incatenato', icon:'⛓️', hp:48, dmg:11, pattern:['attack','defend','attack','poison'],
+      line:'"Le mie catene hanno spezzato di meglio."', lore:'Un tempo prigioniero, ora è lui stesso la prigione di chi lo affronta.'},
+  3: {id:'emberguard', name:'Guardiano Ardente', icon:'🔥', hp:64, dmg:13, pattern:['attack','attack','buff','attack'],
+      line:'"Il fuoco non si stanca mai."', lore:'Veglia sulla soglia finale, alimentato da un fuoco che non consuma legna.'},
+};
+
+/* =========================================================
+   ECONOMIA DELL'ORO (v1.3.1 — guadagni scalati per Atto)
+========================================================= */
+const GOLD_RANGES = {
+  enemy: [[5,10],[8,14],[11,18]],
+  elite: [[12,18],[18,26],[24,34]],
+  boss:  [[20,25],[28,35],[36,45]],
+};
+const REROLL_COSTS = {
+  x2: [20,30,40],
+  x3: [30,45,60],
+};
+const BOTTEGA_PRICES = { 1:[20,30], 2:[40,60], 3:[80,120] }; // per rarità carta
+function rerollCostFor(kind){
+  const act = actOf(RUN.mode, RUN.floor);
+  return REROLL_COSTS[kind][Math.min(act,3)-1];
+}
 
 /* =========================================================
    MAZE GENERATION
 ========================================================= */
-function genMaze(size){
+function genMaze(size, exitType){
+  exitType = exitType || 'boss';
   const cells = [];
   for(let y=0;y<size;y++){ const row=[]; for(let x=0;x<size;x++){ row.push({N:false,E:false,S:false,W:false, content:null, resolved:false}); } cells.push(row); }
   const OPP={N:'S',S:'N',E:'W',W:'E'};
@@ -836,8 +925,8 @@ function genMaze(size){
   const startSideCells = Array.from(startSide).map(s=>{ const [x,y]=s.split(',').map(Number); return {x,y}; }).filter(c=>!(c.x===0&&c.y===0));
   let keyCell = startSideCells.length ? pick(startSideCells) : null;
   if(keyCell) cells[keyCell.y][keyCell.x].content = {type:'key'};
-  // boss at exit
-  cells[exit.y][exit.x].content = {type:'boss'};
+  // boss/elite/stairs alla cella d'uscita
+  cells[exit.y][exit.x].content = {type:exitType};
   // scatter enemies / treasure / traps on remaining empty cells
   const usedSet = new Set();
   usedSet.add('0,0'); usedSet.add(exit.x+','+exit.y);
@@ -846,11 +935,12 @@ function genMaze(size){
     for(let x=0;x<size;x++){
       if(usedSet.has(x+','+y)) continue;
       const r = Math.random();
-      if(r<0.34) cells[y][x].content = {type:'enemy'};
-      else if(r<0.50) cells[y][x].content = {type:'treasure'};
-      else if(r<0.62) cells[y][x].content = {type:'trap'};
-      else if(r<0.71) cells[y][x].content = {type:'shrine'};
-      else if(r<0.77) cells[y][x].content = {type:'bivio', bivioId: pick(Object.keys(BIVI))};
+      if(r<0.33) cells[y][x].content = {type:'enemy'};
+      else if(r<0.48) cells[y][x].content = {type:'treasure'};
+      else if(r<0.59) cells[y][x].content = {type:'trap'};
+      else if(r<0.67) cells[y][x].content = {type:'shrine'};
+      else if(r<0.72) cells[y][x].content = {type:'bivio', bivioId: pick(Object.keys(BIVI))};
+      else if(r<0.77) cells[y][x].content = {type:'bottega'};
       // else empty
     }
   }
@@ -885,10 +975,11 @@ let RUN = null; // active run object
 let SCREEN = 'title';
 let VIEW_ANIM = null; // for smooth-ish transitions (kept minimal/instant per design: step-based)
 
-function newRun(characterId){
+function newRun(characterId, mode){
+  mode = mode==='completa' ? 'completa' : 'breve';
   const character = CHARACTERS[characterId] || CHARACTERS.guerriero;
-  const size = 5;
-  const maze = genMaze(size);
+  const size = floorSizeFor(mode, 1);
+  const maze = genMaze(size, exitTypeFor(mode, 1));
   revealAround(maze, 0, 0);
   let startHp = character.hp;
   let startGold = 0;
@@ -912,6 +1003,8 @@ function newRun(characterId){
   character.deck.forEach(id=> discoverCodex('cards', id));
   return {
     character: character.id,
+    mode: mode,
+    maxFloor: maxFloorFor(mode),
     hp:startHp, maxHp:startHp,
     gold:startGold,
     deck: character.deck.slice(),
@@ -929,7 +1022,6 @@ function newRun(characterId){
     flags:{}
   };
 }
-function floorSize(floor){ return 5 + (floor-1); } // 5,6,7
 function hasRelic(id){ return !!(RUN && RUN.relics && RUN.relics.includes(id)); }
 function discoverCodex(kind, id){
   Meta.codex = Meta.codex || {enemies:{},cards:{},relics:{},bivi:{}};
@@ -988,7 +1080,7 @@ function rectAt(depth, W, H){
   const w = W*(1-t), h = H*(1-t);
   return { x1:(W-w)/2, x2:(W+w)/2, y1:(H-h)/2, y2:(H+h)/2 };
 }
-const CELL_ICONS = {enemy:'👹', treasure:'💰', trap:'⚠️', key:'🗝️', boss:'👑', shrine:'⛩️', bones:'🦴', bivio:'🎭'};
+const CELL_ICONS = {enemy:'👹', treasure:'💰', trap:'⚠️', key:'🗝️', boss:'👑', shrine:'⛩️', bones:'🦴', bivio:'🎭', elite:'🗡️', stairs:'🔽', bottega:'🛒'};
 
 /* =========================================================
    BIOME PALETTES (v1.2 — un colore diverso per ogni piano)
@@ -998,7 +1090,7 @@ const BIOME_PALETTES = {
   2: { name:'Prigione', bgTop:'#241a14', bgBot:'#140d09', floorA:'#3a2418', floorB:'#2e1c12', ceilA:'#1f120b', ceilB:'#170d08', wall:'#6b4030', mortar:'#2a1810', cap:'#7a4a34', capLocked:'#6b4530', voidCol:'#0f0906' },
   3: { name:'Sancta Sanctorum', bgTop:'#2a1414', bgBot:'#150707', floorA:'#3a1c14', floorB:'#2e1510', ceilA:'#200a08', ceilB:'#170606', wall:'#7a3320', mortar:'#2a0d0a', cap:'#8a3a20', capLocked:'#6b4530', voidCol:'#100504' },
 };
-function getBiome(){ return BIOME_PALETTES[Math.min(RUN.floor,3)] || BIOME_PALETTES[1]; }
+function getBiome(){ const act = actOf(RUN.mode, RUN.floor); return BIOME_PALETTES[Math.min(act,3)] || BIOME_PALETTES[1]; }
 
 function renderExplore(){
   if(!RUN) return;
@@ -1213,7 +1305,11 @@ function updateExploreHud(){
   $('hp-text').textContent = `${RUN.hp}/${RUN.maxHp}`;
   $('hp-fill').style.width = clamp(RUN.hp/RUN.maxHp*100,0,100)+'%';
   $('gold-text').textContent = RUN.gold;
-  $('floor-tag').textContent = 'PIANO '+RUN.floor+' · '+getBiome().name;
+  if(RUN.mode==='completa'){
+    $('floor-tag').textContent = 'ATTO '+actOf(RUN.mode,RUN.floor)+' · P.'+subFloorOf(RUN.mode,RUN.floor)+'/'+ACT_LENGTH+' · '+getBiome().name;
+  } else {
+    $('floor-tag').textContent = 'PIANO '+RUN.floor+' · '+getBiome().name;
+  }
   $('relic-count').textContent = RUN.relics ? RUN.relics.length : 0;
 }
 
@@ -1266,19 +1362,27 @@ function triggerCellContent(){
   const cell = maze.cells[p.y][p.x];
   if(!cell.content || cell.resolved) return;
   const type = cell.content.type;
+  const act = actOf(RUN.mode, RUN.floor);
   if(type==='enemy'){
-    const pool = FLOOR_ENEMIES[Math.min(RUN.floor,3)];
-    startCombat(pick(pool), false);
+    const pool = FLOOR_ENEMIES[Math.min(act,3)];
+    startCombat(pick(pool), 'normal');
   } else if(type==='boss'){
-    openBossIntro(BOSSES[RUN.floor]);
+    openBossIntro(BOSSES[act]);
+  } else if(type==='elite'){
+    openEliteIntro(ELITES[act]);
+  } else if(type==='stairs'){
+    cell.resolved = true;
+    Audio1.click(); vibrate(10);
+    nextFloor();
   } else if(type==='treasure'){
     cell.resolved=true;
     if(Math.random()<0.35){
       openCardReward('Scrigno del Tesoro!','Scegli una carta da aggiungere al tuo mazzo.', '💰');
     } else {
-      let g = rand(14,30);
-      if(hasRelic('osso')) g = Math.round(g*1.25);
+      let g = rand(5,15);
+      if(hasRelic('osso')) g = Math.round(g*1.2);
       RUN.gold += g; RUN.score += 5;
+      updateExploreHud();
       openSimpleEvent('💰','Tesoro!', `Hai trovato ${g} monete d'oro.`);
     }
     saveRun();
@@ -1301,6 +1405,8 @@ function triggerCellContent(){
     openShrineEvent();
   } else if(type==='bivio'){
     openBivioEvent(cell.content.bivioId);
+  } else if(type==='bottega'){
+    openBottegaEvent();
   } else if(type==='bones'){
     cell.resolved=true;
     const last = Meta.deathLog && Meta.deathLog.length ? Meta.deathLog[Meta.deathLog.length-1] : null;
@@ -1334,14 +1440,27 @@ function openSimpleEvent(icon, title, desc){
 function closeEvent(){
   RUN.pendingEvent=null;
   evOverlay.classList.remove('active');
+  hideGoldBanner();
   renderExplore();
+}
+function showGoldBanner(){
+  $('event-gold-banner').classList.remove('hidden');
+  $('event-gold-amount').textContent = RUN.gold;
+}
+function hideGoldBanner(){
+  $('event-gold-banner').classList.add('hidden');
 }
 function openCardReward(title, desc, icon, afterCb){
   RUN.pendingEvent='reward';
   $('event-icon').textContent=icon||'🎴';
   $('event-title').textContent=title;
   $('event-desc').textContent=desc;
-  const choices = weightedPick(REWARD_POOL, c=> (4-c.rarity), 3, true);
+  renderCardRewardChoices(2, afterCb);
+  evOverlay.classList.add('active');
+}
+function renderCardRewardChoices(count, afterCb){
+  showGoldBanner();
+  const choices = weightedPick(REWARD_POOL, c=> (4-c.rarity), count, true);
   const wrap = $('event-cards'); wrap.innerHTML='';
   choices.forEach(c=>{
     const el = buildCardEl(c, false);
@@ -1355,9 +1474,28 @@ function openCardReward(title, desc, icon, afterCb){
     };
     wrap.appendChild(el);
   });
-  $('event-actions').innerHTML='<button class="btn ghost" id="btn-event-skip">Salta (+10 oro)</button>';
-  $('btn-event-skip').onclick = ()=>{ RUN.gold+=10; updateExploreHud(); closeEvent(); if(afterCb) afterCb(); saveRun(); };
-  evOverlay.classList.add('active');
+  const cost2 = rerollCostFor('x2'), cost3 = rerollCostFor('x3');
+  const afford2 = RUN.gold>=cost2, afford3 = RUN.gold>=cost3;
+  $('event-actions').innerHTML = `
+    <div style="display:flex; gap:8px;">
+      <button class="btn ghost" id="btn-reroll2" style="flex:1; font-size:11px; padding:12px 6px;" ${afford2?'':'disabled'}>🔄 2 carte<br><span style="opacity:.7;">-${cost2}💰</span></button>
+      <button class="btn ghost" id="btn-reroll3" style="flex:1; font-size:11px; padding:12px 6px;" ${afford3?'':'disabled'}>🔄 3 carte<br><span style="opacity:.7;">-${cost3}💰</span></button>
+    </div>
+    <button class="btn ghost" id="btn-event-skip">Salta (+5 oro)</button>
+  `;
+  $('btn-reroll2').onclick = ()=>{
+    if(RUN.gold<cost2) return;
+    RUN.gold -= cost2; updateExploreHud(); Audio1.click(); vibrate(10);
+    renderCardRewardChoices(2, afterCb);
+    saveRun();
+  };
+  $('btn-reroll3').onclick = ()=>{
+    if(RUN.gold<cost3) return;
+    RUN.gold -= cost3; updateExploreHud(); Audio1.click(); vibrate(10);
+    renderCardRewardChoices(3, afterCb);
+    saveRun();
+  };
+  $('btn-event-skip').onclick = ()=>{ RUN.gold+=5; updateExploreHud(); closeEvent(); if(afterCb) afterCb(); saveRun(); };
 }
 function buildCardEl(c, small){
   const el = document.createElement('div');
@@ -1382,16 +1520,87 @@ function buildRelicEl(r){
   `;
   return el;
 }
+function buildShopCardEl(c, price, affordable){
+  const el = document.createElement('div');
+  el.className = 'card type-'+c.type + (affordable?'':' unaffordable');
+  el.innerHTML = `
+    <div class="c-cost">${c.cost}</div>
+    <div class="c-icon">${c.icon}</div>
+    <div class="c-name">${c.name}</div>
+    <div class="c-desc">${c.desc}</div>
+    <div class="c-type" style="color:var(--gold); opacity:1; font-weight:900;">💰 ${price}</div>
+  `;
+  return el;
+}
+
+/* ---------- Bottega Errante (v1.3.1 — compra una carta specifica) ---------- */
+function openBottegaEvent(){
+  const maze=RUN.maze; const cell = maze.cells[maze.player.y][maze.player.x];
+  cell.resolved = true;
+  RUN.pendingEvent='bottega';
+  $('event-icon').textContent='🛒';
+  $('event-title').textContent='Bottega Errante';
+  $('event-desc').textContent='Un mercante silenzioso espone la sua merce. Scegli cosa comprare, se hai abbastanza oro.';
+  showGoldBanner();
+  const wrap = $('event-cards'); wrap.innerHTML='';
+  const offerings = weightedPick(REWARD_POOL, c=>(4-c.rarity), 4, true);
+  offerings.forEach(c=>{
+    const price = rand(...BOTTEGA_PRICES[c.rarity]);
+    const affordable = RUN.gold>=price;
+    const el = buildShopCardEl(c, price, affordable);
+    if(affordable){
+      el.onclick = ()=>{
+        if(RUN.gold<price) return;
+        RUN.gold -= price;
+        RUN.deck.push(c.id);
+        discoverCodex('cards', c.id);
+        Audio1.treasure(); vibrate([15,10,15]);
+        updateExploreHud();
+        closeEvent();
+        toast(`Hai acquistato ${c.name} per ${price} oro.`);
+        saveRun();
+      };
+    }
+    wrap.appendChild(el);
+  });
+  $('event-actions').innerHTML = '<button class="btn ghost" id="btn-event-ok">Vattene</button>';
+  $('btn-event-ok').onclick = closeEvent;
+  evOverlay.classList.add('active');
+  tutorialOnce('bottega', ()=> setTimeout(()=> toast('La Bottega Errante vende carte specifiche: paghi in oro, scegli esattamente cosa aggiungere al mazzo.'), 500));
+  saveRun();
+}
 
 /* ---------- Boss intro (narrative beat before a boss fight) ---------- */
+function getBossIntroLine(bossData){
+  // continuità narrativa: se il giocatore è già morto contro il boss dell'Atto I,
+  // il boss finale (Atto III) lo ricorda — v1.3
+  if(bossData.id===BOSSES[3].id && bossData.lineRemember && Meta.deathLog){
+    const remembered = Meta.deathLog.some(d=> d.cause===BOSSES[1].name);
+    if(remembered) return bossData.lineRemember;
+  }
+  return bossData.line || '';
+}
 function openBossIntro(bossData){
   RUN.pendingEvent='bossintro';
   $('event-icon').textContent = bossData.icon;
   $('event-title').textContent = bossData.name;
-  $('event-desc').textContent = bossData.line || '';
+  $('event-desc').textContent = getBossIntroLine(bossData);
   $('event-cards').innerHTML='';
   $('event-actions').innerHTML = '<button class="btn danger" id="btn-event-ok">⚔️ Combatti!</button>';
-  $('btn-event-ok').onclick = ()=>{ closeEvent(); startCombat(bossData.id, true); };
+  $('btn-event-ok').onclick = ()=>{ closeEvent(); startCombat(bossData.id, 'boss'); };
+  evOverlay.classList.add('active');
+  renderMinimap();
+}
+
+/* ---------- Elite intro (v1.3 — incontro opzionale a metà Atto) ---------- */
+function openEliteIntro(eliteData){
+  RUN.pendingEvent='eliteintro';
+  $('event-icon').textContent = eliteData.icon;
+  $('event-title').textContent = eliteData.name+' (Elite)';
+  $('event-desc').textContent = eliteData.line || '';
+  $('event-cards').innerHTML='';
+  $('event-actions').innerHTML = '<button class="btn danger" id="btn-event-ok">⚔️ Combatti!</button>';
+  $('btn-event-ok').onclick = ()=>{ closeEvent(); startCombat(eliteData.id, 'elite'); };
   evOverlay.classList.add('active');
   renderMinimap();
 }
@@ -1548,15 +1757,19 @@ function openRelicReward(afterCb, opts){
 /* =========================================================
    COMBAT ENGINE
 ========================================================= */
-function startCombat(enemyId, isBoss){
-  const base = isBoss ? BOSSES[RUN.floor] : ENEMIES[enemyId];
-  const floorMult = 1 + (RUN.floor-1)*0.28;
-  let hp = Math.round(base.hp * (isBoss? (1+(RUN.floor-1)*0.15) : floorMult));
+function startCombat(enemyId, kind){
+  // kind: 'normal' | 'boss' | 'elite'
+  const act = actOf(RUN.mode, RUN.floor);
+  const isBoss = kind==='boss';
+  const isElite = kind==='elite';
+  const base = isBoss ? BOSSES[act] : (isElite ? ELITES[act] : ENEMIES[enemyId]);
+  const mult = isBoss ? bossDifficultyMult() : (isElite ? eliteDifficultyMult() : enemyDifficultyMult());
+  let hp = Math.round(base.hp * mult);
   if(hasRelic('osso')) hp = Math.round(hp*1.10);
   const maxEnergy = 3 + (hasRelic('lanterna')?1:0);
   const initialDraw = hasRelic('lanterna') ? 4 : 5;
   RUN.combat = {
-    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, nextIntent:null, buffed:false, vulnerableTurns:0, weakTurns:0 },
+    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, isElite, nextIntent:null, buffed:false, vulnerableTurns:0, weakTurns:0 },
     drawPile: shuffle(RUN.deck.slice()),
     discardPile: [],
     hand: [],
@@ -1609,7 +1822,7 @@ function renderCombat(){
   $('en-hp-fill').style.width = clamp(e.hp/e.maxHp*100,0,100)+'%';
   $('en-hp-label').textContent = `${e.hp}/${e.maxHp}`;
   $('enemy-sprite').textContent = e.icon;
-  $('enemy-name').textContent = e.name + (e.isBoss?' 👑':'');
+  $('enemy-name').textContent = e.name + (e.isBoss?' 👑':(e.isElite?' 🗡️':''));
   const pc = $('en-poison-chip');
   if(e.poison>0){ pc.classList.remove('hidden'); pc.textContent='☠️ '+e.poison; } else pc.classList.add('hidden');
   const vc = $('en-vulnerable-chip');
@@ -1795,14 +2008,15 @@ function enemyTurn(){
 }
 function winCombat(){
   if(!RUN || !RUN.combat) return;
-  const cb = RUN.combat; const wasBoss = cb.enemy.isBoss;
+  const cb = RUN.combat; const wasBoss = cb.enemy.isBoss; const wasElite = cb.enemy.isElite;
   RUN.kills++;
   discoverCodex('enemies', cb.enemy.id);
   if(!cb.tookDamage){ RUN.streak++; RUN.bestStreak=Math.max(RUN.bestStreak,RUN.streak); } else { RUN.streak=0; }
-  const base = (wasBoss?60:15) * RUN.floor;
+  const act = actOf(RUN.mode, RUN.floor);
+  const base = (wasBoss?60:(wasElite?35:15)) * act;
   const bonus = Math.round(base * (1+RUN.streak*0.1));
   RUN.score += bonus;
-  const goldGain = wasBoss? rand(25,40) : rand(8,18);
+  const goldGain = rand(...GOLD_RANGES[wasBoss?'boss':(wasElite?'elite':'enemy')][Math.min(act,3)-1]);
   RUN.gold += goldGain;
   Audio1.win(); vibrate([20,40,20,40]);
 
@@ -1816,15 +2030,25 @@ function winCombat(){
   if(wasBoss){
     setTimeout(()=>{
       if(!RUN) return;
-      openSimpleEvent('🏆','Piano Superato!', `Hai sconfitto ${cb.enemy.name}! +${bonus} punti, +${goldGain} oro.`);
+      const isFinalAct = RUN.floor>=RUN.maxFloor;
+      const clearTitle = RUN.mode==='completa' ? (isFinalAct?'Guardiano Sconfitto!':'Atto Superato!') : 'Piano Superato!';
+      openSimpleEvent('🏆', clearTitle, `Hai sconfitto ${cb.enemy.name}! +${bonus} punti, +${goldGain} oro.`);
       const okBtn = document.getElementById('btn-event-ok');
       okBtn.onclick = ()=>{
         closeEvent();
         openRelicReward(()=>{
           if(!RUN) return;
-          if(RUN.floor>=MAX_FLOOR) endRun(true); else openRestEvent(()=> nextFloor());
+          if(RUN.floor>=RUN.maxFloor) endRun(true); else openRestEvent(()=> nextFloor());
         });
       };
+    }, 300);
+  } else if(wasElite){
+    setTimeout(()=>{
+      if(!RUN) return;
+      toast(`Elite sconfitto! +${bonus} punti, +${goldGain} oro.`);
+      openCardReward('Bottino dell\u2019Elite','Scegli una carta da aggiungere al tuo mazzo.', '🗡️', ()=>{
+        if(RUN) nextFloor();
+      });
     }, 300);
   } else {
     setTimeout(()=> toast(`Vittoria! +${bonus} punti · +${goldGain} oro${RUN.streak>1?' · streak x'+RUN.streak:''}`), 200);
@@ -1837,12 +2061,18 @@ function nextFloor(){
   }
   RUN.hp = clamp(RUN.hp, 0, RUN.maxHp);
   RUN.keyHeld = false;
-  const size = floorSize(RUN.floor);
-  RUN.maze = genMaze(size);
+  const size = floorSizeFor(RUN.mode, RUN.floor);
+  RUN.maze = genMaze(size, exitTypeFor(RUN.mode, RUN.floor));
   revealAround(RUN.maze,0,0);
   updateExploreHud();
   renderExplore();
-  toast('Piano '+RUN.floor+' · '+getBiome().name+' — resta vigile.');
+  const sub = subFloorOf(RUN.mode, RUN.floor);
+  const act = actOf(RUN.mode, RUN.floor);
+  if(RUN.mode==='completa' && sub===1){
+    toast(`⚜️ Atto ${act}: ${getBiome().name} — resta vigile.`);
+  } else {
+    toast('Piano '+RUN.floor+' · '+getBiome().name+' — resta vigile.');
+  }
   saveRun();
 }
 
@@ -1853,7 +2083,10 @@ function endRun(victory){
   if(RUN.hp<=0) RUN.hp=0;
   Meta.highScore = Math.max(Meta.highScore, RUN.score);
   Meta.bestFloor = Math.max(Meta.bestFloor, RUN.floor);
-  const essenceEarned = Math.floor(RUN.score/12) + RUN.kills*2 + (victory?30:0);
+  const victoryBonus = victory ? (RUN.mode==='completa' ? 60 : 30) : 0;
+  const essenceFromScore = Math.floor(RUN.score/12) + RUN.kills*2 + victoryBonus;
+  const essenceFromGold = Math.floor(RUN.gold/10);
+  const essenceEarned = essenceFromScore + essenceFromGold;
   Meta.essence = (Meta.essence||0) + essenceEarned;
   if(!victory){
     Meta.deathLog = Meta.deathLog || [];
@@ -1864,8 +2097,10 @@ function endRun(victory){
   clearRun();
   $('screen-end').className = 'screen active ' + (victory?'victory':'defeat');
   $('end-icon').textContent = victory?'🏆':'💀';
-  $('end-title').textContent = victory? 'Vittoria!' : 'Sei Caduto...';
-  $('end-sub').textContent = (victory? 'Hai conquistato il dungeon fino in fondo.' : `Sconfitto al Piano ${RUN.floor}, contro ${RUN.lastDeathCause||'il dungeon'}.`) + ` +${essenceEarned} ⚗️ Essenza.`;
+  $('end-title').textContent = victory? (RUN.mode==='completa'?'Dungeon Conquistato!':'Vittoria!') : 'Sei Caduto...';
+  const floorLabel = RUN.mode==='completa' ? `Atto ${actOf(RUN.mode,RUN.floor)}, Piano ${subFloorOf(RUN.mode,RUN.floor)}` : `Piano ${RUN.floor}`;
+  const goldNote = essenceFromGold>0 ? ` (di cui ${essenceFromGold} dall'oro residuo)` : '';
+  $('end-sub').textContent = (victory? 'Hai conquistato il dungeon fino in fondo.' : `Sconfitto al ${floorLabel}, contro ${RUN.lastDeathCause||'il dungeon'}.`) + ` +${essenceEarned} ⚗️ Essenza${goldNote}.`;
   $('end-score').textContent = RUN.score;
   $('end-floor').textContent = RUN.floor;
   $('end-kills').textContent = RUN.kills;
@@ -1941,6 +2176,9 @@ $('btn-continue').onclick = ()=>{
   const saved = loadRun();
   if(!saved) return;
   RUN = saved;
+  // compatibilità con run salvate prima della v1.3 (assenza di mode/maxFloor)
+  if(!RUN.mode) RUN.mode = 'breve';
+  if(!RUN.maxFloor) RUN.maxFloor = maxFloorFor(RUN.mode);
   if(RUN.combat){
     showScreen('combat');
     renderCombat();
@@ -1954,7 +2192,27 @@ $('btn-again').onclick = ()=>{ renderCharacterSelect(); showScreen('characters')
 $('btn-tomenu').onclick = ()=>{ RUN=null; showScreen('title'); updateTitleMeta(); };
 $('btn-char-back').onclick = ()=>{ showScreen('title'); updateTitleMeta(); };
 
+let selectedRunMode = 'breve';
 function renderCharacterSelect(){
+  selectedRunMode = 'breve';
+  const completaUnlocked = !!(Meta.talents && Meta.talents.run_completa);
+  const modeBreveBtn = $('mode-breve'), modeCompletaBtn = $('mode-completa');
+  modeBreveBtn.classList.add('active'); modeCompletaBtn.classList.remove('active');
+  modeCompletaBtn.classList.toggle('locked', !completaUnlocked);
+  modeCompletaBtn.querySelector('.mode-sub').textContent = completaUnlocked
+    ? '9 piani · 3 Atti'
+    : '🔒 Sblocca nel Santuario dell\u2019Eco';
+  modeBreveBtn.onclick = ()=>{
+    selectedRunMode='breve';
+    modeBreveBtn.classList.add('active'); modeCompletaBtn.classList.remove('active');
+    Audio1.click();
+  };
+  modeCompletaBtn.onclick = ()=>{
+    if(!completaUnlocked){ Audio1.bump(); toast('Sblocca la Run Completa nel Santuario dell\u2019Eco (⚗️ Progressione, titolo).'); return; }
+    selectedRunMode='completa';
+    modeCompletaBtn.classList.add('active'); modeBreveBtn.classList.remove('active');
+    Audio1.click();
+  };
   const wrap = $('character-list'); wrap.innerHTML='';
   Object.values(CHARACTERS).forEach(ch=>{
     const el = document.createElement('div');
@@ -1970,12 +2228,12 @@ function renderCharacterSelect(){
       <div class="char-desc">${ch.desc}</div>
       <button class="btn primary" style="margin-top:2px;">Scegli ${ch.name}</button>
     `;
-    el.querySelector('button').onclick = ()=> startNewRunWithCharacter(ch.id);
+    el.querySelector('button').onclick = ()=> startNewRunWithCharacter(ch.id, selectedRunMode);
     wrap.appendChild(el);
   });
 }
-function startNewRunWithCharacter(characterId){
-  RUN = newRun(characterId);
+function startNewRunWithCharacter(characterId, mode){
+  RUN = newRun(characterId, mode);
   saveRun();
   showScreen('explore');
   updateExploreHud();
@@ -1985,7 +2243,10 @@ function startNewRunWithCharacter(characterId){
       openSimpleEvent('🗝️','Benvenuto, Avventuriero', 'Muoviti con le frecce direzionali o il D-pad. Trova la chiave, apri la porta e sconfiggi il guardiano di ogni piano. Ogni scelta che fai resta con te, anche oltre la fine di questa run.');
     }, 300);
   });
-  if(!firstEver) toast('Il dungeon ti attende. Trova la chiave e sconfiggi il guardiano.');
+  if(!firstEver){
+    const msg = RUN.mode==='completa' ? 'Il dungeon completo ti attende: 3 Atti, 9 piani. Buona fortuna.' : 'Il dungeon ti attende. Trova la chiave e sconfiggi il guardiano.';
+    toast(msg);
+  }
 }
 
 /* =========================================================
@@ -2066,7 +2327,7 @@ function codexRow(icon, name, desc, discovered){
 }
 function renderCodexPanel(){
   Meta.codex = Meta.codex || {enemies:{},cards:{},relics:{},bivi:{}};
-  const allEnemies = [...Object.values(ENEMIES), ...Object.values(BOSSES)];
+  const allEnemies = [...Object.values(ENEMIES), ...Object.values(ELITES), ...Object.values(BOSSES)];
   const eWrap = $('codex-enemies-list'); eWrap.innerHTML='';
   let eCount = 0;
   allEnemies.forEach(en=>{
