@@ -108,6 +108,35 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .toggle.on::after{left:24px;}
 .panel .panel-actions{display:flex; flex-direction:column; gap:10px; margin-top:18px;}
 
+/* ---------- TALENTS / RELICS LIST (shared) ---------- */
+.talent-row{display:flex; align-items:center; gap:10px; padding:10px 6px; border-bottom:1px solid var(--line);}
+.talent-row:last-child{border-bottom:none;}
+.talent-row.owned{opacity:.9;}
+.talent-icon{width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;}
+.talent-info{flex:1; min-width:0;}
+.talent-name{font-size:13px; font-weight:800;}
+.talent-desc{font-size:11px; color:var(--parchment-dim); line-height:1.35; margin-top:2px;}
+.talent-buy{flex-shrink:0; padding:8px 12px; font-size:12px; border-radius:10px;}
+.essence-banner{display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(138,109,255,0.12); border:1px solid var(--purple); border-radius:12px; padding:10px; margin-bottom:14px; font-weight:800; font-size:15px; color:#c9bbff;}
+#title-death-fragment{font-size:11px; color:var(--parchment-dim); font-style:italic; margin-top:10px; max-width:88%; line-height:1.4; opacity:.85;}
+
+/* ---------- CHARACTER SELECT ---------- */
+#screen-characters{background:linear-gradient(180deg, var(--dungeon-1), var(--ink) 70%); overflow-y:auto; padding:24px 0 20px;}
+.char-header{text-align:center; padding:0 24px 10px;}
+.char-header h2{font-size:22px; color:var(--torch-2);}
+.char-header .desc{font-size:12px; color:var(--parchment-dim); margin-top:4px;}
+.char-card{display:flex; flex-direction:column; gap:8px; background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:14px; padding:14px; margin:8px 18px;}
+.char-card-top{display:flex; align-items:center; gap:12px;}
+.char-icon{width:52px; height:52px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0;}
+.char-name{font-size:16px; font-weight:800;}
+.char-stat{font-size:11px; color:var(--parchment-dim); margin-top:2px;}
+.char-desc{font-size:12px; color:var(--parchment-dim); line-height:1.4;}
+
+/* ---------- CODEX ---------- */
+.codex-section{font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--torch-2); margin:16px 0 2px; font-weight:800; display:flex; justify-content:space-between; align-items:center;}
+.codex-section:first-of-type{margin-top:4px;}
+.codex-section span{color:var(--parchment-dim); font-weight:700; letter-spacing:0; text-transform:none;}
+
 /* ---------- EXPLORE ---------- */
 #screen-explore{background:var(--ink);}
 #hud-top{
@@ -160,7 +189,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* ---------- COMBAT ---------- */
 #screen-combat{background:linear-gradient(180deg,#241c40,#150f26 55%,#0e0a1c);}
 #combat-top{padding:10px 14px 4px; display:flex; flex-direction:column; gap:8px;}
-.combatant-row{display:flex; align-items:center; gap:10px;}
+.combatant-row{display:flex; align-items:center; gap:6px; flex-wrap:wrap; row-gap:4px;}
 .combatant-name{font-size:12px; font-weight:800; letter-spacing:.03em; min-width:64px;}
 .block-chip{display:flex; align-items:center; gap:3px; background:rgba(77,226,199,0.16); border:1px solid var(--gem); color:var(--gem); font-size:11px; font-weight:800; padding:2px 7px; border-radius:10px;}
 .poison-chip{display:flex; align-items:center; gap:3px; background:rgba(138,109,255,0.16); border:1px solid var(--purple); color:var(--purple); font-size:11px; font-weight:800; padding:2px 7px; border-radius:10px;}
@@ -185,26 +214,39 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 #energy-row{display:flex; align-items:center; justify-content:space-between; padding:0 6px 8px;}
 #energy-pill{display:flex; gap:5px; align-items:center; font-weight:900; font-size:14px; color:var(--gold);}
 #deck-counts{font-size:11px; color:var(--parchment-dim); display:flex; gap:10px;}
-#hand{display:flex; gap:8px; overflow-x:auto; padding:4px 2px 8px; scroll-snap-type:x proximity;}
+#hand{display:flex; gap:8px; overflow-x:auto; overflow-y:visible; padding:16px 4px 8px; scroll-snap-type:x proximity;}
 #hand::-webkit-scrollbar{display:none;}
 .card{
-  flex:0 0 auto; width:98px; height:136px; border-radius:12px; position:relative; cursor:pointer;
-  background:linear-gradient(160deg,#fbf3de,#f0e3c4); color:#2a1d0d; padding:8px; display:flex; flex-direction:column;
+  flex:0 0 auto; width:104px; height:158px; border-radius:12px; position:relative; cursor:pointer;
+  background:linear-gradient(160deg,#fbf3de,#f0e3c4); color:#2a1d0d; padding:10px 8px 7px; display:flex; flex-direction:column;
   box-shadow:0 6px 14px rgba(0,0,0,.4), inset 0 0 0 2px rgba(0,0,0,.06); border:2px solid #c9a45c;
   scroll-snap-align:start; transition:transform .12s ease, box-shadow .12s ease; -webkit-touch-callout:none;
 }
 .card.type-attack{border-color:#c94a4a;}
 .card.type-skill{border-color:#3f9cc9;}
+.card.type-relic{
+  border-color:#8a6dff; background:linear-gradient(160deg,#f2ecfb,#e6dbf7);
+  width:132px; height:198px;
+}
+.card.type-relic .c-icon{font-size:28px; margin-top:4px;}
+.card.type-relic .c-desc{-webkit-line-clamp:7; font-size:9.5px; line-height:1.32;}
 .card:active{transform:translateY(-6px) scale(1.04); box-shadow:0 12px 20px rgba(0,0,0,.5);}
 .card.unaffordable{opacity:.42; filter:grayscale(.4);}
 .card .c-cost{
-  position:absolute; top:-8px; left:-8px; width:26px; height:26px; border-radius:50%; background:var(--dungeon-3);
+  position:absolute; top:-9px; left:-9px; width:26px; height:26px; border-radius:50%; background:var(--dungeon-3);
   color:var(--gold); border:2px solid var(--gold); font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 2px 4px rgba(0,0,0,.45); z-index:2;
 }
-.card .c-icon{font-size:26px; text-align:center; margin-top:6px;}
-.card .c-name{font-size:11px; font-weight:800; text-align:center; margin-top:4px; line-height:1.15;}
-.card .c-desc{font-size:9px; line-height:1.25; text-align:center; margin-top:auto; color:#4a3a20; padding:0 2px;}
-.card .c-type{position:absolute; bottom:4px; right:6px; font-size:8px; text-transform:uppercase; letter-spacing:.05em; opacity:.55; font-weight:800;}
+.card .c-icon{font-size:24px; text-align:center; line-height:1; margin-top:2px; flex:0 0 auto;}
+.card .c-name{font-size:11px; font-weight:800; text-align:center; margin-top:5px; line-height:1.15; min-height:2.3em; display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+.card .c-desc{
+  font-size:9px; line-height:1.28; text-align:center; color:#4a3a20; padding:0 1px; flex:1 1 auto; min-height:0;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; margin-top:2px;
+}
+.card .c-type{
+  flex:0 0 auto; font-size:8px; text-transform:uppercase; letter-spacing:.06em; opacity:.6; font-weight:800; text-align:center;
+  border-top:1px solid rgba(42,29,13,0.15); padding-top:3px; margin-top:3px;
+}
 
 #combat-actions{display:flex; gap:10px; padding:0 14px 16px;}
 #combat-actions .btn{flex:1;}
@@ -242,10 +284,26 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <button class="btn primary" id="btn-continue">Continua<small>Riprendi la run in corso</small></button>
       <button class="btn gem" id="btn-newgame">Inizia Avventura</button>
       <button class="btn ghost" id="btn-options">Opzioni</button>
+      <button class="btn ghost" id="btn-progress">⚗️ Progressione</button>
+      <button class="btn ghost" id="btn-codex">📖 Codex</button>
     </div>
     <div id="title-meta">
       <span>Record: <b id="meta-highscore">0</b></span>
       <span>Piano max: <b id="meta-bestfloor">—</b></span>
+      <span>Essenza: <b id="meta-essence">0</b></span>
+    </div>
+    <div id="title-death-fragment"></div>
+  </div>
+
+  <!-- CHARACTER SELECT -->
+  <div class="screen" id="screen-characters">
+    <div class="char-header">
+      <h2>Scegli il tuo Eroe</h2>
+      <div class="desc">Ogni eroe ha un mazzo iniziale diverso: scegli il tuo stile di gioco.</div>
+    </div>
+    <div id="character-list"></div>
+    <div class="menu-col" style="padding:6px 18px 0;">
+      <button class="btn ghost" id="btn-char-back">Indietro</button>
     </div>
   </div>
 
@@ -255,6 +313,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div class="hud-pill">❤️ <span id="hp-text">60/60</span></div>
       <div class="hpbar-wrap"><div class="hpbar-track"><div class="hpbar-fill" id="hp-fill" style="width:100%"></div></div></div>
       <div class="hud-pill">💰 <span id="gold-text">0</span></div>
+      <button class="hud-pill" id="hud-relics" style="border:none; cursor:pointer;">🔮 <span id="relic-count">0</span></button>
       <button id="menu-fab">☰</button>
     </div>
     <div id="viewport-wrap">
@@ -289,6 +348,8 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div class="combatant-row" style="width:80%; max-width:260px;">
         <div class="hpbar-track" style="flex:1;"><div class="hpbar-fill" id="en-hp-fill"></div><div class="hpbar-label" id="en-hp-label"></div></div>
         <div class="poison-chip hidden" id="en-poison-chip">☠️ 0</div>
+        <div class="poison-chip hidden" id="en-vulnerable-chip" style="border-color:var(--danger); color:#ffb9c1; background:rgba(255,85,102,0.14);">🎯 Vuln.</div>
+        <div class="poison-chip hidden" id="en-weak-chip" style="border-color:var(--parchment-dim); color:var(--parchment-dim); background:rgba(217,205,174,0.14);">🔻 Deb.</div>
       </div>
       <div id="enemy-intent">⚔️ 8</div>
     </div>
@@ -358,6 +419,48 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
         <button class="btn primary" id="btn-resume">Riprendi</button>
         <button class="btn ghost" id="btn-pause-options">Opzioni</button>
         <button class="btn danger" id="btn-abandon">Abbandona run</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESSION (META SHOP) OVERLAY -->
+  <div class="overlay" id="overlay-progress">
+    <div class="panel">
+      <h2>⚗️ Santuario dell'Eco</h2>
+      <div class="desc">Spendi l'Essenza raccolta nelle run passate per ottenere vantaggi permanenti.</div>
+      <div class="essence-banner">⚗️ <span id="progress-essence">0</span> Essenza</div>
+      <div id="talent-list"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="btn-close-progress">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RELICS (IN-RUN) OVERLAY -->
+  <div class="overlay" id="overlay-relics">
+    <div class="panel">
+      <h2>🔮 Le tue Reliquie</h2>
+      <div class="desc">Poteri permanenti per questa run. Restano attivi fino a vittoria o sconfitta.</div>
+      <div id="relics-list"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="btn-close-relics">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CODEX OVERLAY -->
+  <div class="overlay" id="overlay-codex">
+    <div class="panel">
+      <h2>📖 Codex del Dungeon</h2>
+      <div class="desc">Ciò che hai scoperto esplorando, combattendo e scegliendo, run dopo run.</div>
+      <div class="codex-section">Nemici <span id="codex-enemies-count"></span></div>
+      <div id="codex-enemies-list"></div>
+      <div class="codex-section">Reliquie <span id="codex-relics-count"></span></div>
+      <div id="codex-relics-list"></div>
+      <div class="codex-section">Carte <span id="codex-cards-count"></span></div>
+      <div id="codex-cards-list"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="btn-close-codex">Chiudi</button>
       </div>
     </div>
   </div>
@@ -438,7 +541,7 @@ const LS_META = 'mdc_meta_v1';
 const LS_SAVE = 'mdc_save_v1';
 const LS_OPTS = 'mdc_opts_v1';
 
-let Meta = { highScore:0, bestFloor:0 };
+let Meta = { highScore:0, bestFloor:0, essence:0, talents:{}, deathLog:[], tutorialDone:{}, codex:{enemies:{},cards:{},relics:{},bivi:{}} };
 let Settings = { audio:true, vibrate:true };
 
 function loadMeta(){ try{ const s=localStorage.getItem(LS_META); if(s) Meta=Object.assign(Meta, JSON.parse(s)); }catch(e){} }
@@ -467,29 +570,190 @@ const CARDS = {
   fury:     {id:'fury',     name:'Furia',            cost:1, type:'skill',  icon:'🔥', rarity:1, furyBuff:5, desc:'Il prossimo Attacco infligge +5 danni.'},
   adrenaline:{id:'adrenaline', name:'Adrenalina',    cost:1, type:'skill',  icon:'⚡', rarity:2, gainEnergy:1, draw:1, desc:'Ottieni 1 energia e pesca 1 carta.'},
   riposte:  {id:'riposte',  name:'Contrattacco',     cost:1, type:'skill',  icon:'🔄', rarity:1, block:8, dmg:6, desc:'Ottieni 8 Blocco e infliggi 6 danni.'},
+
+  // ---- v1.2: nuove carte ----
+  jab:       {id:'jab', name:'Schiaffo', cost:0, type:'attack', icon:'👊', rarity:1, dmg:3, desc:'Infliggi 3 danni. Costa 0 energia.'},
+  throw:     {id:'throw', name:'Lancio di Pugnale', cost:0, type:'attack', icon:'🔪', rarity:2, dmg:4, pierce:true, desc:'4 danni. Ignora la difesa nemica. Costa 0 energia.'},
+  flurry:    {id:'flurry', name:'Raffica', cost:2, type:'attack', icon:'🌀', rarity:2, dmg:5, hits:3, desc:'Infliggi 5 danni, tre volte.'},
+  execute:   {id:'execute', name:'Colpo di Grazia', cost:2, type:'attack', icon:'🎯', rarity:2, dmg:9, execute:true, desc:'9 danni. Raddoppiati se il nemico è sotto il 30% dei PF.'},
+  lifesteal: {id:'lifesteal', name:'Morso Vampirico', cost:2, type:'attack', icon:'🧛', rarity:2, dmg:8, lifesteal:true, desc:'Infliggi 8 danni. Recuperi PF pari al danno inflitto.'},
+  berserk:   {id:'berserk', name:'Furia Cieca', cost:1, type:'attack', icon:'😡', rarity:2, dmg:11, selfDmg:3, desc:'Infliggi 11 danni. Subisci 3 danni.'},
+  crushing:  {id:'crushing', name:'Colpo Schiacciante', cost:3, type:'attack', icon:'🔨', rarity:3, dmg:22, pierce:true, desc:'22 danni. Ignora la difesa nemica.'},
+  mark:      {id:'mark', name:'Marchio', cost:1, type:'attack', icon:'🩹', rarity:2, dmg:4, vulnerable:2, desc:'4 danni. Rende il nemico Vulnerabile (+50% danno subito) per 2 turni.'},
+  venomstrike:{id:'venomstrike', name:'Colpo Velenoso', cost:1, type:'attack', icon:'🐍', rarity:2, dmg:5, poison:3, desc:'5 danni. Applica 3 Veleno (3 turni).'},
+
+  secondwind:{id:'secondwind', name:'Fiato Sospeso', cost:1, type:'skill', icon:'💨', rarity:1, block:4, heal:4, desc:'Ottieni 4 Blocco e recupera 4 PF.'},
+  barrier:   {id:'barrier', name:'Barriera Arcana', cost:2, type:'skill', icon:'🔷', rarity:2, block:16, desc:'Ottieni 16 Blocco.'},
+  deepbreath:{id:'deepbreath', name:'Respiro Profondo', cost:0, type:'skill', icon:'🌬️', rarity:1, draw:1, desc:'Pesca 1 carta. Costa 0 energia.'},
+  weaken:    {id:'weaken', name:'Indebolisci', cost:1, type:'skill', icon:'🔻', rarity:2, weak:2, desc:'Il nemico infligge il 25% di danno in meno per 2 turni.'},
+  channel:   {id:'channel', name:'Canalizzazione', cost:1, type:'skill', icon:'🌟', rarity:3, gainEnergy:2, desc:'Ottieni 2 energia.'},
+  mirror:    {id:'mirror', name:"Specchio d'Ossidiana", cost:2, type:'skill', icon:'🪞', rarity:2, block:10, desc:'Ottieni 10 Blocco.'},
+  purify:    {id:'purify', name:'Purificazione', cost:1, type:'skill', icon:'✨', rarity:1, cleanse:true, heal:5, desc:'Rimuovi il tuo Veleno e recupera 5 PF.'},
+  doubleguard:{id:'doubleguard', name:'Doppia Guardia', cost:2, type:'skill', icon:'🛡️', rarity:2, block:10, draw:1, desc:'Ottieni 10 Blocco e pesca 1 carta.'},
+  bloodpact: {id:'bloodpact', name:'Patto di Sangue', cost:1, type:'skill', icon:'🩸', rarity:2, selfDmg:5, gainEnergy:2, draw:1, desc:'Subisci 5 danni. Ottieni 2 energia e pesca 1 carta.'},
 };
 const STARTER_DECK = ['strike','strike','strike','strike','guard','guard','guard','twin','focus','heal'];
 const REWARD_POOL = Object.values(CARDS).filter(c=>c.id!=='mega' || true); // all cards eligible, weighted by rarity
+
+function describeCard(c){
+  const parts=[];
+  if(c.dmg){
+    if(c.hits && c.hits>1) parts.push(`Infliggi ${c.dmg} danni, ${c.hits} volte.`);
+    else parts.push(`Infliggi ${c.dmg} danni${c.pierce?' (ignora la difesa nemica)':''}.`);
+  }
+  if(c.poison) parts.push(`Applica ${c.poison} Veleno (3 turni).`);
+  if(c.block) parts.push(`Ottieni ${c.block} Blocco.`);
+  if(c.heal) parts.push(`Recupera ${c.heal} PF.`);
+  if(c.draw) parts.push(`Pesca ${c.draw} cart${c.draw===1?'a':'e'}.`);
+  if(c.furyBuff) parts.push(`Il prossimo Attacco infligge +${c.furyBuff} danni.`);
+  if(c.gainEnergy) parts.push(`Ottieni ${c.gainEnergy} energia.`);
+  if(c.vulnerable) parts.push(`Nemico Vulnerabile per ${c.vulnerable} turni.`);
+  if(c.weak) parts.push(`Nemico Indebolito per ${c.weak} turni.`);
+  if(c.execute) parts.push(`Danno raddoppiato sotto il 30% PF nemici.`);
+  if(c.lifesteal) parts.push(`Recuperi PF pari al danno inflitto.`);
+  if(c.selfDmg) parts.push(`Subisci ${c.selfDmg} danni.`);
+  if(c.cleanse) parts.push(`Rimuovi il tuo Veleno.`);
+  return parts.join(' ');
+}
+function getUpgraded(baseId){
+  const upId = baseId+'_plus';
+  if(CARDS[upId]) return CARDS[upId];
+  const b = CARDS[baseId];
+  const up = Object.assign({}, b);
+  up.id = upId; up.name = b.name+'+';
+  if(up.dmg) up.dmg = Math.round(up.dmg*1.4);
+  if(up.block) up.block = Math.round(up.block*1.4);
+  if(up.heal) up.heal = Math.round(up.heal*1.3);
+  if(up.poison) up.poison = up.poison+2;
+  if(up.draw) up.draw = up.draw+1;
+  if(up.furyBuff) up.furyBuff = up.furyBuff+3;
+  if(up.gainEnergy) up.gainEnergy = up.gainEnergy+1;
+  if(up.selfDmg) up.selfDmg = Math.max(1, up.selfDmg-2);
+  if(up.cost>1) up.cost = up.cost-1;
+  up.desc = describeCard(up);
+  CARDS[upId] = up;
+  discoverCodex('cards', upId);
+  return up;
+}
+
+/* =========================================================
+   RELICS (permanent powers for the run — v1.1)
+========================================================= */
+const RELICS = {
+  divoratore: { id:'divoratore', name:'Patto del Divoratore', icon:'🩸',
+    lore:'Un patto sussurrato da un\u2019entità che si nutre di forza vitale.',
+    patto:'I tuoi Attacchi infliggono +3 danni. Ogni volta che superi un piano perdi 2 PF massimi.' },
+  lanterna: { id:'lanterna', name:"Lanterna dell'Errante", icon:'🏮',
+    lore:'Una fiamma che non si spegne mai, ma consuma ciò che illumina.',
+    patto:'+1 energia massima in combattimento. Peschi una carta in meno a inizio scontro.' },
+  osso: { id:'osso', name:'Osso Fortunato', icon:'🍀',
+    lore:'Appartenuto a chi, prima di te, ha quasi trovato la via d\u2019uscita.',
+    patto:'+25% oro trovato. I nemici hanno il 10% di PF in più.' },
+  cuore: { id:'cuore', name:'Cuore di Ferro', icon:'🛡️',
+    lore:'Batte più lento, ma nulla lo spezza facilmente.',
+    patto:'Inizi ogni combattimento con 5 Blocco gratuito. -5 PF massimi permanenti (subito).' },
+  fiala: { id:'fiala', name:'Fiala di Veleno Nero', icon:'☠️',
+    lore:'Distilalto dalle vene stesse del dungeon.',
+    patto:'Le carte Veleno applicano +2 Veleno. Le cure curano il 30% in meno.' },
+};
+
+/* =========================================================
+   TALENTS (permanent cross-run unlocks — v1.1)
+========================================================= */
+const TALENTS = {
+  cuore_robusto: { id:'cuore_robusto', name:'Cuore Robusto', icon:'❤️', cost:40,
+    desc:'+10 PF massimi iniziali in ogni run futura.' },
+  borsa: { id:'borsa', name:'Borsa Capiente', icon:'💰', cost:30,
+    desc:"Inizia ogni run con 20 monete d'oro." },
+  occhio_chiave: { id:'occhio_chiave', name:'Occhio della Chiave', icon:'🗝️', cost:25,
+    desc:'La chiave del piano è sempre visibile (sfocata) sulla minimappa fin dall\u2019inizio.' },
+};
+
+/* =========================================================
+   CHARACTERS (v1.2 — playstyle diversi)
+========================================================= */
+const CHARACTERS = {
+  guerriero: { id:'guerriero', name:'Guerriero', icon:'⚔️', hp:60,
+    deck:['strike','strike','strike','strike','guard','guard','guard','twin','focus','heal'],
+    desc:'Equilibrato e versatile. Il modo migliore per iniziare a esplorare il dungeon.' },
+  custode: { id:'custode', name:'Custode', icon:'🛡️', hp:68,
+    deck:['strike','strike','guard','guard','guard','ironwall','focus','heal','heal','riposte'],
+    desc:'Resiste a lungo e logora il nemico. Meno danno immediato, molta sopravvivenza.' },
+  assassina: { id:'assassina', name:'Assassina', icon:'☠️', hp:52,
+    deck:['strike','strike','poisonC','poisonC','twin','twin','guard','focus','fury','pierce'],
+    desc:'Colpisce rapida e avvelena chi la affronta. Fragile, ma letale nel tempo.' },
+};
+
+/* =========================================================
+   BIVI (scelte narrative con conseguenze meccaniche — v1.2)
+========================================================= */
+const BIVI = {
+  prigioniero: {
+    id:'prigioniero', icon:'⛓️', title:'Prigioniero Incatenato',
+    text:'Un prigioniero incatenato ti supplica di essere liberato. "Ti ricompenserò," sussurra, "se solo mi lasci andare."',
+    choiceA:{ label:'🗝️ Liberalo', effect: ()=>{
+      if(RUN.deck.length>6){
+        const idx = rand(0, RUN.deck.length-1);
+        const removed = CARDS[RUN.deck[idx]];
+        RUN.deck.splice(idx,1);
+        toast(`Il prigioniero fugge portando via "${removed.name}" dal tuo mazzo... ma ti lascia qualcosa.`);
+      } else {
+        toast('Il prigioniero fugge nell\u2019ombra... e ti lascia qualcosa.');
+      }
+      openRelicReward(null, { icon:'⛓️', title:'Dono del Prigioniero', desc:'Nella fuga, ti lascia questo oggetto.', emptyMsg:'Il prigioniero non ha nient\u2019altro da offrirti.' });
+    } },
+    choiceB:{ label:'🚶 Ignoralo', effect: ()=>{ toast('Ti allontani. Le sue suppliche svaniscono alle tue spalle.'); } }
+  },
+  mercante: {
+    id:'mercante', icon:'🕯️', title:'Mercante Ombra',
+    text:'Una figura incappucciata offre uno scambio silenzioso: un po\u2019 della tua vitalità in cambio di conoscenza proibita.',
+    choiceA:{ label:'🩸 Accetta (-8 PF)', effect: ()=>{
+      RUN.hp = clamp(RUN.hp-8,0,RUN.maxHp);
+      updateExploreHud(); saveRun();
+      if(RUN.hp<=0){ RUN.lastDeathCause='un patto avventato'; setTimeout(()=>{ if(RUN) endRun(false); },400); return; }
+      openCardReward('Conoscenza Proibita','Scegli una carta da aggiungere al tuo mazzo.', '🕯️');
+    } },
+    choiceB:{ label:'🙅 Rifiuta', effect: ()=>{ RUN.gold+=5; updateExploreHud(); toast('Rifiuti. La figura svanisce senza una parola. +5 oro trovato per terra.'); } }
+  }
+};
 
 /* =========================================================
    ENEMY DATABASE
 ========================================================= */
 const ENEMIES = {
-  rat:    {id:'rat',    name:'Ratto Gigante', icon:'🐀', hp:16, dmg:5,  pattern:['attack','attack','defend']},
-  bat:    {id:'bat',    name:'Pipistrello Osseo', icon:'🦇', hp:13, dmg:4, pattern:['attack','attack']},
-  skeleton:{id:'skeleton', name:'Scheletro Guerriero', icon:'💀', hp:24, dmg:7, pattern:['attack','defend','attack']},
-  slime:  {id:'slime',  name:'Melma Acida', icon:'🟢', hp:30, dmg:4,  pattern:['attack','poison','attack']},
-  spider: {id:'spider', name:'Ragno Tunnel', icon:'🕷️', hp:20, dmg:6, pattern:['attack','attack','buff']},
+  rat:    {id:'rat',    name:'Ratto Gigante', icon:'🐀', hp:16, dmg:5,  pattern:['attack','attack','defend'],
+    lore:'Si dice che questi ratti abbiano imparato a rosicchiare persino le catene delle porte.'},
+  bat:    {id:'bat',    name:'Pipistrello Osseo', icon:'🦇', hp:13, dmg:4, pattern:['attack','attack'],
+    lore:'Le sue ossa cantano nel buio, un richiamo per gli altri abitanti del dungeon.'},
+  skeleton:{id:'skeleton', name:'Scheletro Guerriero', icon:'💀', hp:24, dmg:7, pattern:['attack','defend','attack'],
+    lore:'Combatte ancora la stessa battaglia, da secoli, senza ricordarne il motivo.'},
+  slime:  {id:'slime',  name:'Melma Acida', icon:'🟢', hp:30, dmg:4,  pattern:['attack','poison','attack'],
+    lore:'Un tempo era qualcos\u2019altro. Il dungeon dimentica in fretta le forme originarie.'},
+  spider: {id:'spider', name:'Ragno Tunnel', icon:'🕷️', hp:20, dmg:6, pattern:['attack','attack','buff'],
+    lore:'Tesse le sue tele lungo i corridoi che nessun altro osa più percorrere.'},
+  goblin: {id:'goblin', name:'Goblin Furfante', icon:'👺', hp:18, dmg:6, pattern:['attack','attack','defend'],
+    lore:'Ruba tutto ciò che luccica, incluse le speranze di chi si perde qui.'},
+  wisp:   {id:'wisp', name:'Fuoco Fatuo', icon:'🔥', hp:15, dmg:5, pattern:['attack','buff','attack'],
+    lore:'Guida i viandanti fuori strada con una luce che promette salvezza e non la mantiene.'},
+  golem:  {id:'golem', name:'Golem di Pietra', icon:'🗿', hp:40, dmg:8, pattern:['defend','attack','attack','defend'],
+    lore:'Fu scolpito per proteggere qualcosa. Nessuno ricorda più cosa.'},
+  wraithling: {id:'wraithling', name:'Spettro Minore', icon:'👻', hp:22, dmg:6, pattern:['attack','poison','attack'],
+    lore:'Un\u2019eco di chi non ha mai trovato l\u2019uscita, condannata a ripetere gli stessi passi.'},
+  crawler: {id:'crawler', name:'Verme Corazzato', icon:'🪱', hp:26, dmg:5, pattern:['defend','attack','attack'],
+    lore:'Scava tunnel che nessuna mappa registra, ridisegnando il dungeon dall\u2019interno.'},
 };
 const FLOOR_ENEMIES = {
-  1: ['rat','bat'],
-  2: ['skeleton','spider'],
-  3: ['slime','skeleton','spider'],
+  1: ['rat','bat','goblin'],
+  2: ['skeleton','spider','wraithling','goblin'],
+  3: ['slime','skeleton','spider','golem','crawler','wisp'],
 };
 const BOSSES = {
-  1: {id:'ogre',   name:'Orco Sentinella', icon:'👹', hp:52, dmg:10, pattern:['attack','attack','defend','attack']},
-  2: {id:'wraith', name:'Spettro Incatenato', icon:'👻', hp:74, dmg:12, pattern:['attack','poison','attack','defend']},
-  3: {id:'dragon', name:'Drago Nano', icon:'🐲', hp:105, dmg:15, pattern:['attack','attack','defend','buff','attack']},
+  1: {id:'ogre',   name:'Orco Sentinella', icon:'👹', hp:52, dmg:10, pattern:['attack','attack','defend','attack'],
+      line:'"Un altro topo nel mio labirinto. Che sia l\u2019ultimo."'},
+  2: {id:'wraith', name:'Spettro Incatenato', icon:'👻', hp:74, dmg:12, pattern:['attack','poison','attack','defend'],
+      line:'"Le catene non tratterranno il mio odio ancora per molto."'},
+  3: {id:'dragon', name:'Drago Nano', icon:'🐲', hp:105, dmg:15, pattern:['attack','attack','defend','buff','attack'],
+      line:'"Piccola fiamma... lascia che ti spenga per sempre."'},
 };
 const MAX_FLOOR = 3;
 
@@ -582,9 +846,11 @@ function genMaze(size){
     for(let x=0;x<size;x++){
       if(usedSet.has(x+','+y)) continue;
       const r = Math.random();
-      if(r<0.38) cells[y][x].content = {type:'enemy'};
-      else if(r<0.58) cells[y][x].content = {type:'treasure'};
-      else if(r<0.72) cells[y][x].content = {type:'trap'};
+      if(r<0.34) cells[y][x].content = {type:'enemy'};
+      else if(r<0.50) cells[y][x].content = {type:'treasure'};
+      else if(r<0.62) cells[y][x].content = {type:'trap'};
+      else if(r<0.71) cells[y][x].content = {type:'shrine'};
+      else if(r<0.77) cells[y][x].content = {type:'bivio', bivioId: pick(Object.keys(BIVI))};
       // else empty
     }
   }
@@ -619,14 +885,36 @@ let RUN = null; // active run object
 let SCREEN = 'title';
 let VIEW_ANIM = null; // for smooth-ish transitions (kept minimal/instant per design: step-based)
 
-function newRun(){
+function newRun(characterId){
+  const character = CHARACTERS[characterId] || CHARACTERS.guerriero;
   const size = 5;
   const maze = genMaze(size);
   revealAround(maze, 0, 0);
+  let startHp = character.hp;
+  let startGold = 0;
+  if(Meta.talents && Meta.talents.cuore_robusto) startHp += 10;
+  if(Meta.talents && Meta.talents.borsa) startGold += 20;
+  // death-trace: place a one-time flavor cell referencing the last death, on floor 1 only
+  if(Meta.deathLog && Meta.deathLog.length>0){
+    const emptyCells=[];
+    for(let y=0;y<size;y++){
+      for(let x=0;x<size;x++){
+        if(x===0&&y===0) continue;
+        if(maze.cells[y][x].content) continue;
+        emptyCells.push({x,y});
+      }
+    }
+    if(emptyCells.length){
+      const bc = pick(emptyCells);
+      maze.cells[bc.y][bc.x].content = {type:'bones'};
+    }
+  }
+  character.deck.forEach(id=> discoverCodex('cards', id));
   return {
-    hp:60, maxHp:60,
-    gold:0,
-    deck: STARTER_DECK.slice(),
+    character: character.id,
+    hp:startHp, maxHp:startHp,
+    gold:startGold,
+    deck: character.deck.slice(),
     floor:1,
     maze,
     score:0,
@@ -634,19 +922,35 @@ function newRun(){
     bestStreak:0,
     kills:0,
     keyHeld:false,
+    relics:[],
     combat:null,
     pendingEvent:null,
+    lastDeathCause:null,
     flags:{}
   };
 }
 function floorSize(floor){ return 5 + (floor-1); } // 5,6,7
+function hasRelic(id){ return !!(RUN && RUN.relics && RUN.relics.includes(id)); }
+function discoverCodex(kind, id){
+  Meta.codex = Meta.codex || {enemies:{},cards:{},relics:{},bivi:{}};
+  if(!Meta.codex[kind]) Meta.codex[kind] = {};
+  if(!Meta.codex[kind][id]){ Meta.codex[kind][id] = true; saveMeta(); }
+}
+function tutorialOnce(key, fn){
+  if(!Meta.tutorialDone) Meta.tutorialDone = {};
+  if(Meta.tutorialDone[key]) return false;
+  Meta.tutorialDone[key] = true;
+  saveMeta();
+  fn();
+  return true;
+}
 
 /* =========================================================
    DOM REFS
 ========================================================= */
 const $ = (id)=>document.getElementById(id);
 const screens = {
-  title: $('screen-title'), explore: $('screen-explore'), combat: $('screen-combat'), end: $('screen-end')
+  title: $('screen-title'), characters: $('screen-characters'), explore: $('screen-explore'), combat: $('screen-combat'), end: $('screen-end')
 };
 function showScreen(name){
   SCREEN = name;
@@ -684,14 +988,26 @@ function rectAt(depth, W, H){
   const w = W*(1-t), h = H*(1-t);
   return { x1:(W-w)/2, x2:(W+w)/2, y1:(H-h)/2, y2:(H+h)/2 };
 }
-const CELL_ICONS = {enemy:'👹', treasure:'💰', trap:'⚠️', key:'🗝️', boss:'👑'};
+const CELL_ICONS = {enemy:'👹', treasure:'💰', trap:'⚠️', key:'🗝️', boss:'👑', shrine:'⛩️', bones:'🦴', bivio:'🎭'};
+
+/* =========================================================
+   BIOME PALETTES (v1.2 — un colore diverso per ogni piano)
+========================================================= */
+const BIOME_PALETTES = {
+  1: { name:'Cripta', bgTop:'#1a1430', bgBot:'#0d0a18', floorA:'#2a2148', floorB:'#211a3a', ceilA:'#180f2e', ceilB:'#130b25', wall:'#4a3c78', mortar:'#241a44', cap:'#584a86', capLocked:'#6b4530', voidCol:'#0c0918' },
+  2: { name:'Prigione', bgTop:'#241a14', bgBot:'#140d09', floorA:'#3a2418', floorB:'#2e1c12', ceilA:'#1f120b', ceilB:'#170d08', wall:'#6b4030', mortar:'#2a1810', cap:'#7a4a34', capLocked:'#6b4530', voidCol:'#0f0906' },
+  3: { name:'Sancta Sanctorum', bgTop:'#2a1414', bgBot:'#150707', floorA:'#3a1c14', floorB:'#2e1510', ceilA:'#200a08', ceilB:'#170606', wall:'#7a3320', mortar:'#2a0d0a', cap:'#8a3a20', capLocked:'#6b4530', voidCol:'#100504' },
+};
+function getBiome(){ return BIOME_PALETTES[Math.min(RUN.floor,3)] || BIOME_PALETTES[1]; }
+
 function renderExplore(){
   if(!RUN) return;
+  const biome = getBiome();
   const W = cv.clientWidth, H = cv.clientHeight;
   ctx2d.clearRect(0,0,W,H);
   // sky/ceiling and floor base gradient
   const g = ctx2d.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#1a1430'); g.addColorStop(1,'#0d0a18');
+  g.addColorStop(0,biome.bgTop); g.addColorStop(1,biome.bgBot);
   ctx2d.fillStyle=g; ctx2d.fillRect(0,0,W,H);
 
   const maze = RUN.maze;
@@ -724,14 +1040,14 @@ function renderExplore(){
     const shade = clamp(1 - s.depth*0.155, 0.22, 1);
     const parity = s.depth%2===0;
     // floor (checkered stone tiles for depth cues)
-    ctx2d.fillStyle = shadeColor(parity?'#2a2148':'#211a3a', shade);
+    ctx2d.fillStyle = shadeColor(parity?biome.floorA:biome.floorB, shade);
     ctx2d.beginPath();
     ctx2d.moveTo(near.x1, near.y2); ctx2d.lineTo(near.x2, near.y2);
     ctx2d.lineTo(far.x2, far.y2); ctx2d.lineTo(far.x1, far.y2);
     ctx2d.closePath(); ctx2d.fill();
     ctx2d.strokeStyle='rgba(10,7,20,0.5)'; ctx2d.lineWidth=1; ctx2d.stroke();
     // ceiling
-    ctx2d.fillStyle = shadeColor(parity?'#180f2e':'#130b25', shade);
+    ctx2d.fillStyle = shadeColor(parity?biome.ceilA:biome.ceilB, shade);
     ctx2d.beginPath();
     ctx2d.moveTo(near.x1, near.y1); ctx2d.lineTo(near.x2, near.y1);
     ctx2d.lineTo(far.x2, far.y1); ctx2d.lineTo(far.x1, far.y1);
@@ -746,10 +1062,10 @@ function renderExplore(){
       ctx2d.closePath();
       if(hasWall){
         const wallShade = shade*(isLeft?0.92:0.8);
-        ctx2d.fillStyle = shadeColor('#4a3c78', wallShade);
+        ctx2d.fillStyle = shadeColor(biome.wall, wallShade);
         ctx2d.fill();
         // brick lines
-        ctx2d.strokeStyle = shadeColor('#241a44', wallShade);
+        ctx2d.strokeStyle = shadeColor(biome.mortar, wallShade);
         ctx2d.lineWidth=1;
         const rows=3;
         for(let r=1;r<rows;r++){
@@ -763,7 +1079,7 @@ function renderExplore(){
         ctx2d.strokeStyle='rgba(20,14,40,0.5)'; ctx2d.lineWidth=1; ctx2d.stroke();
       } else {
         // open passage: darker recess to read clearly as an opening into shadow
-        ctx2d.fillStyle = shadeColor('#0c0918', shade);
+        ctx2d.fillStyle = shadeColor(biome.voidCol, shade);
         ctx2d.fill();
       }
     }
@@ -784,11 +1100,11 @@ function renderExplore(){
 
     // front wall (cap)
     if(s.frontWall){
-      const capColor = s.locked ? '#6b4530' : '#584a86';
+      const capColor = s.locked ? biome.capLocked : biome.cap;
       ctx2d.fillStyle = shadeColor(capColor, shade);
       ctx2d.fillRect(far.x1, far.y1, far.x2-far.x1, far.y2-far.y1);
       // brick grid on cap
-      ctx2d.strokeStyle = shadeColor('#241a44', shade);
+      ctx2d.strokeStyle = shadeColor(biome.mortar, shade);
       ctx2d.lineWidth=1;
       const cw=far.x2-far.x1, chh=far.y2-far.y1;
       for(let r=1;r<4;r++){ const yy=far.y1+chh*(r/4); ctx2d.beginPath(); ctx2d.moveTo(far.x1,yy); ctx2d.lineTo(far.x2,yy); ctx2d.stroke(); }
@@ -855,6 +1171,21 @@ function renderMinimap(){
       }
     }
   }
+  // Talento "Occhio della Chiave": rivela la posizione della chiave anche se non ancora scoperta
+  if(Meta.talents && Meta.talents.occhio_chiave){
+    for(let y=0;y<size;y++){
+      for(let x=0;x<size;x++){
+        const cell = maze.cells[y][x];
+        if(cell.content && cell.content.type==='key' && !maze.discovered[y][x]){
+          const cx=pad+x*cs+cs/2, cy=pad+y*cs+cs/2;
+          mmCtx.globalAlpha=0.5;
+          mmCtx.font=(cs*0.5)+'px sans-serif'; mmCtx.textAlign='center'; mmCtx.textBaseline='middle';
+          mmCtx.fillText('🗝️', cx, cy);
+          mmCtx.globalAlpha=1;
+        }
+      }
+    }
+  }
   // player marker
   const px=pad+maze.player.x*cs+cs/2, py=pad+maze.player.y*cs+cs/2;
   const ang = {N:-Math.PI/2, E:0, S:Math.PI/2, W:Math.PI}[DIRS[maze.player.dir]];
@@ -882,7 +1213,8 @@ function updateExploreHud(){
   $('hp-text').textContent = `${RUN.hp}/${RUN.maxHp}`;
   $('hp-fill').style.width = clamp(RUN.hp/RUN.maxHp*100,0,100)+'%';
   $('gold-text').textContent = RUN.gold;
-  $('floor-tag').textContent = 'PIANO '+RUN.floor;
+  $('floor-tag').textContent = 'PIANO '+RUN.floor+' · '+getBiome().name;
+  $('relic-count').textContent = RUN.relics ? RUN.relics.length : 0;
 }
 
 /* =========================================================
@@ -938,13 +1270,14 @@ function triggerCellContent(){
     const pool = FLOOR_ENEMIES[Math.min(RUN.floor,3)];
     startCombat(pick(pool), false);
   } else if(type==='boss'){
-    startCombat(BOSSES[RUN.floor].id, true);
+    openBossIntro(BOSSES[RUN.floor]);
   } else if(type==='treasure'){
     cell.resolved=true;
     if(Math.random()<0.35){
       openCardReward('Scrigno del Tesoro!','Scegli una carta da aggiungere al tuo mazzo.', '💰');
     } else {
-      const g = rand(14,30);
+      let g = rand(14,30);
+      if(hasRelic('osso')) g = Math.round(g*1.25);
       RUN.gold += g; RUN.score += 5;
       openSimpleEvent('💰','Tesoro!', `Hai trovato ${g} monete d'oro.`);
     }
@@ -957,12 +1290,28 @@ function triggerCellContent(){
     openSimpleEvent('⚠️','Trappola!', `Una trappola scatta! Subisci ${dmg} danni.`);
     updateExploreHud();
     saveRun();
-    if(RUN.hp<=0){ setTimeout(()=>{ if(RUN) endRun(false); },650); }
+    if(RUN.hp<=0){ RUN.lastDeathCause='una trappola'; setTimeout(()=>{ if(RUN) endRun(false); },650); }
   } else if(type==='key'){
     cell.resolved=true;
     RUN.keyHeld=true;
     Audio1.treasure(); vibrate(15);
     openSimpleEvent('🗝️','Chiave Trovata!', 'Puoi ora aprire la porta chiusa del piano.');
+    saveRun();
+  } else if(type==='shrine'){
+    openShrineEvent();
+  } else if(type==='bivio'){
+    openBivioEvent(cell.content.bivioId);
+  } else if(type==='bones'){
+    cell.resolved=true;
+    const last = Meta.deathLog && Meta.deathLog.length ? Meta.deathLog[Meta.deathLog.length-1] : null;
+    const g = 8;
+    RUN.gold += g;
+    Audio1.poison(); vibrate(20);
+    const msg = last
+      ? `Riconosci questi resti: sono i tuoi, di un tentativo passato. Cadesti al Piano ${last.floor}, contro ${last.cause}. Tra le ossa trovi ${g} monete rimaste.`
+      : `Resti di un altro avventuriero, dimenticato dal dungeon. Trovi ${g} monete.`;
+    openSimpleEvent('🦴','Resti Familiari...', msg);
+    updateExploreHud();
     saveRun();
   }
 }
@@ -998,6 +1347,7 @@ function openCardReward(title, desc, icon, afterCb){
     const el = buildCardEl(c, false);
     el.onclick = ()=>{
       RUN.deck.push(c.id);
+      discoverCodex('cards', c.id);
       Audio1.treasure(); vibrate(15);
       closeEvent();
       if(afterCb) afterCb();
@@ -1021,6 +1371,179 @@ function buildCardEl(c, small){
   `;
   return el;
 }
+function buildRelicEl(r){
+  const el = document.createElement('div');
+  el.className='card type-relic';
+  el.innerHTML = `
+    <div class="c-icon">${r.icon}</div>
+    <div class="c-name">${r.name}</div>
+    <div class="c-desc">${r.patto}</div>
+    <div class="c-type">Reliquia</div>
+  `;
+  return el;
+}
+
+/* ---------- Boss intro (narrative beat before a boss fight) ---------- */
+function openBossIntro(bossData){
+  RUN.pendingEvent='bossintro';
+  $('event-icon').textContent = bossData.icon;
+  $('event-title').textContent = bossData.name;
+  $('event-desc').textContent = bossData.line || '';
+  $('event-cards').innerHTML='';
+  $('event-actions').innerHTML = '<button class="btn danger" id="btn-event-ok">⚔️ Combatti!</button>';
+  $('btn-event-ok').onclick = ()=>{ closeEvent(); startCombat(bossData.id, true); };
+  evOverlay.classList.add('active');
+  renderMinimap();
+}
+
+/* ---------- Shrine (Santuario): remove or upgrade a card ---------- */
+function openShrineEvent(){
+  const maze=RUN.maze; const cell = maze.cells[maze.player.y][maze.player.x];
+  cell.resolved = true;
+  RUN.pendingEvent='shrine';
+  $('event-icon').textContent='⛩️';
+  $('event-title').textContent='Santuario Antico';
+  $('event-desc').textContent='Scegli il destino di una carta del tuo mazzo. La scelta è permanente per questa run.';
+  $('event-cards').innerHTML='';
+  $('event-actions').innerHTML = `
+    <button class="btn gem" id="btn-shrine-upgrade">✨ Potenzia una carta</button>
+    <button class="btn danger" id="btn-shrine-remove">🗑️ Rimuovi una carta</button>
+    <button class="btn ghost" id="btn-event-ok">Ignora</button>
+  `;
+  $('btn-event-ok').onclick = closeEvent;
+  $('btn-shrine-upgrade').onclick = ()=> openShrinePicker('upgrade');
+  $('btn-shrine-remove').onclick = ()=> openShrinePicker('remove');
+  evOverlay.classList.add('active');
+  saveRun();
+}
+function openShrinePicker(mode, afterCb){
+  const tooSmall = mode==='remove' && RUN.deck.length<=6;
+  $('event-title').textContent = mode==='upgrade' ? 'Quale carta potenziare?' : 'Quale carta rimuovere?';
+  $('event-desc').textContent = tooSmall
+    ? 'Il mazzo è già troppo essenziale: non puoi rimuovere altre carte.'
+    : (mode==='upgrade' ? 'La versione potenziata sostituirà una copia della carta scelta.' : 'La carta scelta verrà rimossa definitivamente dal mazzo.');
+  const wrap = $('event-cards'); wrap.innerHTML='';
+  const uniqueIds = Array.from(new Set(RUN.deck));
+  uniqueIds.forEach(id=>{
+    const c = CARDS[id];
+    const el = buildCardEl(c);
+    if(tooSmall){
+      el.classList.add('unaffordable');
+    } else {
+      el.onclick = ()=>{
+        if(mode==='upgrade'){
+          const upgraded = getUpgraded(id);
+          const idx = RUN.deck.indexOf(id);
+          if(idx>=0) RUN.deck[idx] = upgraded.id;
+          Audio1.treasure(); vibrate([15,10,15]);
+          closeEvent();
+          toast(`${c.name} è stata potenziata in ${upgraded.name}!`);
+        } else {
+          const idx = RUN.deck.indexOf(id);
+          if(idx>=0) RUN.deck.splice(idx,1);
+          Audio1.click(); vibrate(15);
+          closeEvent();
+          toast(`${c.name} è stata rimossa dal mazzo.`);
+        }
+        saveRun();
+        if(afterCb) afterCb();
+      };
+    }
+    wrap.appendChild(el);
+  });
+  $('event-actions').innerHTML = '<button class="btn ghost" id="btn-event-ok">Annulla</button>';
+  $('btn-event-ok').onclick = ()=>{ closeEvent(); if(afterCb) afterCb(); };
+}
+
+/* ---------- Falò (rest event): heal OR forge a card — replaces the old automatic heal ---------- */
+function openRestEvent(afterCb){
+  RUN.pendingEvent='rest';
+  $('event-icon').textContent='🔥';
+  $('event-title').textContent='Falò del Sollievo';
+  $('event-desc').textContent='Prima di scendere, scegli come prepararti per il piano successivo. La scelta è unica: non potrai fare entrambe le cose.';
+  $('event-cards').innerHTML='';
+  $('event-actions').innerHTML = `
+    <button class="btn primary" id="btn-rest-heal">💤 Riposa (cura il 40% dei PF massimi)</button>
+    <button class="btn gem" id="btn-rest-forge">⚒️ Affina una carta del mazzo</button>
+  `;
+  $('btn-rest-heal').onclick = ()=>{
+    const healAmt = Math.round(RUN.maxHp*0.4);
+    RUN.hp = clamp(RUN.hp+healAmt, 0, RUN.maxHp);
+    Audio1.heal(); vibrate(15);
+    closeEvent();
+    toast(`Ti riposi accanto al fuoco e recuperi ${healAmt} PF.`);
+    saveRun();
+    if(afterCb) afterCb();
+  };
+  $('btn-rest-forge').onclick = ()=>{
+    openShrinePicker('upgrade', afterCb);
+  };
+  evOverlay.classList.add('active');
+  saveRun();
+}
+
+/* ---------- Bivi: scelte narrative con conseguenze meccaniche ---------- */
+function openBivioEvent(bivioId){
+  const maze=RUN.maze; const cell = maze.cells[maze.player.y][maze.player.x];
+  cell.resolved = true;
+  const b = BIVI[bivioId];
+  if(!b){ return; }
+  RUN.pendingEvent='bivio';
+  $('event-icon').textContent = b.icon;
+  $('event-title').textContent = b.title;
+  $('event-desc').textContent = b.text;
+  $('event-cards').innerHTML='';
+  $('event-actions').innerHTML = `
+    <button class="btn primary" id="btn-bivio-a">${b.choiceA.label}</button>
+    <button class="btn ghost" id="btn-bivio-b">${b.choiceB.label}</button>
+  `;
+  $('btn-bivio-a').onclick = ()=> resolveBivio(bivioId,'a');
+  $('btn-bivio-b').onclick = ()=> resolveBivio(bivioId,'b');
+  evOverlay.classList.add('active');
+  saveRun();
+}
+function resolveBivio(bivioId, choice){
+  const b = BIVI[bivioId];
+  discoverCodex('bivi', bivioId+'_'+choice);
+  closeEvent();
+  (choice==='a' ? b.choiceA.effect : b.choiceB.effect)();
+  saveRun();
+}
+
+/* ---------- Relic reward (guardian's essence after a boss kill, or other sources) ---------- */
+function openRelicReward(afterCb, opts){
+  opts = opts || {};
+  const available = Object.values(RELICS).filter(r=>!RUN.relics.includes(r.id));
+  if(available.length===0){
+    toast(opts.emptyMsg || 'Hai già raccolto tutte le reliquie del dungeon.');
+    if(afterCb) afterCb();
+    return;
+  }
+  RUN.pendingEvent='relic';
+  const choices = shuffle(available).slice(0,3);
+  $('event-icon').textContent = opts.icon || '🔮';
+  $('event-title').textContent = opts.title || 'Essenza del Guardiano';
+  $('event-desc').textContent = opts.desc || 'Scegli una reliquia permanente per il resto della run.';
+  const wrap=$('event-cards'); wrap.innerHTML='';
+  choices.forEach(r=>{
+    const el = buildRelicEl(r);
+    el.onclick = ()=>{
+      RUN.relics.push(r.id);
+      if(r.id==='cuore'){ RUN.maxHp=Math.max(10,RUN.maxHp-5); RUN.hp=Math.min(RUN.hp,RUN.maxHp); }
+      discoverCodex('relics', r.id);
+      Audio1.treasure(); vibrate([15,10,15]);
+      closeEvent();
+      updateExploreHud();
+      tutorialOnce('relic', ()=> setTimeout(()=> toast('Le reliquie restano attive per tutta la run: fino a vittoria o sconfitta.'), 500));
+      if(afterCb) afterCb();
+      saveRun();
+    };
+    wrap.appendChild(el);
+  });
+  $('event-actions').innerHTML = '<button class="btn ghost" id="btn-event-skip">Rifiuta il patto</button>';
+  $('btn-event-skip').onclick = ()=>{ closeEvent(); if(afterCb) afterCb(); saveRun(); };
+  evOverlay.classList.add('active');
+}
 
 /* =========================================================
    COMBAT ENGINE
@@ -1028,14 +1551,17 @@ function buildCardEl(c, small){
 function startCombat(enemyId, isBoss){
   const base = isBoss ? BOSSES[RUN.floor] : ENEMIES[enemyId];
   const floorMult = 1 + (RUN.floor-1)*0.28;
-  const hp = Math.round(base.hp * (isBoss? (1+(RUN.floor-1)*0.15) : floorMult));
+  let hp = Math.round(base.hp * (isBoss? (1+(RUN.floor-1)*0.15) : floorMult));
+  if(hasRelic('osso')) hp = Math.round(hp*1.10);
+  const maxEnergy = 3 + (hasRelic('lanterna')?1:0);
+  const initialDraw = hasRelic('lanterna') ? 4 : 5;
   RUN.combat = {
-    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, nextIntent:null, buffed:false },
+    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, nextIntent:null, buffed:false, vulnerableTurns:0, weakTurns:0 },
     drawPile: shuffle(RUN.deck.slice()),
     discardPile: [],
     hand: [],
-    energy:3, maxEnergy:3,
-    playerBlock:0,
+    energy:maxEnergy, maxEnergy:maxEnergy,
+    playerBlock: hasRelic('cuore') ? 5 : 0,
     playerPoison:0,
     furyBuff:0,
     tookDamage:false,
@@ -1043,10 +1569,11 @@ function startCombat(enemyId, isBoss){
   };
   const cb = RUN.combat;
   rollEnemyIntent();
-  drawHand(5);
+  drawHand(initialDraw);
   showScreen('combat');
   setupCombatUI();
   Audio1.click();
+  tutorialOnce('combat', ()=> setTimeout(()=> toast(`⚡ Energia per giocare le carte. L'icona sopra al nemico mostra la sua prossima mossa.`), 450));
 }
 function drawFromDeck(n){
   const cb=RUN.combat; const out=[];
@@ -1085,6 +1612,10 @@ function renderCombat(){
   $('enemy-name').textContent = e.name + (e.isBoss?' 👑':'');
   const pc = $('en-poison-chip');
   if(e.poison>0){ pc.classList.remove('hidden'); pc.textContent='☠️ '+e.poison; } else pc.classList.add('hidden');
+  const vc = $('en-vulnerable-chip');
+  if(e.vulnerableTurns>0){ vc.classList.remove('hidden'); vc.textContent='🎯 Vuln. '+e.vulnerableTurns; } else vc.classList.add('hidden');
+  const wc = $('en-weak-chip');
+  if(e.weakTurns>0){ wc.classList.remove('hidden'); wc.textContent='🔻 Deb. '+e.weakTurns; } else wc.classList.add('hidden');
 
   const intentEl = $('enemy-intent');
   intentEl.classList.remove('defend','buff');
@@ -1142,7 +1673,11 @@ function playCard(idx){
   if(c.dmg){
     let dmg = c.dmg;
     if(cb.furyBuff>0){ dmg += cb.furyBuff; cb.furyBuff=0; }
+    if(hasRelic('divoratore')) dmg += 3;
+    if(c.execute && e.hp <= e.maxHp*0.3){ dmg = dmg*2; }
+    if(e.vulnerableTurns>0){ dmg = Math.round(dmg*1.5); }
     const hits = c.hits||1;
+    let totalApplied = 0;
     for(let h=0; h<hits; h++){
       let applied = dmg;
       if(!c.pierce && e.block>0){
@@ -1150,19 +1685,45 @@ function playCard(idx){
         e.block -= absorbed; applied -= absorbed;
       }
       e.hp = clamp(e.hp-applied,0,e.maxHp);
+      totalApplied += applied;
       if(applied>0){ floatNumber('dmg','-'+applied); shakeEnemy(); Audio1.hit(); vibrate(15); }
       else { floatNumber('block','Bloccato!'); Audio1.block(); }
     }
+    if(c.lifesteal && totalApplied>0){
+      RUN.hp = clamp(RUN.hp+totalApplied, 0, RUN.maxHp);
+      floatNumber('heal','+'+totalApplied); Audio1.heal();
+    }
   }
-  if(c.poison){ e.poison = (e.poison||0) + c.poison; floatNumber('poison','+'+c.poison+' ☠️'); Audio1.poison(); }
+  if(c.poison){
+    const poisonAmt = c.poison + (hasRelic('fiala') ? 2 : 0);
+    e.poison = (e.poison||0) + poisonAmt;
+    floatNumber('poison','+'+poisonAmt+' ☠️'); Audio1.poison();
+  }
   if(c.block){ cb.playerBlock += c.block; Audio1.block(); }
-  if(c.heal){ RUN.hp = clamp(RUN.hp+c.heal, 0, RUN.maxHp); floatNumber('heal','+'+c.heal); Audio1.heal(); }
+  if(c.heal){
+    const healAmt = hasRelic('fiala') ? Math.round(c.heal*0.7) : c.heal;
+    RUN.hp = clamp(RUN.hp+healAmt, 0, RUN.maxHp); floatNumber('heal','+'+healAmt); Audio1.heal();
+  }
   if(c.draw){ drawHand(c.draw); }
   if(c.furyBuff){ cb.furyBuff += c.furyBuff; }
   if(c.gainEnergy){ cb.energy = clamp(cb.energy+c.gainEnergy, 0, 9); }
+  if(c.vulnerable){ e.vulnerableTurns = Math.max(e.vulnerableTurns||0, c.vulnerable); floatNumber('poison','Vulnerabile!'); }
+  if(c.weak){ e.weakTurns = Math.max(e.weakTurns||0, c.weak); floatNumber('block','Indebolito!'); }
+  if(c.cleanse){ cb.playerPoison = 0; }
+  if(c.selfDmg){
+    RUN.hp = clamp(RUN.hp-c.selfDmg, 0, RUN.maxHp);
+    floatNumber('dmg','-'+c.selfDmg); Audio1.hit(); vibrate(15);
+  }
 
   renderCombat();
+  updateExploreHud();
 
+  if(RUN.hp<=0){
+    RUN.lastDeathCause = RUN.lastDeathCause || 'un patto rischioso';
+    cb.busy = true;
+    setTimeout(()=>{ if(RUN) endRun(false); }, 500);
+    return;
+  }
   if(e.hp<=0){ cb.busy = true; setTimeout(()=>winCombat(), 420); return; }
 }
 
@@ -1192,6 +1753,7 @@ function enemyTurn(){
     const move = e.nextIntent;
     if(move==='attack'){
       let dmg = e.dmg; if(e.buffed){ dmg = Math.round(dmg*1.5); e.buffed=false; }
+      if(e.weakTurns>0){ dmg = Math.round(dmg*0.75); }
       let toBlock = Math.min(cb.playerBlock, dmg);
       cb.playerBlock -= toBlock; dmg -= toBlock;
       if(dmg>0){ RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp); floatNumber('dmg','-'+dmg); cb.tookDamage=true; Audio1.hit(); vibrate([30,20,30]); }
@@ -1217,12 +1779,14 @@ function enemyTurn(){
     }
     renderCombat();
     updateExploreHud();
-    if(RUN.hp<=0){ setTimeout(()=>{ if(RUN) endRun(false); }, 500); return; }
+    if(RUN.hp<=0){ RUN.lastDeathCause = e.name; setTimeout(()=>{ if(RUN) endRun(false); }, 500); return; }
     // start next player turn
     cb.playerBlock = 0;
     cb.energy = cb.maxEnergy;
     cb.turn++;
     cb.busy = false;
+    if(e.vulnerableTurns>0) e.vulnerableTurns--;
+    if(e.weakTurns>0) e.weakTurns--;
     rollEnemyIntent();
     drawHand(5);
     renderCombat();
@@ -1233,6 +1797,7 @@ function winCombat(){
   if(!RUN || !RUN.combat) return;
   const cb = RUN.combat; const wasBoss = cb.enemy.isBoss;
   RUN.kills++;
+  discoverCodex('enemies', cb.enemy.id);
   if(!cb.tookDamage){ RUN.streak++; RUN.bestStreak=Math.max(RUN.bestStreak,RUN.streak); } else { RUN.streak=0; }
   const base = (wasBoss?60:15) * RUN.floor;
   const bonus = Math.round(base * (1+RUN.streak*0.1));
@@ -1249,30 +1814,35 @@ function winCombat(){
   saveRun();
 
   if(wasBoss){
-    if(RUN.floor>=MAX_FLOOR){
-      setTimeout(()=>endRun(true), 300);
-    } else {
-      setTimeout(()=>{
-        if(!RUN) return;
-        openSimpleEvent('🏆','Piano Superato!', `Hai sconfitto ${cb.enemy.name}! +${bonus} punti, +${goldGain} oro.`);
-        const okBtn = document.getElementById('btn-event-ok');
-        okBtn.onclick = ()=>{ closeEvent(); nextFloor(); };
-      }, 300);
-    }
+    setTimeout(()=>{
+      if(!RUN) return;
+      openSimpleEvent('🏆','Piano Superato!', `Hai sconfitto ${cb.enemy.name}! +${bonus} punti, +${goldGain} oro.`);
+      const okBtn = document.getElementById('btn-event-ok');
+      okBtn.onclick = ()=>{
+        closeEvent();
+        openRelicReward(()=>{
+          if(!RUN) return;
+          if(RUN.floor>=MAX_FLOOR) endRun(true); else openRestEvent(()=> nextFloor());
+        });
+      };
+    }, 300);
   } else {
     setTimeout(()=> toast(`Vittoria! +${bonus} punti · +${goldGain} oro${RUN.streak>1?' · streak x'+RUN.streak:''}`), 200);
   }
 }
 function nextFloor(){
   RUN.floor++;
-  RUN.hp = clamp(Math.round(RUN.hp + RUN.maxHp*0.18), 0, RUN.maxHp);
+  if(hasRelic('divoratore')){
+    RUN.maxHp = Math.max(15, RUN.maxHp-2);
+  }
+  RUN.hp = clamp(RUN.hp, 0, RUN.maxHp);
   RUN.keyHeld = false;
   const size = floorSize(RUN.floor);
   RUN.maze = genMaze(size);
   revealAround(RUN.maze,0,0);
   updateExploreHud();
   renderExplore();
-  toast('Piano '+RUN.floor+' — resta vigile.');
+  toast('Piano '+RUN.floor+' · '+getBiome().name+' — resta vigile.');
   saveRun();
 }
 
@@ -1283,12 +1853,19 @@ function endRun(victory){
   if(RUN.hp<=0) RUN.hp=0;
   Meta.highScore = Math.max(Meta.highScore, RUN.score);
   Meta.bestFloor = Math.max(Meta.bestFloor, RUN.floor);
+  const essenceEarned = Math.floor(RUN.score/12) + RUN.kills*2 + (victory?30:0);
+  Meta.essence = (Meta.essence||0) + essenceEarned;
+  if(!victory){
+    Meta.deathLog = Meta.deathLog || [];
+    Meta.deathLog.push({ floor:RUN.floor, cause: RUN.lastDeathCause || 'il dungeon', deckSize:RUN.deck.length });
+    if(Meta.deathLog.length>5) Meta.deathLog.shift();
+  }
   saveMeta();
   clearRun();
   $('screen-end').className = 'screen active ' + (victory?'victory':'defeat');
   $('end-icon').textContent = victory?'🏆':'💀';
   $('end-title').textContent = victory? 'Vittoria!' : 'Sei Caduto...';
-  $('end-sub').textContent = victory? 'Hai conquistato il dungeon fino in fondo.' : `Sconfitto al Piano ${RUN.floor}.`;
+  $('end-sub').textContent = (victory? 'Hai conquistato il dungeon fino in fondo.' : `Sconfitto al Piano ${RUN.floor}, contro ${RUN.lastDeathCause||'il dungeon'}.`) + ` +${essenceEarned} ⚗️ Essenza.`;
   $('end-score').textContent = RUN.score;
   $('end-floor').textContent = RUN.floor;
   $('end-kills').textContent = RUN.kills;
@@ -1318,9 +1895,9 @@ $('btn-options').onclick = ()=>{ refreshOptionsUI(); $('overlay-options').classL
 $('btn-close-options').onclick = ()=> $('overlay-options').classList.remove('active');
 $('btn-pause-options').onclick = ()=>{ $('overlay-pause').classList.remove('active'); refreshOptionsUI(); $('overlay-options').classList.add('active'); };
 $('btn-reset').onclick = ()=>{
-  if(confirm('Azzerare record e run salvata? Questa azione non può essere annullata.')){
+  if(confirm('Azzerare record, Essenza, Talenti e run salvata? Questa azione non può essere annullata.')){
     localStorage.removeItem(LS_META); localStorage.removeItem(LS_SAVE);
-    Meta={highScore:0,bestFloor:0}; RUN=null;
+    Meta={highScore:0,bestFloor:0,essence:0,talents:{},deathLog:[],tutorialDone:{},codex:{enemies:{},cards:{},relics:{},bivi:{}}}; RUN=null;
     updateTitleMeta();
     $('overlay-options').classList.remove('active');
     toast('Progressi azzerati.');
@@ -1348,17 +1925,18 @@ $('btn-abandon').onclick = ()=>{
 function updateTitleMeta(){
   $('meta-highscore').textContent = Meta.highScore;
   $('meta-bestfloor').textContent = Meta.bestFloor || '—';
+  $('meta-essence').textContent = Meta.essence || 0;
   const saved = loadRun();
   $('btn-continue').disabled = !saved;
+  const frag = $('title-death-fragment');
+  if(Meta.deathLog && Meta.deathLog.length){
+    const last = Meta.deathLog[Meta.deathLog.length-1];
+    frag.textContent = `"Ricordo di essere caduto al Piano ${last.floor}, contro ${last.cause}..."`;
+  } else {
+    frag.textContent = '';
+  }
 }
-$('btn-newgame').onclick = ()=>{
-  RUN = newRun();
-  saveRun();
-  showScreen('explore');
-  updateExploreHud();
-  resizeCanvas();
-  toast('Il dungeon ti attende. Trova la chiave e sconfiggi il guardiano.');
-};
+$('btn-newgame').onclick = ()=>{ renderCharacterSelect(); showScreen('characters'); };
 $('btn-continue').onclick = ()=>{
   const saved = loadRun();
   if(!saved) return;
@@ -1372,14 +1950,153 @@ $('btn-continue').onclick = ()=>{
     resizeCanvas();
   }
 };
-$('btn-again').onclick = ()=>{
-  RUN = newRun();
+$('btn-again').onclick = ()=>{ renderCharacterSelect(); showScreen('characters'); };
+$('btn-tomenu').onclick = ()=>{ RUN=null; showScreen('title'); updateTitleMeta(); };
+$('btn-char-back').onclick = ()=>{ showScreen('title'); updateTitleMeta(); };
+
+function renderCharacterSelect(){
+  const wrap = $('character-list'); wrap.innerHTML='';
+  Object.values(CHARACTERS).forEach(ch=>{
+    const el = document.createElement('div');
+    el.className='char-card';
+    el.innerHTML = `
+      <div class="char-card-top">
+        <div class="char-icon">${ch.icon}</div>
+        <div>
+          <div class="char-name">${ch.name}</div>
+          <div class="char-stat">❤️ ${ch.hp} PF · 🎴 ${ch.deck.length} carte iniziali</div>
+        </div>
+      </div>
+      <div class="char-desc">${ch.desc}</div>
+      <button class="btn primary" style="margin-top:2px;">Scegli ${ch.name}</button>
+    `;
+    el.querySelector('button').onclick = ()=> startNewRunWithCharacter(ch.id);
+    wrap.appendChild(el);
+  });
+}
+function startNewRunWithCharacter(characterId){
+  RUN = newRun(characterId);
   saveRun();
   showScreen('explore');
   updateExploreHud();
   resizeCanvas();
-};
-$('btn-tomenu').onclick = ()=>{ RUN=null; showScreen('title'); updateTitleMeta(); };
+  const firstEver = tutorialOnce('welcome', ()=>{
+    setTimeout(()=>{
+      openSimpleEvent('🗝️','Benvenuto, Avventuriero', 'Muoviti con le frecce direzionali o il D-pad. Trova la chiave, apri la porta e sconfiggi il guardiano di ogni piano. Ogni scelta che fai resta con te, anche oltre la fine di questa run.');
+    }, 300);
+  });
+  if(!firstEver) toast('Il dungeon ti attende. Trova la chiave e sconfiggi il guardiano.');
+}
+
+/* =========================================================
+   PROGRESSION SHOP (Talenti) & RELICS PANEL
+========================================================= */
+function renderProgressPanel(){
+  $('progress-essence').textContent = Meta.essence || 0;
+  const wrap = $('talent-list'); wrap.innerHTML='';
+  Object.values(TALENTS).forEach(t=>{
+    const owned = !!(Meta.talents && Meta.talents[t.id]);
+    const row = document.createElement('div');
+    row.className = 'talent-row' + (owned?' owned':'');
+    row.innerHTML = `
+      <div class="talent-icon">${t.icon}</div>
+      <div class="talent-info">
+        <div class="talent-name">${t.name}</div>
+        <div class="talent-desc">${t.desc}</div>
+      </div>
+      <button class="btn ${owned?'ghost':'gem'} talent-buy" ${owned?'disabled':''}>${owned?'Ottenuto':'⚗️ '+t.cost}</button>
+    `;
+    if(!owned){
+      const btn = row.querySelector('.talent-buy');
+      if((Meta.essence||0) < t.cost) btn.disabled = true;
+      btn.onclick = ()=>{
+        if((Meta.essence||0) < t.cost) return;
+        Meta.essence -= t.cost;
+        Meta.talents = Meta.talents || {};
+        Meta.talents[t.id] = true;
+        saveMeta();
+        Audio1.treasure(); vibrate([15,10,15]);
+        renderProgressPanel();
+        updateTitleMeta();
+      };
+    }
+    wrap.appendChild(row);
+  });
+}
+$('btn-progress').onclick = ()=>{ renderProgressPanel(); $('overlay-progress').classList.add('active'); };
+$('btn-close-progress').onclick = ()=> $('overlay-progress').classList.remove('active');
+
+function renderRelicsPanel(){
+  const wrap = $('relics-list'); wrap.innerHTML='';
+  if(!RUN || !RUN.relics || !RUN.relics.length){
+    wrap.innerHTML = '<div class="desc" style="margin:6px 0 0;">Nessuna reliquia ancora. Sconfiggi i guardiani di piano per ottenerle.</div>';
+    return;
+  }
+  RUN.relics.forEach(id=>{
+    const r = RELICS[id]; if(!r) return;
+    const row = document.createElement('div');
+    row.className='talent-row owned';
+    row.innerHTML = `
+      <div class="talent-icon">${r.icon}</div>
+      <div class="talent-info">
+        <div class="talent-name">${r.name}</div>
+        <div class="talent-desc">${r.patto}</div>
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+}
+$('hud-relics').onclick = ()=>{ renderRelicsPanel(); $('overlay-relics').classList.add('active'); };
+$('btn-close-relics').onclick = ()=> $('overlay-relics').classList.remove('active');
+
+/* =========================================================
+   CODEX (v1.2 — narrativa strutturale)
+========================================================= */
+function codexRow(icon, name, desc, discovered){
+  const row = document.createElement('div');
+  row.className = 'talent-row' + (discovered?' owned':'');
+  row.innerHTML = discovered ? `
+    <div class="talent-icon">${icon}</div>
+    <div class="talent-info"><div class="talent-name">${name}</div><div class="talent-desc">${desc||''}</div></div>
+  ` : `
+    <div class="talent-icon">❔</div>
+    <div class="talent-info"><div class="talent-name">???</div><div class="talent-desc">Non ancora scoperto.</div></div>
+  `;
+  return row;
+}
+function renderCodexPanel(){
+  Meta.codex = Meta.codex || {enemies:{},cards:{},relics:{},bivi:{}};
+  const allEnemies = [...Object.values(ENEMIES), ...Object.values(BOSSES)];
+  const eWrap = $('codex-enemies-list'); eWrap.innerHTML='';
+  let eCount = 0;
+  allEnemies.forEach(en=>{
+    const disc = !!Meta.codex.enemies[en.id];
+    if(disc) eCount++;
+    eWrap.appendChild(codexRow(en.icon, en.name, en.lore || en.line || '', disc));
+  });
+  $('codex-enemies-count').textContent = `(${eCount}/${allEnemies.length})`;
+
+  const rWrap = $('codex-relics-list'); rWrap.innerHTML='';
+  let rCount = 0;
+  Object.values(RELICS).forEach(r=>{
+    const disc = !!Meta.codex.relics[r.id];
+    if(disc) rCount++;
+    rWrap.appendChild(codexRow(r.icon, r.name, r.lore || r.patto, disc));
+  });
+  $('codex-relics-count').textContent = `(${rCount}/${Object.keys(RELICS).length})`;
+
+  const cWrap = $('codex-cards-list'); cWrap.innerHTML='';
+  let cCount = 0;
+  const baseCards = Object.values(CARDS).filter(c=>!c.id.includes('_plus'));
+  baseCards.forEach(c=>{
+    const disc = !!Meta.codex.cards[c.id];
+    if(disc) cCount++;
+    cWrap.appendChild(codexRow(c.icon, c.name, c.desc, disc));
+  });
+  $('codex-cards-count').textContent = `(${cCount}/${baseCards.length})`;
+}
+$('btn-codex').onclick = ()=>{ renderCodexPanel(); $('overlay-codex').classList.add('active'); };
+$('btn-close-codex').onclick = ()=> $('overlay-codex').classList.remove('active');
 
 /* =========================================================
    INPUT: keyboard + dpad
