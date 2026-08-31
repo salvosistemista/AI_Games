@@ -1267,13 +1267,13 @@ function enemyDifficultyMult(){
   return 1 + (act-1)*0.32 + (sub-1)*0.14;
 }
 function bossDifficultyMult(){
-  if(RUN.mode!=='completa') return 1 + (RUN.floor-1)*0.15;
+  if(RUN.mode!=='completa') return 1 + (RUN.floor-1)*0.32;
   const act = actOf(RUN.mode, RUN.floor);
-  return 1 + (act-1)*0.30;
+  return 1 + (act-1)*0.55;
 }
 function eliteDifficultyMult(){
   const act = actOf(RUN.mode, RUN.floor);
-  return 1 + (act-1)*0.22;
+  return 1 + (act-1)*0.40;
 }
 
 /* =========================================================
@@ -2539,20 +2539,23 @@ function startCombat(enemyId, kind, companionId){
   const maxEnergy = 3 + (hasRelic('lanterna')?1:0);
   const initialDraw = hasRelic('lanterna') ? 4 : 5;
 
-  function makeEnemy(data, hpVal, tags){
+  function makeEnemy(data, hpVal, dmgVal, tags){
     return Object.assign({
-      id:data.id, name:data.name, icon:data.icon, art:data.art, hp:hpVal, maxHp:hpVal, dmg:data.dmg,
+      id:data.id, name:data.name, icon:data.icon, art:data.art, hp:hpVal, maxHp:hpVal, dmg:dmgVal,
       pattern:data.pattern, patternIdx:0, block:0, poison:0, nextIntent:null, buffed:false,
       vulnerableTurns:0, weakTurns:0, phase2:false, isBoss:false, isElite:false, isCompanion:false
     }, tags);
   }
 
-  const enemies = [ makeEnemy(base, hp, {isBoss, isElite}) ];
+  const dmg = Math.round(base.dmg * ((isBoss||isElite) ? mult : 1));
+  const enemies = [ makeEnemy(base, hp, dmg, {isBoss, isElite}) ];
   if(companionId && ENEMIES[companionId]){
     const compBase = ENEMIES[companionId];
-    let compHp = Math.round(compBase.hp * enemyDifficultyMult() * 0.65);
+    const compMult = enemyDifficultyMult();
+    let compHp = Math.round(compBase.hp * compMult * 0.65);
     if(hasRelic('osso')) compHp = Math.round(compHp*1.10);
-    enemies.push(makeEnemy(compBase, compHp, {isCompanion:true}));
+    const compDmg = Math.round(compBase.dmg * compMult);
+    enemies.push(makeEnemy(compBase, compHp, compDmg, {isCompanion:true}));
   }
 
   RUN.combat = {
@@ -2924,8 +2927,9 @@ function processEnemyStep(index, livingEnemies){
       floatNumberAt(e, 'block','+Difesa');
       Audio1.block();
     } else if(move==='poison'){
-      cb.playerPoison = (cb.playerPoison||0)+3;
-      floatNumber('poison','+3 ☠️');
+      const poisonAmt = Math.max(3, Math.round(e.dmg*0.28));
+      cb.playerPoison = (cb.playerPoison||0)+poisonAmt;
+      floatNumber('poison','+'+poisonAmt+' ☠️');
       Audio1.poison();
     } else if(move==='buff'){
       e.buffed = true;
