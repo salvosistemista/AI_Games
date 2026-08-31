@@ -145,7 +145,8 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .mode-sub{font-size:10px; margin-top:2px; line-height:1.3;}
 .char-card{display:flex; flex-direction:column; gap:8px; background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:14px; padding:14px; margin:8px 18px;}
 .char-card-top{display:flex; align-items:center; gap:12px;}
-.char-icon{width:52px; height:52px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0;}
+.char-icon{width:52px; height:52px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; overflow:hidden;}
+.char-icon svg{width:100%; height:100%; display:block;}
 .char-name{font-size:16px; font-weight:800;}
 .char-stat{font-size:11px; color:var(--parchment-dim); margin-top:2px;}
 .char-desc{font-size:12px; color:var(--parchment-dim); line-height:1.4;}
@@ -432,6 +433,16 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 @keyframes dragonFlapR{0%{transform:rotate(0deg);}100%{transform:rotate(-20deg);}}
 @keyframes dragonFireFlicker{0%{transform:scale(1);}100%{transform:scale(1.15,.9);}}
 @keyframes dragonBite{0%,45%{transform:translateY(0);}80%,100%{transform:translateY(8px);}}
+/* ---------- PERSONAGGI GIOCABILI v1 — alta definizione ---------- */
+.charW-body{animation:artBreathe 3s ease-in-out infinite; transform-box:fill-box; transform-origin:center;}
+.charW-eye{animation:charEyeGlintW 2.6s ease-in-out infinite alternate;}
+.charG-body{animation:artBreathe 3.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center;}
+.charG-eye{animation:charEyeGlintG 2.2s ease-in-out infinite alternate;}
+.charA-body{animation:artBreathe 2.8s ease-in-out infinite; transform-box:fill-box; transform-origin:center;}
+.charA-eye{animation:charEyeGlintA 2.4s ease-in-out infinite alternate;}
+@keyframes charEyeGlintW{0%{fill:#2a1a10;}100%{fill:#4a3018;}}
+@keyframes charEyeGlintG{0%{fill:#2a8a78; filter:drop-shadow(0 0 2px #4de2c7);}100%{fill:#4de2c7; filter:drop-shadow(0 0 6px #4de2c7);}}
+@keyframes charEyeGlintA{0%{fill:#5a9e2e; filter:drop-shadow(0 0 2px #9be05a);}100%{fill:#9be05a; filter:drop-shadow(0 0 6px #9be05a);}}
 #enemy-name{font-size:16px; font-weight:800; margin-top:6px;}
 #enemy-intent{
   margin-top:8px; display:flex; align-items:center; gap:6px; background:rgba(255,85,102,0.14);
@@ -1029,13 +1040,16 @@ function checkAchievements(run, victory){
 const CHARACTERS = {
   guerriero: { id:'guerriero', name:'Guerriero', icon:'⚔️', hp:60,
     deck:['strike','strike','strike','strike','guard','guard','guard','twin','focus','heal'],
-    desc:'Equilibrato e versatile. Il modo migliore per iniziare a esplorare il dungeon.' },
+    desc:'Equilibrato e versatile. Il modo migliore per iniziare a esplorare il dungeon.',
+    art:`<svg viewBox="0 0 400 400" width="100%" height="100%"><defs><radialGradient id="warrior-skin-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#e8b894"/><stop offset="55%" stop-color="#b8825a"/><stop offset="100%" stop-color="#6b4a30"/></radialGradient><radialGradient id="warrior-armor-gradient" cx="45%" cy="25%" r="75%"><stop offset="0%" stop-color="#c9a45c"/><stop offset="55%" stop-color="#8a6d3a"/><stop offset="100%" stop-color="#3a2a12"/></radialGradient><linearGradient id="warrior-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#eef1f4"/><stop offset="100%" stop-color="#8a8a94"/></linearGradient><linearGradient id="warrior-cape-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#c94a4a"/><stop offset="100%" stop-color="#5a1c1c"/></linearGradient></defs><g class="charW-body"><path d="M70,400 Q80,280 200,260 Q320,280 330,400 Z" fill="url(#warrior-cape-gradient)"/><path d="M300,200 L344,90 L360,97 L316,207 Z" fill="url(#warrior-metal-gradient)"/><rect x="290" y="200" width="30" height="12" fill="url(#warrior-armor-gradient)" transform="rotate(23 305 206)"/><circle cx="292" cy="215" r="9" fill="url(#warrior-armor-gradient)"/><path d="M100,400 Q110,300 200,285 Q290,300 300,400 Z" fill="url(#warrior-armor-gradient)"/><rect x="90" y="260" width="32" height="52" rx="8" fill="url(#warrior-armor-gradient)"/><rect x="278" y="260" width="32" height="52" rx="8" fill="url(#warrior-armor-gradient)"/><ellipse cx="200" cy="205" rx="68" ry="78" fill="url(#warrior-skin-gradient)"/><path d="M132,178 Q135,108 200,103 Q265,108 268,178 Q268,200 250,210 L150,210 Q132,200 132,178 Z" fill="url(#warrior-armor-gradient)"/><rect x="192" y="178" width="16" height="48" fill="url(#warrior-armor-gradient)"/><ellipse cx="172" cy="196" rx="10" ry="8" fill="#1c1006"/><ellipse cx="228" cy="196" rx="10" ry="8" fill="#1c1006"/><circle cx="172" cy="196" r="3" class="charW-eye"/><circle cx="228" cy="196" r="3" class="charW-eye"/><path d="M180,236 L220,236" stroke="#6b4a30" stroke-width="4" stroke-linecap="round"/></g></svg>`},
   custode: { id:'custode', name:'Custode', icon:'🛡️', hp:68,
     deck:['strike','strike','guard','guard','guard','ironwall','focus','heal','heal','riposte'],
-    desc:'Resiste a lungo e logora il nemico. Meno danno immediato, molta sopravvivenza.' },
+    desc:'Resiste a lungo e logora il nemico. Meno danno immediato, molta sopravvivenza.',
+    art:`<svg viewBox="0 0 400 400" width="100%" height="100%"><defs><radialGradient id="guardian-armor-gradient" cx="45%" cy="25%" r="75%"><stop offset="0%" stop-color="#8a94a8"/><stop offset="55%" stop-color="#4a5468"/><stop offset="100%" stop-color="#1c2030"/></radialGradient><linearGradient id="guardian-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="100%" stop-color="#5a5a64"/></linearGradient></defs><g class="charG-body"><path d="M55,350 Q50,392 82,408 L88,348 Z" fill="url(#guardian-metal-gradient)"/><path d="M55,350 Q50,392 82,408 L88,348 Z" stroke="#1c2030" stroke-width="3" fill="none"/><path d="M90,400 Q100,290 200,270 Q300,290 310,400 Z" fill="url(#guardian-armor-gradient)"/><rect x="72" y="250" width="42" height="62" rx="10" fill="url(#guardian-armor-gradient)"/><rect x="286" y="250" width="42" height="62" rx="10" fill="url(#guardian-armor-gradient)"/><path d="M150,140 Q200,108 250,140 Q262,200 230,232 L170,232 Q138,200 150,140 Z" fill="url(#guardian-armor-gradient)"/><path d="M200,102 L190,142 L210,142 Z" fill="url(#guardian-metal-gradient)"/><rect x="166" y="180" width="24" height="9" class="charG-eye" fill="#4de2c7"/><rect x="210" y="180" width="24" height="9" class="charG-eye" fill="#4de2c7"/><path d="M175,205 L225,205" stroke="#1c2030" stroke-width="4" stroke-linecap="round"/></g></svg>`},
   assassina: { id:'assassina', name:'Assassina', icon:'☠️', hp:52,
     deck:['strike','strike','poisonC','poisonC','twin','twin','guard','focus','fury','pierce'],
-    desc:'Colpisce rapida e avvelena chi la affronta. Fragile, ma letale nel tempo.' },
+    desc:'Colpisce rapida e avvelena chi la affronta. Fragile, ma letale nel tempo.',
+    art:`<svg viewBox="0 0 400 400" width="100%" height="100%"><defs><radialGradient id="assassin-cloth-gradient" cx="45%" cy="25%" r="75%"><stop offset="0%" stop-color="#4a3a6a"/><stop offset="55%" stop-color="#241c40"/><stop offset="100%" stop-color="#0a0714"/></radialGradient><linearGradient id="assassin-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#eef1f4"/><stop offset="100%" stop-color="#8a8a94"/></linearGradient></defs><g class="charA-body"><path d="M90,260 L60,190 L72,184 L102,254 Z" fill="url(#assassin-metal-gradient)"/><path d="M310,260 L340,190 L328,184 L298,254 Z" fill="url(#assassin-metal-gradient)"/><path d="M80,400 Q90,290 200,270 Q310,290 320,400 Z" fill="url(#assassin-cloth-gradient)"/><path d="M145,150 Q200,113 255,150 Q265,202 235,227 L165,227 Q135,202 145,150 Z" fill="url(#assassin-cloth-gradient)"/><ellipse cx="200" cy="192" rx="45" ry="50" fill="#0a0714"/><ellipse cx="182" cy="190" rx="7" ry="9" class="charA-eye" transform="rotate(8 182 190)"/><ellipse cx="218" cy="190" rx="7" ry="9" class="charA-eye" transform="rotate(-8 218 190)"/><path d="M163,207 Q200,227 237,207 L237,232 Q200,248 163,232 Z" fill="#1c1430"/></g></svg>`},
 };
 
 /* =========================================================
@@ -1714,13 +1728,30 @@ function drawCellIcon(ctx, type, cx, cy, size){
   ctx.translate(cx, cy);
   ctx.lineJoin='round'; ctx.lineCap='round';
   if(type==='enemy'){
-    ctx.fillStyle='#e8e2d0';
-    ctx.beginPath(); ctx.arc(0,-size*0.05,size*0.42,0,Math.PI*2); ctx.fill();
-    ctx.fillRect(-size*0.28,size*0.15,size*0.56,size*0.22);
-    ctx.fillStyle='#150f26';
-    ctx.beginPath(); ctx.ellipse(-size*0.16,-size*0.05,size*0.12,size*0.15,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(size*0.16,-size*0.05,size*0.12,size*0.15,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-size*0.06,size*0.08); ctx.lineTo(size*0.06,size*0.08); ctx.lineTo(0,size*0.2); ctx.closePath(); ctx.fill();
+    const auraG = ctx.createRadialGradient(0,0,0,0,0,size*0.9);
+    auraG.addColorStop(0,'rgba(80,20,110,0.55)'); auraG.addColorStop(1,'rgba(10,5,20,0)');
+    ctx.fillStyle=auraG; ctx.beginPath(); ctx.arc(0,0,size*0.9,0,Math.PI*2); ctx.fill();
+    const blobG = ctx.createRadialGradient(-size*0.08,-size*0.1,size*0.05,0,0,size*0.5);
+    blobG.addColorStop(0,'#2a2440'); blobG.addColorStop(0.5,'#150f26'); blobG.addColorStop(1,'#050308');
+    ctx.fillStyle=blobG;
+    ctx.beginPath();
+    ctx.moveTo(-size*0.1,size*0.3);
+    ctx.bezierCurveTo(-size*0.42,size*0.05,-size*0.32,-size*0.35,size*0.02,-size*0.42);
+    ctx.bezierCurveTo(size*0.28,-size*0.46,size*0.46,-size*0.18,size*0.4,size*0.1);
+    ctx.bezierCurveTo(size*0.32,size*0.4,size*0.08,size*0.44,-size*0.1,size*0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle='#050308'; ctx.lineWidth=size*0.03; ctx.stroke();
+    ctx.fillStyle='#ff5566';
+    ctx.save(); ctx.translate(-size*0.12,-size*0.02); ctx.rotate(0.25); ctx.beginPath(); ctx.ellipse(0,0,size*0.05,size*0.075,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    ctx.fillStyle='#ff9d4d';
+    ctx.save(); ctx.translate(size*0.14,-size*0.08); ctx.rotate(-0.35); ctx.beginPath(); ctx.ellipse(0,0,size*0.06,size*0.085,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    ctx.fillStyle='rgba(255,120,90,0.7)';
+    ctx.beginPath(); ctx.arc(-size*0.24,size*0.12,size*0.022,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(size*0.28,size*0.08,size*0.028,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(size*0.02,-size*0.28,size*0.018,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#050308'; ctx.lineWidth=size*0.025; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-size*0.1,size*0.08); ctx.lineTo(-size*0.02,size*0.18); ctx.lineTo(size*0.06,size*0.1); ctx.lineTo(size*0.13,size*0.22); ctx.stroke();
   } else if(type==='elite'){
     ctx.strokeStyle='#ff5566'; ctx.lineWidth=size*0.05; ctx.setLineDash([size*0.12,size*0.1]);
     ctx.beginPath(); ctx.arc(0,0,size*0.48,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
@@ -3055,7 +3086,7 @@ function renderCharacterSelect(){
     el.className='char-card';
     el.innerHTML = `
       <div class="char-card-top">
-        <div class="char-icon">${ch.icon}</div>
+        <div class="char-icon">${ch.art || ch.icon}</div>
         <div>
           <div class="char-name">${ch.name}</div>
           <div class="char-stat">❤️ ${ch.hp} PF · 🎴 ${ch.deck.length} carte iniziali</div>
