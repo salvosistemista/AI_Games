@@ -212,10 +212,35 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .poison-chip{display:flex; align-items:center; gap:3px; background:rgba(138,109,255,0.16); border:1px solid var(--purple); color:var(--purple); font-size:11px; font-weight:800; padding:2px 7px; border-radius:10px;}
 
 #enemy-stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; min-height:0; padding:6px 16px;}
+#single-enemy-view{display:flex; flex-direction:column; align-items:center; width:100%;}
+
+/* ---------- MULTI-ENEMY (v2.0) ---------- */
+#targeting-banner{
+  position:absolute; top:0; left:0; right:0; z-index:5; display:flex; align-items:center; justify-content:center; gap:10px;
+  background:rgba(255,85,102,0.16); border-bottom:1px solid var(--danger); padding:8px 12px; font-size:13px; font-weight:800; color:#ffd7db;
+}
+#multi-enemy-view{display:flex; flex-direction:column; gap:10px; width:100%; max-width:320px; overflow-y:auto; max-height:100%; padding:4px 0;}
+.enemy-panel{
+  display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1.5px solid var(--line); border-radius:14px; padding:8px 10px;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.enemy-panel.targetable{ cursor:pointer; border-color:var(--danger); box-shadow:0 0 0 3px rgba(255,85,102,0.25); animation:targetPulse 1.1s ease-in-out infinite; }
+@keyframes targetPulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(255,85,102,0.2);} 50%{ box-shadow:0 0 0 6px rgba(255,85,102,0.4);} }
+.enemy-panel.defeated{ opacity:.4; filter:grayscale(1); }
+.enemy-panel-icon{font-size:38px; flex-shrink:0; filter:drop-shadow(0 4px 8px rgba(0,0,0,.4)); transition:transform .12s ease;}
+.enemy-panel-info{flex:1; min-width:0;}
+.enemy-panel-name{font-size:12px; font-weight:800; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.enemy-panel-hp{height:10px; border-radius:6px; background:#2a2242; overflow:hidden; border:1px solid var(--line); position:relative;}
+.enemy-panel-hp-fill{height:100%; background:linear-gradient(90deg,#ff5566,#ff9d4d);}
+.enemy-panel-chips{display:flex; gap:4px; margin-top:3px; flex-wrap:wrap;}
+.enemy-panel-chip{font-size:9px; font-weight:800; padding:1px 5px; border-radius:8px; border:1px solid; }
+.enemy-panel-intent{font-size:11px; font-weight:800; flex-shrink:0; text-align:center; min-width:40px;}
 #enemy-sprite{font-size:76px; filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)); transition:transform .12s ease, filter .4s ease;}
 #enemy-sprite.phase2{filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(255,85,102,0.85)); animation:phase2Pulse 1.6s ease-in-out infinite;}
+.enemy-panel-icon.phase2{filter:drop-shadow(0 0 10px rgba(255,85,102,0.9)); animation:phase2Pulse 1.6s ease-in-out infinite;}
 @keyframes phase2Pulse{ 0%,100%{ filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 14px rgba(255,85,102,0.6)); } 50%{ filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 26px rgba(255,85,102,1)); } }
 #enemy-sprite.hit{animation:hitshake .28s ease;}
+.enemy-panel-icon.hit{animation:hitshake .28s ease;}
 @keyframes hitshake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px) rotate(-3deg);} 75%{transform:translateX(10px) rotate(3deg);} }
 #enemy-name{font-size:16px; font-weight:800; margin-top:6px;}
 #enemy-intent{
@@ -372,15 +397,22 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
     </div>
     <div id="enemy-stage">
       <div id="floatlayer"></div>
-      <div id="enemy-sprite">👹</div>
-      <div id="enemy-name">Nemico</div>
-      <div class="combatant-row" style="width:80%; max-width:260px;">
-        <div class="hpbar-track" style="flex:1;"><div class="hpbar-fill" id="en-hp-fill"></div><div class="hpbar-label" id="en-hp-label"></div></div>
-        <div class="poison-chip hidden" id="en-poison-chip">☠️ 0</div>
-        <div class="poison-chip hidden" id="en-vulnerable-chip" style="border-color:var(--danger); color:#ffb9c1; background:rgba(255,85,102,0.14);">🎯 Vuln.</div>
-        <div class="poison-chip hidden" id="en-weak-chip" style="border-color:var(--parchment-dim); color:var(--parchment-dim); background:rgba(217,205,174,0.14);">🔻 Deb.</div>
+      <div id="targeting-banner" class="hidden">
+        <span>🎯 Scegli un bersaglio</span>
+        <button class="btn ghost" id="btn-cancel-targeting" style="padding:6px 12px; font-size:12px;">Annulla</button>
       </div>
-      <div id="enemy-intent">⚔️ 8</div>
+      <div id="single-enemy-view">
+        <div id="enemy-sprite">👹</div>
+        <div id="enemy-name">Nemico</div>
+        <div class="combatant-row" style="width:80%; max-width:260px;">
+          <div class="hpbar-track" style="flex:1;"><div class="hpbar-fill" id="en-hp-fill"></div><div class="hpbar-label" id="en-hp-label"></div></div>
+          <div class="poison-chip hidden" id="en-poison-chip">☠️ 0</div>
+          <div class="poison-chip hidden" id="en-vulnerable-chip" style="border-color:var(--danger); color:#ffb9c1; background:rgba(255,85,102,0.14);">🎯 Vuln.</div>
+          <div class="poison-chip hidden" id="en-weak-chip" style="border-color:var(--parchment-dim); color:var(--parchment-dim); background:rgba(217,205,174,0.14);">🔻 Deb.</div>
+        </div>
+        <div id="enemy-intent">⚔️ 8</div>
+      </div>
+      <div id="multi-enemy-view" class="hidden"></div>
     </div>
     <div id="hand-area">
       <div id="energy-row">
@@ -624,24 +656,29 @@ const CARDS = {
   purify:    {id:'purify', name:'Purificazione', cost:1, type:'skill', icon:'✨', rarity:1, cleanse:true, heal:5, desc:'Rimuovi il tuo Veleno e recupera 5 PF.'},
   doubleguard:{id:'doubleguard', name:'Doppia Guardia', cost:2, type:'skill', icon:'🛡️', rarity:2, block:10, draw:1, desc:'Ottieni 10 Blocco e pesca 1 carta.'},
   bloodpact: {id:'bloodpact', name:'Patto di Sangue', cost:1, type:'skill', icon:'🩸', rarity:2, selfDmg:5, gainEnergy:2, draw:1, desc:'Subisci 5 danni. Ottieni 2 energia e pesca 1 carta.'},
+
+  // ---- v2.0: carte ad area (multi-nemico) ----
+  shockwave: {id:'shockwave', name:"Onda d'Urto", cost:2, type:'attack', icon:'💥', rarity:2, dmg:6, aoe:true, desc:'Infliggi 6 danni a TUTTI i nemici.'},
+  warcry: {id:'warcry', name:'Grido di Guerra', cost:1, type:'skill', icon:'📯', rarity:2, weak:2, aoe:true, desc:'Indebolisci TUTTI i nemici (-25% danno) per 2 turni.'},
 };
 const STARTER_DECK = ['strike','strike','strike','strike','guard','guard','guard','twin','focus','heal'];
 const REWARD_POOL = Object.values(CARDS).filter(c=>c.id!=='mega' || true); // all cards eligible, weighted by rarity
 
 function describeCard(c){
   const parts=[];
+  const bersaglio = c.aoe ? 'TUTTI i nemici' : null;
   if(c.dmg){
-    if(c.hits && c.hits>1) parts.push(`Infliggi ${c.dmg} danni, ${c.hits} volte.`);
-    else parts.push(`Infliggi ${c.dmg} danni${c.pierce?' (ignora la difesa nemica)':''}.`);
+    if(c.hits && c.hits>1) parts.push(`Infliggi ${c.dmg} danni${bersaglio?' a '+bersaglio:''}, ${c.hits} volte.`);
+    else parts.push(`Infliggi ${c.dmg} danni${bersaglio?' a '+bersaglio:''}${c.pierce?' (ignora la difesa nemica)':''}.`);
   }
-  if(c.poison) parts.push(`Applica ${c.poison} Veleno (3 turni).`);
+  if(c.poison) parts.push(`Applica ${c.poison} Veleno${bersaglio?' a '+bersaglio:''} (3 turni).`);
   if(c.block) parts.push(`Ottieni ${c.block} Blocco.`);
   if(c.heal) parts.push(`Recupera ${c.heal} PF.`);
   if(c.draw) parts.push(`Pesca ${c.draw} cart${c.draw===1?'a':'e'}.`);
   if(c.furyBuff) parts.push(`Il prossimo Attacco infligge +${c.furyBuff} danni.`);
   if(c.gainEnergy) parts.push(`Ottieni ${c.gainEnergy} energia.`);
-  if(c.vulnerable) parts.push(`Nemico Vulnerabile per ${c.vulnerable} turni.`);
-  if(c.weak) parts.push(`Nemico Indebolito per ${c.weak} turni.`);
+  if(c.vulnerable) parts.push(`${bersaglio||'Nemico'} Vulnerabile per ${c.vulnerable} turni.`);
+  if(c.weak) parts.push(`${bersaglio||'Nemico'} Indebolito per ${c.weak} turni.`);
   if(c.execute) parts.push(`Danno raddoppiato sotto il 30% PF nemici.`);
   if(c.lifesteal) parts.push(`Recuperi PF pari al danno inflitto.`);
   if(c.selfDmg) parts.push(`Subisci ${c.selfDmg} danni.`);
@@ -847,14 +884,17 @@ const FLOOR_ENEMIES = {
 const BOSSES = {
   1: {id:'ogre',   name:'Orco Sentinella', icon:'👹', hp:52, dmg:10, pattern:['attack','attack','defend','attack'],
       line:'"Un altro topo nel mio labirinto. Che sia l\u2019ultimo."',
-      pattern2:['attack','attack','buff','attack'], phase2Line:'"IL SANGUE MI RENDE PIÙ FORTE!"'},
+      pattern2:['attack','attack','buff','attack'], phase2Line:'"IL SANGUE MI RENDE PIÙ FORTE!"',
+      companion:'goblin', companionLine:'Al suo fianco avanza un goblin, ghigno furbo e lama pronta.'},
   2: {id:'wraith', name:'Spettro Incatenato', icon:'👻', hp:74, dmg:12, pattern:['attack','poison','attack','defend'],
       line:'"Le catene non tratterranno il mio odio ancora per molto."',
-      pattern2:['poison','attack','buff','attack'], phase2Line:'"LE CATENE SI SPEZZANO!"'},
+      pattern2:['poison','attack','buff','attack'], phase2Line:'"LE CATENE SI SPEZZANO!"',
+      companion:'wraithling', companionLine:'Un\u2019eco minore gli è incatenata accanto, sussurrando lo stesso odio.'},
   3: {id:'dragon', name:'Drago Nano', icon:'🐲', hp:105, dmg:15, pattern:['attack','attack','defend','buff','attack'],
       line:'"Piccola fiamma... lascia che ti spenga per sempre."',
       lineRemember:'"Sento ancora il tuo odore... sei tornato a cadere, come già facesti una volta."',
-      pattern2:['attack','buff','attack','attack'], phase2Line:'"IL VERO FUOCO SI RISVEGLIA!"'},
+      pattern2:['attack','buff','attack','attack'], phase2Line:'"IL VERO FUOCO SI RISVEGLIA!"',
+      companion:'golem', companionLine:'Un golem di pietra veglia al suo fianco, immobile finché non è il momento di colpire.'},
 };
 const MAX_FLOOR = 3; // usato solo per Run Breve
 
@@ -1662,10 +1702,12 @@ function openBossIntro(bossData){
   RUN.pendingEvent='bossintro';
   $('event-icon').textContent = bossData.icon;
   $('event-title').textContent = bossData.name;
-  $('event-desc').textContent = getBossIntroLine(bossData);
+  let desc = getBossIntroLine(bossData);
+  if(bossData.companion && bossData.companionLine) desc += ' ' + bossData.companionLine;
+  $('event-desc').textContent = desc;
   $('event-cards').innerHTML='';
   $('event-actions').innerHTML = '<button class="btn danger" id="btn-event-ok">⚔️ Combatti!</button>';
-  $('btn-event-ok').onclick = ()=>{ closeEvent(); startCombat(bossData.id, 'boss'); };
+  $('btn-event-ok').onclick = ()=>{ closeEvent(); startCombat(bossData.id, 'boss', bossData.companion); };
   evOverlay.classList.add('active');
   renderMinimap();
 }
@@ -1835,7 +1877,7 @@ function openRelicReward(afterCb, opts){
 /* =========================================================
    COMBAT ENGINE
 ========================================================= */
-function startCombat(enemyId, kind){
+function startCombat(enemyId, kind, companionId){
   // kind: 'normal' | 'boss' | 'elite'
   const act = actOf(RUN.mode, RUN.floor);
   const isBoss = kind==='boss';
@@ -1846,8 +1888,26 @@ function startCombat(enemyId, kind){
   if(hasRelic('osso')) hp = Math.round(hp*1.10);
   const maxEnergy = 3 + (hasRelic('lanterna')?1:0);
   const initialDraw = hasRelic('lanterna') ? 4 : 5;
+
+  function makeEnemy(data, hpVal, tags){
+    return Object.assign({
+      id:data.id, name:data.name, icon:data.icon, hp:hpVal, maxHp:hpVal, dmg:data.dmg,
+      pattern:data.pattern, patternIdx:0, block:0, poison:0, nextIntent:null, buffed:false,
+      vulnerableTurns:0, weakTurns:0, phase2:false, isBoss:false, isElite:false, isCompanion:false
+    }, tags);
+  }
+
+  const enemies = [ makeEnemy(base, hp, {isBoss, isElite}) ];
+  if(companionId && ENEMIES[companionId]){
+    const compBase = ENEMIES[companionId];
+    let compHp = Math.round(compBase.hp * enemyDifficultyMult() * 0.65);
+    if(hasRelic('osso')) compHp = Math.round(compHp*1.10);
+    enemies.push(makeEnemy(compBase, compHp, {isCompanion:true}));
+  }
+
   RUN.combat = {
-    enemy: { id:base.id, name:base.name, icon:base.icon, hp:hp, maxHp:hp, dmg:base.dmg, pattern:base.pattern, patternIdx:0, block:0, poison:0, isBoss, isElite, nextIntent:null, buffed:false, vulnerableTurns:0, weakTurns:0, phase2:false },
+    enemies: enemies,
+    targetingCardIdx: null,
     drawPile: shuffle(RUN.deck.slice()),
     discardPile: [],
     hand: [],
@@ -1859,12 +1919,15 @@ function startCombat(enemyId, kind){
     turn:1,
   };
   const cb = RUN.combat;
-  rollEnemyIntent();
+  enemies.forEach(rollEnemyIntentFor);
   drawHand(initialDraw);
   showScreen('combat');
   setupCombatUI();
   Audio1.click();
   tutorialOnce('combat', ()=> setTimeout(()=> toast(`⚡ Energia per giocare le carte. L'icona sopra al nemico mostra la sua prossima mossa.`), 450));
+  if(enemies.length>1){
+    tutorialOnce('multitarget', ()=> setTimeout(()=> toast('Più nemici in campo! Tocca una carta d\u2019attacco, poi scegli su chi usarla. Le carte ad area colpiscono tutti.'), 900));
+  }
 }
 function drawFromDeck(n){
   const cb=RUN.combat; const out=[];
@@ -1881,8 +1944,7 @@ function drawHand(n){
   const cb=RUN.combat;
   cb.hand = cb.hand.concat(drawFromDeck(n));
 }
-function rollEnemyIntent(){
-  const e = RUN.combat.enemy;
+function rollEnemyIntentFor(e){
   const move = e.pattern[e.patternIdx % e.pattern.length];
   e.patternIdx++;
   e.nextIntent = move;
@@ -1892,11 +1954,40 @@ function setupCombatUI(){
 }
 function renderCombat(){
   if(!RUN || !RUN.combat) return;
-  const cb = RUN.combat, e = cb.enemy;
+  const cb = RUN.combat;
   $('pc-hp-fill').style.width = clamp(RUN.hp/RUN.maxHp*100,0,100)+'%';
   $('pc-hp-label').textContent = `${RUN.hp}/${RUN.maxHp}`;
   $('pc-block-chip').textContent = `🛡️ ${cb.playerBlock}`;
   $('pc-block-chip').style.visibility = cb.playerBlock>0?'visible':'hidden';
+
+  const targetingBanner = $('targeting-banner');
+  targetingBanner.classList.toggle('hidden', cb.targetingCardIdx==null);
+
+  if(cb.enemies.length<=1){
+    $('single-enemy-view').classList.remove('hidden');
+    $('multi-enemy-view').classList.add('hidden');
+    renderSingleEnemy(cb.enemies[0]);
+  } else {
+    $('single-enemy-view').classList.add('hidden');
+    $('multi-enemy-view').classList.remove('hidden');
+    renderMultiEnemies(cb.enemies);
+  }
+
+  $('energy-text').textContent = `${cb.energy}/${cb.maxEnergy}`;
+  $('draw-count').textContent = `🎴 ${cb.drawPile.length}`;
+  $('discard-count').textContent = `🗑️ ${cb.discardPile.length}`;
+
+  const handEl = $('hand'); handEl.innerHTML='';
+  cb.hand.forEach((cardId, idx)=>{
+    const c = CARDS[cardId];
+    const el = buildCardEl(c);
+    if(c.cost>cb.energy) el.classList.add('unaffordable');
+    el.onclick = ()=> playCard(idx);
+    handEl.appendChild(el);
+  });
+}
+function renderSingleEnemy(e){
+  if(!e) return;
   $('en-hp-fill').style.width = clamp(e.hp/e.maxHp*100,0,100)+'%';
   $('en-hp-label').textContent = `${e.hp}/${e.maxHp}`;
   $('enemy-sprite').textContent = e.icon;
@@ -1924,18 +2015,46 @@ function renderCombat(){
     intentEl.classList.add('buff');
     intentEl.innerHTML = `💢 Carica`;
   }
-
-  $('energy-text').textContent = `${cb.energy}/${cb.maxEnergy}`;
-  $('draw-count').textContent = `🎴 ${cb.drawPile.length}`;
-  $('discard-count').textContent = `🗑️ ${cb.discardPile.length}`;
-
-  const handEl = $('hand'); handEl.innerHTML='';
-  cb.hand.forEach((cardId, idx)=>{
-    const c = CARDS[cardId];
-    const el = buildCardEl(c);
-    if(c.cost>cb.energy) el.classList.add('unaffordable');
-    el.onclick = ()=> playCard(idx);
-    handEl.appendChild(el);
+}
+function renderMultiEnemies(enemies){
+  const wrap = $('multi-enemy-view'); wrap.innerHTML='';
+  const cb = RUN.combat;
+  const targeting = cb.targetingCardIdx != null;
+  enemies.forEach((e, idx)=>{
+    const defeated = e.hp<=0;
+    const panel = document.createElement('div');
+    panel.className = 'enemy-panel' + (defeated?' defeated':'') + (targeting && !defeated ? ' targetable':'');
+    panel.setAttribute('data-idx', idx);
+    let intentHtml = '✔️ Sconfitto';
+    if(!defeated){
+      if(e.nextIntent==='attack'){
+        let dmg = e.dmg; if(e.buffed) dmg = Math.round(dmg*1.5);
+        intentHtml = `⚔️<br>${dmg}`;
+      } else if(e.nextIntent==='defend'){
+        intentHtml = `🛡️<br>Dif.`;
+      } else if(e.nextIntent==='poison'){
+        intentHtml = `☠️<br>Ven.`;
+      } else if(e.nextIntent==='buff'){
+        intentHtml = `💢<br>Carica`;
+      }
+    }
+    const chips = [];
+    if(!defeated){
+      if(e.poison>0) chips.push(`<span class="enemy-panel-chip" style="border-color:var(--purple); color:var(--purple);">☠️${e.poison}</span>`);
+      if(e.vulnerableTurns>0) chips.push(`<span class="enemy-panel-chip" style="border-color:var(--danger); color:#ffb9c1;">🎯${e.vulnerableTurns}</span>`);
+      if(e.weakTurns>0) chips.push(`<span class="enemy-panel-chip" style="border-color:var(--parchment-dim); color:var(--parchment-dim);">🔻${e.weakTurns}</span>`);
+    }
+    panel.innerHTML = `
+      <div class="enemy-panel-icon${e.phase2?' phase2':''}">${e.icon}</div>
+      <div class="enemy-panel-info">
+        <div class="enemy-panel-name">${e.name}${e.isBoss?' 👑':(e.isElite?' 🗡️':'')}${e.phase2?' ⚡':''}</div>
+        <div class="enemy-panel-hp"><div class="enemy-panel-hp-fill" style="width:${clamp(e.hp/e.maxHp*100,0,100)}%;"></div></div>
+        <div class="enemy-panel-chips">${chips.join('')}</div>
+      </div>
+      <div class="enemy-panel-intent">${intentHtml}</div>
+    `;
+    if(targeting && !defeated) panel.onclick = ()=> chooseTarget(idx);
+    wrap.appendChild(panel);
   });
 }
 function floatNumber(kind, text){
@@ -1947,8 +2066,36 @@ function floatNumber(kind, text){
   layer.appendChild(el);
   setTimeout(()=>el.remove(), 950);
 }
+function floatNumberAt(e, kind, text){
+  const cb = RUN.combat;
+  if(!cb || cb.enemies.length<=1){ floatNumber(kind, text); return; }
+  const idx = cb.enemies.indexOf(e);
+  const panel = document.querySelector('.enemy-panel[data-idx="'+idx+'"]');
+  const stage = $('enemy-stage');
+  if(!panel || !stage){ floatNumber(kind, text); return; }
+  const pr = panel.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  if(sr.width===0 || sr.height===0){ floatNumber(kind, text); return; }
+  const layer = $('floatlayer');
+  const el = document.createElement('div');
+  el.className = 'float-num '+kind;
+  el.textContent = text;
+  const xPct = ((pr.left+pr.width/2-sr.left)/sr.width)*100 + rand(-4,4);
+  const yPct = ((pr.top-sr.top)/sr.height)*100;
+  el.style.left = xPct+'%';
+  el.style.top = yPct+'%';
+  layer.appendChild(el);
+  setTimeout(()=>el.remove(), 950);
+}
 function shakeEnemy(){
   const s=$('enemy-sprite'); s.classList.remove('hit'); void s.offsetWidth; s.classList.add('hit');
+}
+function shakeEnemyEl(e){
+  const cb = RUN.combat;
+  if(!cb || cb.enemies.length<=1){ shakeEnemy(); return; }
+  const idx = cb.enemies.indexOf(e);
+  const spr = document.querySelector('.enemy-panel[data-idx="'+idx+'"] .enemy-panel-icon');
+  if(!spr){ shakeEnemy(); return; }
+  spr.classList.remove('hit'); void spr.offsetWidth; spr.classList.add('hit');
 }
 function checkBossPhaseTransition(e){
   if(!e || !e.isBoss || e.phase2 || e.hp<=0) return false;
@@ -1959,8 +2106,8 @@ function checkBossPhaseTransition(e){
   e.pattern = bossData.pattern2;
   e.patternIdx = 0;
   e.block = 0; // la trasformazione spazza via ogni difesa residua
-  shakeEnemy(); Audio1.hit(); vibrate([60,30,60,30,80]);
-  floatNumber('poison', '⚡ FASE 2!');
+  shakeEnemyEl(e); Audio1.hit(); vibrate([60,30,60,30,80]);
+  floatNumberAt(e, 'poison', '⚡ FASE 2!');
   renderCombat();
   toast(bossData.phase2Line || 'Il nemico si trasforma!');
   return true;
@@ -1971,41 +2118,76 @@ function playCard(idx){
   const cb = RUN.combat;
   const cardId = cb.hand[idx]; if(!cardId) return; const c = CARDS[cardId];
   if(c.cost>cb.energy){ Audio1.bump(); return; }
+
+  const needsTarget = !!(c.dmg || c.poison || c.vulnerable || c.weak) && !c.aoe;
+  const livingEnemies = cb.enemies.filter(en=>en.hp>0);
+
+  if(needsTarget && livingEnemies.length>1){
+    cb.targetingCardIdx = idx;
+    Audio1.click();
+    renderCombat();
+    return;
+  }
+  const target = needsTarget ? livingEnemies[0] : null;
+  executeCard(idx, target);
+}
+function cancelTargeting(){
+  if(RUN && RUN.combat){ RUN.combat.targetingCardIdx = null; renderCombat(); }
+}
+function chooseTarget(enemyIdx){
+  const cb = RUN.combat; if(!cb || cb.targetingCardIdx==null) return;
+  const target = cb.enemies[enemyIdx];
+  if(!target || target.hp<=0) return;
+  const idx = cb.targetingCardIdx;
+  cb.targetingCardIdx = null;
+  executeCard(idx, target);
+}
+function executeCard(idx, target){
+  if(!RUN || !RUN.combat) return;
+  const cb = RUN.combat;
+  const cardId = cb.hand[idx]; if(!cardId) return; const c = CARDS[cardId];
   cb.energy -= c.cost;
   cb.hand.splice(idx,1);
   cb.discardPile.push(cardId);
   Audio1.cardplay();
 
-  const e = cb.enemy;
+  const targets = c.aoe ? cb.enemies.filter(e=>e.hp>0) : (target ? [target] : []);
+
   if(c.dmg){
-    let dmg = c.dmg;
-    if(cb.furyBuff>0){ dmg += cb.furyBuff; cb.furyBuff=0; }
-    if(hasRelic('divoratore')) dmg += 3;
-    if(c.execute && e.hp <= e.maxHp*0.3){ dmg = dmg*2; }
-    if(e.vulnerableTurns>0){ dmg = Math.round(dmg*1.5); }
-    const hits = c.hits||1;
-    let totalApplied = 0;
-    for(let h=0; h<hits; h++){
-      let applied = dmg;
-      if(!c.pierce && e.block>0){
-        const absorbed = Math.min(e.block, applied);
-        e.block -= absorbed; applied -= absorbed;
+    let baseDmg = c.dmg;
+    if(cb.furyBuff>0){ baseDmg += cb.furyBuff; cb.furyBuff=0; }
+    if(hasRelic('divoratore')) baseDmg += 3;
+    let totalAppliedAll = 0;
+    targets.forEach(e=>{
+      let dmg = baseDmg;
+      if(c.execute && e.hp <= e.maxHp*0.3){ dmg = dmg*2; }
+      if(e.vulnerableTurns>0){ dmg = Math.round(dmg*1.5); }
+      const hits = c.hits||1;
+      for(let h=0; h<hits; h++){
+        let applied = dmg;
+        if(!c.pierce && e.block>0){
+          const absorbed = Math.min(e.block, applied);
+          e.block -= absorbed; applied -= absorbed;
+        }
+        e.hp = clamp(e.hp-applied,0,e.maxHp);
+        totalAppliedAll += applied;
+        if(applied>0){ floatNumberAt(e,'dmg','-'+applied); shakeEnemyEl(e); Audio1.hit(); vibrate(15); }
+        else { floatNumberAt(e,'block','Bloccato!'); Audio1.block(); }
       }
-      e.hp = clamp(e.hp-applied,0,e.maxHp);
-      totalApplied += applied;
-      if(applied>0){ floatNumber('dmg','-'+applied); shakeEnemy(); Audio1.hit(); vibrate(15); }
-      else { floatNumber('block','Bloccato!'); Audio1.block(); }
+      checkBossPhaseTransition(e);
+    });
+    if(c.lifesteal && totalAppliedAll>0){
+      RUN.hp = clamp(RUN.hp+totalAppliedAll, 0, RUN.maxHp);
+      floatNumber('heal','+'+totalAppliedAll); Audio1.heal();
     }
-    if(c.lifesteal && totalApplied>0){
-      RUN.hp = clamp(RUN.hp+totalApplied, 0, RUN.maxHp);
-      floatNumber('heal','+'+totalApplied); Audio1.heal();
-    }
-    checkBossPhaseTransition(e);
   }
   if(c.poison){
     const poisonAmt = c.poison + (hasRelic('fiala') ? 2 : 0);
-    e.poison = (e.poison||0) + poisonAmt;
-    floatNumber('poison','+'+poisonAmt+' ☠️'); Audio1.poison();
+    targets.forEach(e=>{
+      e.poison = (e.poison||0) + poisonAmt;
+      floatNumberAt(e, 'poison', '+'+poisonAmt+' ☠️');
+    });
+    if(targets.length) Audio1.poison();
   }
   if(c.block){ cb.playerBlock += c.block; Audio1.block(); }
   if(c.heal){
@@ -2015,8 +2197,12 @@ function playCard(idx){
   if(c.draw){ drawHand(c.draw); }
   if(c.furyBuff){ cb.furyBuff += c.furyBuff; }
   if(c.gainEnergy){ cb.energy = clamp(cb.energy+c.gainEnergy, 0, 9); }
-  if(c.vulnerable){ e.vulnerableTurns = Math.max(e.vulnerableTurns||0, c.vulnerable); floatNumber('poison','Vulnerabile!'); }
-  if(c.weak){ e.weakTurns = Math.max(e.weakTurns||0, c.weak); floatNumber('block','Indebolito!'); }
+  if(c.vulnerable){
+    targets.forEach(e=>{ e.vulnerableTurns = Math.max(e.vulnerableTurns||0, c.vulnerable); floatNumberAt(e,'poison','Vulnerabile!'); });
+  }
+  if(c.weak){
+    targets.forEach(e=>{ e.weakTurns = Math.max(e.weakTurns||0, c.weak); floatNumberAt(e,'block','Indebolito!'); });
+  }
   if(c.cleanse){ cb.playerPoison = 0; }
   if(c.selfDmg){
     RUN.hp = clamp(RUN.hp-c.selfDmg, 0, RUN.maxHp);
@@ -2033,7 +2219,7 @@ function playCard(idx){
     setTimeout(()=>{ if(RUN) endRun(false); }, 500);
     return;
   }
-  if(e.hp<=0){ cb.busy = true; setTimeout(()=>winCombat(), 420); return; }
+  if(cb.enemies.every(e=>e.hp<=0)){ cb.busy = true; setTimeout(()=>winCombat(), 420); return; }
 }
 
 function endPlayerTurn(){
@@ -2048,13 +2234,28 @@ function endPlayerTurn(){
 }
 function enemyTurn(){
   if(!RUN || !RUN.combat) return;
-  const cb = RUN.combat; const e = cb.enemy;
-  // enemy poison tick (applies to enemy at start of enemy turn, standard DOT)
+  const livingEnemies = RUN.combat.enemies.filter(e=>e.hp>0);
+  processEnemyStep(0, livingEnemies);
+}
+function processEnemyStep(index, livingEnemies){
+  if(!RUN || !RUN.combat) return;
+  const cb = RUN.combat;
+  if(index >= livingEnemies.length){
+    finishEnemyRound();
+    return;
+  }
+  const e = livingEnemies[index];
+  // veleno sul nemico a inizio della sua azione
   if(e.poison>0){
     e.hp = clamp(e.hp-e.poison,0,e.maxHp);
-    floatNumber('poison','-'+e.poison+' ☠️');
+    floatNumberAt(e, 'poison','-'+e.poison+' ☠️');
     e.poison = Math.max(0, e.poison-1);
-    if(e.hp<=0){ renderCombat(); setTimeout(()=>{ if(RUN) winCombat(); }, 500); return; }
+    renderCombat();
+    if(e.hp<=0){
+      if(cb.enemies.every(en=>en.hp<=0)){ setTimeout(()=>{ if(RUN) winCombat(); }, 500); return; }
+      setTimeout(()=> processEnemyStep(index+1, livingEnemies), 400);
+      return;
+    }
     checkBossPhaseTransition(e);
     renderCombat();
   }
@@ -2070,7 +2271,7 @@ function enemyTurn(){
       else { floatNumber('block','Bloccato!'); Audio1.block(); }
     } else if(move==='defend'){
       e.block += Math.round(e.dmg*0.9);
-      floatNumber('block','+Difesa');
+      floatNumberAt(e, 'block','+Difesa');
       Audio1.block();
     } else if(move==='poison'){
       cb.playerPoison = (cb.playerPoison||0)+3;
@@ -2078,37 +2279,50 @@ function enemyTurn(){
       Audio1.poison();
     } else if(move==='buff'){
       e.buffed = true;
-      floatNumber('poison','Carica!');
-    }
-    // apply player poison DOT
-    if(cb.playerPoison>0){
-      RUN.hp = clamp(RUN.hp-cb.playerPoison,0,RUN.maxHp);
-      markDamageTaken();
-      floatNumber('poison','-'+cb.playerPoison+' ☠️');
-      cb.playerPoison = Math.max(0, cb.playerPoison-1);
-      cb.tookDamage=true;
+      floatNumberAt(e, 'poison','Carica!');
     }
     renderCombat();
     updateExploreHud();
     if(RUN.hp<=0){ RUN.lastDeathCause = e.name; setTimeout(()=>{ if(RUN) endRun(false); }, 500); return; }
-    // start next player turn
-    cb.playerBlock = 0;
-    cb.energy = cb.maxEnergy;
-    cb.turn++;
-    cb.busy = false;
+    setTimeout(()=> processEnemyStep(index+1, livingEnemies), 280);
+  }, 550);
+}
+function finishEnemyRound(){
+  if(!RUN || !RUN.combat) return;
+  const cb = RUN.combat;
+  // veleno del giocatore: si applica una sola volta per round, dopo che tutti i nemici hanno agito
+  if(cb.playerPoison>0){
+    RUN.hp = clamp(RUN.hp-cb.playerPoison,0,RUN.maxHp);
+    markDamageTaken();
+    floatNumber('poison','-'+cb.playerPoison+' ☠️');
+    cb.playerPoison = Math.max(0, cb.playerPoison-1);
+    cb.tookDamage=true;
+    renderCombat();
+    updateExploreHud();
+  }
+  if(RUN.hp<=0){ setTimeout(()=>{ if(RUN) endRun(false); }, 500); return; }
+  // prossimo turno del giocatore
+  cb.playerBlock = 0;
+  cb.energy = cb.maxEnergy;
+  cb.turn++;
+  cb.busy = false;
+  cb.enemies.forEach(e=>{
+    if(e.hp<=0) return;
     if(e.vulnerableTurns>0) e.vulnerableTurns--;
     if(e.weakTurns>0) e.weakTurns--;
-    rollEnemyIntent();
-    drawHand(5);
-    renderCombat();
-    saveRun();
-  }, 550);
+    rollEnemyIntentFor(e);
+  });
+  drawHand(5);
+  renderCombat();
+  saveRun();
 }
 function winCombat(){
   if(!RUN || !RUN.combat) return;
-  const cb = RUN.combat; const wasBoss = cb.enemy.isBoss; const wasElite = cb.enemy.isElite;
-  RUN.kills++;
-  discoverCodex('enemies', cb.enemy.id);
+  const cb = RUN.combat;
+  const primary = cb.enemies.find(en=>en.isBoss) || cb.enemies.find(en=>en.isElite) || cb.enemies[0];
+  const wasBoss = primary.isBoss; const wasElite = primary.isElite;
+  RUN.kills += cb.enemies.length;
+  cb.enemies.forEach(en=> discoverCodex('enemies', en.id));
   if(cb.turn===1) RUN.flags.oneTurnKill = true;
   if(!cb.tookDamage){ RUN.streak++; RUN.bestStreak=Math.max(RUN.bestStreak,RUN.streak); } else { RUN.streak=0; }
   const act = actOf(RUN.mode, RUN.floor);
@@ -2131,7 +2345,7 @@ function winCombat(){
       if(!RUN) return;
       const isFinalAct = RUN.floor>=RUN.maxFloor;
       const clearTitle = RUN.mode==='completa' ? (isFinalAct?'Guardiano Sconfitto!':'Atto Superato!') : 'Piano Superato!';
-      openSimpleEvent('🏆', clearTitle, `Hai sconfitto ${cb.enemy.name}! +${bonus} punti, +${goldGain} oro.`);
+      openSimpleEvent('🏆', clearTitle, `Hai sconfitto ${primary.name}! +${bonus} punti, +${goldGain} oro.`);
       const okBtn = document.getElementById('btn-event-ok');
       okBtn.onclick = ()=>{
         closeEvent();
@@ -2495,6 +2709,7 @@ $('btn-back').addEventListener('click', ()=>movePlayer(-1));
 $('btn-left').addEventListener('click', ()=>rotatePlayer(-1));
 $('btn-right').addEventListener('click', ()=>rotatePlayer(1));
 $('btn-endturn').addEventListener('click', ()=>{ if(RUN&&RUN.combat){ Audio1.click(); endPlayerTurn(); } });
+$('btn-cancel-targeting').addEventListener('click', ()=>{ Audio1.click(); cancelTargeting(); });
 
 window.addEventListener('keydown', (e)=>{
   if(!RUN) return;
