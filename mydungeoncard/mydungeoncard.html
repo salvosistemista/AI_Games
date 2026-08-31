@@ -237,7 +237,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .enemy-panel-chips{display:flex; gap:4px; margin-top:3px; flex-wrap:wrap;}
 .enemy-panel-chip{font-size:9px; font-weight:800; padding:1px 5px; border-radius:8px; border:1px solid; }
 .enemy-panel-intent{font-size:11px; font-weight:800; flex-shrink:0; text-align:center; min-width:40px;}
-#enemy-sprite{width:112px; height:112px; display:flex; align-items:center; justify-content:center; filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)); transition:transform .12s ease, filter .4s ease;}
+#enemy-sprite{width:146px; height:146px; display:flex; align-items:center; justify-content:center; filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)); transition:transform .12s ease, filter .4s ease;}
 #enemy-sprite svg{width:100%; height:100%; display:block; overflow:visible;}
 #enemy-sprite.phase2{filter:drop-shadow(0 10px 18px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(255,85,102,0.85)); animation:phase2Pulse 1.6s ease-in-out infinite;}
 .enemy-panel-icon.phase2{filter:drop-shadow(0 0 10px rgba(255,85,102,0.9)); animation:phase2Pulse 1.6s ease-in-out infinite;}
@@ -258,48 +258,134 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 @keyframes artFlicker{0%,100%{transform:scale(1) translateY(0);}50%{transform:scale(1.06) translateY(-1px);}}
 @keyframes artSquish{0%,100%{transform:scale(1,1);}50%{transform:scale(1.05,.94);}}
 @keyframes artPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.3);}}
-.rat-tail{animation:artSway 1.8s ease-in-out infinite;}
-.rat-whisk{animation:artTwitch 2.6s ease-in-out infinite;}
-.rat-body{animation:artBreathe 2.4s ease-in-out infinite;}
-.bat-wing-l{animation:artFlapL .9s ease-in-out infinite;}
-.bat-wing-r{animation:artFlapR .9s ease-in-out infinite;}
-.bat-body{animation:artBob 2s ease-in-out infinite;}
-.skel-eye,.skel-eye-2{animation:artBlink 3.2s ease-in-out infinite;}
-.skel-eye-2{animation-delay:.15s;}
-.skel-sword{animation:artSwaySmall 2.8s ease-in-out infinite;}
-.skel-body{animation:artBreathe 2.8s ease-in-out infinite;}
-.slime-body{animation:artSquish 2.4s ease-in-out infinite;}
-.spider-legs{animation:artTwitch 2.4s ease-in-out infinite;}
-.spider-body{animation:artBreathe 2.6s ease-in-out infinite;}
-.goblin-ear-l,.goblin-ear-r{animation:artTwitch 3s ease-in-out infinite;}
-.goblin-ear-r{animation-delay:.3s;}
-.goblin-body{animation:artBreathe 2.4s ease-in-out infinite;}
-.wisp-flame,.wisp-flame-2{animation:artFlicker 1.4s ease-in-out infinite;}
-.wisp-flame-2{animation-delay:.2s;}
-.wisp-ember{animation:artBob 1.6s ease-in-out infinite;}
-.wisp-ember-2{animation:artBob 1.9s ease-in-out infinite; animation-delay:.3s;}
-.golem-body{animation:artBreatheSlow 3.6s ease-in-out infinite;}
-.golem-eye-l,.golem-eye-r{animation:artPulse 1.8s ease-in-out infinite;}
-.golem-eye-r{animation-delay:.2s;}
-.wraith-body{animation:artBob 2.6s ease-in-out infinite;}
-.wraith-wisp-l,.wraith-wisp-r{animation:artSwaySmall 2.2s ease-in-out infinite;}
-.wraith-wisp-r{animation-delay:.25s;}
-.crawler-seg1,.crawler-seg2,.crawler-seg3,.crawler-seg4{animation:artSwaySmall 2.2s ease-in-out infinite;}
-.crawler-seg2{animation-delay:.15s;} .crawler-seg3{animation-delay:.3s;} .crawler-seg4{animation-delay:.45s;}
-/* ---------- ELITE ART v2.2 — aura distintiva + dettaglio superiore ---------- */
+/* ---------- RATTO GIGANTE v3 — versione alta definizione (gradienti + posa frontale) ---------- */
+.ratHD-body{animation:ratGrowl 2.5s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:50% 65%;}
+.ratHD-head{animation:ratHeadThrust 1.8s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:50% 55%;}
+.ratHD-jaw{animation:ratBiteSnarl 1.8s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:50% 0%;}
+.ratHD-whisk-l{animation:ratTwitchL .8s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:100% 40%;}
+.ratHD-whisk-r{animation:ratTwitchR .8s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:0% 40%;}
+.ratHD-eye{animation:ratEyePulse 1.2s ease-in-out infinite alternate;}
+@keyframes ratGrowl{0%{transform:scale(1) translateY(0);}50%{transform:scale(1.03,.97) translateY(4px);}100%{transform:scale(1.05,1.02) translateY(-6px);}}
+@keyframes ratHeadThrust{0%{transform:scale(1) translateY(0);}60%{transform:scale(1.08) translateY(-4px);}100%{transform:scale(1.12) translateY(6px);}}
+@keyframes ratBiteSnarl{0%,40%{transform:translateY(0);}70%,100%{transform:translateY(8px);}}
+@keyframes ratTwitchL{0%{transform:rotate(0deg);}100%{transform:rotate(-5deg) translateY(-2px);}}
+@keyframes ratTwitchR{0%{transform:rotate(0deg);}100%{transform:rotate(5deg) translateY(-2px);}}
+@keyframes ratEyePulse{0%{fill:#990000; filter:drop-shadow(0 0 2px #ff0000);}100%{fill:#ff1a1a; filter:drop-shadow(0 0 8px #ff0000);}}
+/* ---------- PIPISTRELLO OSSEO v3 — alta definizione ---------- */
+.batHD-body{animation:batGrowl 2.2s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.batHD-wing-l{animation:batFlapL .7s ease-in-out infinite alternate;}
+.batHD-wing-r{animation:batFlapR .7s ease-in-out infinite alternate;}
+.batHD-head{animation:batHeadThrust 1.6s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.batHD-jaw{animation:batBite 1.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.batHD-eye{animation:batEyePulse 1s ease-in-out infinite alternate;}
+@keyframes batGrowl{0%{transform:scale(1);}100%{transform:scale(1.04,1.06) translateY(-4px);}}
+@keyframes batFlapL{0%{transform:rotate(-8deg);}100%{transform:rotate(22deg);}}
+@keyframes batFlapR{0%{transform:rotate(8deg);}100%{transform:rotate(-22deg);}}
+@keyframes batHeadThrust{0%{transform:scale(1) translateY(0);}100%{transform:scale(1.08) translateY(4px);}}
+@keyframes batBite{0%,50%{transform:translateY(0);}80%,100%{transform:translateY(10px);}}
+@keyframes batEyePulse{0%{fill:#1a3a38; filter:drop-shadow(0 0 2px #4de2c7);}100%{fill:#4de2c7; filter:drop-shadow(0 0 10px #4de2c7);}}
+/* ---------- SCHELETRO GUERRIERO v3 ---------- */
+.skelHD-body{animation:skelGrowl 2.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.skelHD-head{animation:skelHeadThrust 1.7s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.skelHD-jaw{animation:skelBite 1.5s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.skelHD-eye{animation:skelEyePulse 1.1s ease-in-out infinite alternate;}
+@keyframes skelGrowl{0%{transform:scale(1);}100%{transform:scale(1.04,1.06) translateY(-5px);}}
+@keyframes skelHeadThrust{0%{transform:scale(1) translateY(0);}100%{transform:scale(1.07) translateY(5px);}}
+@keyframes skelBite{0%,45%{transform:translateY(0);}80%,100%{transform:translateY(9px);}}
+@keyframes skelEyePulse{0%{fill:#a33d10; filter:drop-shadow(0 0 2px #ff9d4d);}100%{fill:#ffcf5c; filter:drop-shadow(0 0 10px #ff9d4d);}}
+/* ---------- MELMA ACIDA v3 ---------- */
+.slimeHD-body{animation:slimeSquish 2.2s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.slimeHD-jaw{animation:slimeBite 1.6s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.slimeHD-eye{animation:slimeEyePulse 1.1s ease-in-out infinite alternate;}
+@keyframes slimeSquish{0%{transform:scale(1,1);}50%{transform:scale(1.08,.9) translateY(6px);}100%{transform:scale(.94,1.08) translateY(-6px);}}
+@keyframes slimeBite{0%,45%{transform:scaleY(1);}80%,100%{transform:scaleY(1.35);}}
+@keyframes slimeEyePulse{0%{fill:#4a6b1a; filter:drop-shadow(0 0 2px #9be05a);}100%{fill:#c9ff6a; filter:drop-shadow(0 0 10px #9be05a);}}
+/* ---------- RAGNO TUNNEL v3 ---------- */
+.spiderHD-body{animation:spiderSkitter 1.9s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.spiderHD-jaw{animation:spiderFangs 1.3s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.spiderHD-eye{animation:spiderEyePulse 1s ease-in-out infinite alternate;}
+@keyframes spiderSkitter{0%{transform:scale(1) rotate(0deg);}50%{transform:scale(1.03,.97) rotate(-1deg);}100%{transform:scale(1.05,1.02) rotate(1deg);}}
+@keyframes spiderFangs{0%,45%{transform:translateY(0);}80%,100%{transform:translateY(6px);}}
+@keyframes spiderEyePulse{0%{fill:#5c1616; filter:drop-shadow(0 0 2px #ff5566);}100%{fill:#ff5566; filter:drop-shadow(0 0 9px #ff5566);}}
+/* ---------- GOBLIN FURFANTE v3 ---------- */
+.goblinHD-body{animation:goblinGrowl 2s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.goblinHD-head{animation:goblinHeadThrust 1.5s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.goblinHD-jaw{animation:goblinSnarl 1.3s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.goblinHD-ear-l{animation:goblinTwitchL 2.4s ease-in-out infinite alternate;}
+.goblinHD-ear-r{animation:goblinTwitchR 2.4s ease-in-out infinite alternate; animation-delay:.3s;}
+.goblinHD-eye{animation:goblinEyePulse 1.1s ease-in-out infinite alternate;}
+@keyframes goblinGrowl{0%{transform:scale(1);}100%{transform:scale(1.05,1.03) translateY(-5px);}}
+@keyframes goblinHeadThrust{0%{transform:scale(1) translateY(0);}100%{transform:scale(1.1) translateY(4px);}}
+@keyframes goblinSnarl{0%,45%{transform:translateY(0);}80%,100%{transform:translateY(7px);}}
+@keyframes goblinTwitchL{0%{transform:rotate(0deg);}100%{transform:rotate(-8deg);}}
+@keyframes goblinTwitchR{0%{transform:rotate(0deg);}100%{transform:rotate(8deg);}}
+@keyframes goblinEyePulse{0%{fill:#7a5c10; filter:drop-shadow(0 0 2px #ffcf5c);}100%{fill:#ffe89a; filter:drop-shadow(0 0 8px #ffcf5c);}}
+/* ---------- FUOCO FATUO v3 ---------- */
+.wispHD-body{animation:wispDrift 2.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.wispHD-flame-outer,.wispHD-flame-inner{animation:wispFlicker 1s ease-in-out infinite alternate;}
+.wispHD-flame-inner{animation-delay:.15s;}
+.wispHD-jaw{animation:wispMouth 1.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.wispHD-ember-1{animation:artBob 1.6s ease-in-out infinite;}
+.wispHD-ember-2{animation:artBob 1.9s ease-in-out infinite; animation-delay:.3s;}
+.wispHD-ember-3{animation:artBob 2.1s ease-in-out infinite; animation-delay:.5s;}
+@keyframes wispDrift{0%{transform:translateY(0) scale(1);}100%{transform:translateY(-6px) scale(1.03);}}
+@keyframes wispFlicker{0%{transform:scale(1) skewX(0deg);}100%{transform:scale(1.05,.97) skewX(2deg);}}
+@keyframes wispMouth{0%,45%{transform:scaleY(1);}80%,100%{transform:scaleY(1.5);}}
+/* ---------- GOLEM DI PIETRA v3 ---------- */
+.golemHD-body{animation:golemStomp 3.2s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.golemHD-arm-l{animation:golemSwingL 2.6s ease-in-out infinite alternate;}
+.golemHD-arm-r{animation:golemSwingR 2.6s ease-in-out infinite alternate;}
+.golemHD-eye{animation:golemRunePulse 1.6s ease-in-out infinite alternate;}
+@keyframes golemStomp{0%{transform:scale(1);}100%{transform:scale(1.03,1.05) translateY(-4px);}}
+@keyframes golemSwingL{0%{transform:rotate(0deg);}100%{transform:rotate(-10deg);}}
+@keyframes golemSwingR{0%{transform:rotate(0deg);}100%{transform:rotate(10deg);}}
+@keyframes golemRunePulse{0%{fill:#1a6b5e; filter:drop-shadow(0 0 2px #4de2c7);}100%{fill:#4de2c7; filter:drop-shadow(0 0 10px #4de2c7);}}
+/* ---------- SPETTRO MINORE v3 ---------- */
+.wraithHD-body{animation:wraithFloat 2.6s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.wraithHD-arm-l{animation:wraithSwayL 2s ease-in-out infinite alternate;}
+.wraithHD-arm-r{animation:wraithSwayR 2s ease-in-out infinite alternate;}
+.wraithHD-eye{animation:wraithEyePulse 1.2s ease-in-out infinite alternate;}
+@keyframes wraithFloat{0%{transform:translateY(0) scale(1);}100%{transform:translateY(-8px) scale(1.03);}}
+@keyframes wraithSwayL{0%{transform:rotate(0deg);}100%{transform:rotate(-10deg);}}
+@keyframes wraithSwayR{0%{transform:rotate(0deg);}100%{transform:rotate(10deg);}}
+@keyframes wraithEyePulse{0%{fill:#1a3a6b; filter:drop-shadow(0 0 2px #4de2c7);}100%{fill:#9adfff; filter:drop-shadow(0 0 9px #4de2c7);}}
+/* ---------- VERME CORAZZATO v3 ---------- */
+.crawlerHD-body{animation:crawlerUndulate 2s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.crawlerHD-jaw{animation:crawlerMandibles 1.3s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.crawlerHD-eye{animation:crawlerEyePulse 1s ease-in-out infinite alternate;}
+@keyframes crawlerUndulate{0%{transform:scale(1,1);}100%{transform:scale(1.02,1.06) translateY(-3px);}}
+@keyframes crawlerMandibles{0%,45%{transform:rotate(0deg);}80%,100%{transform:rotate(6deg);}}
+@keyframes crawlerEyePulse{0%{fill:#7a2010; filter:drop-shadow(0 0 2px #ff5566);}100%{fill:#ff9d4d; filter:drop-shadow(0 0 8px #ff5566);}}
+/* ---------- ELITE ART v3 — alta definizione, aura distintiva ---------- */
 .elite-aura{fill:none; stroke:var(--danger); stroke-width:2; stroke-dasharray:5 4; transform-box:fill-box; transform-origin:center; animation:auraSpin 6s linear infinite;}
 @keyframes auraSpin{to{transform:rotate(360deg);}}
-.eliteA-body{animation:artBreathe 2.6s ease-in-out infinite;}
-.eliteA-eye,.eliteA-eye2{animation:artPulse 1.6s ease-in-out infinite;}
-.eliteA-eye2{animation-delay:.2s;}
-.eliteB-body{animation:artBreathe 2.8s ease-in-out infinite;}
-.eliteB-chain-l,.eliteB-chain-r{animation:artSwaySmall 2.4s ease-in-out infinite;}
-.eliteB-chain-r{animation-delay:.3s;}
-.eliteC-body{animation:artBreatheSlow 3s ease-in-out infinite;}
-.eliteC-flame-l,.eliteC-flame-r,.eliteC-crest{animation:artFlicker 1.3s ease-in-out infinite;}
-.eliteC-flame-r{animation-delay:.15s;} .eliteC-crest{animation-delay:.3s;}
-.eliteC-ember{animation:artBob 1.7s ease-in-out infinite;}
-.eliteC-ember2{animation:artBob 2s ease-in-out infinite; animation-delay:.3s;}
+.eliteAHD-body{animation:shadowGrowl 2.3s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.eliteAHD-eye{animation:shadowEyePulse 1.1s ease-in-out infinite alternate;}
+.eliteAHD-arm-l{animation:shadowStrikeL 1.4s ease-in-out infinite alternate;}
+.eliteAHD-arm-r{animation:shadowStrikeR 1.4s ease-in-out infinite alternate;}
+@keyframes shadowGrowl{0%{transform:scale(1);}100%{transform:scale(1.04,1.06) translateY(-5px);}}
+@keyframes shadowEyePulse{0%{fill:#7a1a1a; filter:drop-shadow(0 0 2px #ff5566);}100%{fill:#ff5566; filter:drop-shadow(0 0 10px #ff5566);}}
+@keyframes shadowStrikeL{0%{transform:rotate(0deg);}100%{transform:rotate(-14deg);}}
+@keyframes shadowStrikeR{0%{transform:rotate(0deg);}100%{transform:rotate(14deg);}}
+.eliteBHD-body{animation:chainStomp 2.6s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.eliteBHD-eye{animation:chainEyePulse 1.2s ease-in-out infinite alternate;}
+.eliteBHD-chain-l{animation:chainSwayL 2s ease-in-out infinite alternate;}
+.eliteBHD-chain-r{animation:chainSwayR 2s ease-in-out infinite alternate;}
+.eliteBHD-axe{animation:chainAxeRaise 1.8s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+@keyframes chainStomp{0%{transform:scale(1);}100%{transform:scale(1.03,1.05) translateY(-4px);}}
+@keyframes chainEyePulse{0%{fill:#7a1a1a; filter:drop-shadow(0 0 2px #ff5566);}100%{fill:#ff5566; filter:drop-shadow(0 0 9px #ff5566);}}
+@keyframes chainSwayL{0%{transform:rotate(0deg);}100%{transform:rotate(-10deg);}}
+@keyframes chainSwayR{0%{transform:rotate(0deg);}100%{transform:rotate(10deg);}}
+@keyframes chainAxeRaise{0%{transform:scale(1) translateY(0);}100%{transform:scale(1.05) translateY(-8px);}}
+.eliteCHD-body{animation:emberGrowl 2.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.eliteCHD-eye{animation:emberEyePulse 1s ease-in-out infinite alternate;}
+.eliteCHD-flame-l,.eliteCHD-flame-r,.eliteCHD-crest,.eliteCHD-blade-flame,.eliteCHD-blade-flame-2{animation:emberFlicker 1s ease-in-out infinite alternate;}
+.eliteCHD-flame-r{animation-delay:.15s;} .eliteCHD-crest{animation-delay:.25s;} .eliteCHD-blade-flame-2{animation-delay:.3s;}
+.eliteCHD-sword{animation:emberSwordRaise 1.7s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+@keyframes emberGrowl{0%{transform:scale(1);}100%{transform:scale(1.04,1.05) translateY(-4px);}}
+@keyframes emberEyePulse{0%{fill:#a3660a; filter:drop-shadow(0 0 2px #ffcf5c);}100%{fill:#ffe89a; filter:drop-shadow(0 0 10px #ffcf5c);}}
+@keyframes emberFlicker{0%{transform:scale(1);}100%{transform:scale(1.08,.95);}}
+@keyframes emberSwordRaise{0%{transform:scale(1) translateY(0);}100%{transform:scale(1.04) translateY(-6px);}}
 /* ---------- BOSS ART v2.3 — cornice dorata + illustrazione maggiore + fase 2 ---------- */
 .boss-frame-outer{fill:none; stroke:var(--gold); stroke-width:1.5;}
 .boss-frame-inner{fill:none; stroke:var(--gold); stroke-width:1; stroke-dasharray:2 3;}
@@ -308,24 +394,44 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 @keyframes bossFrameSpin{to{transform:rotate(360deg);}}
 .phase2 .boss-frame-outer,.phase2 .boss-frame-inner{stroke:var(--danger);}
 .phase2 .boss-frame-orn{fill:var(--danger);}
-.bossA-body{animation:artBreathe 2.8s ease-in-out infinite;}
-.bossA-eye,.bossA-eye2{transition:fill .4s ease;}
-.phase2 .bossA-eye,.phase2 .bossA-eye2{fill:var(--danger);}
-.bossB-body{animation:artBob 2.6s ease-in-out infinite;}
-.bossB-chain-l,.bossB-chain-r{animation:artSwaySmall 2.4s ease-in-out infinite;}
-.bossB-chain-r{animation-delay:.25s;}
-.bossB-wisp-l,.bossB-wisp-r{animation:artSwaySmall 2.2s ease-in-out infinite;}
-.bossB-wisp-r{animation-delay:.3s;}
-.bossB-eye,.bossB-eye2{transition:fill .4s ease;}
-.phase2 .bossB-eye,.phase2 .bossB-eye2{fill:var(--danger);}
-.bossC-body{animation:artBreathe 2.6s ease-in-out infinite;}
-.bossC-wing-l{animation:artFlapL 1.1s ease-in-out infinite;}
-.bossC-wing-r{animation:artFlapR 1.1s ease-in-out infinite;}
-.bossC-tail{animation:artSwaySmall 2.4s ease-in-out infinite;}
-.bossC-fire{animation:artFlicker 1s ease-in-out infinite;}
-.bossC-eye,.bossC-eye2{transition:fill .4s ease;}
-.phase2 .bossC-eye,.phase2 .bossC-eye2{fill:var(--danger);}
-.phase2 .bossC-fire{fill:var(--danger);}
+/* ---------- BOSS ART v3 — alta definizione, cornice dorata + fase 2 ---------- */
+.boss-frame-outer{fill:none; stroke:var(--gold); stroke-width:4;}
+.boss-frame-inner{fill:none; stroke:var(--gold); stroke-width:2.5; stroke-dasharray:6 8;}
+.boss-frame-orn{fill:var(--gold);}
+.boss-frame{transform-box:fill-box; transform-origin:center; animation:bossFrameSpin 14s linear infinite;}
+@keyframes bossFrameSpin{to{transform:rotate(360deg);}}
+.phase2 .boss-frame-outer,.phase2 .boss-frame-inner{stroke:var(--danger);}
+.phase2 .boss-frame-orn{fill:var(--danger);}
+.bossAHD-body{animation:ogreGrowl 2.6s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.bossAHD-arm-l{animation:ogreSwingL 2.2s ease-in-out infinite alternate;}
+.bossAHD-arm-r{animation:ogreSwingR 2.2s ease-in-out infinite alternate;}
+.bossAHD-eye{transition:fill .4s ease, filter .4s ease;}
+.phase2 .bossAHD-eye{fill:var(--danger) !important; filter:drop-shadow(0 0 8px var(--danger));}
+@keyframes ogreGrowl{0%{transform:scale(1);}100%{transform:scale(1.04,1.06) translateY(-6px);}}
+@keyframes ogreSwingL{0%{transform:rotate(0deg);}100%{transform:rotate(-8deg);}}
+@keyframes ogreSwingR{0%{transform:rotate(0deg);}100%{transform:rotate(8deg);}}
+.bossBHD-body{animation:wraithBossFloat 2.8s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.bossBHD-arm-l{animation:wraithBossSwayL 2s ease-in-out infinite alternate;}
+.bossBHD-arm-r{animation:wraithBossSwayR 2s ease-in-out infinite alternate;}
+.bossBHD-eye{transition:fill .4s ease, filter .4s ease;}
+.phase2 .bossBHD-eye{fill:var(--danger) !important; filter:drop-shadow(0 0 8px var(--danger));}
+@keyframes wraithBossFloat{0%{transform:translateY(0) scale(1);}100%{transform:translateY(-9px) scale(1.03);}}
+@keyframes wraithBossSwayL{0%{transform:rotate(0deg);}100%{transform:rotate(-9deg);}}
+@keyframes wraithBossSwayR{0%{transform:rotate(0deg);}100%{transform:rotate(9deg);}}
+.bossCHD-body{animation:dragonGrowl 2.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.bossCHD-wing-l{animation:dragonFlapL 1s ease-in-out infinite alternate;}
+.bossCHD-wing-r{animation:dragonFlapR 1s ease-in-out infinite alternate;}
+.bossCHD-tail{animation:artSwaySmall 2.4s ease-in-out infinite;}
+.bossCHD-fire{animation:dragonFireFlicker .9s ease-in-out infinite alternate;}
+.bossCHD-jaw{animation:dragonBite 1.4s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+.bossCHD-eye{transition:fill .4s ease, filter .4s ease;}
+.phase2 .bossCHD-eye{fill:var(--danger) !important; filter:drop-shadow(0 0 8px var(--danger));}
+.phase2 .bossCHD-fire{fill:var(--danger) !important;}
+@keyframes dragonGrowl{0%{transform:scale(1);}100%{transform:scale(1.04,1.05) translateY(-5px);}}
+@keyframes dragonFlapL{0%{transform:rotate(0deg);}100%{transform:rotate(20deg);}}
+@keyframes dragonFlapR{0%{transform:rotate(0deg);}100%{transform:rotate(-20deg);}}
+@keyframes dragonFireFlicker{0%{transform:scale(1);}100%{transform:scale(1.15,.9);}}
+@keyframes dragonBite{0%,45%{transform:translateY(0);}80%,100%{transform:translateY(8px);}}
 #enemy-name{font-size:16px; font-weight:800; margin-top:6px;}
 #enemy-intent{
   margin-top:8px; display:flex; align-items:center; gap:6px; background:rgba(255,85,102,0.14);
@@ -972,34 +1078,34 @@ const BIVI = {
 const ENEMIES = {
   rat:    {id:'rat',    name:'Ratto Gigante', icon:'🐀', hp:16, dmg:5,  pattern:['attack','attack','defend'],
     lore:'Si dice che questi ratti abbiano imparato a rosicchiare persino le catene delle porte.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="rat-body"><path class="rat-tail" d="M30 66 Q18 56 26 44 Q34 49 36 60 Q31 60 30 66 Z" fill="#6b5a46" style="transform-origin:32px 60px;"/><ellipse cx="50" cy="64" rx="20" ry="14" fill="#8a7358"/><ellipse cx="50" cy="70" rx="13" ry="7" fill="#c9b48f"/><circle cx="70" cy="50" r="11" fill="#8a7358"/><path d="M63 41 L59 29 L69 39 Z" fill="#8a7358"/><path d="M63 41 L60 32 L66 39 Z" fill="#e0a0a8"/><path d="M76 40 L82 28 L72 37 Z" fill="#8a7358"/><path d="M76 40 L80 31 L74 38 Z" fill="#e0a0a8"/><circle cx="74" cy="48" r="2" fill="#ff5566"/><ellipse cx="79" cy="52" rx="2" ry="1.5" fill="#e0a0a8"/><path class="rat-whisk" d="M77 51 L88 48 M77 53 L89 54 M77 55 L87 58" stroke="#3a2c63" stroke-width="1" fill="none" style="transform-origin:77px 53px;"/><ellipse cx="44" cy="76" rx="4" ry="6" fill="#6b5a46"/><ellipse cx="56" cy="77" rx="4" ry="6" fill="#6b5a46"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="rat-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="rat-fur-body-front" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#5a4b40"/><stop offset="60%" stop-color="#332821"/><stop offset="100%" stop-color="#140f0c"/></radialGradient><radialGradient id="rat-snout-gradient" cx="50%" cy="30%" r="70%"><stop offset="0%" stop-color="#736255"/><stop offset="70%" stop-color="#3d3128"/><stop offset="100%" stop-color="#1c1511"/></radialGradient><linearGradient id="rat-skin-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#c48e85"/><stop offset="100%" stop-color="#613b35"/></linearGradient><radialGradient id="rat-mouth-darkness" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4a0404"/><stop offset="100%" stop-color="#0f0000"/></radialGradient></defs><ellipse cx="300" cy="440" rx="210" ry="30" fill="url(#rat-drop-shadow)"/><g class="ratHD-body"><path d="M 220,410 Q 120,450 40,410 Q 10,390 30,370" fill="none" stroke="url(#rat-skin-gradient)" stroke-width="14" stroke-linecap="round"/><path d="M 140,260 C 110,360 160,430 300,430 C 440,430 490,360 460,260 C 430,190 170,190 140,260 Z" fill="url(#rat-fur-body-front)"/><g><path d="M 210,380 L 190,435 Q 185,442 170,440" stroke="url(#rat-skin-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M 195,435 L 180,443 M 190,435 L 170,440 M 188,430 L 165,433" stroke="#e0e0e0" stroke-width="3" stroke-linecap="round"/></g><g><path d="M 390,380 L 410,435 Q 415,442 430,440" stroke="url(#rat-skin-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M 405,435 L 420,443 M 410,435 L 430,440 M 412,430 L 435,433" stroke="#e0e0e0" stroke-width="3" stroke-linecap="round"/></g><g class="ratHD-head"><ellipse cx="200" cy="140" rx="35" ry="45" fill="url(#rat-fur-body-front)" transform="rotate(-20 200 140)"/><ellipse cx="203" cy="142" rx="22" ry="30" fill="url(#rat-skin-gradient)" transform="rotate(-20 200 140)"/><ellipse cx="400" cy="140" rx="35" ry="45" fill="url(#rat-fur-body-front)" transform="rotate(20 400 140)"/><ellipse cx="397" cy="142" rx="22" ry="30" fill="url(#rat-skin-gradient)" transform="rotate(20 400 140)"/><polygon points="300,110 390,190 350,270 250,270 210,190" fill="url(#rat-snout-gradient)"/><ellipse cx="300" cy="180" rx="85" ry="70" fill="url(#rat-snout-gradient)"/><g><ellipse cx="235" cy="175" rx="12" ry="16" fill="#1a0000" transform="rotate(15 235 175)"/><ellipse cx="236" cy="175" rx="8" ry="11" class="ratHD-eye" transform="rotate(15 235 175)"/><circle cx="233" cy="171" r="2" fill="#ffffff"/><ellipse cx="365" cy="175" rx="12" ry="16" fill="#1a0000" transform="rotate(-15 365 175)"/><ellipse cx="364" cy="175" rx="8" ry="11" class="ratHD-eye" transform="rotate(-15 365 175)"/><circle cx="367" cy="171" r="2" fill="#ffffff"/></g><path d="M 220,155 Q 245,165 260,165" stroke="#140f0c" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M 380,155 Q 355,165 340,165" stroke="#140f0c" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M 285,205 Q 300,195 315,205 Q 300,220 285,205 Z" fill="#c48e85"/><g class="ratHD-jaw"><path d="M 265,225 Q 300,230 335,225 Q 330,265 300,270 Q 270,265 265,225 Z" fill="url(#rat-mouth-darkness)"/><rect x="291" y="224" width="8" height="16" rx="2" fill="#f5f2d0"/><rect x="301" y="224" width="8" height="16" rx="2" fill="#f5f2d0"/><rect x="293" y="250" width="6" height="14" rx="1" fill="#e6e2b8"/><rect x="301" y="250" width="6" height="14" rx="1" fill="#e6e2b8"/></g><g class="ratHD-whisk-l" stroke="#d9d9d9" stroke-width="1.2" opacity=".8"><line x1="260" y1="210" x2="140" y2="180"/><line x1="255" y1="215" x2="130" y2="210"/><line x1="258" y1="220" x2="145" y2="240"/><line x1="262" y1="225" x2="160" y2="265"/></g><g class="ratHD-whisk-r" stroke="#d9d9d9" stroke-width="1.2" opacity=".8"><line x1="340" y1="210" x2="460" y2="180"/><line x1="345" y1="215" x2="470" y2="210"/><line x1="342" y1="220" x2="455" y2="240"/><line x1="338" y1="225" x2="440" y2="265"/></g></g></g></svg>`},
   bat:    {id:'bat',    name:'Pipistrello Osseo', icon:'🦇', hp:13, dmg:4, pattern:['attack','attack'],
     lore:'Le sue ossa cantano nel buio, un richiamo per gli altri abitanti del dungeon.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="bat-body"><path class="bat-wing-l" d="M50 55 Q22 27 8 43 Q18 43 25 49 Q17 46 13 53 Q31 49 42 60 Z" fill="#8a6dff" style="transform-origin:50px 55px;"/><path class="bat-wing-r" d="M50 55 Q78 27 92 43 Q82 43 75 49 Q83 46 87 53 Q69 49 58 60 Z" fill="#8a6dff" style="transform-origin:50px 55px;"/><ellipse cx="50" cy="61" rx="7" ry="9" fill="#e8e2d0"/><path d="M44 50 L41 39 L48 48 Z" fill="#e8e2d0"/><path d="M56 50 L59 39 L52 48 Z" fill="#e8e2d0"/><path d="M44 46 L43 41 L47 46 Z" fill="#c9788a"/><path d="M56 46 L57 41 L53 46 Z" fill="#c9788a"/><circle cx="47" cy="57" r="1.8" fill="#ff5566"/><circle cx="53" cy="57" r="1.8" fill="#ff5566"/><path d="M48 63 Q50 65 52 63" stroke="#3a2c63" stroke-width="1" fill="none"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="bat-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="bat-wing-gradient" cx="40%" cy="20%" r="80%"><stop offset="0%" stop-color="#7a5fd9"/><stop offset="55%" stop-color="#4a3599"/><stop offset="100%" stop-color="#1c1042"/></radialGradient><radialGradient id="bat-bone-gradient" cx="50%" cy="35%" r="65%"><stop offset="0%" stop-color="#f0ead8"/><stop offset="55%" stop-color="#c9bfa0"/><stop offset="100%" stop-color="#8f8468"/></radialGradient><linearGradient id="bat-skin-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#c48e85"/><stop offset="100%" stop-color="#613b35"/></linearGradient><radialGradient id="bat-mouth-darkness" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4a0404"/><stop offset="100%" stop-color="#0f0000"/></radialGradient></defs><ellipse cx="300" cy="440" rx="190" ry="26" fill="url(#bat-drop-shadow)"/><g class="batHD-body"><g class="batHD-wing-l" style="transform-origin:280px 250px;"><path d="M280,250 L60,140 Q134,213 15,235 Q127,270 35,330 Q156,319 110,400 L210,380 Z" fill="url(#bat-wing-gradient)"/><path d="M280,250 L60,140 M280,250 L15,235 M280,250 L35,330 M280,250 L110,400" stroke="#c9bfa0" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M280,250 L255,215 L268,212 Z" fill="#e8e2d0"/></g><g class="batHD-wing-r" style="transform-origin:320px 250px;"><path d="M320,250 L540,140 Q466,213 585,235 Q473,270 565,330 Q444,319 490,400 L390,380 Z" fill="url(#bat-wing-gradient)"/><path d="M320,250 L540,140 M320,250 L585,235 M320,250 L565,330 M320,250 L490,400" stroke="#c9bfa0" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M320,250 L345,215 L332,212 Z" fill="#e8e2d0"/></g><path d="M270,420 L260,455 Q255,462 245,460" stroke="url(#bat-skin-gradient)" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M330,420 L340,455 Q345,462 355,460" stroke="url(#bat-skin-gradient)" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M240,255 Q300,225 360,255 Q380,320 350,390 Q300,420 250,390 Q220,320 240,255 Z" fill="url(#bat-bone-gradient)"/><path d="M260,280 Q300,300 340,280 M255,320 Q300,345 345,320" stroke="#8f8468" stroke-width="2" fill="none" opacity=".5"/><g class="batHD-head" style="transform-origin:300px 190px;"><polygon points="218,28 178,158 272,148" fill="url(#bat-bone-gradient)"/><polygon points="216,55 197,142 252,138" fill="url(#bat-skin-gradient)"/><polygon points="382,28 422,158 328,148" fill="url(#bat-bone-gradient)"/><polygon points="384,55 403,142 348,138" fill="url(#bat-skin-gradient)"/><ellipse cx="300" cy="175" rx="68" ry="62" fill="url(#bat-bone-gradient)"/><g><ellipse cx="270" cy="165" rx="11" ry="15" fill="#1a1a2e" transform="rotate(12 270 165)"/><ellipse cx="271" cy="165" rx="7" ry="10" class="batHD-eye" transform="rotate(12 270 165)"/><circle cx="268" cy="161" r="1.6" fill="#ffffff"/><ellipse cx="330" cy="165" rx="11" ry="15" fill="#1a1a2e" transform="rotate(-12 330 165)"/><ellipse cx="329" cy="165" rx="7" ry="10" class="batHD-eye" transform="rotate(-12 330 165)"/><circle cx="332" cy="161" r="1.6" fill="#ffffff"/></g><path d="M245,148 Q265,140 280,145" stroke="#3d2a1c" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M355,148 Q335,140 320,145" stroke="#3d2a1c" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M288,190 Q300,182 312,190 Q305,205 300,208 Q295,205 288,190 Z" fill="#8f8468"/><g class="batHD-jaw" style="transform-origin:300px 195px;"><path d="M270,200 Q300,208 330,200 Q325,235 300,242 Q275,235 270,200 Z" fill="url(#bat-mouth-darkness)"/><path d="M282,202 L278,225 L288,205 Z" fill="#f5f2d0"/><path d="M318,202 L322,225 L312,205 Z" fill="#f5f2d0"/><rect x="294" y="201" width="5" height="10" fill="#e6e2b8"/><rect x="301" y="201" width="5" height="10" fill="#e6e2b8"/></g></g></g></svg>`},
   skeleton:{id:'skeleton', name:'Scheletro Guerriero', icon:'💀', hp:24, dmg:7, pattern:['attack','defend','attack'],
     lore:'Combatte ancora la stessa battaglia, da secoli, senza ricordarne il motivo.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="skel-body"><path d="M32 78 Q50 90 68 78 L66 90 Q50 97 34 90 Z" fill="#5a4a30"/><path d="M34 80 L66 80 L62 88 L38 88 Z" fill="#8a6d3a"/><circle cx="50" cy="42" r="14" fill="#e8e2d0"/><ellipse class="skel-eye" cx="45" cy="40" rx="3.2" ry="4" fill="#120e1f"/><ellipse class="skel-eye-2" cx="55" cy="40" rx="3.2" ry="4" fill="#120e1f"/><circle cx="45" cy="40" r="1.3" fill="#4de2c7"/><circle cx="55" cy="40" r="1.3" fill="#4de2c7"/><path d="M47 49 L53 49 L50 53 Z" fill="#120e1f"/><path d="M40 51 L44 53 L48 51 L52 53 L56 51 L60 53" stroke="#c9c3b0" stroke-width="1" fill="none"/><path d="M36 58 L64 58 M38 65 L62 65 M40 72 L60 72" stroke="#e8e2d0" stroke-width="3.5" stroke-linecap="round"/><path d="M50 55 L50 80" stroke="#e8e2d0" stroke-width="3.5"/><g class="skel-sword" style="transform-origin:66px 82px;"><path d="M34 90 L70 56" stroke="#c9ccd4" stroke-width="4" stroke-linecap="round"/><path d="M37 87 L67 59" stroke="#eef1f4" stroke-width="1" stroke-linecap="round"/><path d="M64 54 L74 58 L70 68 L60 64 Z" fill="#8a6d3a"/><circle cx="67" cy="61" r="2" fill="#ffcf5c"/></g></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="skel-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="skel-bone-gradient" cx="50%" cy="35%" r="65%"><stop offset="0%" stop-color="#f0ead8"/><stop offset="55%" stop-color="#c9bfa0"/><stop offset="100%" stop-color="#7a705a"/></radialGradient><radialGradient id="skel-void-gradient" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#2a1f45"/><stop offset="100%" stop-color="#0d0818"/></radialGradient><linearGradient id="skel-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="50%" stop-color="#8a8a94"/><stop offset="100%" stop-color="#4a4a54"/></linearGradient><linearGradient id="skel-metal-dark" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6b5a30"/><stop offset="100%" stop-color="#2a2010"/></linearGradient></defs><ellipse cx="300" cy="450" rx="180" ry="26" fill="url(#skel-drop-shadow)"/><g class="skelHD-body"><path d="M270,395 L255,460" stroke="url(#skel-bone-gradient)" stroke-width="16" stroke-linecap="round"/><circle cx="262" cy="428" r="9" fill="url(#skel-bone-gradient)"/><path d="M255,460 L235,468 M255,460 L248,472" stroke="#c9bfa0" stroke-width="4" stroke-linecap="round"/><path d="M330,395 L345,460" stroke="url(#skel-bone-gradient)" stroke-width="16" stroke-linecap="round"/><circle cx="338" cy="428" r="9" fill="url(#skel-bone-gradient)"/><path d="M345,460 L365,468 M345,460 L352,472" stroke="#c9bfa0" stroke-width="4" stroke-linecap="round"/><path d="M255,380 Q300,360 345,380 Q345,410 300,415 Q255,410 255,380 Z" fill="url(#skel-bone-gradient)"/><path d="M240,255 Q300,235 360,255 Q370,340 340,390 Q300,405 260,390 Q230,340 240,255 Z" fill="url(#skel-void-gradient)"/><path d="M300,250 L300,380" stroke="url(#skel-bone-gradient)" stroke-width="10" stroke-linecap="round"/><path d="M300,270 Q255,262 245,285" stroke="#c9bfa0" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M300,270 Q345,262 355,285" stroke="#c9bfa0" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M300,300 Q253,292 243,315" stroke="#c9bfa0" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M300,300 Q347,292 357,315" stroke="#c9bfa0" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M300,330 Q255,322 246,345" stroke="#c9bfa0" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M300,330 Q345,322 354,345" stroke="#c9bfa0" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M225,250 Q245,225 275,235 Q265,265 235,270 Z" fill="url(#skel-metal-dark)"/><path d="M375,250 Q355,225 325,235 Q335,265 365,270 Z" fill="url(#skel-metal-dark)"/><path d="M235,250 L205,310" stroke="url(#skel-bone-gradient)" stroke-width="14" stroke-linecap="round"/><path d="M205,310 L200,360" stroke="url(#skel-bone-gradient)" stroke-width="12" stroke-linecap="round"/><path d="M200,360 L188,378 M200,360 L198,382 M200,360 L210,380" stroke="url(#skel-bone-gradient)" stroke-width="5" stroke-linecap="round"/><path d="M365,250 L410,190" stroke="url(#skel-bone-gradient)" stroke-width="14" stroke-linecap="round"/><path d="M410,190 L440,140" stroke="url(#skel-bone-gradient)" stroke-width="12" stroke-linecap="round"/><circle cx="440" cy="138" r="10" fill="url(#skel-bone-gradient)"/><path d="M440,138 L470,20 L484,26 L452,145 Z" fill="url(#skel-metal-gradient)"/><path d="M448,130 L472,32" stroke="#eef1f4" stroke-width="2" opacity=".6"/><rect x="420" y="126" width="40" height="10" fill="url(#skel-metal-dark)" transform="rotate(-20 440 131)"/><circle cx="436" cy="152" r="7" fill="url(#skel-metal-dark)"/><g class="skelHD-head" style="transform-origin:300px 170px;"><ellipse cx="300" cy="165" rx="62" ry="60" fill="url(#skel-bone-gradient)"/><path d="M280,115 L275,140 M320,110 L325,138" stroke="#5a5040" stroke-width="2" fill="none"/><path d="M262,145 Q280,138 295,145" stroke="#6b6050" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M338,145 Q320,138 305,145" stroke="#6b6050" stroke-width="5" stroke-linecap="round" fill="none"/><ellipse cx="278" cy="160" rx="14" ry="17" fill="#150f26"/><ellipse cx="278" cy="160" rx="9" ry="11" class="skelHD-eye"/><ellipse cx="322" cy="160" rx="14" ry="17" fill="#150f26"/><ellipse cx="322" cy="160" rx="9" ry="11" class="skelHD-eye"/><path d="M292,180 L300,195 L308,180 Z" fill="#150f26"/><g class="skelHD-jaw" style="transform-origin:300px 205px;"><path d="M262,200 Q300,235 338,200 Q330,218 300,222 Q270,218 262,200 Z" fill="url(#skel-bone-gradient)"/><path d="M272,203 L277,214 L282,203 Z M292,205 L297,217 L302,205 Z M312,205 L317,217 L322,205 Z M330,203 L335,214 L328,203 Z" fill="#e6e2b8"/></g></g></g></svg>`},
   slime:  {id:'slime',  name:'Melma Acida', icon:'🟢', hp:30, dmg:4,  pattern:['attack','poison','attack'],
     lore:'Un tempo era qualcos\u2019altro. Il dungeon dimentica in fretta le forme originarie.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="slime-body"><path d="M50 25 Q75 30 78 55 Q80 78 58 85 Q50 90 42 85 Q20 78 22 55 Q25 30 50 25 Z" fill="#6fae3a"/><path d="M28 65 Q30 82 50 87 Q70 82 72 65 Q60 75 50 76 Q40 75 28 65 Z" fill="#4a8f2a"/><ellipse cx="42" cy="40" rx="10" ry="7" fill="#a8d97a"/><ellipse cx="44" cy="52" rx="3" ry="4" fill="#1c1633"/><ellipse cx="58" cy="52" rx="3" ry="4" fill="#1c1633"/><circle cx="45" cy="50" r="1" fill="#f4ecd8"/><circle cx="59" cy="50" r="1" fill="#f4ecd8"/><circle cx="64" cy="38" r="3" fill="#a8d97a"/><circle cx="32" cy="60" r="2.5" fill="#a8d97a"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="slime-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="slime-body-gradient" cx="40%" cy="25%" r="75%"><stop offset="0%" stop-color="#9be05a"/><stop offset="55%" stop-color="#5a9e2e"/><stop offset="100%" stop-color="#2a5012"/></radialGradient><radialGradient id="slime-highlight-gradient" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#d4f5a8" stop-opacity=".8"/><stop offset="100%" stop-color="#d4f5a8" stop-opacity="0"/></radialGradient></defs><ellipse cx="300" cy="450" rx="170" ry="24" fill="url(#slime-drop-shadow)"/><g class="slimeHD-body" style="transform-origin:300px 300px;"><path d="M195,320 Q140,290 130,230 Q120,260 140,300 Q150,330 190,345 Z" fill="url(#slime-body-gradient)"/><path d="M405,320 Q460,290 470,230 Q480,260 460,300 Q450,330 410,345 Z" fill="url(#slime-body-gradient)"/><path d="M180,300 C170,220 230,160 300,160 C370,160 430,220 420,300 C440,360 410,430 300,440 C190,430 160,360 180,300 Z" fill="url(#slime-body-gradient)"/><ellipse cx="255" cy="230" rx="60" ry="45" fill="url(#slime-highlight-gradient)"/><circle cx="350" cy="210" r="10" fill="#c9f08a" opacity=".6"/><circle cx="220" cy="340" r="7" fill="#c9f08a" opacity=".5"/><circle cx="370" cy="330" r="9" fill="#c9f08a" opacity=".5"/><path d="M240,210 Q265,225 285,222" stroke="#1e3d0a" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M360,210 Q335,225 315,222" stroke="#1e3d0a" stroke-width="6" stroke-linecap="round" fill="none"/><ellipse cx="260" cy="250" rx="16" ry="20" fill="#0d1a05"/><ellipse cx="261" cy="250" rx="10" ry="13" class="slimeHD-eye"/><ellipse cx="340" cy="250" rx="16" ry="20" fill="#0d1a05"/><ellipse cx="339" cy="250" rx="10" ry="13" class="slimeHD-eye"/><g class="slimeHD-jaw" style="transform-origin:300px 315px;"><path d="M265,300 Q300,315 335,300 Q325,335 300,340 Q275,335 265,300 Z" fill="#0d1a05"/><path d="M275,303 L280,314 L285,303 M295,305 L300,318 L305,305 M315,305 L320,318 L325,305" fill="#e6ffb0"/></g><path d="M240,430 Q235,450 240,465 Q245,450 240,430 Z" fill="url(#slime-body-gradient)"/><path d="M300,438 Q296,458 300,472 Q304,458 300,438 Z" fill="url(#slime-body-gradient)"/><path d="M360,430 Q356,450 360,465 Q365,450 360,430 Z" fill="url(#slime-body-gradient)"/></g></svg>`},
   spider: {id:'spider', name:'Ragno Tunnel', icon:'🕷️', hp:20, dmg:6, pattern:['attack','attack','buff'],
     lore:'Tesse le sue tele lungo i corridoi che nessun altro osa più percorrere.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="spider-body"><g class="spider-legs"><path d="M38 48 Q20 40 12 50 M38 54 Q18 55 10 65 M40 42 Q26 28 15 30 M42 58 Q30 68 22 78" stroke="#3a2c63" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M62 48 Q80 40 88 50 M62 54 Q82 55 90 65 M60 42 Q74 28 85 30 M58 58 Q70 68 78 78" stroke="#3a2c63" stroke-width="2.5" fill="none" stroke-linecap="round"/></g><ellipse cx="50" cy="62" rx="14" ry="11" fill="#3a2c63"/><circle cx="50" cy="46" r="9" fill="#4b3f74"/><path d="M44 58 L50 66 L56 58" stroke="#8a6dff" stroke-width="1.5" fill="none"/><circle cx="46" cy="44" r="1.5" fill="#ff5566"/><circle cx="50" cy="42" r="1.5" fill="#ff5566"/><circle cx="54" cy="44" r="1.5" fill="#ff5566"/><circle cx="48" cy="47" r="1.2" fill="#ff9d4d"/><circle cx="52" cy="47" r="1.2" fill="#ff9d4d"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="spider-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="spider-body-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#6a52d9"/><stop offset="55%" stop-color="#3d2a8f"/><stop offset="100%" stop-color="#150c33"/></radialGradient><linearGradient id="spider-leg-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4a3599"/><stop offset="100%" stop-color="#150c33"/></linearGradient></defs><ellipse cx="300" cy="450" rx="200" ry="26" fill="url(#spider-drop-shadow)"/><g class="spiderHD-body" style="transform-origin:300px 280px;"><path d="M250,260 Q170,220 90,240 Q60,245 40,270" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M250,270 Q160,270 80,290 Q50,298 30,320" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M250,290 Q165,320 100,350 Q70,362 55,385" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M250,300 Q180,350 130,390 Q105,405 95,430" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M350,260 Q430,220 510,240 Q540,245 560,270" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M350,270 Q440,270 520,290 Q550,298 570,320" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M350,290 Q435,320 500,350 Q530,362 545,385" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M350,300 Q420,350 470,390 Q495,405 505,430" stroke="url(#spider-leg-gradient)" stroke-width="10" stroke-linecap="round" fill="none"/><ellipse cx="300" cy="340" rx="95" ry="80" fill="url(#spider-body-gradient)"/><path d="M270,300 L300,340 L330,300" stroke="#8a6dff" stroke-width="4" fill="none" opacity=".6"/><ellipse cx="300" cy="230" rx="70" ry="60" fill="url(#spider-body-gradient)"/><ellipse cx="278" cy="215" rx="10" ry="13" fill="#0d0818"/><ellipse cx="279" cy="215" rx="6" ry="8" class="spiderHD-eye"/><ellipse cx="322" cy="215" rx="10" ry="13" fill="#0d0818"/><ellipse cx="321" cy="215" rx="6" ry="8" class="spiderHD-eye"/><circle cx="260" cy="225" r="4" fill="#ff5566"/><circle cx="340" cy="225" r="4" fill="#ff5566"/><circle cx="268" cy="203" r="3" fill="#ff5566"/><circle cx="332" cy="203" r="3" fill="#ff5566"/><g class="spiderHD-jaw" style="transform-origin:300px 250px;"><path d="M280,245 Q270,270 260,290" stroke="#e8e2d0" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M320,245 Q330,270 340,290" stroke="#e8e2d0" stroke-width="6" stroke-linecap="round" fill="none"/></g></g></svg>`},
   goblin: {id:'goblin', name:'Goblin Furfante', icon:'👺', hp:18, dmg:6, pattern:['attack','attack','defend'],
     lore:'Ruba tutto ciò che luccica, incluse le speranze di chi si perde qui.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="goblin-body"><ellipse cx="32" cy="62" rx="5" ry="9" fill="#7a9e4a"/><ellipse cx="68" cy="62" rx="5" ry="9" fill="#7a9e4a"/><path d="M34 55 Q50 50 66 55 L64 82 Q50 88 36 82 Z" fill="#5a4a30"/><rect x="36" y="70" width="28" height="4" fill="#3a2c1a"/><path d="M66 62 L78 50 L81 53 L69 65 Z" fill="#c9ccd4"/><path d="M66 62 L70 68 L64 70 Z" fill="#5a4a30"/><circle cx="50" cy="42" r="13" fill="#7a9e4a"/><path class="goblin-ear-l" d="M38 40 L26 34 L40 48 Z" fill="#7a9e4a" style="transform-origin:40px 44px;"/><path class="goblin-ear-r" d="M62 40 L74 34 L60 48 Z" fill="#7a9e4a" style="transform-origin:60px 44px;"/><ellipse cx="45" cy="40" rx="2.5" ry="3" fill="#ffcf5c"/><ellipse cx="55" cy="40" rx="2.5" ry="3" fill="#ffcf5c"/><circle cx="45" cy="41" r="1" fill="#120e1f"/><circle cx="55" cy="41" r="1" fill="#120e1f"/><path d="M49 45 L51 45 L50 49 Z" fill="#5a7a38"/><path d="M44 50 Q50 54 56 50" stroke="#2f4020" stroke-width="1" fill="none"/><rect x="47" y="49" width="2" height="3" fill="#f4ecd8"/><rect x="51" y="49" width="2" height="3" fill="#f4ecd8"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="goblin-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="goblin-skin-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#9ec95a"/><stop offset="55%" stop-color="#5a8a2e"/><stop offset="100%" stop-color="#2a4012"/></radialGradient><linearGradient id="goblin-cloth-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#7a5c3a"/><stop offset="100%" stop-color="#3a2a1a"/></linearGradient><linearGradient id="goblin-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="100%" stop-color="#4a4a54"/></linearGradient></defs><ellipse cx="300" cy="440" rx="150" ry="24" fill="url(#goblin-drop-shadow)"/><g class="goblinHD-body" style="transform-origin:300px 300px;"><path d="M270,390 L260,440" stroke="url(#goblin-skin-gradient)" stroke-width="16" stroke-linecap="round"/><path d="M330,390 L340,440" stroke="url(#goblin-skin-gradient)" stroke-width="16" stroke-linecap="round"/><path d="M235,290 Q300,260 365,290 L352,395 Q300,415 248,395 Z" fill="url(#goblin-cloth-gradient)"/><rect x="248" y="350" width="104" height="14" fill="#241a10"/><path d="M235,290 L200,340" stroke="url(#goblin-skin-gradient)" stroke-width="14" stroke-linecap="round"/><path d="M200,340 L175,300" stroke="url(#goblin-skin-gradient)" stroke-width="12" stroke-linecap="round"/><path d="M175,300 L140,250 L150,245 L185,292 Z" fill="url(#goblin-metal-gradient)"/><path d="M365,290 L400,330 M400,330 L392,350 M405,325 L385,345" stroke="url(#goblin-skin-gradient)" stroke-width="6" stroke-linecap="round"/><g class="goblinHD-head" style="transform-origin:300px 200px;"><path class="goblinHD-ear-l" d="M225,180 L175,140 L205,220 Z" fill="url(#goblin-skin-gradient)" style="transform-origin:225px 180px;"/><path class="goblinHD-ear-r" d="M375,180 L425,140 L395,220 Z" fill="url(#goblin-skin-gradient)" style="transform-origin:375px 180px;"/><ellipse cx="300" cy="195" rx="70" ry="65" fill="url(#goblin-skin-gradient)"/><path d="M255,175 Q275,160 295,170" stroke="#2a4012" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M345,175 Q325,160 305,170" stroke="#2a4012" stroke-width="5" stroke-linecap="round" fill="none"/><ellipse cx="272" cy="188" rx="9" ry="11" fill="#150f26"/><ellipse cx="273" cy="188" rx="5" ry="7" class="goblinHD-eye"/><ellipse cx="328" cy="188" rx="9" ry="11" fill="#150f26"/><ellipse cx="327" cy="188" rx="5" ry="7" class="goblinHD-eye"/><path d="M290,205 L300,198 L310,205 L303,215 L297,215 Z" fill="#3a5a1e"/><g class="goblinHD-jaw" style="transform-origin:300px 225px;"><path d="M265,215 Q300,245 335,215 Q328,232 300,235 Q272,232 265,215 Z" fill="#1a2a0d"/><path d="M275,217 L280,228 L285,217 M295,220 L300,232 L305,220 M315,217 L320,228 L325,217" fill="#f5f2d0"/></g></g></g></svg>`},
   wisp:   {id:'wisp', name:'Fuoco Fatuo', icon:'🔥', hp:15, dmg:5, pattern:['attack','buff','attack'],
     lore:'Guida i viandanti fuori strada con una luce che promette salvezza e non la mantiene.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="wisp-body"><path class="wisp-flame" d="M50 20 Q65 35 60 55 Q75 60 68 78 Q50 92 32 78 Q25 60 40 55 Q35 35 50 20 Z" fill="#ff9d4d"/><path class="wisp-flame-2" d="M50 35 Q58 45 55 58 Q64 62 58 74 Q50 82 42 74 Q36 62 45 58 Q42 45 50 35 Z" fill="#ffc978"/><ellipse cx="50" cy="62" rx="9" ry="12" fill="#fff3d6"/><ellipse cx="45" cy="58" rx="2" ry="3" fill="#120e1f"/><ellipse cx="55" cy="58" rx="2" ry="3" fill="#120e1f"/><circle class="wisp-ember" cx="24" cy="38" r="2" fill="#ff9d4d"/><circle class="wisp-ember-2" cx="76" cy="43" r="1.6" fill="#ffc978"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="wisp-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".85"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="wisp-flame-gradient" cx="50%" cy="30%" r="75%"><stop offset="0%" stop-color="#fff3c9"/><stop offset="40%" stop-color="#ffcf5c"/><stop offset="75%" stop-color="#ff9d4d"/><stop offset="100%" stop-color="#c9541a"/></radialGradient><radialGradient id="wisp-core-gradient" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#fff3c9"/><stop offset="100%" stop-color="#ffcf5c"/></radialGradient></defs><ellipse cx="300" cy="450" rx="140" ry="22" fill="url(#wisp-drop-shadow)"/><g class="wispHD-body" style="transform-origin:300px 280px;"><circle class="wispHD-ember-1" cx="180" cy="200" r="6" fill="#ffcf5c"/><circle class="wispHD-ember-2" cx="430" cy="230" r="5" fill="#ff9d4d"/><circle class="wispHD-ember-3" cx="400" cy="150" r="4" fill="#fff3c9"/><path class="wispHD-flame-outer" d="M300,120 Q380,200 360,280 Q420,300 400,380 Q340,440 300,440 Q260,440 200,380 Q180,300 240,280 Q220,200 300,120 Z" fill="url(#wisp-flame-gradient)" style="transform-origin:300px 280px;"/><path class="wispHD-flame-inner" d="M300,180 Q350,230 335,290 Q370,305 358,360 Q320,400 300,400 Q280,400 242,360 Q230,305 265,290 Q250,230 300,180 Z" fill="url(#wisp-core-gradient)" style="transform-origin:300px 290px;"/><path d="M264,258 L292,272 L264,282 Z" fill="#3a1a05"/><path d="M336,258 L308,272 L336,282 Z" fill="#3a1a05"/><g class="wispHD-jaw" style="transform-origin:300px 305px;"><path d="M270,298 L282,318 L292,300 L300,320 L308,300 L318,318 L330,298 Q300,290 270,298 Z" fill="#3a1a05"/></g></g></svg>`},
   golem:  {id:'golem', name:'Golem di Pietra', icon:'🗿', hp:40, dmg:8, pattern:['defend','attack','attack','defend'],
     lore:'Fu scolpito per proteggere qualcosa. Nessuno ricorda più cosa.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="golem-body"><rect x="22" y="42" width="14" height="16" rx="3" fill="#5a5468"/><rect x="64" y="42" width="14" height="16" rx="3" fill="#5a5468"/><rect x="32" y="45" width="36" height="34" rx="4" fill="#6b6478"/><rect x="40" y="28" width="20" height="18" rx="3" fill="#7a7488"/><path d="M45 50 L50 58 L47 66" stroke="#3a3648" stroke-width="1.5" fill="none"/><path d="M55 52 L52 62" stroke="#3a3648" stroke-width="1.5" fill="none"/><ellipse cx="38" cy="60" rx="6" ry="4" fill="#5a8f3a"/><rect class="golem-eye-l" x="44" y="34" width="4" height="4" fill="#4de2c7"/><rect class="golem-eye-r" x="52" y="34" width="4" height="4" fill="#4de2c7"/><rect x="36" y="79" width="10" height="10" fill="#5a5468"/><rect x="54" y="79" width="10" height="10" fill="#5a5468"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="golem-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="golem-stone-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#8a8494"/><stop offset="55%" stop-color="#5a5468"/><stop offset="100%" stop-color="#2a2638"/></radialGradient><linearGradient id="golem-moss-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6a9e3a"/><stop offset="100%" stop-color="#2a4a12"/></linearGradient></defs><ellipse cx="300" cy="450" rx="200" ry="26" fill="url(#golem-drop-shadow)"/><g class="golemHD-body" style="transform-origin:300px 300px;"><rect x="250" y="380" width="40" height="70" fill="url(#golem-stone-gradient)"/><rect x="310" y="380" width="40" height="70" fill="url(#golem-stone-gradient)"/><rect x="220" y="250" width="160" height="140" rx="10" fill="url(#golem-stone-gradient)"/><path d="M260,270 L260,340 M300,260 L300,350 M340,270 L340,340" stroke="#2a2638" stroke-width="3" fill="none" opacity=".6"/><path d="M270,290 L300,320 L330,285" stroke="#4de2c7" stroke-width="3" fill="none" opacity=".5"/><ellipse cx="245" cy="360" rx="20" ry="14" fill="url(#golem-moss-gradient)"/><ellipse cx="355" cy="270" rx="16" ry="12" fill="url(#golem-moss-gradient)"/><rect x="170" y="230" width="70" height="80" rx="8" fill="url(#golem-stone-gradient)"/><rect x="360" y="230" width="70" height="80" rx="8" fill="url(#golem-stone-gradient)"/><g class="golemHD-arm-l" style="transform-origin:205px 260px;"><path d="M205,260 L150,160" stroke="url(#golem-stone-gradient)" stroke-width="32" stroke-linecap="round"/><circle cx="150" cy="150" r="28" fill="url(#golem-stone-gradient)"/></g><g class="golemHD-arm-r" style="transform-origin:395px 260px;"><path d="M395,260 L450,160" stroke="url(#golem-stone-gradient)" stroke-width="32" stroke-linecap="round"/><circle cx="450" cy="150" r="28" fill="url(#golem-stone-gradient)"/></g><rect x="260" y="180" width="80" height="70" rx="8" fill="url(#golem-stone-gradient)"/><path d="M270,195 L268,215 M330,190 L332,212" stroke="#2a2638" stroke-width="2" fill="none"/><path d="M255,205 Q280,195 300,200" stroke="#2a2638" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M345,205 Q320,195 300,200" stroke="#2a2638" stroke-width="4" stroke-linecap="round" fill="none"/><rect class="golemHD-eye" x="278" y="210" width="16" height="16" fill="#4de2c7"/><rect class="golemHD-eye" x="306" y="210" width="16" height="16" fill="#4de2c7"/></g></svg>`},
   wraithling: {id:'wraithling', name:'Spettro Minore', icon:'👻', hp:22, dmg:6, pattern:['attack','poison','attack'],
     lore:'Un\u2019eco di chi non ha mai trovato l\u2019uscita, condannata a ripetere gli stessi passi.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="wraith-body"><path d="M50 22 Q70 30 72 55 Q76 75 66 88 Q60 78 56 88 Q50 80 44 88 Q40 78 34 88 Q24 75 28 55 Q30 30 50 22 Z" fill="#8a6dff"/><path d="M50 30 Q64 36 65 55 Q67 68 60 78 Q50 72 40 78 Q33 68 35 55 Q36 36 50 30 Z" fill="#5a3fc0"/><ellipse cx="50" cy="48" rx="10" ry="9" fill="#1c1633"/><circle cx="46" cy="47" r="2" fill="#4de2c7"/><circle cx="54" cy="47" r="2" fill="#4de2c7"/><path class="wraith-wisp-l" d="M34 82 Q30 90 24 92" stroke="#8a6dff" stroke-width="2" fill="none" stroke-linecap="round" style="transform-origin:34px 82px;"/><path class="wraith-wisp-r" d="M66 82 Q70 90 76 92" stroke="#8a6dff" stroke-width="2" fill="none" stroke-linecap="round" style="transform-origin:66px 82px;"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="wraith-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".85"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="wraith-body-gradient" cx="50%" cy="25%" r="75%"><stop offset="0%" stop-color="#a78bff"/><stop offset="55%" stop-color="#6a4fd9"/><stop offset="100%" stop-color="#2a1a5c"/></radialGradient><radialGradient id="wraith-void-gradient" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1c1042"/><stop offset="100%" stop-color="#0a0618"/></radialGradient></defs><ellipse cx="300" cy="450" rx="160" ry="22" fill="url(#wraith-drop-shadow)"/><g class="wraithHD-body" style="transform-origin:300px 280px;"><g class="wraithHD-arm-l" style="transform-origin:240px 260px;"><path d="M240,260 Q190,290 160,340" stroke="url(#wraith-body-gradient)" stroke-width="16" stroke-linecap="round" fill="none"/><path d="M160,340 L140,355 M160,340 L155,362 M160,340 L172,358" stroke="#e8e2ff" stroke-width="4" stroke-linecap="round"/></g><g class="wraithHD-arm-r" style="transform-origin:360px 260px;"><path d="M360,260 Q410,290 440,340" stroke="url(#wraith-body-gradient)" stroke-width="16" stroke-linecap="round" fill="none"/><path d="M440,340 L460,355 M440,340 L445,362 M440,340 L428,358" stroke="#e8e2ff" stroke-width="4" stroke-linecap="round"/></g><path d="M300,120 Q380,160 390,260 Q420,340 400,420 Q380,400 370,430 Q350,400 340,435 Q320,405 300,438 Q280,405 260,435 Q250,400 230,430 Q220,400 200,420 Q180,340 210,260 Q220,160 300,120 Z" fill="url(#wraith-body-gradient)"/><ellipse cx="300" cy="190" rx="55" ry="60" fill="url(#wraith-void-gradient)"/><ellipse cx="280" cy="185" rx="9" ry="12" class="wraithHD-eye"/><ellipse cx="320" cy="185" rx="9" ry="12" class="wraithHD-eye"/></g></svg>`},
   crawler: {id:'crawler', name:'Verme Corazzato', icon:'🪱', hp:26, dmg:5, pattern:['defend','attack','attack'],
     lore:'Scava tunnel che nessuna mappa registra, ridisegnando il dungeon dall\u2019interno.',
-    art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="crawler-body"><g class="crawler-seg1" style="transform-origin:25px 70px;"><ellipse cx="25" cy="70" rx="9" ry="10" fill="#8a6d3a"/></g><g class="crawler-seg2" style="transform-origin:38px 62px;"><ellipse cx="38" cy="62" rx="10" ry="11" fill="#a58548"/></g><g class="crawler-seg3" style="transform-origin:52px 56px;"><ellipse cx="52" cy="56" rx="10" ry="11" fill="#8a6d3a"/></g><g class="crawler-seg4" style="transform-origin:66px 52px;"><ellipse cx="66" cy="52" rx="10" ry="11" fill="#a58548"/></g><ellipse cx="80" cy="48" rx="9" ry="9" fill="#5a4a2a"/><circle cx="83" cy="45" r="1.5" fill="#ff5566"/><path d="M87 50 L94 46 M87 52 L94 55" stroke="#3a2c1a" stroke-width="2" stroke-linecap="round"/><path d="M22 78 L18 84 M28 78 L30 85 M36 71 L32 77 M42 71 L45 78 M50 65 L46 71 M56 65 L59 72 M64 61 L60 67 M70 61 L73 68" stroke="#3a2c1a" stroke-width="1.5"/><path d="M25 63 Q38 55 52 49 Q66 45 78 41" stroke="#c9b48f" stroke-width="1" fill="none"/></g></svg>`},
+    art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="crawler-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="crawler-shell-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#c9a45c"/><stop offset="55%" stop-color="#8a6d3a"/><stop offset="100%" stop-color="#3a2a12"/></radialGradient><linearGradient id="crawler-underbelly-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#e8d9a8"/><stop offset="100%" stop-color="#8a7548"/></linearGradient></defs><ellipse cx="300" cy="450" rx="170" ry="24" fill="url(#crawler-drop-shadow)"/><g class="crawlerHD-body" style="transform-origin:300px 300px;"><ellipse cx="300" cy="400" rx="130" ry="50" fill="url(#crawler-shell-gradient)"/><ellipse cx="300" cy="340" rx="150" ry="55" fill="url(#crawler-shell-gradient)"/><ellipse cx="300" cy="270" rx="140" ry="60" fill="url(#crawler-shell-gradient)"/><path d="M180,320 Q300,345 420,320 M170,375 Q300,398 430,375" stroke="#3a2a12" stroke-width="3" fill="none" opacity=".5"/><ellipse cx="300" cy="420" rx="60" ry="20" fill="url(#crawler-underbelly-gradient)"/><path d="M215,285 L200,310 M225,300 L212,322 M375,285 L390,310 M365,300 L378,322" stroke="#3a2a12" stroke-width="4" stroke-linecap="round"/><ellipse cx="300" cy="190" rx="90" ry="75" fill="url(#crawler-shell-gradient)"/><ellipse cx="265" cy="175" rx="10" ry="12" class="crawlerHD-eye"/><ellipse cx="335" cy="175" rx="10" ry="12" class="crawlerHD-eye"/><ellipse cx="245" cy="195" rx="6" ry="7" class="crawlerHD-eye"/><ellipse cx="355" cy="195" rx="6" ry="7" class="crawlerHD-eye"/><g class="crawlerHD-jaw" style="transform-origin:300px 230px;"><path d="M250,220 Q220,250 200,290" stroke="#3a2a12" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M350,220 Q380,250 400,290" stroke="#3a2a12" stroke-width="10" stroke-linecap="round" fill="none"/></g></g></svg>`},
 };
 const FLOOR_ENEMIES = {
   1: ['rat','bat','goblin'],
@@ -1011,17 +1117,17 @@ const BOSSES = {
       line:'"Un altro topo nel mio labirinto. Che sia l\u2019ultimo."',
       pattern2:['attack','attack','buff','attack'], phase2Line:'"IL SANGUE MI RENDE PIÙ FORTE!"',
       companion:'goblin', companionLine:'Al suo fianco avanza un goblin, ghigno furbo e lama pronta.',
-      art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="boss-frame"><circle class="boss-frame-outer" cx="50" cy="55" r="44"/><circle class="boss-frame-inner" cx="50" cy="55" r="40"/><path class="boss-frame-orn" d="M50 11 L54 17 L50 23 L46 17 Z"/><path class="boss-frame-orn" d="M50 99 L54 93 L50 87 L46 93 Z"/><path class="boss-frame-orn" d="M6 55 L12 51 L18 55 L12 59 Z"/><path class="boss-frame-orn" d="M94 55 L88 51 L82 55 L88 59 Z"/></g><g class="bossA-body"><ellipse cx="24" cy="68" rx="7" ry="14" fill="#6b7a4a"/><ellipse cx="76" cy="68" rx="7" ry="14" fill="#6b7a4a"/><path d="M76 54 L86 30 L92 34 L82 58 Z" fill="#5a4a30"/><circle cx="88" cy="32" r="1.5" fill="#8a8a94"/><circle cx="84" cy="40" r="1.5" fill="#8a8a94"/><path d="M30 58 Q50 50 70 58 L66 92 Q50 98 34 92 Z" fill="#6b7a4a"/><path d="M36 81 L64 81 L60 92 L40 92 Z" fill="#8a6d3a"/><rect x="36" y="76" width="28" height="5" fill="#3a2c1a"/><circle cx="50" cy="38" r="15" fill="#7a8a54"/><path d="M38 30 L46 33" stroke="#4a5230" stroke-width="2"/><path d="M62 30 L54 33" stroke="#4a5230" stroke-width="2"/><ellipse class="bossA-eye" cx="44" cy="36" rx="2.5" ry="3" fill="#ffcf5c"/><ellipse class="bossA-eye2" cx="56" cy="36" rx="2.5" ry="3" fill="#ffcf5c"/><path d="M42 46 L40 54 L45 50 Z" fill="#f4ecd8"/><path d="M58 46 L60 54 L55 50 Z" fill="#f4ecd8"/></g></svg>`},
+      art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="ogre-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="ogre-skin-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#9ec96a"/><stop offset="55%" stop-color="#5a7a3a"/><stop offset="100%" stop-color="#2a3a18"/></radialGradient><linearGradient id="ogre-cloth-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#8a6d3a"/><stop offset="100%" stop-color="#3a2a12"/></linearGradient><radialGradient id="ogre-club-gradient" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="#a58548"/><stop offset="55%" stop-color="#6b5030"/><stop offset="100%" stop-color="#2a1e10"/></radialGradient><linearGradient id="ogre-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="100%" stop-color="#6a6a74"/></linearGradient></defs><ellipse cx="300" cy="450" rx="220" ry="30" fill="url(#ogre-drop-shadow)"/><g class="bossAHD-body" style="transform-origin:300px 280px;"><g class="boss-frame"><circle class="boss-frame-outer" cx="300" cy="260" r="215"/><circle class="boss-frame-inner" cx="300" cy="260" r="200"/><path class="boss-frame-orn" d="M300,30 L316,50 L300,70 L284,50 Z"/><path class="boss-frame-orn" d="M300,490 L316,470 L300,450 L284,470 Z"/><path class="boss-frame-orn" d="M55,260 L75,244 L95,260 L75,276 Z"/><path class="boss-frame-orn" d="M545,260 L525,244 L505,260 L525,276 Z"/></g><path d="M255,400 L245,470" stroke="url(#ogre-skin-gradient)" stroke-width="34" stroke-linecap="round"/><path d="M345,400 L355,470" stroke="url(#ogre-skin-gradient)" stroke-width="34" stroke-linecap="round"/><path d="M195,270 Q300,230 405,270 Q420,370 370,430 Q300,455 230,430 Q180,370 195,270 Z" fill="url(#ogre-skin-gradient)"/><path d="M225,380 L375,380 L365,410 L235,410 Z" fill="url(#ogre-cloth-gradient)"/><path d="M195,280 L150,360" stroke="url(#ogre-skin-gradient)" stroke-width="30" stroke-linecap="round"/><circle cx="145" cy="375" r="22" fill="url(#ogre-skin-gradient)"/><g class="bossAHD-arm-r" style="transform-origin:405px 280px;"><path d="M405,280 L460,140" stroke="url(#ogre-skin-gradient)" stroke-width="30" stroke-linecap="round"/><circle cx="460" cy="135" r="20" fill="url(#ogre-skin-gradient)"/><path d="M460,135 L470,15 L525,25 L500,150 Z" fill="url(#ogre-club-gradient)"/><circle cx="500" cy="55" r="7" fill="url(#ogre-metal-gradient)"/><circle cx="482" cy="90" r="7" fill="url(#ogre-metal-gradient)"/><circle cx="512" cy="105" r="7" fill="url(#ogre-metal-gradient)"/><circle cx="490" cy="125" r="7" fill="url(#ogre-metal-gradient)"/></g><circle cx="300" cy="190" r="80" fill="url(#ogre-skin-gradient)"/><path d="M235,165 Q270,150 300,158" stroke="#2a3a18" stroke-width="8" stroke-linecap="round" fill="none"/><path d="M365,165 Q330,150 300,158" stroke="#2a3a18" stroke-width="8" stroke-linecap="round" fill="none"/><ellipse cx="265" cy="180" rx="10" ry="12" class="bossAHD-eye" fill="#ffcf5c"/><ellipse cx="335" cy="180" rx="10" ry="12" class="bossAHD-eye" fill="#ffcf5c"/><path d="M258,225 Q300,215 342,225 Q332,250 300,255 Q268,250 258,225 Z" fill="#1c1408"/><path d="M272,228 L277,240 L282,228 M295,230 L300,244 L305,230 M318,228 L323,240 L328,228" fill="#f4ecd8"/><path d="M255,230 L245,265 L268,240 Z" fill="#f4ecd8"/><path d="M345,230 L355,265 L332,240 Z" fill="#f4ecd8"/></g></svg>`},
   2: {id:'wraith', name:'Spettro Incatenato', icon:'👻', hp:74, dmg:12, pattern:['attack','poison','attack','defend'],
       line:'"Le catene non tratterranno il mio odio ancora per molto."',
       pattern2:['poison','attack','buff','attack'], phase2Line:'"LE CATENE SI SPEZZANO!"',
       companion:'wraithling', companionLine:'Un\u2019eco minore gli è incatenata accanto, sussurrando lo stesso odio.',
-      art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="boss-frame"><circle class="boss-frame-outer" cx="50" cy="55" r="44"/><circle class="boss-frame-inner" cx="50" cy="55" r="40"/><path class="boss-frame-orn" d="M50 11 L54 17 L50 23 L46 17 Z"/><path class="boss-frame-orn" d="M50 99 L54 93 L50 87 L46 93 Z"/><path class="boss-frame-orn" d="M6 55 L12 51 L18 55 L12 59 Z"/><path class="boss-frame-orn" d="M94 55 L88 51 L82 55 L88 59 Z"/></g><g class="bossB-body"><path d="M50 18 Q76 28 78 58 Q82 82 68 96 Q60 84 56 96 Q50 86 44 96 Q40 84 32 96 Q18 82 22 58 Q24 28 50 18 Z" fill="#8a6dff"/><path d="M50 28 Q68 36 69 58 Q71 74 62 88 Q50 80 38 88 Q29 74 31 58 Q32 36 50 28 Z" fill="#5a3fc0"/><path d="M38 22 L40 12 L44 22 Z" fill="#8a6dff"/><path d="M48 18 L50 8 L52 18 Z" fill="#8a6dff"/><path d="M56 22 L60 12 L62 22 Z" fill="#8a6dff"/><ellipse cx="50" cy="48" rx="11" ry="10" fill="#1c1633"/><circle class="bossB-eye" cx="45" cy="47" r="2.3" fill="#4de2c7"/><circle class="bossB-eye2" cx="55" cy="47" r="2.3" fill="#4de2c7"/><path class="bossB-chain-l" d="M30 70 Q20 78 26 90" stroke="#8a8a94" stroke-width="2.5" fill="none" style="transform-origin:30px 70px;"/><path class="bossB-chain-r" d="M70 70 Q80 78 74 90" stroke="#8a8a94" stroke-width="2.5" fill="none" style="transform-origin:70px 70px;"/><path class="bossB-wisp-l" d="M34 92 Q30 98 24 100" stroke="#8a6dff" stroke-width="2" fill="none" stroke-linecap="round" style="transform-origin:34px 92px;"/><path class="bossB-wisp-r" d="M66 92 Q70 98 76 100" stroke="#8a6dff" stroke-width="2" fill="none" stroke-linecap="round" style="transform-origin:66px 92px;"/></g></svg>`},
+      art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="wraithboss-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".85"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="wraithboss-body-gradient" cx="50%" cy="22%" r="75%"><stop offset="0%" stop-color="#c9b3ff"/><stop offset="55%" stop-color="#7a5fe0"/><stop offset="100%" stop-color="#2a1a5c"/></radialGradient><linearGradient id="wraithboss-chain-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="100%" stop-color="#5a5a64"/></linearGradient></defs><ellipse cx="300" cy="450" rx="200" ry="26" fill="url(#wraithboss-drop-shadow)"/><g class="bossBHD-body" style="transform-origin:300px 270px;"><g class="boss-frame"><circle class="boss-frame-outer" cx="300" cy="260" r="215"/><circle class="boss-frame-inner" cx="300" cy="260" r="200"/><path class="boss-frame-orn" d="M300,30 L316,50 L300,70 L284,50 Z"/><path class="boss-frame-orn" d="M300,490 L316,470 L300,450 L284,470 Z"/><path class="boss-frame-orn" d="M55,260 L75,244 L95,260 L75,276 Z"/><path class="boss-frame-orn" d="M545,260 L525,244 L505,260 L525,276 Z"/></g><g class="bossBHD-arm-l" style="transform-origin:225px 280px;"><path d="M225,280 Q170,310 140,365" stroke="url(#wraithboss-body-gradient)" stroke-width="20" stroke-linecap="round" fill="none"/><path d="M140,365 L118,382 M140,365 L134,392 M140,365 L154,388" stroke="#eee6ff" stroke-width="5" stroke-linecap="round"/></g><g class="bossBHD-arm-r" style="transform-origin:375px 280px;"><path d="M375,280 Q430,310 460,365" stroke="url(#wraithboss-body-gradient)" stroke-width="20" stroke-linecap="round" fill="none"/><path d="M460,365 L482,382 M460,365 L466,392 M460,365 L446,388" stroke="#eee6ff" stroke-width="5" stroke-linecap="round"/></g><path d="M300,100 Q390,140 400,260 Q430,350 405,430 Q385,405 375,438 Q355,405 340,440 Q320,405 300,442 Q280,405 260,440 Q245,405 225,438 Q215,405 195,430 Q170,350 200,260 Q210,140 300,100 Z" fill="url(#wraithboss-body-gradient)"/><path d="M255,110 L258,72 L272,108 Z" fill="url(#wraithboss-body-gradient)"/><path d="M300,95 L300,50 L312,93 Z" fill="url(#wraithboss-body-gradient)"/><path d="M345,110 L342,72 L328,108 Z" fill="url(#wraithboss-body-gradient)"/><ellipse cx="300" cy="195" rx="65" ry="70" fill="#1c1042"/><ellipse cx="275" cy="188" rx="10" ry="14" class="bossBHD-eye" fill="#4de2c7"/><ellipse cx="325" cy="188" rx="10" ry="14" class="bossBHD-eye" fill="#4de2c7"/><path d="M260,290 Q300,260 340,290" stroke="url(#wraithboss-chain-gradient)" stroke-width="6" fill="none"/><circle cx="280" cy="270" r="8" fill="none" stroke="url(#wraithboss-chain-gradient)" stroke-width="4"/><circle cx="320" cy="270" r="8" fill="none" stroke="url(#wraithboss-chain-gradient)" stroke-width="4"/></g></svg>`},
   3: {id:'dragon', name:'Drago Nano', icon:'🐲', hp:105, dmg:15, pattern:['attack','attack','defend','buff','attack'],
       line:'"Piccola fiamma... lascia che ti spenga per sempre."',
       lineRemember:'"Sento ancora il tuo odore... sei tornato a cadere, come già facesti una volta."',
       pattern2:['attack','buff','attack','attack'], phase2Line:'"IL VERO FUOCO SI RISVEGLIA!"',
-      art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><g class="boss-frame"><circle class="boss-frame-outer" cx="50" cy="55" r="44"/><circle class="boss-frame-inner" cx="50" cy="55" r="40"/><path class="boss-frame-orn" d="M50 11 L54 17 L50 23 L46 17 Z"/><path class="boss-frame-orn" d="M50 99 L54 93 L50 87 L46 93 Z"/><path class="boss-frame-orn" d="M6 55 L12 51 L18 55 L12 59 Z"/><path class="boss-frame-orn" d="M94 55 L88 51 L82 55 L88 59 Z"/></g><g class="bossC-body"><path class="bossC-wing-l" d="M34 58 Q10 46 6 60 Q18 58 24 66 Q14 64 10 72 Q26 68 36 74 Z" fill="#5a2626" style="transform-origin:34px 58px;"/><path class="bossC-wing-r" d="M66 58 Q90 46 94 60 Q82 58 76 66 Q86 64 90 72 Q74 68 64 74 Z" fill="#5a2626" style="transform-origin:66px 58px;"/><path class="bossC-tail" d="M30 78 Q18 84 22 94 Q28 90 34 84 Z" fill="#7a3a3a" style="transform-origin:30px 78px;"/><ellipse cx="50" cy="64" rx="20" ry="16" fill="#7a3a3a"/><ellipse cx="50" cy="70" rx="13" ry="8" fill="#c98a6d"/><circle cx="50" cy="42" r="13" fill="#8a4444"/><path d="M42 32 L38 20 L46 30 Z" fill="#e8e2d0"/><path d="M58 32 L62 20 L54 30 Z" fill="#e8e2d0"/><ellipse class="bossC-eye" cx="45" cy="40" rx="2.3" ry="2.8" fill="#ffcf5c"/><ellipse class="bossC-eye2" cx="55" cy="40" rx="2.3" ry="2.8" fill="#ffcf5c"/><path d="M44 46 L56 46 L50 54 Z" fill="#8a4444"/><path d="M46 46 L47 50 L48 46 Z" fill="#f4ecd8"/><path d="M52 46 L53 50 L54 46 Z" fill="#f4ecd8"/><path class="bossC-fire" d="M50 54 Q54 60 50 66 Q46 60 50 54 Z" fill="#ff9d4d" style="transform-origin:50px 60px;"/></g></svg>`,
+      art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="dragonboss-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="dragonboss-body-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#c94a4a"/><stop offset="55%" stop-color="#7a2626"/><stop offset="100%" stop-color="#2a0d0d"/></radialGradient><linearGradient id="dragonboss-belly-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f0c9a8"/><stop offset="100%" stop-color="#8a5c3a"/></linearGradient><radialGradient id="dragonboss-wing-gradient" cx="40%" cy="20%" r="80%"><stop offset="0%" stop-color="#8a3a3a"/><stop offset="55%" stop-color="#4a1c1c"/><stop offset="100%" stop-color="#1c0808"/></radialGradient><radialGradient id="dragonboss-fire-gradient" cx="50%" cy="20%" r="80%"><stop offset="0%" stop-color="#fff3c9"/><stop offset="45%" stop-color="#ffcf5c"/><stop offset="100%" stop-color="#ff9d4d"/></radialGradient></defs><ellipse cx="300" cy="450" rx="220" ry="30" fill="url(#dragonboss-drop-shadow)"/><g class="bossCHD-body" style="transform-origin:300px 270px;"><g class="boss-frame"><circle class="boss-frame-outer" cx="300" cy="260" r="215"/><circle class="boss-frame-inner" cx="300" cy="260" r="200"/><path class="boss-frame-orn" d="M300,30 L316,50 L300,70 L284,50 Z"/><path class="boss-frame-orn" d="M300,490 L316,470 L300,450 L284,470 Z"/><path class="boss-frame-orn" d="M55,260 L75,244 L95,260 L75,276 Z"/><path class="boss-frame-orn" d="M545,260 L525,244 L505,260 L525,276 Z"/></g><path class="bossCHD-wing-l" d="M270,260 Q140,180 60,220 Q120,240 155,270 Q90,270 50,310 Q140,300 190,340 L250,330 Z" fill="url(#dragonboss-wing-gradient)" style="transform-origin:270px 260px;"/><path class="bossCHD-wing-r" d="M330,260 Q460,180 540,220 Q480,240 445,270 Q510,270 550,310 Q460,300 410,340 L350,330 Z" fill="url(#dragonboss-wing-gradient)" style="transform-origin:330px 260px;"/><path class="bossCHD-tail" d="M255,420 Q190,440 175,400 Q220,415 260,400 Z" fill="url(#dragonboss-body-gradient)" style="transform-origin:255px 415px;"/><path d="M240,380 L230,450" stroke="url(#dragonboss-body-gradient)" stroke-width="30" stroke-linecap="round"/><path d="M360,380 L370,450" stroke="url(#dragonboss-body-gradient)" stroke-width="30" stroke-linecap="round"/><path d="M210,260 Q300,225 390,260 Q405,340 360,405 Q300,430 240,405 Q195,340 210,260 Z" fill="url(#dragonboss-body-gradient)"/><ellipse cx="300" cy="330" rx="55" ry="60" fill="url(#dragonboss-belly-gradient)"/><circle cx="300" cy="185" r="70" fill="url(#dragonboss-body-gradient)"/><path d="M262,140 L250,90 L282,135 Z" fill="#e8e2d0"/><path d="M338,140 L350,90 L318,135 Z" fill="#e8e2d0"/><ellipse cx="268" cy="175" rx="10" ry="12" class="bossCHD-eye" fill="#ffcf5c"/><ellipse cx="332" cy="175" rx="10" ry="12" class="bossCHD-eye" fill="#ffcf5c"/><path d="M255,205 L345,205 L300,230 Z" fill="url(#dragonboss-body-gradient)"/><g class="bossCHD-jaw" style="transform-origin:300px 225px;"><path d="M255,215 L345,215 L330,255 L270,255 Z" fill="#1c0808"/><path d="M270,217 L275,235 L280,217 M295,220 L300,240 L305,220 M320,217 L325,235 L330,217" fill="#f4ecd8"/><path class="bossCHD-fire" d="M300,255 Q315,290 300,325 Q285,290 300,255 Z" fill="url(#dragonboss-fire-gradient)" style="transform-origin:300px 290px;"/></g></g></svg>`,
       companion:'golem', companionLine:'Un golem di pietra veglia al suo fianco, immobile finché non è il momento di colpire.'},
 };
 const MAX_FLOOR = 3; // usato solo per Run Breve
@@ -1065,13 +1171,13 @@ function eliteDifficultyMult(){
 const ELITES = {
   1: {id:'shadowhunter', name:'Cacciatore di Ombre', icon:'🗡️', hp:34, dmg:9, pattern:['attack','attack','defend'],
       line:'"Ti ho fiutato tre corridoi fa."', lore:'Si muove tra le fiaccole spente, dove la luce non arriva mai in tempo.',
-      art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><circle class="elite-aura" cx="50" cy="55" r="36"/><g class="eliteA-body"><path d="M50 20 Q64 24 66 40 Q68 52 62 61 L38 61 Q32 52 34 40 Q36 24 50 20 Z" fill="#241c40"/><path d="M50 24 Q60 27 61 39 Q62 48 58 55 L42 55 Q38 48 39 39 Q40 27 50 24 Z" fill="#150f26"/><ellipse cx="50" cy="42" rx="8" ry="7" fill="#0e0a1c"/><ellipse class="eliteA-eye" cx="46" cy="41" rx="1.8" ry="2.2" fill="#ff5566"/><ellipse class="eliteA-eye2" cx="54" cy="41" rx="1.8" ry="2.2" fill="#ff5566"/><path d="M34 58 L18 46 L21 52 L36 64 Z" fill="#8a6d3a"/><path d="M18 46 L8 36 L13 44 L21 52 Z" fill="#c9ccd4"/><path d="M66 58 L82 46 L79 52 L64 64 Z" fill="#8a6d3a"/><path d="M82 46 L92 36 L87 44 L79 52 Z" fill="#c9ccd4"/><path d="M38 61 Q50 68 62 61 L58 78 Q50 82 42 78 Z" fill="#150f26"/></g></svg>`},
+      art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="shadow-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="shadow-cloak-gradient" cx="45%" cy="25%" r="75%"><stop offset="0%" stop-color="#4a3a7a"/><stop offset="55%" stop-color="#241c40"/><stop offset="100%" stop-color="#0a0714"/></radialGradient><linearGradient id="shadow-blade-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#eef1f4"/><stop offset="100%" stop-color="#8a8a94"/></linearGradient><linearGradient id="shadow-hilt-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#8a6d3a"/><stop offset="100%" stop-color="#3a2a12"/></linearGradient></defs><ellipse cx="300" cy="450" rx="180" ry="26" fill="url(#shadow-drop-shadow)"/><g class="eliteAHD-body" style="transform-origin:300px 280px;"><circle class="elite-aura" cx="300" cy="280" r="215"/><path d="M300,140 Q400,180 420,300 Q440,380 400,440 Q380,410 360,445 Q340,405 320,448 Q300,410 280,448 Q260,405 240,445 Q220,410 200,440 Q160,380 180,300 Q200,180 300,140 Z" fill="url(#shadow-cloak-gradient)"/><ellipse cx="300" cy="205" rx="60" ry="65" fill="#0a0714"/><ellipse cx="278" cy="200" rx="8" ry="10" class="eliteAHD-eye"/><ellipse cx="322" cy="200" rx="8" ry="10" class="eliteAHD-eye"/><g class="eliteAHD-arm-l" style="transform-origin:230px 300px;"><path d="M230,300 L150,220" stroke="url(#shadow-cloak-gradient)" stroke-width="16" stroke-linecap="round"/><path d="M150,220 L100,150 L112,142 L165,210 Z" fill="url(#shadow-blade-gradient)"/><rect x="140" y="210" width="26" height="8" fill="url(#shadow-hilt-gradient)" transform="rotate(45 150 214)"/></g><g class="eliteAHD-arm-r" style="transform-origin:370px 300px;"><path d="M370,300 L450,220" stroke="url(#shadow-cloak-gradient)" stroke-width="16" stroke-linecap="round"/><path d="M450,220 L500,150 L488,142 L435,210 Z" fill="url(#shadow-blade-gradient)"/><rect x="434" y="210" width="26" height="8" fill="url(#shadow-hilt-gradient)" transform="rotate(-45 450 214)"/></g></g></svg>`},
   2: {id:'chainreaper', name:'Carnefice Incatenato', icon:'⛓️', hp:48, dmg:11, pattern:['attack','defend','attack','poison'],
       line:'"Le mie catene hanno spezzato di meglio."', lore:'Un tempo prigioniero, ora è lui stesso la prigione di chi lo affronta.',
-      art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><circle class="elite-aura" cx="50" cy="55" r="36"/><g class="eliteB-body"><rect x="22" y="48" width="14" height="14" rx="3" fill="#5a5468"/><rect x="64" y="48" width="14" height="14" rx="3" fill="#5a5468"/><path d="M32 55 Q50 48 68 55 L64 88 Q50 94 36 88 Z" fill="#4b3f74"/><circle cx="50" cy="38" r="11" fill="#6b6478"/><rect x="44" y="37" width="5" height="2" fill="#ff5566"/><rect x="51" y="37" width="5" height="2" fill="#ff5566"/><path class="eliteB-chain-l" d="M30 60 Q20 70 28 82" stroke="#8a8a94" stroke-width="2.5" fill="none" style="transform-origin:30px 60px;"/><circle cx="26" cy="66" r="2" fill="none" stroke="#c9ccd4" stroke-width="1"/><circle cx="23" cy="75" r="2" fill="none" stroke="#c9ccd4" stroke-width="1"/><path class="eliteB-chain-r" d="M70 60 Q80 70 72 82" stroke="#8a8a94" stroke-width="2.5" fill="none" style="transform-origin:70px 60px;"/><circle cx="74" cy="66" r="2" fill="none" stroke="#c9ccd4" stroke-width="1"/><circle cx="77" cy="75" r="2" fill="none" stroke="#c9ccd4" stroke-width="1"/><path d="M78 40 L92 26 L96 30 L82 44 Z" fill="#c9ccd4"/><path d="M78 40 L64 54" stroke="#5a4a30" stroke-width="4"/><rect x="36" y="76" width="28" height="4" fill="#3a2c1a"/></g></svg>`},
+      art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="chain-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="chain-armor-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#7a7488"/><stop offset="55%" stop-color="#4b3f74"/><stop offset="100%" stop-color="#1c1638"/></radialGradient><linearGradient id="chain-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="100%" stop-color="#4a4a54"/></linearGradient></defs><ellipse cx="300" cy="450" rx="200" ry="28" fill="url(#chain-drop-shadow)"/><g class="eliteBHD-body" style="transform-origin:300px 290px;"><circle class="elite-aura" cx="300" cy="290" r="225"/><path d="M260,400 L250,460" stroke="url(#chain-armor-gradient)" stroke-width="24" stroke-linecap="round"/><path d="M340,400 L350,460" stroke="url(#chain-armor-gradient)" stroke-width="24" stroke-linecap="round"/><path d="M215,270 Q300,240 385,270 L370,400 Q300,425 230,400 Z" fill="url(#chain-armor-gradient)"/><path d="M175,240 Q210,205 260,220 Q245,260 195,270 Z" fill="url(#chain-armor-gradient)"/><path d="M425,240 Q390,205 340,220 Q355,260 405,270 Z" fill="url(#chain-armor-gradient)"/><g class="eliteBHD-chain-l" style="transform-origin:200px 320px;"><path d="M200,320 Q160,360 185,410" stroke="url(#chain-metal-gradient)" stroke-width="7" fill="none"/><circle cx="182" cy="350" r="7" fill="none" stroke="url(#chain-metal-gradient)" stroke-width="4"/><circle cx="178" cy="380" r="7" fill="none" stroke="url(#chain-metal-gradient)" stroke-width="4"/></g><g class="eliteBHD-chain-r" style="transform-origin:400px 320px;"><path d="M400,320 Q440,360 415,410" stroke="url(#chain-metal-gradient)" stroke-width="7" fill="none"/><circle cx="418" cy="350" r="7" fill="none" stroke="url(#chain-metal-gradient)" stroke-width="4"/><circle cx="422" cy="380" r="7" fill="none" stroke="url(#chain-metal-gradient)" stroke-width="4"/></g><circle cx="300" cy="195" r="55" fill="url(#chain-armor-gradient)"/><rect x="270" y="188" width="24" height="10" fill="#ff5566" class="eliteBHD-eye"/><rect x="306" y="188" width="24" height="10" fill="#ff5566" class="eliteBHD-eye"/><g class="eliteBHD-axe" style="transform-origin:300px 240px;"><path d="M300,240 L300,80" stroke="url(#chain-metal-gradient)" stroke-width="14" stroke-linecap="round"/><path d="M300,110 L400,60 L420,100 L330,155 Z" fill="url(#chain-metal-gradient)"/><path d="M300,110 L200,60 L180,100 L270,155 Z" fill="url(#chain-metal-gradient)"/><circle cx="300" cy="78" r="12" fill="url(#chain-armor-gradient)"/></g></g></svg>`},
   3: {id:'emberguard', name:'Guardiano Ardente', icon:'🔥', hp:64, dmg:13, pattern:['attack','attack','buff','attack'],
       line:'"Il fuoco non si stanca mai."', lore:'Veglia sulla soglia finale, alimentato da un fuoco che non consuma legna.',
-      art:`<svg viewBox="0 0 100 100" width="100%" height="100%"><circle class="elite-aura" cx="50" cy="55" r="36"/><g class="eliteC-body"><path class="eliteC-flame-l" d="M22 50 Q30 40 38 50 Q30 58 22 50 Z" fill="#ff9d4d" style="transform-origin:30px 50px;"/><path class="eliteC-flame-r" d="M78 50 Q70 40 62 50 Q70 58 78 50 Z" fill="#ff9d4d" style="transform-origin:70px 50px;"/><path d="M34 55 Q50 48 66 55 L62 88 Q50 94 38 88 Z" fill="#5a4a30"/><circle cx="50" cy="38" r="11" fill="#8a6d3a"/><rect x="43" y="36" width="14" height="4" fill="#ffcf5c"/><path class="eliteC-crest" d="M50 18 Q56 26 50 34 Q44 26 50 18 Z" fill="#ff9d4d" style="transform-origin:50px 26px;"/><path d="M50 22 Q53 27 50 32 Q47 27 50 22 Z" fill="#ffc978"/><path d="M78 30 L88 18" stroke="#c9ccd4" stroke-width="3"/><path d="M84 22 Q90 18 88 12 Q84 16 84 22 Z" fill="#ff9d4d"/><circle class="eliteC-ember" cx="18" cy="32" r="1.6" fill="#ff9d4d"/><circle class="eliteC-ember2" cx="84" cy="62" r="1.4" fill="#ffc978"/></g></svg>`},
+      art:`<svg viewBox="0 0 600 500" width="100%" height="100%"><defs><radialGradient id="ember-drop-shadow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000000" stop-opacity=".9"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><radialGradient id="ember-armor-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#c9a45c"/><stop offset="55%" stop-color="#8a6d3a"/><stop offset="100%" stop-color="#3a2a12"/></radialGradient><radialGradient id="ember-flame-gradient" cx="50%" cy="30%" r="75%"><stop offset="0%" stop-color="#fff3c9"/><stop offset="40%" stop-color="#ffcf5c"/><stop offset="75%" stop-color="#ff9d4d"/><stop offset="100%" stop-color="#c9541a"/></radialGradient><linearGradient id="ember-metal-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#eef1f4"/><stop offset="100%" stop-color="#8a8a94"/></linearGradient></defs><ellipse cx="300" cy="450" rx="190" ry="26" fill="url(#ember-drop-shadow)"/><g class="eliteCHD-body" style="transform-origin:300px 280px;"><circle class="elite-aura" cx="300" cy="280" r="220"/><path d="M260,400 L252,460" stroke="url(#ember-armor-gradient)" stroke-width="24" stroke-linecap="round"/><path d="M340,400 L348,460" stroke="url(#ember-armor-gradient)" stroke-width="24" stroke-linecap="round"/><path d="M215,270 Q300,240 385,270 L370,400 Q300,425 230,400 Z" fill="url(#ember-armor-gradient)"/><path class="eliteCHD-flame-l" d="M175,260 Q140,220 150,170 Q170,210 195,235 Q185,250 175,260 Z" fill="url(#ember-flame-gradient)" style="transform-origin:175px 235px;"/><path class="eliteCHD-flame-r" d="M425,260 Q460,220 450,170 Q430,210 405,235 Q415,250 425,260 Z" fill="url(#ember-flame-gradient)" style="transform-origin:425px 235px;"/><circle cx="300" cy="195" r="55" fill="url(#ember-armor-gradient)"/><path class="eliteCHD-crest" d="M300,110 Q318,142 300,170 Q282,142 300,110 Z" fill="url(#ember-flame-gradient)" style="transform-origin:300px 140px;"/><rect x="270" y="188" width="60" height="14" fill="#ffcf5c" class="eliteCHD-eye"/><g class="eliteCHD-sword" style="transform-origin:300px 220px;"><path d="M284,220 L284,45 L300,25 L316,45 L316,220 Z" fill="url(#ember-metal-gradient)"/><rect x="258" y="215" width="84" height="14" fill="url(#ember-armor-gradient)"/><rect x="288" y="229" width="24" height="34" fill="#5a4a30"/><path class="eliteCHD-blade-flame" d="M278,130 Q250,105 265,65 Q286,95 298,125 Z" fill="url(#ember-flame-gradient)" style="transform-origin:278px 100px;"/><path class="eliteCHD-blade-flame-2" d="M322,130 Q350,105 335,65 Q314,95 302,125 Z" fill="url(#ember-flame-gradient)" style="transform-origin:322px 100px;"/></g></g></svg>`},
 };
 
 /* =========================================================
@@ -1329,7 +1435,6 @@ function rectAt(depth, W, H){
   const w = W*(1-t), h = H*(1-t);
   return { x1:(W-w)/2, x2:(W+w)/2, y1:(H-h)/2, y2:(H+h)/2 };
 }
-const CELL_ICONS = {enemy:'👹', treasure:'💰', trap:'⚠️', key:'🗝️', boss:'👑', shrine:'⛩️', bones:'🦴', bivio:'🎭', elite:'🗡️', stairs:'🔽', bottega:'🛒'};
 
 /* =========================================================
    BIOME PALETTES (v1.2 — un colore diverso per ogni piano)
@@ -1366,13 +1471,13 @@ function renderExplore(){
     const rightDir = DIRS[(DIRS.indexOf(dir)+1)%4];
     const leftOpen = cellOpen(maze,x,y,leftDir).open;
     const rightOpen = cellOpen(maze,x,y,rightDir).open;
-    let contentIcon = null;
+    let contentType = null;
     if(maze.discovered[y][x] && maze.cells[y][x].content && !maze.cells[y][x].resolved){
-      contentIcon = CELL_ICONS[maze.cells[y][x].content.type];
+      contentType = maze.cells[y][x].content.type;
     }
     // a locked door blocks the view just like a wall, until unlocked
     const blocked = (!info.open) || info.locked;
-    steps.push({depth:d, leftWall:!leftOpen, rightWall:!rightOpen, frontWall:blocked, locked:info.locked, contentIcon, isPlayerCell:d===0, cellX:x, cellY:y});
+    steps.push({depth:d, leftWall:!leftOpen, rightWall:!rightOpen, frontWall:blocked, locked:info.locked, contentType, isPlayerCell:d===0, cellX:x, cellY:y});
     if(blocked){ stoppedAt=d; break; }
     x += DX[dir]; y += DY[dir];
   }
@@ -1490,15 +1595,13 @@ function renderExplore(){
       }
     }
     // content icon (for cells ahead, not the player's own cell) — soft glow badge
-    if(s.contentIcon && s.depth>0){
+    if(s.contentType && s.depth>0){
       const cx=(near.x1+near.x2)/2, cy=(near.y1+near.y2)/2 + (near.y2-near.y1)*0.1;
       const r = Math.max(14,(near.x2-near.x1)*0.13);
       const cglow = ctx2d.createRadialGradient(cx,cy,0,cx,cy,r*1.8);
       cglow.addColorStop(0,'rgba(255,201,120,0.35)'); cglow.addColorStop(1,'rgba(255,201,120,0)');
       ctx2d.fillStyle=cglow; ctx2d.beginPath(); ctx2d.arc(cx,cy,r*1.8,0,Math.PI*2); ctx2d.fill();
-      ctx2d.font = Math.max(18,(near.x2-near.x1)*0.24)+'px sans-serif';
-      ctx2d.textAlign='center'; ctx2d.textBaseline='middle';
-      ctx2d.fillText(s.contentIcon, cx, cy);
+      drawCellIcon(ctx2d, s.contentType, cx, cy, Math.max(18,(near.x2-near.x1)*0.24));
     }
   }
 
@@ -1606,6 +1709,119 @@ function drawLockIcon(lx, ly, lsz){
   ctx2d.fillRect(-lsz*0.035, lsz*0.2, lsz*0.07, lsz*0.18);
   ctx2d.restore();
 }
+function drawCellIcon(ctx, type, cx, cy, size){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  if(type==='enemy'){
+    ctx.fillStyle='#e8e2d0';
+    ctx.beginPath(); ctx.arc(0,-size*0.05,size*0.42,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-size*0.28,size*0.15,size*0.56,size*0.22);
+    ctx.fillStyle='#150f26';
+    ctx.beginPath(); ctx.ellipse(-size*0.16,-size*0.05,size*0.12,size*0.15,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(size*0.16,-size*0.05,size*0.12,size*0.15,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-size*0.06,size*0.08); ctx.lineTo(size*0.06,size*0.08); ctx.lineTo(0,size*0.2); ctx.closePath(); ctx.fill();
+  } else if(type==='elite'){
+    ctx.strokeStyle='#ff5566'; ctx.lineWidth=size*0.05; ctx.setLineDash([size*0.12,size*0.1]);
+    ctx.beginPath(); ctx.arc(0,0,size*0.48,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle='#eef1f4'; ctx.lineWidth=size*0.11;
+    ctx.beginPath(); ctx.moveTo(-size*0.24,-size*0.24); ctx.lineTo(size*0.24,size*0.24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.24,-size*0.24); ctx.lineTo(-size*0.24,size*0.24); ctx.stroke();
+    ctx.fillStyle='#ffcf5c';
+    ctx.beginPath(); ctx.arc(-size*0.24,-size*0.24,size*0.06,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(size*0.24,-size*0.24,size*0.06,0,Math.PI*2); ctx.fill();
+  } else if(type==='boss'){
+    ctx.fillStyle='#ffcf5c';
+    ctx.fillRect(-size*0.3,size*0.05,size*0.6,size*0.18);
+    ctx.beginPath();
+    ctx.moveTo(-size*0.3,size*0.05); ctx.lineTo(-size*0.3,-size*0.15); ctx.lineTo(-size*0.15,size*0.05);
+    ctx.lineTo(0,-size*0.28); ctx.lineTo(size*0.15,size*0.05); ctx.lineTo(size*0.3,-size*0.15); ctx.lineTo(size*0.3,size*0.05);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#ff5566';
+    ctx.beginPath(); ctx.arc(0,-size*0.02,size*0.06,0,Math.PI*2); ctx.fill();
+  } else if(type==='treasure'){
+    ctx.fillStyle='#5a4a30'; ctx.fillRect(-size*0.32,-size*0.02,size*0.64,size*0.34);
+    ctx.fillStyle='#7a5c3a';
+    ctx.beginPath(); ctx.moveTo(-size*0.32,-size*0.02); ctx.quadraticCurveTo(0,-size*0.34,size*0.32,-size*0.02);
+    ctx.lineTo(size*0.32,size*0.06); ctx.quadraticCurveTo(0,-size*0.2,-size*0.32,size*0.06); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#3a2c1a'; ctx.lineWidth=size*0.035;
+    ctx.beginPath(); ctx.moveTo(-size*0.1,-size*0.02); ctx.lineTo(-size*0.1,size*0.32); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.1,-size*0.02); ctx.lineTo(size*0.1,size*0.32); ctx.stroke();
+    ctx.fillStyle='rgba(255,207,92,0.55)';
+    ctx.beginPath(); ctx.ellipse(0,-size*0.03,size*0.16,size*0.04,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ffcf5c';
+    ctx.beginPath(); ctx.arc(0,size*0.04,size*0.055,0,Math.PI*2); ctx.fill();
+  } else if(type==='trap'){
+    ctx.fillStyle='#4b3f74';
+    ctx.beginPath(); ctx.ellipse(0,size*0.16,size*0.38,size*0.13,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#c9ccd4';
+    for(let i=-2;i<=2;i++){
+      const xo=i*size*0.15;
+      ctx.beginPath(); ctx.moveTo(xo-size*0.045,size*0.16); ctx.lineTo(xo+size*0.045,size*0.16); ctx.lineTo(xo,-size*0.14); ctx.closePath(); ctx.fill();
+    }
+  } else if(type==='key'){
+    ctx.strokeStyle='#c9a45c'; ctx.lineWidth=size*0.09;
+    ctx.beginPath(); ctx.arc(-size*0.18,-size*0.06,size*0.16,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-size*0.02,-size*0.06); ctx.lineTo(size*0.32,-size*0.06); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.32,-size*0.06); ctx.lineTo(size*0.32,size*0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.21,-size*0.06); ctx.lineTo(size*0.21,size*0.06); ctx.stroke();
+  } else if(type==='shrine'){
+    ctx.fillStyle='#4b3f74'; ctx.fillRect(-size*0.26,size*0.06,size*0.52,size*0.22);
+    ctx.fillRect(-size*0.34,size*0.26,size*0.68,size*0.08);
+    ctx.fillStyle='#ffc978';
+    ctx.beginPath(); ctx.moveTo(0,-size*0.3); ctx.quadraticCurveTo(size*0.07,-size*0.14,0,-size*0.02);
+    ctx.quadraticCurveTo(-size*0.07,-size*0.14,0,-size*0.3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#4de2c7';
+    ctx.beginPath(); ctx.arc(0,size*0.15,size*0.09,0,Math.PI*2); ctx.fill();
+  } else if(type==='bones'){
+    ctx.strokeStyle='#e8e2d0'; ctx.lineWidth=size*0.09;
+    ctx.beginPath(); ctx.moveTo(-size*0.24,-size*0.16); ctx.lineTo(size*0.24,size*0.16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.24,-size*0.16); ctx.lineTo(-size*0.24,size*0.16); ctx.stroke();
+    ctx.fillStyle='#e8e2d0';
+    [[-0.24,-0.16],[0.24,0.16],[0.24,-0.16],[-0.24,0.16]].forEach(p=>{
+      ctx.beginPath(); ctx.arc(p[0]*size,p[1]*size,size*0.07,0,Math.PI*2); ctx.fill();
+    });
+  } else if(type==='bivio'){
+    ctx.fillStyle='#3a2c63';
+    ctx.beginPath(); ctx.ellipse(0,0,size*0.3,size*0.38,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#8a6dff';
+    ctx.beginPath(); ctx.moveTo(-size*0.1,-size*0.34); ctx.lineTo(-size*0.17,-size*0.48); ctx.lineTo(-size*0.03,-size*0.38); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(size*0.1,-size*0.34); ctx.lineTo(size*0.17,-size*0.48); ctx.lineTo(size*0.03,-size*0.38); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#ff5566';
+    ctx.beginPath(); ctx.ellipse(-size*0.11,-size*0.07,size*0.055,size*0.09,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(size*0.11,-size*0.07,size*0.055,size*0.09,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#150f26'; ctx.lineWidth=size*0.03;
+    ctx.beginPath(); ctx.moveTo(-size*0.13,size*0.13); ctx.lineTo(-size*0.05,size*0.2); ctx.lineTo(0,size*0.12); ctx.lineTo(size*0.05,size*0.2); ctx.lineTo(size*0.13,size*0.13); ctx.stroke();
+  } else if(type==='stairs'){
+    ctx.fillStyle='#8a8494';
+    const sw=size*0.16, sh=size*0.13, x0=-size*0.32, y0=-size*0.26;
+    ctx.beginPath(); ctx.moveTo(x0,y0);
+    for(let i=0;i<4;i++){
+      ctx.lineTo(x0+sw*(i+1), y0+sh*i);
+      ctx.lineTo(x0+sw*(i+1), y0+sh*(i+1));
+    }
+    ctx.lineTo(x0, y0+sh*4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#5a5468'; ctx.lineWidth=size*0.02;
+    for(let i=1;i<4;i++){
+      ctx.beginPath(); ctx.moveTo(x0+sw*i, y0+sh*i); ctx.lineTo(x0+sw*i, y0+sh*4); ctx.stroke();
+    }
+  } else if(type==='bottega'){
+    ctx.strokeStyle='#8a6d3a'; ctx.lineWidth=size*0.04;
+    ctx.beginPath(); ctx.arc(0,-size*0.3,size*0.08,Math.PI,0); ctx.stroke();
+    ctx.fillStyle='#ffc978';
+    ctx.beginPath(); ctx.ellipse(0,-size*0.12,size*0.11,size*0.15,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#3a2c1a'; ctx.lineWidth=size*0.025;
+    ctx.strokeRect(-size*0.11,-size*0.27,size*0.22,size*0.3);
+    ctx.strokeStyle='#c9a45c'; ctx.lineWidth=size*0.03;
+    ctx.beginPath(); ctx.moveTo(-size*0.22,size*0.12); ctx.lineTo(size*0.22,size*0.12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,size*0.12); ctx.lineTo(0,size*0.02); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-size*0.22,size*0.12); ctx.lineTo(-size*0.22,size*0.2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.22,size*0.12); ctx.lineTo(size*0.22,size*0.2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-size*0.22,size*0.2,size*0.06,0,Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(size*0.22,size*0.2,size*0.06,0,Math.PI); ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawAmbientParticles(biome, W, H, t){
   const type = biome.particleType;
   const count = 9;
@@ -1680,8 +1896,7 @@ function renderMinimap(){
       if(!cell.S){ mmCtx.moveTo(cx,cy+cs); mmCtx.lineTo(cx+cs,cy+cs); }
       mmCtx.stroke();
       if(cell.content && !cell.resolved){
-        mmCtx.font=(cs*0.55)+'px sans-serif'; mmCtx.textAlign='center'; mmCtx.textBaseline='middle';
-        mmCtx.fillText(CELL_ICONS[cell.content.type], cx+cs/2, cy+cs/2);
+        drawCellIcon(mmCtx, cell.content.type, cx+cs/2, cy+cs/2, cs*0.75);
       }
     }
   }
@@ -1693,8 +1908,7 @@ function renderMinimap(){
         if(cell.content && cell.content.type==='key' && !maze.discovered[y][x]){
           const cx=pad+x*cs+cs/2, cy=pad+y*cs+cs/2;
           mmCtx.globalAlpha=0.5;
-          mmCtx.font=(cs*0.5)+'px sans-serif'; mmCtx.textAlign='center'; mmCtx.textBaseline='middle';
-          mmCtx.fillText('🗝️', cx, cy);
+          drawCellIcon(mmCtx, 'key', cx, cy, cs*0.7);
           mmCtx.globalAlpha=1;
         }
       }
