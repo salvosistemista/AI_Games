@@ -188,7 +188,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const gridContainer = document.getElementById('gamesGrid');
-
+        
             games.forEach(game => {
                 const card = document.createElement('div');
                 card.className = 'game-card';
@@ -197,7 +197,7 @@
                         <span class="game-name">${game.name}</span>
                         <span class="game-description">${game.desc}</span>
                     </div>
-                    <a href="${encodeURIComponent(game.file)}" class="btn-play">Esegui</a>
+                    <a href="${encodeURI(game.file)}" class="btn-play">Esegui</a>
                 `;
                 gridContainer.appendChild(card);
             });
