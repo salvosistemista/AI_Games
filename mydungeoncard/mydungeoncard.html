@@ -833,7 +833,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.3';
+const GAME_VERSION = 'v2.4';
 
 /* =========================================================
    UTILITIES
@@ -1531,6 +1531,37 @@ function revealAround(maze, x, y){
 }
 
 /* =========================================================
+   IL LADRUNCOLO — nemico furtivo, solo Run Completa/Immensa
+========================================================= */
+const THIEF_SPAWN_CHANCE = 0.55;
+const THIEF_TELEPORT_CHANCE = 0.2;
+function pickEmptyCell(maze, exclude){
+  const size = maze.size; const candidates=[];
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      if(exclude && exclude.some(e=>e.x===x&&e.y===y)) continue;
+      if(maze.cells[y][x].content) continue;
+      candidates.push({x,y});
+    }
+  }
+  return candidates.length ? pick(candidates) : null;
+}
+function freshThiefState(){ return {active:false, x:0, y:0, goldStolen:0, cardsStolen:[]}; }
+function spawnThiefFor(maze, mode){
+  if(!ACT_MODES.includes(mode)) return freshThiefState();
+  if(Math.random()>=THIEF_SPAWN_CHANCE) return freshThiefState();
+  const spot = pickEmptyCell(maze, [{x:0,y:0}, maze.exit]);
+  if(!spot) return freshThiefState();
+  return {active:true, x:spot.x, y:spot.y, goldStolen:0, cardsStolen:[]};
+}
+function teleportThief(){
+  if(!RUN || !RUN.thief || !RUN.thief.active) return;
+  const spot = pickEmptyCell(RUN.maze, [{x:0,y:0}, RUN.maze.exit]);
+  if(spot){ RUN.thief.x = spot.x; RUN.thief.y = spot.y; }
+}
+function thiefHasLoot(){ return !!(RUN && RUN.thief && (RUN.thief.goldStolen>0 || (RUN.thief.cardsStolen && RUN.thief.cardsStolen.length>0))); }
+
+/* =========================================================
    GAME STATE
 ========================================================= */
 let RUN = null; // active run object
@@ -1572,6 +1603,7 @@ function newRun(characterId, mode){
     deck: character.deck.slice(),
     floor:1,
     maze,
+    thief: spawnThiefFor(maze, mode),
     score:0,
     streak:0,
     bestStreak:0,
@@ -2186,6 +2218,21 @@ function renderMinimap(){
       }
     }
   }
+  // Il Ladruncolo: visibile sulla minimappa solo se ha bottino rubato, ovunque si trovi
+  if(RUN.thief && RUN.thief.active && thiefHasLoot()){
+    const tx=pad+RUN.thief.x*cs+cs/2, ty=pad+RUN.thief.y*cs+cs/2;
+    const pulse = 1 + Math.sin(performance.now()/220)*0.18;
+    mmCtx.save();
+    mmCtx.translate(tx,ty); mmCtx.scale(pulse,pulse);
+    mmCtx.strokeStyle='#ffcf5c'; mmCtx.lineWidth=1.4; mmCtx.setLineDash([2,2]);
+    mmCtx.beginPath(); mmCtx.arc(0,0,cs*0.42,0,Math.PI*2); mmCtx.stroke();
+    mmCtx.setLineDash([]);
+    mmCtx.fillStyle='#8a6d3a';
+    mmCtx.beginPath(); mmCtx.ellipse(0,1,cs*0.2,cs*0.24,0,0,Math.PI*2); mmCtx.fill();
+    mmCtx.strokeStyle='#3a2c1a'; mmCtx.lineWidth=1;
+    mmCtx.beginPath(); mmCtx.moveTo(-cs*0.1,-cs*0.12); mmCtx.lineTo(cs*0.1,-cs*0.12); mmCtx.stroke();
+    mmCtx.restore();
+  }
   // player marker
   const px=pad+maze.player.x*cs+cs/2, py=pad+maze.player.y*cs+cs/2;
   const ang = {N:-Math.PI/2, E:0, S:Math.PI/2, W:Math.PI}[DIRS[maze.player.dir]];
@@ -2263,10 +2310,18 @@ function movePlayer(delta){ // delta: +1 forward, -1 back
   }
   p.x += DX[moveDir]; p.y += DY[moveDir];
   Audio1.step(); vibrate(12);
+  if(RUN.thief && RUN.thief.active){
+    if(RUN.thief.goldStolen>0) RUN.thief.goldStolen = Math.max(0, RUN.thief.goldStolen-1);
+    if(Math.random()<THIEF_TELEPORT_CHANCE) teleportThief();
+  }
   revealAround(maze, p.x, p.y);
   renderExplore();
   updateExploreHud();
   saveRun();
+  if(RUN.thief && RUN.thief.active && RUN.thief.x===p.x && RUN.thief.y===p.y){
+    openThiefEncounter();
+    return;
+  }
   triggerCellContent();
 }
 function rotatePlayer(delta){
@@ -2477,6 +2532,9 @@ function openFateDice(mode){
   if(mode==='treasure'){
     $('trap-dice-title').textContent = 'Tesoro!';
     $('trap-dice-desc').textContent = 'Un forziere scintilla nell\u2019ombra. Lancia il dado del destino: il numero che uscirà sono le monete d\u2019oro che troverai.';
+  } else if(mode==='thief'){
+    $('trap-dice-title').textContent = '🐀 Il Ladruncolo!';
+    $('trap-dice-desc').textContent = 'Una figura furtiva ti sbarra il passo. Lancia il dado: 1-4 ti ruba metà dell\u2019oro, 5-8 ti scippa una carta, 9-12 ti restituisce tutto ciò che ti ha già rubato.';
   } else {
     $('trap-dice-title').textContent = '⚠️ Trappola!';
     $('trap-dice-desc').textContent = 'Una trappola scatta sotto i tuoi piedi. Lancia il dado del destino: il numero che uscirà sono i danni che subirai.';
@@ -2505,6 +2563,9 @@ $('btn-roll-dice').onclick = ()=>{
   // rete di sicurezza: se Three.js non è disponibile (CDN irraggiungibile), non blocchiamo il giocatore
   setTimeout(()=>{ if(!settled) finish(finalValue); }, 5200);
 };
+function openThiefEncounter(){
+  openFateDice('thief');
+}
 function resolveFateDice(val){
   const resEl = $('trap-dice-result');
   resEl.style.display = '';
@@ -2518,6 +2579,55 @@ function resolveFateDice(val){
     resEl.style.color = 'var(--gold)';
     const badge = bonus ? ` <span style="display:inline-flex; width:22px; height:22px; vertical-align:-6px;">${RELICS.osso.art}</span>` : '';
     resEl.innerHTML = `Trovi ${g} monete d'oro!${badge}`;
+  } else if(RUN.fateDiceMode==='thief'){
+    RUN.thief = RUN.thief || freshThiefState();
+    if(val<=4){
+      const stolen = Math.round(RUN.gold*0.5);
+      RUN.gold -= stolen;
+      RUN.thief.goldStolen += stolen;
+      Audio1.hit(); vibrate([30,15,30]);
+      resEl.style.color = 'var(--danger)';
+      resEl.textContent = stolen>0 ? `Il ladruncolo intasca ${stolen} monete e fugge!` : 'Il ladruncolo fruga tasche vuote e scappa deluso.';
+    } else if(val<=8){
+      const eligible = RUN.deck.filter(id => ['guard','heal'].includes(id.split('_plus')[0]));
+      if(eligible.length===0){
+        const stolen = Math.round(RUN.gold*0.5);
+        RUN.gold -= stolen;
+        RUN.thief.goldStolen += stolen;
+        Audio1.hit(); vibrate([30,15,30]);
+        resEl.style.color = 'var(--danger)';
+        resEl.textContent = stolen>0 ? `Non trova carte da rubare: intasca ${stolen} monete e fugge!` : 'Non trova nulla da rubarti e scappa deluso.';
+      } else {
+        const cardId = pick(eligible);
+        const idx = RUN.deck.indexOf(cardId);
+        RUN.deck.splice(idx,1);
+        RUN.thief.cardsStolen.push(cardId);
+        Audio1.hit(); vibrate([30,15,30]);
+        resEl.style.color = 'var(--danger)';
+        resEl.textContent = `Il ladruncolo scippa la tua carta "${CARDS[cardId].name}" e fugge!`;
+      }
+    } else {
+      const recGold = RUN.thief.goldStolen;
+      const recCards = RUN.thief.cardsStolen.slice();
+      if(recGold>0 || recCards.length>0){
+        RUN.gold += recGold;
+        recCards.forEach(cid => RUN.deck.push(cid));
+        RUN.thief.goldStolen = 0;
+        RUN.thief.cardsStolen = [];
+        Audio1.treasure(); vibrate([15,10,15,10,25]);
+        resEl.style.color = 'var(--gold)';
+        const parts = [];
+        if(recGold>0) parts.push(`${recGold} monete`);
+        if(recCards.length>0) parts.push(recCards.map(cid=>`"${CARDS[cid].name}"`).join(', '));
+        resEl.textContent = `Lo hai sorpreso! Recuperi: ${parts.join(' e ')}.`;
+      } else {
+        Audio1.click();
+        resEl.style.color = 'var(--parchment-dim)';
+        resEl.textContent = 'Il ladruncolo non ha ancora nulla da restituirti... per ora.';
+      }
+    }
+    teleportThief();
+    updateExploreHud(); saveRun();
   } else {
     RUN.hp = clamp(RUN.hp-val,0,RUN.maxHp);
     markDamageTaken();
@@ -2532,7 +2642,7 @@ function resolveFateDice(val){
 }
 $('btn-trap-continue').onclick = ()=>{
   Audio1.click();
-  const died = RUN.fateDiceMode!=='treasure' && RUN.hp<=0;
+  const died = RUN.fateDiceMode==='trap' && RUN.hp<=0;
   RUN.pendingEvent = null;
   RUN.fateDiceMode = null;
   $('overlay-trap-dice').classList.remove('active');
@@ -3389,6 +3499,7 @@ function winCombat(){
   }
 }
 function nextFloor(){
+  const lostLoot = thiefHasLoot();
   RUN.floor++;
   if(hasRelic('divoratore')){
     RUN.maxHp = Math.max(15, RUN.maxHp-2);
@@ -3397,6 +3508,7 @@ function nextFloor(){
   RUN.keyHeld = false;
   const size = floorSizeFor(RUN.mode, RUN.floor);
   RUN.maze = genMaze(size, exitTypeFor(RUN.mode, RUN.floor), RUN.mode);
+  RUN.thief = spawnThiefFor(RUN.maze, RUN.mode);
   revealAround(RUN.maze,0,0);
   updateExploreHud();
   renderExplore();
@@ -3407,6 +3519,9 @@ function nextFloor(){
     toast(`⚜️ Atto ${act}: ${getBiome().name} — resta vigile.`);
   } else {
     toast('Piano '+RUN.floor+' · '+getBiome().name+' — resta vigile.');
+  }
+  if(lostLoot){
+    setTimeout(()=>{ toast('🐀 Il ladruncolo è scomparso col suo bottino: lo perdi per sempre.'); }, 1900);
   }
   saveRun();
 }
