@@ -2427,19 +2427,21 @@ function resolveFateDice(val){
   resEl.style.display = '';
   if(RUN.fateDiceMode==='treasure'){
     let g = val;
-    if(hasRelic('osso')) g = Math.round(g*1.2);
+    const bonus = hasRelic('osso');
+    if(bonus) g = Math.round(g*1.2);
     RUN.gold += g; RUN.score += 5;
     Audio1.treasure(); vibrate([15,10,15]);
     updateExploreHud(); saveRun();
     resEl.style.color = 'var(--gold)';
-    resEl.textContent = `Il dado segna ${val}: trovi ${g} monete d'oro!`;
+    const badge = bonus ? ` <span style="display:inline-flex; width:22px; height:22px; vertical-align:-6px;">${RELICS.osso.art}</span>` : '';
+    resEl.innerHTML = `Trovi ${g} monete d'oro!${badge}`;
   } else {
     RUN.hp = clamp(RUN.hp-val,0,RUN.maxHp);
     markDamageTaken();
     Audio1.hit(); vibrate([40,20,40]);
     updateExploreHud(); saveRun();
     resEl.style.color = 'var(--danger)';
-    resEl.textContent = `Il dado segna ${val}: subisci ${val} danni!`;
+    resEl.textContent = `Subisci ${val} danni!`;
     if(RUN.hp<=0) RUN.lastDeathCause='una trappola';
   }
   $('btn-roll-dice').style.display = 'none';
