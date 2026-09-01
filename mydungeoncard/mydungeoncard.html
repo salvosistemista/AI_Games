@@ -537,7 +537,16 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 #combat-actions .btn{flex:1;}
 
 /* ---------- EVENT / REWARD ---------- */
-#event-icon{width:120px; height:120px; margin:0 auto 6px; font-size:54px; display:flex; align-items:center; justify-content:center;}
+#event-icon{width:120px; height:120px; margin:0 auto 6px; font-size:54px; display:flex; align-items:center; justify-content:center; perspective:400px;}
+#event-icon svg{overflow:visible;}
+.ei-shrine-flame{transform-box:fill-box; transform-origin:50% 90%; animation:eiShrineFlame 1s ease-in-out infinite;}
+@keyframes eiShrineFlame{0%,100%{transform:scaleY(1) scaleX(1);}50%{transform:scaleY(1.18) scaleX(0.88) translateY(-2px);}}
+.ei-shrine-rune{transform-box:fill-box; transform-origin:center; animation:eiShrineRune 1.7s ease-in-out infinite;}
+@keyframes eiShrineRune{0%,100%{opacity:.55; transform:scale(1);}50%{opacity:1; transform:scale(1.15);}}
+.ei-shrine-glow{transform-box:fill-box; transform-origin:center; animation:eiShrineGlow 1.7s ease-in-out infinite;}
+@keyframes eiShrineGlow{0%,100%{opacity:.25;}50%{opacity:.55;}}
+.ei-key-spin{transform-style:preserve-3d; transform-box:fill-box; transform-origin:center; animation:eiKeySpin 2.8s linear infinite;}
+@keyframes eiKeySpin{from{transform:rotateY(0deg);} to{transform:rotateY(360deg);}}
 #event-icon svg{width:100%; height:100%; display:block;}
 .reward-cards{display:flex; gap:10px; justify-content:center; margin:14px 0; flex-wrap:wrap;}
 .reward-cards .card{cursor:pointer;}
@@ -1082,12 +1091,12 @@ const RELICS = {
    ricompense carte/reliquie, trofeo/teschio di fine run...)
 ========================================================= */
 const EVENT_ICONS = {
-  shrine: `<svg viewBox="0 0 120 120" width="100%" height="100%"><rect x="25" y="85" width="70" height="15" rx="3" fill="#4b3f74"/><rect x="38" y="60" width="44" height="25" rx="4" fill="#5a4e88"/><circle cx="60" cy="45" r="22" fill="none" stroke="#4de2c7" stroke-width="2" opacity=".4"/><ellipse cx="60" cy="45" rx="8" ry="16" fill="#4de2c7"/></svg>`,
+  shrine: `<svg viewBox="0 0 120 120" width="100%" height="100%"><rect x="25" y="85" width="70" height="15" rx="3" fill="#4b3f74"/><rect x="38" y="60" width="44" height="25" rx="4" fill="#5a4e88"/><circle class="ei-shrine-glow" cx="60" cy="45" r="22" fill="none" stroke="#4de2c7" stroke-width="2" opacity=".4"/><ellipse class="ei-shrine-rune" cx="60" cy="52" rx="7" ry="12" fill="#4de2c7"/><path class="ei-shrine-flame" d="M60,18 Q69,32 62,41 Q69,43 64,52 Q60,58 56,52 Q51,43 58,41 Q51,32 60,18 Z" fill="#ffc978"/></svg>`,
   campfire: `<svg viewBox="0 0 120 120" width="100%" height="100%"><path d="M35,90 L60,70 L85,90 Z" fill="#5a4020"/><path d="M45,90 L60,78 L75,90 Z" fill="#3a2a12"/><path d="M60,25 Q80,50 68,65 Q84,68 76,88 Q60,100 44,88 Q36,68 52,65 Q40,50 60,25 Z" fill="#ff9d4d"/><path d="M60,45 Q70,58 63,68 Q72,70 66,84 Q60,90 54,84 Q48,70 57,68 Q50,58 60,45 Z" fill="#ffcf5c"/></svg>`,
   bottega: `<svg viewBox="0 0 120 120" width="100%" height="100%"><path d="M50,20 Q60,10 70,20 L70,32 L50,32 Z" fill="none" stroke="#c9a45c" stroke-width="4"/><rect x="42" y="32" width="36" height="45" rx="4" fill="none" stroke="#c9a45c" stroke-width="5"/><ellipse cx="60" cy="54" rx="13" ry="18" fill="#ffcf5c"/><rect x="40" y="77" width="40" height="8" rx="2" fill="#c9a45c"/><line x1="60" y1="85" x2="60" y2="105" stroke="#c9ccd4" stroke-width="4"/><line x1="35" y1="92" x2="85" y2="92" stroke="#c9ccd4" stroke-width="4"/><path d="M35,92 A10,6 0 0 0 55,92" stroke="#c9ccd4" stroke-width="3" fill="none"/><path d="M65,92 A10,6 0 0 0 85,92" stroke="#c9ccd4" stroke-width="3" fill="none"/></svg>`,
   treasure: `<svg viewBox="0 0 120 120" width="100%" height="100%"><rect x="20" y="55" width="80" height="45" rx="4" fill="#6b5030"/><path d="M20,55 Q60,25 100,55 Z" fill="#a5854a"/><rect x="16" y="53" width="88" height="8" fill="#3a2a12"/><rect x="54" y="53" width="12" height="20" fill="#e8c98a"/><ellipse cx="60" cy="58" rx="10" ry="4" fill="#ffe89a"/></svg>`,
   trap: `<svg viewBox="0 0 120 120" width="100%" height="100%"><ellipse cx="60" cy="80" rx="45" ry="14" fill="#3a2c4a"/><path d="M35,80 L40,35 L45,80 Z M55,80 L60,25 L65,80 Z M75,80 L80,35 L85,80 Z" fill="#c9ccd4"/></svg>`,
-  key: `<svg viewBox="0 0 120 120" width="100%" height="100%"><circle cx="40" cy="55" r="18" fill="none" stroke="#e8c98a" stroke-width="8"/><rect x="55" y="51" width="45" height="8" fill="#e8c98a"/><rect x="80" y="59" width="8" height="14" fill="#e8c98a"/><rect x="92" y="59" width="8" height="10" fill="#e8c98a"/></svg>`,
+  key: `<svg viewBox="0 0 120 120" width="100%" height="100%"><g class="ei-key-spin"><circle cx="40" cy="55" r="18" fill="none" stroke="#e8c98a" stroke-width="8"/><rect x="55" y="51" width="45" height="8" fill="#e8c98a"/><rect x="80" y="59" width="8" height="14" fill="#e8c98a"/><rect x="92" y="59" width="8" height="10" fill="#e8c98a"/></g></svg>`,
   bones: `<svg viewBox="0 0 120 120" width="100%" height="100%"><g stroke="#e8e2d0" stroke-width="10" stroke-linecap="round"><line x1="30" y1="45" x2="90" y2="80"/><line x1="30" y1="80" x2="90" y2="45"/></g><circle cx="30" cy="45" r="9" fill="#e8e2d0"/><circle cx="90" cy="45" r="9" fill="#e8e2d0"/><circle cx="30" cy="80" r="9" fill="#e8e2d0"/><circle cx="90" cy="80" r="9" fill="#e8e2d0"/></svg>`,
   brokenChain: `<svg viewBox="0 0 120 120" width="100%" height="100%"><ellipse cx="42" cy="60" rx="16" ry="20" fill="none" stroke="#c9ccd4" stroke-width="8" transform="rotate(-12 42 60)"/><path d="M80,42 A18,18 0 1 0 80,78" fill="none" stroke="#c9ccd4" stroke-width="8" stroke-linecap="round"/><path d="M81,37 L94,27" stroke="#c9ccd4" stroke-width="8" stroke-linecap="round"/><path d="M81,83 L91,95" stroke="#c9ccd4" stroke-width="8" stroke-linecap="round"/></svg>`,
   candle: `<svg viewBox="0 0 120 120" width="100%" height="100%"><rect x="52" y="55" width="16" height="45" fill="#e8dcc0"/><ellipse cx="60" cy="55" rx="8" ry="4" fill="#c9bfa0"/><path d="M60,20 Q70,35 62,45 Q72,47 65,60 Q60,66 55,60 Q48,47 58,45 Q50,35 60,20 Z" fill="#ffcf5c"/></svg>`,
@@ -1947,19 +1956,33 @@ function drawCellIcon(ctx, type, cx, cy, size, t){
       ctx.beginPath(); ctx.moveTo(xo-size*0.045,size*0.16); ctx.lineTo(xo+size*0.045,size*0.16); ctx.lineTo(xo,-size*0.14); ctx.closePath(); ctx.fill();
     }
   } else if(type==='key'){
+    ctx.save();
+    const spin = Math.cos(t/700);
+    ctx.scale(spin, 1);
     ctx.strokeStyle='#c9a45c'; ctx.lineWidth=size*0.09;
     ctx.beginPath(); ctx.arc(-size*0.18,-size*0.06,size*0.16,0,Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-size*0.02,-size*0.06); ctx.lineTo(size*0.32,-size*0.06); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(size*0.32,-size*0.06); ctx.lineTo(size*0.32,size*0.1); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(size*0.21,-size*0.06); ctx.lineTo(size*0.21,size*0.06); ctx.stroke();
+    ctx.restore();
   } else if(type==='shrine'){
     ctx.fillStyle='#4b3f74'; ctx.fillRect(-size*0.26,size*0.06,size*0.52,size*0.22);
     ctx.fillRect(-size*0.34,size*0.26,size*0.68,size*0.08);
+    const flicker = Math.sin(t/140)*0.12;
+    ctx.save();
+    ctx.translate(0,-size*0.16);
+    ctx.scale(1+flicker*0.4, 1-flicker*0.5);
+    ctx.translate(0,size*0.16);
     ctx.fillStyle='#ffc978';
     ctx.beginPath(); ctx.moveTo(0,-size*0.3); ctx.quadraticCurveTo(size*0.07,-size*0.14,0,-size*0.02);
     ctx.quadraticCurveTo(-size*0.07,-size*0.14,0,-size*0.3); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    const pulse = 1 + Math.sin(t/420)*0.18;
+    ctx.save();
+    ctx.globalAlpha = 0.65 + Math.sin(t/420)*0.25;
     ctx.fillStyle='#4de2c7';
-    ctx.beginPath(); ctx.arc(0,size*0.15,size*0.09,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,size*0.15,size*0.09*pulse,0,Math.PI*2); ctx.fill();
+    ctx.restore();
   } else if(type==='bones'){
     ctx.strokeStyle='#e8e2d0'; ctx.lineWidth=size*0.09;
     ctx.beginPath(); ctx.moveTo(-size*0.24,-size*0.16); ctx.lineTo(size*0.24,size*0.16); ctx.stroke();
