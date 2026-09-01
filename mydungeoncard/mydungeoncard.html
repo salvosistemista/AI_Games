@@ -833,7 +833,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.4';
+const GAME_VERSION = 'v2.41';
 
 /* =========================================================
    UTILITIES
@@ -1556,7 +1556,7 @@ function spawnThiefFor(maze, mode){
 }
 function teleportThief(){
   if(!RUN || !RUN.thief || !RUN.thief.active) return;
-  const spot = pickEmptyCell(RUN.maze, [{x:0,y:0}, RUN.maze.exit]);
+  const spot = pickEmptyCell(RUN.maze, [{x:0,y:0}, RUN.maze.exit, {x:RUN.thief.x, y:RUN.thief.y}]);
   if(spot){ RUN.thief.x = spot.x; RUN.thief.y = spot.y; }
 }
 function thiefHasLoot(){ return !!(RUN && RUN.thief && (RUN.thief.goldStolen>0 || (RUN.thief.cardsStolen && RUN.thief.cardsStolen.length>0))); }
@@ -2534,7 +2534,7 @@ function openFateDice(mode){
     $('trap-dice-desc').textContent = 'Un forziere scintilla nell\u2019ombra. Lancia il dado del destino: il numero che uscirà sono le monete d\u2019oro che troverai.';
   } else if(mode==='thief'){
     $('trap-dice-title').textContent = '🐀 Il Ladruncolo!';
-    $('trap-dice-desc').textContent = 'Una figura furtiva ti sbarra il passo. Lancia il dado: 1-4 ti ruba metà dell\u2019oro, 5-8 ti scippa una carta, 9-12 ti restituisce tutto ciò che ti ha già rubato.';
+    $('trap-dice-desc').textContent = 'Una figura furtiva ti sbarra il passo. Lancia il dado: 1-4 ti ruba oro, 5-8 ti scippa una carta, 9-10 recuperi le carte e metà del bottino, 11-12 recuperi tutto.';
   } else {
     $('trap-dice-title').textContent = '⚠️ Trappola!';
     $('trap-dice-desc').textContent = 'Una trappola scatta sotto i tuoi piedi. Lancia il dado del destino: il numero che uscirà sono i danni che subirai.';
@@ -2582,21 +2582,24 @@ function resolveFateDice(val){
   } else if(RUN.fateDiceMode==='thief'){
     RUN.thief = RUN.thief || freshThiefState();
     if(val<=4){
-      const stolen = Math.round(RUN.gold*0.5);
+      const pct = 0.5 + Math.random()*0.25; // 50%-75%
+      const stolen = Math.round(RUN.gold*pct);
       RUN.gold -= stolen;
       RUN.thief.goldStolen += stolen;
       Audio1.hit(); vibrate([30,15,30]);
       resEl.style.color = 'var(--danger)';
-      resEl.textContent = stolen>0 ? `Il ladruncolo intasca ${stolen} monete e fugge!` : 'Il ladruncolo fruga tasche vuote e scappa deluso.';
+      resEl.textContent = stolen>0 ? `Il ladruncolo intasca ${stolen} monete (${Math.round(pct*100)}%) e fugge!` : 'Il ladruncolo fruga tasche vuote e scappa deluso.';
     } else if(val<=8){
-      const eligible = RUN.deck.filter(id => ['guard','heal'].includes(id.split('_plus')[0]));
+      const stealPool = RUN.character==='assassina' ? ['pierce','fury'] : ['guard','heal'];
+      const eligible = RUN.deck.filter(id => stealPool.includes(id.split('_plus')[0]));
       if(eligible.length===0){
-        const stolen = Math.round(RUN.gold*0.5);
+        const pct = 0.5 + Math.random()*0.25;
+        const stolen = Math.round(RUN.gold*pct);
         RUN.gold -= stolen;
         RUN.thief.goldStolen += stolen;
         Audio1.hit(); vibrate([30,15,30]);
         resEl.style.color = 'var(--danger)';
-        resEl.textContent = stolen>0 ? `Non trova carte da rubare: intasca ${stolen} monete e fugge!` : 'Non trova nulla da rubarti e scappa deluso.';
+        resEl.textContent = stolen>0 ? `Non trova carte da rubare: intasca ${stolen} monete (${Math.round(pct*100)}%) e fugge!` : 'Non trova nulla da rubarti e scappa deluso.';
       } else {
         const cardId = pick(eligible);
         const idx = RUN.deck.indexOf(cardId);
@@ -2607,9 +2610,12 @@ function resolveFateDice(val){
         resEl.textContent = `Il ladruncolo scippa la tua carta "${CARDS[cardId].name}" e fugge!`;
       }
     } else {
-      const recGold = RUN.thief.goldStolen;
       const recCards = RUN.thief.cardsStolen.slice();
-      if(recGold>0 || recCards.length>0){
+      const totalGold = RUN.thief.goldStolen;
+      const fullRecovery = val>=11;
+      const recGold = fullRecovery ? totalGold : Math.round(totalGold*0.5);
+      const lostGold = totalGold - recGold;
+      if(totalGold>0 || recCards.length>0){
         RUN.gold += recGold;
         recCards.forEach(cid => RUN.deck.push(cid));
         RUN.thief.goldStolen = 0;
@@ -2617,9 +2623,11 @@ function resolveFateDice(val){
         Audio1.treasure(); vibrate([15,10,15,10,25]);
         resEl.style.color = 'var(--gold)';
         const parts = [];
-        if(recGold>0) parts.push(`${recGold} monete`);
         if(recCards.length>0) parts.push(recCards.map(cid=>`"${CARDS[cid].name}"`).join(', '));
-        resEl.textContent = `Lo hai sorpreso! Recuperi: ${parts.join(' e ')}.`;
+        if(recGold>0) parts.push(`${recGold} monete`);
+        let msg = `Lo hai sorpreso! Recuperi: ${parts.join(' e ')}.`;
+        if(!fullRecovery && lostGold>0) msg += ` ${lostGold} monete sono già state spese, perse per sempre.`;
+        resEl.textContent = msg;
       } else {
         Audio1.click();
         resEl.style.color = 'var(--parchment-dim)';
