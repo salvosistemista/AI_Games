@@ -242,8 +242,16 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .enemy-panel-icon svg{width:100%; height:100%; display:block; overflow:visible;}
 .enemy-panel-info{flex:1; min-width:0;}
 .enemy-panel-name{font-size:12px; font-weight:800; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.enemy-panel-hp{height:10px; border-radius:6px; background:#2a2242; overflow:hidden; border:1px solid var(--line); position:relative;}
+.enemy-panel-hp{height:16px; border-radius:6px; background:#2a2242; overflow:hidden; border:1px solid var(--line); position:relative;}
 .enemy-panel-hp-fill{height:100%; background:linear-gradient(90deg,#ff5566,#ff9d4d);}
+.enemy-panel-hp-label{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.6);}
+.enemy-panel.boss-featured{ flex-direction:column; align-items:center; padding:14px 10px; gap:8px; border-color:var(--gold); background:linear-gradient(180deg, rgba(255,207,92,0.08), rgba(255,255,255,0.02)); }
+.enemy-panel.boss-featured .enemy-panel-icon{ width:96px; height:96px; filter:drop-shadow(0 8px 14px rgba(0,0,0,.5)); }
+.enemy-panel.boss-featured .enemy-panel-info{ width:100%; text-align:center; }
+.enemy-panel.boss-featured .enemy-panel-name{ font-size:15px; white-space:normal; text-align:center; }
+.enemy-panel.boss-featured .enemy-panel-hp{ height:18px; }
+.enemy-panel.boss-featured .enemy-panel-chips{ justify-content:center; }
+.enemy-panel.boss-featured .enemy-panel-intent{ font-size:14px; }
 .enemy-panel-chips{display:flex; gap:4px; margin-top:3px; flex-wrap:wrap;}
 .enemy-panel-chip{font-size:9px; font-weight:800; padding:1px 5px; border-radius:8px; border:1px solid; }
 .enemy-panel-intent{font-size:11px; font-weight:800; flex-shrink:0; text-align:center; min-width:40px;}
@@ -772,7 +780,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.1';
+const GAME_VERSION = 'v2.2';
 
 /* =========================================================
    UTILITIES
@@ -1710,12 +1718,18 @@ function renderExplore(){
     }
     // content icon (for cells ahead, not the player's own cell) — soft glow badge
     if(s.contentType && s.depth>0){
-      const cx=(near.x1+near.x2)/2, cy=(near.y1+near.y2)/2 + (near.y2-near.y1)*0.1;
+      const onFloor = (s.contentType==='trap' || s.contentType==='treasure');
+      const cx=(near.x1+near.x2)/2;
+      const cy = onFloor
+        ? near.y2 - (near.y2-near.y1)*0.12
+        : (near.y1+near.y2)/2 + (near.y2-near.y1)*0.1;
       const r = Math.max(14,(near.x2-near.x1)*0.13);
+      const glowAlpha = s.contentType==='trap' ? 0.16 : 0.35;
       const cglow = ctx2d.createRadialGradient(cx,cy,0,cx,cy,r*1.8);
-      cglow.addColorStop(0,'rgba(255,201,120,0.35)'); cglow.addColorStop(1,'rgba(255,201,120,0)');
+      cglow.addColorStop(0,`rgba(255,201,120,${glowAlpha})`); cglow.addColorStop(1,'rgba(255,201,120,0)');
       ctx2d.fillStyle=cglow; ctx2d.beginPath(); ctx2d.arc(cx,cy,r*1.8,0,Math.PI*2); ctx2d.fill();
-      drawCellIcon(ctx2d, s.contentType, cx, cy, Math.max(18,(near.x2-near.x1)*0.24));
+      const iconSize = onFloor ? Math.max(15,(near.x2-near.x1)*0.19) : Math.max(18,(near.x2-near.x1)*0.24);
+      drawCellIcon(ctx2d, s.contentType, cx, cy, iconSize, t);
     }
   }
 
@@ -1751,12 +1765,12 @@ function drawWallDetail(biome, nx, fx, near, far, isLeft, cellX, cellY, t){
   } else if(biome.detail==='chains'){
     if(seededRand(seed+1)<0.5){
       const dropX = nx + (fx-nx)*0.5, dropY = near.y1+(near.y2-near.y1)*0.05;
-      const dropLen = (near.y2-near.y1)*0.24;
+      const dropLen = (near.y2-near.y1)*0.52;
       ctx2d.strokeStyle = 'rgba(20,14,10,0.65)'; ctx2d.lineWidth=Math.max(1,(near.y2-near.y1)*0.02);
       ctx2d.beginPath(); ctx2d.moveTo(dropX, dropY); ctx2d.lineTo(dropX, dropY+dropLen); ctx2d.stroke();
-      for(let k=0;k<3;k++){
+      for(let k=0;k<6;k++){
         ctx2d.beginPath();
-        ctx2d.arc(dropX, dropY+dropLen*(k/3), Math.max(1.5,dropLen*0.09), 0, Math.PI*2);
+        ctx2d.arc(dropX, dropY+dropLen*(k/6), Math.max(1.5,dropLen*0.045), 0, Math.PI*2);
         ctx2d.stroke();
       }
     }
@@ -1823,11 +1837,16 @@ function drawLockIcon(lx, ly, lsz){
   ctx2d.fillRect(-lsz*0.035, lsz*0.2, lsz*0.07, lsz*0.18);
   ctx2d.restore();
 }
-function drawCellIcon(ctx, type, cx, cy, size){
+function drawCellIcon(ctx, type, cx, cy, size, t){
+  t = t||0;
   ctx.save();
   ctx.translate(cx, cy);
   ctx.lineJoin='round'; ctx.lineCap='round';
   if(type==='enemy'){
+    ctx.globalAlpha = 0.55;
+    const pulse = 1 + Math.sin(t/380)*0.06;
+    ctx.scale(pulse, pulse);
+    ctx.rotate(Math.sin(t/900)*0.06);
     const auraG = ctx.createRadialGradient(0,0,0,0,0,size*0.9);
     auraG.addColorStop(0,'rgba(80,20,110,0.55)'); auraG.addColorStop(1,'rgba(10,5,20,0)');
     ctx.fillStyle=auraG; ctx.beginPath(); ctx.arc(0,0,size*0.9,0,Math.PI*2); ctx.fill();
@@ -1842,9 +1861,10 @@ function drawCellIcon(ctx, type, cx, cy, size){
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle='#050308'; ctx.lineWidth=size*0.03; ctx.stroke();
-    ctx.fillStyle='#ff5566';
+    const eyeGlow = 0.6 + Math.sin(t/260)*0.25;
+    ctx.fillStyle=`rgba(255,85,102,${eyeGlow})`;
     ctx.save(); ctx.translate(-size*0.12,-size*0.02); ctx.rotate(0.25); ctx.beginPath(); ctx.ellipse(0,0,size*0.05,size*0.075,0,0,Math.PI*2); ctx.fill(); ctx.restore();
-    ctx.fillStyle='#ff9d4d';
+    ctx.fillStyle=`rgba(255,157,77,${eyeGlow})`;
     ctx.save(); ctx.translate(size*0.14,-size*0.08); ctx.rotate(-0.35); ctx.beginPath(); ctx.ellipse(0,0,size*0.06,size*0.085,0,0,Math.PI*2); ctx.fill(); ctx.restore();
     ctx.fillStyle='rgba(255,120,90,0.7)';
     ctx.beginPath(); ctx.arc(-size*0.24,size*0.12,size*0.022,0,Math.PI*2); ctx.fill();
@@ -1883,6 +1903,7 @@ function drawCellIcon(ctx, type, cx, cy, size){
     ctx.fillStyle='#ffcf5c';
     ctx.beginPath(); ctx.arc(0,size*0.04,size*0.055,0,Math.PI*2); ctx.fill();
   } else if(type==='trap'){
+    ctx.globalAlpha = 0.32;
     ctx.fillStyle='#4b3f74';
     ctx.beginPath(); ctx.ellipse(0,size*0.16,size*0.38,size*0.13,0,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='#c9ccd4';
@@ -1913,6 +1934,8 @@ function drawCellIcon(ctx, type, cx, cy, size){
       ctx.beginPath(); ctx.arc(p[0]*size,p[1]*size,size*0.07,0,Math.PI*2); ctx.fill();
     });
   } else if(type==='bivio'){
+    ctx.rotate(Math.sin(t/650)*0.05);
+    ctx.translate(0, Math.sin(t/500)*size*0.03);
     ctx.fillStyle='#3a2c63';
     ctx.beginPath(); ctx.ellipse(0,0,size*0.3,size*0.38,0,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='#8a6dff';
@@ -1937,19 +1960,33 @@ function drawCellIcon(ctx, type, cx, cy, size){
       ctx.beginPath(); ctx.moveTo(x0+sw*i, y0+sh*i); ctx.lineTo(x0+sw*i, y0+sh*4); ctx.stroke();
     }
   } else if(type==='bottega'){
-    ctx.strokeStyle='#8a6d3a'; ctx.lineWidth=size*0.04;
-    ctx.beginPath(); ctx.arc(0,-size*0.3,size*0.08,Math.PI,0); ctx.stroke();
-    ctx.fillStyle='#ffc978';
-    ctx.beginPath(); ctx.ellipse(0,-size*0.12,size*0.11,size*0.15,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#3a2c1a'; ctx.lineWidth=size*0.025;
-    ctx.strokeRect(-size*0.11,-size*0.27,size*0.22,size*0.3);
+    const sway = Math.sin(t/700)*0.08;
+    ctx.rotate(sway);
+    const flicker = 1 + Math.sin(t/150)*0.08;
+    ctx.strokeStyle='#c9a45c'; ctx.lineWidth=size*0.05;
+    ctx.beginPath(); ctx.arc(0,-size*0.42,size*0.11,Math.PI,0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-size*0.31); ctx.lineTo(0,-size*0.24); ctx.stroke();
+    ctx.strokeStyle='#8a6d3a'; ctx.lineWidth=size*0.035;
+    ctx.strokeRect(-size*0.16,-size*0.24,size*0.32,size*0.38);
+    ctx.beginPath(); ctx.moveTo(-size*0.16,-size*0.1); ctx.lineTo(size*0.16,-size*0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-size*0.16,-size*0.24); ctx.lineTo(size*0.16,-size*0.24); ctx.stroke();
+    ctx.save();
+    ctx.scale(flicker, flicker);
+    const flameG = ctx.createRadialGradient(0,-size*0.02,size*0.01,0,-size*0.02,size*0.16);
+    flameG.addColorStop(0,'#fff3c9'); flameG.addColorStop(0.5,'#ffcf5c'); flameG.addColorStop(1,'#ff9d4d');
+    ctx.fillStyle=flameG;
+    ctx.beginPath(); ctx.ellipse(0,-size*0.02,size*0.12,size*0.16,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle='#3a2c1a'; ctx.lineWidth=size*0.02;
+    ctx.strokeRect(-size*0.16,-size*0.24,size*0.32,size*0.38);
     ctx.strokeStyle='#c9a45c'; ctx.lineWidth=size*0.03;
-    ctx.beginPath(); ctx.moveTo(-size*0.22,size*0.12); ctx.lineTo(size*0.22,size*0.12); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0,size*0.12); ctx.lineTo(0,size*0.02); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-size*0.22,size*0.12); ctx.lineTo(-size*0.22,size*0.2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(size*0.22,size*0.12); ctx.lineTo(size*0.22,size*0.2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(-size*0.22,size*0.2,size*0.06,0,Math.PI); ctx.stroke();
-    ctx.beginPath(); ctx.arc(size*0.22,size*0.2,size*0.06,0,Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-size*0.28,size*0.2); ctx.lineTo(size*0.28,size*0.2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,size*0.2); ctx.lineTo(0,size*0.06); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-size*0.28,size*0.2); ctx.lineTo(-size*0.28,size*0.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(size*0.28,size*0.2); ctx.lineTo(size*0.28,size*0.3); ctx.stroke();
+    ctx.strokeStyle='#8a8a94'; ctx.lineWidth=size*0.025;
+    ctx.beginPath(); ctx.arc(-size*0.28,size*0.24,size*0.08,0,Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(size*0.28,size*0.24,size*0.08,0,Math.PI); ctx.stroke();
   }
   ctx.restore();
 }
@@ -2676,19 +2713,20 @@ function renderMultiEnemies(enemies){
   enemies.forEach((e, idx)=>{
     const defeated = e.hp<=0;
     const panel = document.createElement('div');
-    panel.className = 'enemy-panel' + (defeated?' defeated':'') + (targeting && !defeated ? ' targetable':'');
+    const featured = e.isBoss;
+    panel.className = 'enemy-panel' + (featured?' boss-featured':'') + (defeated?' defeated':'') + (targeting && !defeated ? ' targetable':'');
     panel.setAttribute('data-idx', idx);
     let intentHtml = '✔️ Sconfitto';
     if(!defeated){
       if(e.nextIntent==='attack'){
         let dmg = e.dmg; if(e.buffed) dmg = Math.round(dmg*1.5);
-        intentHtml = `⚔️<br>${dmg}`;
+        intentHtml = featured ? `⚔️ ${dmg}` : `⚔️<br>${dmg}`;
       } else if(e.nextIntent==='defend'){
-        intentHtml = `🛡️<br>Dif.`;
+        intentHtml = featured ? `🛡️ Difesa` : `🛡️<br>Dif.`;
       } else if(e.nextIntent==='poison'){
-        intentHtml = `☠️<br>Ven.`;
+        intentHtml = featured ? `☠️ Veleno` : `☠️<br>Ven.`;
       } else if(e.nextIntent==='buff'){
-        intentHtml = `💢<br>Carica`;
+        intentHtml = featured ? `💢 Carica` : `💢<br>Carica`;
       }
     }
     const chips = [];
@@ -2701,7 +2739,7 @@ function renderMultiEnemies(enemies){
       <div class="enemy-panel-icon${e.phase2?' phase2':''}">${e.art || e.icon}</div>
       <div class="enemy-panel-info">
         <div class="enemy-panel-name">${e.name}${e.isBoss?' 👑':(e.isElite?' 🗡️':'')}${e.phase2?' ⚡':''}</div>
-        <div class="enemy-panel-hp"><div class="enemy-panel-hp-fill" style="width:${clamp(e.hp/e.maxHp*100,0,100)}%;"></div></div>
+        <div class="enemy-panel-hp"><div class="enemy-panel-hp-fill" style="width:${clamp(e.hp/e.maxHp*100,0,100)}%;"></div><div class="enemy-panel-hp-label">${e.hp}/${e.maxHp}</div></div>
         <div class="enemy-panel-chips">${chips.join('')}</div>
       </div>
       <div class="enemy-panel-intent">${intentHtml}</div>
@@ -3381,6 +3419,12 @@ $('btn-left').addEventListener('click', ()=>rotatePlayer(-1));
 $('btn-right').addEventListener('click', ()=>rotatePlayer(1));
 $('btn-endturn').addEventListener('click', ()=>{ if(RUN&&RUN.combat){ Audio1.click(); endPlayerTurn(); } });
 $('btn-cancel-targeting').addEventListener('click', ()=>{ Audio1.click(); cancelTargeting(); });
+$('hand').addEventListener('wheel', (e)=>{
+  const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+  if(delta===0) return;
+  e.preventDefault();
+  $('hand').scrollLeft += delta;
+}, {passive:false});
 
 window.addEventListener('keydown', (e)=>{
   if(!RUN) return;
