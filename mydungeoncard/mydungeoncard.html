@@ -1039,9 +1039,11 @@ function describeCard(c){
   return parts.join(' ');
 }
 function getUpgraded(baseId){
+  const b = CARDS[baseId];
+  const currentPlusCount = (b.name.match(/\+/g)||[]).length;
+  if(currentPlusCount>=3) return b; // già al massimo potenziamento ("+++")
   const upId = baseId+'_plus';
   if(CARDS[upId]) return CARDS[upId];
-  const b = CARDS[baseId];
   const up = Object.assign({}, b);
   up.id = upId; up.name = b.name+'+';
   if(up.dmg) up.dmg = Math.round(up.dmg*1.4);
@@ -2685,13 +2687,16 @@ function openShrinePicker(mode, afterCb){
   $('event-title').textContent = mode==='upgrade' ? 'Quale carta potenziare?' : 'Quale carta rimuovere?';
   $('event-desc').textContent = tooSmall
     ? 'Il mazzo è già troppo essenziale: non puoi rimuovere altre carte.'
-    : (mode==='upgrade' ? 'La versione potenziata sostituirà una copia della carta scelta.' : 'La carta scelta verrà rimossa definitivamente dal mazzo.');
+    : (mode==='upgrade' ? 'La versione potenziata sostituirà una copia della carta scelta. Una carta già a "+++" ha raggiunto il massimo potenziamento.' : 'La carta scelta verrà rimossa definitivamente dal mazzo.');
   const wrap = $('event-cards'); wrap.innerHTML='';
   const uniqueIds = Array.from(new Set(RUN.deck));
+  const MAX_UPGRADE_LEVEL = 3;
   uniqueIds.forEach(id=>{
     const c = CARDS[id];
     const el = buildCardEl(c);
-    if(tooSmall){
+    const plusCount = (c.name.match(/\+/g)||[]).length;
+    const maxedOut = mode==='upgrade' && plusCount>=MAX_UPGRADE_LEVEL;
+    if(tooSmall || maxedOut){
       el.classList.add('unaffordable');
     } else {
       el.onclick = ()=>{
