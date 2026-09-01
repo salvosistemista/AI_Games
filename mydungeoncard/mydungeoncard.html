@@ -857,7 +857,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.53';
+const GAME_VERSION = 'v2.54';
 
 /* =========================================================
    UTILITIES
@@ -1095,6 +1095,7 @@ function getUpgraded(baseId){
 }
 
 /* ---------- Unione carte (Santuario Antico) ---------- */
+const MERGE_GOLD_COST = 100;
 const MERGE_EXCLUDED_BASE_IDS = new Set(['focus','deepbreath','channel','adrenaline']);
 function mergeRootId(id){ return id.split('_plus')[0].replace('_merged',''); }
 function isMergeEligibleId(id){
@@ -2931,20 +2932,23 @@ function openShrineEvent(){
   const canMerge = hasEligibleMergePair();
   $('event-actions').innerHTML = `
     <button class="btn gem" id="btn-shrine-upgrade">✨ Potenzia una carta</button>
-    ${canMerge ? '<button class="btn gem" id="btn-shrine-merge">🔗 Unisci 2 carte</button>' : ''}
+    ${canMerge ? `<button class="btn gem" id="btn-shrine-merge">🔗 Unisci 2 carte (🪙${MERGE_GOLD_COST})</button>` : ''}
     <button class="btn danger" id="btn-shrine-remove">🗑️ Rimuovi una carta</button>
     <button class="btn ghost" id="btn-event-ok">Ignora</button>
   `;
   $('btn-event-ok').onclick = closeEvent;
   $('btn-shrine-upgrade').onclick = ()=> openShrinePicker('upgrade');
-  if(canMerge) $('btn-shrine-merge').onclick = ()=> openMergePicker();
+  if(canMerge) $('btn-shrine-merge').onclick = ()=>{
+    if(RUN.gold < MERGE_GOLD_COST){ Audio1.bump(); toast(`Ti servono ${MERGE_GOLD_COST} monete d'oro per unire due carte.`); return; }
+    openMergePicker();
+  };
   $('btn-shrine-remove').onclick = ()=> openShrinePicker('remove');
   evOverlay.classList.add('active');
   saveRun();
 }
 function openMergePicker(){
   $('event-title').textContent = 'Quali due carte unire?';
-  $('event-desc').textContent = 'Due copie identiche si fondono in una carta speciale: valori sommati, costo maggiorato. Non potrà più essere potenziata né unita di nuovo.';
+  $('event-desc').textContent = `Due copie identiche si fondono in una carta speciale (costo: 🪙${MERGE_GOLD_COST}): valori sommati, costo energia maggiorato. Non potrà più essere potenziata né unita di nuovo.`;
   const wrap = $('event-cards'); wrap.innerHTML='';
   const counts = {};
   RUN.deck.forEach(id=>{ counts[id]=(counts[id]||0)+1; });
@@ -2953,13 +2957,16 @@ function openMergePicker(){
     const c = CARDS[id];
     const el = buildCardEl(c);
     el.onclick = ()=>{
+      if(RUN.gold < MERGE_GOLD_COST){ Audio1.bump(); toast(`Ti servono ${MERGE_GOLD_COST} monete d'oro per unire due carte.`); return; }
+      RUN.gold -= MERGE_GOLD_COST;
       const merged = getMerged(id);
       let removed=0;
       RUN.deck = RUN.deck.filter(cid=>{ if(cid===id && removed<2){ removed++; return false; } return true; });
       RUN.deck.push(merged.id);
       Audio1.treasure(); vibrate([15,10,15,10,20]);
+      updateExploreHud();
       closeEvent();
-      toast(`2× ${c.name} si fondono in una carta speciale!`);
+      toast(`2× ${c.name} si fondono in una carta speciale! (-${MERGE_GOLD_COST} oro)`);
       saveRun();
     };
     wrap.appendChild(el);
