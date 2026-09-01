@@ -797,7 +797,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       </div>
       <div class="desc" id="trap-dice-result" style="display:none; font-weight:800; color:var(--danger); font-size:16px;"></div>
       <div class="panel-actions">
-        <button class="btn primary" id="btn-roll-dice">🎲 Lancia il Dado</button>
+        <button class="btn primary" id="btn-roll-dice">Lancia il Dado</button>
         <button class="btn primary" id="btn-trap-continue" style="display:none;">Continua</button>
       </div>
     </div>
@@ -833,7 +833,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.41';
+const GAME_VERSION = 'v2.42';
 
 /* =========================================================
    UTILITIES
@@ -2640,9 +2640,16 @@ function resolveFateDice(val){
     RUN.hp = clamp(RUN.hp-val,0,RUN.maxHp);
     markDamageTaken();
     Audio1.hit(); vibrate([40,20,40]);
-    updateExploreHud(); saveRun();
     resEl.style.color = 'var(--danger)';
-    resEl.textContent = `Subisci ${val} danni!`;
+    let msg = `Subisci ${val} danni!`;
+    if(val===12){
+      RUN.maze.player.x = 0; RUN.maze.player.y = 0;
+      revealAround(RUN.maze, 0, 0);
+      Audio1.bump(); vibrate([20,30,20,30,40]);
+      msg += ' Il pavimento cede sotto di te: vieni scaraventato all\u2019ingresso del piano!';
+    }
+    resEl.textContent = msg;
+    updateExploreHud(); saveRun();
     if(RUN.hp<=0) RUN.lastDeathCause='una trappola';
   }
   $('btn-roll-dice').style.display = 'none';
