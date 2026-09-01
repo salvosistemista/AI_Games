@@ -773,7 +773,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 
   <div class="overlay" id="overlay-trap-dice">
     <div class="panel" style="text-align:center;">
-      <h2>⚠️ Trappola!</h2>
+      <h2 id="trap-dice-title">⚠️ Trappola!</h2>
       <div class="desc" id="trap-dice-desc">Una trappola scatta sotto i tuoi piedi. Lancia il dado del destino: il numero che uscirà sono i danni che subirai.</div>
       <div id="trap-die-stage">
         <div id="trap-die-canvas-container"></div>
@@ -2225,16 +2225,12 @@ function triggerCellContent(){
     if(Math.random()<0.35){
       openCardReward('Scrigno del Tesoro!','Scegli una carta da aggiungere al tuo mazzo.', EVENT_ICONS.treasure);
     } else {
-      let g = rand(5,15);
-      if(hasRelic('osso')) g = Math.round(g*1.2);
-      RUN.gold += g; RUN.score += 5;
-      updateExploreHud();
-      openSimpleEvent(EVENT_ICONS.treasure,'Tesoro!', `Hai trovato ${g} monete d'oro.`);
+      openFateDice('treasure');
     }
     saveRun();
   } else if(type==='trap'){
     cell.resolved=true;
-    openTrapDice();
+    openFateDice('trap');
   } else if(type==='key'){
     cell.resolved=true;
     RUN.keyHeld=true;
@@ -2391,9 +2387,17 @@ const TrapDie3D = (function(){
     }
   };
 })();
-function openTrapDice(){
+function openFateDice(mode){
   RUN.pendingEvent = 'trapdice';
+  RUN.fateDiceMode = mode;
   TrapDie3D.init();
+  if(mode==='treasure'){
+    $('trap-dice-title').textContent = '💰 Tesoro!';
+    $('trap-dice-desc').textContent = 'Un forziere scintilla nell\u2019ombra. Lancia il dado del destino: il numero che uscirà sono le monete d\u2019oro che troverai.';
+  } else {
+    $('trap-dice-title').textContent = '⚠️ Trappola!';
+    $('trap-dice-desc').textContent = 'Una trappola scatta sotto i tuoi piedi. Lancia il dado del destino: il numero che uscirà sono i danni che subirai.';
+  }
   $('trap-dice-result').style.display = 'none';
   $('trap-dice-result').textContent = '';
   $('btn-roll-dice').style.display = '';
@@ -2409,31 +2413,43 @@ $('btn-roll-dice').onclick = ()=>{
   Audio1.click(); vibrate(15);
   const finalValue = rand(1,12);
   let settled = false;
-  const finish = (dmg)=>{
+  const finish = (val)=>{
     if(settled) return; settled = true;
     Audio1.bump(); vibrate([20,10,20,10,30]);
-    resolveTrapDice(dmg);
+    resolveFateDice(val);
   };
   TrapDie3D.roll(finalValue, finish);
   // rete di sicurezza: se Three.js non è disponibile (CDN irraggiungibile), non blocchiamo il giocatore
   setTimeout(()=>{ if(!settled) finish(finalValue); }, 5200);
 };
-function resolveTrapDice(dmg){
-  RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp);
-  markDamageTaken();
-  Audio1.hit(); vibrate([40,20,40]);
-  updateExploreHud(); saveRun();
+function resolveFateDice(val){
   const resEl = $('trap-dice-result');
   resEl.style.display = '';
-  resEl.textContent = `Il dado segna ${dmg}: subisci ${dmg} danni!`;
+  if(RUN.fateDiceMode==='treasure'){
+    let g = val;
+    if(hasRelic('osso')) g = Math.round(g*1.2);
+    RUN.gold += g; RUN.score += 5;
+    Audio1.treasure(); vibrate([15,10,15]);
+    updateExploreHud(); saveRun();
+    resEl.style.color = 'var(--gold)';
+    resEl.textContent = `Il dado segna ${val}: trovi ${g} monete d'oro!`;
+  } else {
+    RUN.hp = clamp(RUN.hp-val,0,RUN.maxHp);
+    markDamageTaken();
+    Audio1.hit(); vibrate([40,20,40]);
+    updateExploreHud(); saveRun();
+    resEl.style.color = 'var(--danger)';
+    resEl.textContent = `Il dado segna ${val}: subisci ${val} danni!`;
+    if(RUN.hp<=0) RUN.lastDeathCause='una trappola';
+  }
   $('btn-roll-dice').style.display = 'none';
   $('btn-trap-continue').style.display = '';
-  if(RUN.hp<=0) RUN.lastDeathCause='una trappola';
 }
 $('btn-trap-continue').onclick = ()=>{
   Audio1.click();
-  const died = RUN.hp<=0;
+  const died = RUN.fateDiceMode!=='treasure' && RUN.hp<=0;
   RUN.pendingEvent = null;
+  RUN.fateDiceMode = null;
   $('overlay-trap-dice').classList.remove('active');
   renderExplore();
   if(died){ setTimeout(()=>{ if(RUN) endRun(false); },300); }
