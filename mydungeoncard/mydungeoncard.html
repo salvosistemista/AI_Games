@@ -116,6 +116,20 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .opt-slider-row input[type="range"]::-moz-range-thumb{width:18px; height:18px; border-radius:50%; background:var(--gold); cursor:pointer; border:2px solid #150f26;}
 .opt-slider-row input[type="range"]:disabled{opacity:.4;}
 .opt-slider-row .opt-slider-val{font-size:12px; font-weight:700; color:var(--gold); width:36px; text-align:right; flex-shrink:0;}
+#trap-die-stage{ position:relative; width:180px; height:180px; margin:18px auto; perspective:600px; }
+#trap-die-svg{ width:100%; height:100%; display:block; filter:drop-shadow(0 10px 16px rgba(0,0,0,.5)); }
+#trap-die-stage.rolling #trap-die-svg{ animation: trapDieSpin 4.5s cubic-bezier(.15,.7,.25,1) 1; }
+@keyframes trapDieSpin{
+  0%{ transform:rotate(0deg) rotateX(0deg) scale(1); }
+  40%{ transform:rotate(1080deg) rotateX(18deg) scale(1.06); }
+  100%{ transform:rotate(2160deg) rotateX(0deg) scale(1); }
+}
+#trap-die-number{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:52px; font-weight:900; color:#2a1c10; text-shadow:0 1px 0 rgba(255,255,255,.3);
+  pointer-events:none;
+}
+#trap-die-stage.rolling #trap-die-number{ font-size:44px; }
 .toggle{ width:48px; height:27px; border-radius:20px; background:#3a3160; position:relative; cursor:pointer; flex-shrink:0; transition:background .15s;}
 .toggle.on{background:var(--gem-2);}
 .toggle::after{content:''; position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:var(--parchment); transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4);}
@@ -767,6 +781,44 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
     </div>
   </div>
 
+  <div class="overlay" id="overlay-trap-dice">
+    <div class="panel" style="text-align:center;">
+      <h2>⚠️ Trappola!</h2>
+      <div class="desc" id="trap-dice-desc">Una trappola scatta sotto i tuoi piedi. Lancia il dado del destino: il numero che uscirà sono i danni che subirai.</div>
+      <div id="trap-die-stage">
+        <svg id="trap-die-svg" viewBox="0 0 200 200">
+          <defs>
+            <radialGradient id="trap-die-gradient" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#ffe89a"/>
+              <stop offset="45%" stop-color="#c9a45c"/>
+              <stop offset="100%" stop-color="#5a4020"/>
+            </radialGradient>
+          </defs>
+          <polygon points="100.0,12.0 144.0,23.8 176.2,56.0 188.0,100.0 176.2,144.0 144.0,176.2 100.0,188.0 56.0,176.2 23.8,144.0 12.0,100.0 23.8,56.0 56.0,23.8" fill="url(#trap-die-gradient)" stroke="#2a1c10" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M100,100 L100.0,12.0 L144.0,23.8 Z" fill="rgba(255,255,255,0.05)"/>
+          <path d="M100,100 L144.0,23.8 L176.2,56.0 Z" fill="rgba(255,255,255,0.16)"/>
+          <path d="M100,100 L176.2,56.0 L188.0,100.0 Z" fill="rgba(255,255,255,0.24)"/>
+          <path d="M100,100 L188.0,100.0 L176.2,144.0 Z" fill="rgba(255,255,255,0.05)"/>
+          <path d="M100,100 L176.2,144.0 L144.0,176.2 Z" fill="rgba(255,255,255,0.16)"/>
+          <path d="M100,100 L144.0,176.2 L100.0,188.0 Z" fill="rgba(255,255,255,0.24)"/>
+          <path d="M100,100 L100.0,188.0 L56.0,176.2 Z" fill="rgba(0,0,0,0.08)"/>
+          <path d="M100,100 L56.0,176.2 L23.8,144.0 Z" fill="rgba(0,0,0,0.16)"/>
+          <path d="M100,100 L23.8,144.0 L12.0,100.0 Z" fill="rgba(0,0,0,0.24)"/>
+          <path d="M100,100 L12.0,100.0 L23.8,56.0 Z" fill="rgba(0,0,0,0.08)"/>
+          <path d="M100,100 L23.8,56.0 L56.0,23.8 Z" fill="rgba(0,0,0,0.16)"/>
+          <path d="M100,100 L56.0,23.8 L100.0,12.0 Z" fill="rgba(0,0,0,0.08)"/>
+          <polygon points="100.0,12.0 144.0,23.8 176.2,56.0 188.0,100.0 176.2,144.0 144.0,176.2 100.0,188.0 56.0,176.2 23.8,144.0 12.0,100.0 23.8,56.0 56.0,23.8" fill="none" stroke="#2a1c10" stroke-width="4" stroke-linejoin="round"/>
+        </svg>
+        <div id="trap-die-number">?</div>
+      </div>
+      <div class="desc" id="trap-dice-result" style="display:none; font-weight:800; color:var(--danger); font-size:16px;"></div>
+      <div class="panel-actions">
+        <button class="btn primary" id="btn-roll-dice">🎲 Lancia il Dado</button>
+        <button class="btn primary" id="btn-trap-continue" style="display:none;">Continua</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CODEX OVERLAY -->
   <div class="overlay" id="overlay-codex">
     <div class="panel">
@@ -797,7 +849,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.2';
+const GAME_VERSION = 'v2.3';
 
 /* =========================================================
    UTILITIES
@@ -1739,12 +1791,12 @@ function renderExplore(){
       const cy = onFloor
         ? near.y2 - (near.y2-near.y1)*0.12
         : (near.y1+near.y2)/2 + (near.y2-near.y1)*0.1;
-      const r = Math.max(14,(near.x2-near.x1)*0.13);
+      const r = Math.max(14,(near.x2-near.x1)*0.13) * (onFloor ? 1.7 : 1);
       const glowAlpha = s.contentType==='trap' ? 0.16 : 0.35;
       const cglow = ctx2d.createRadialGradient(cx,cy,0,cx,cy,r*1.8);
       cglow.addColorStop(0,`rgba(255,201,120,${glowAlpha})`); cglow.addColorStop(1,'rgba(255,201,120,0)');
       ctx2d.fillStyle=cglow; ctx2d.beginPath(); ctx2d.arc(cx,cy,r*1.8,0,Math.PI*2); ctx2d.fill();
-      const iconSize = onFloor ? Math.max(15,(near.x2-near.x1)*0.19) : Math.max(18,(near.x2-near.x1)*0.24);
+      const iconSize = onFloor ? Math.max(30,(near.x2-near.x1)*0.38) : Math.max(18,(near.x2-near.x1)*0.24);
       drawCellIcon(ctx2d, s.contentType, cx, cy, iconSize, t);
     }
   }
@@ -2142,7 +2194,14 @@ function movePlayer(delta){ // delta: +1 forward, -1 back
   const facing = DIRS[p.dir];
   const moveDir = delta>0 ? facing : OPP[facing];
   const info = cellOpen(maze, p.x, p.y, moveDir);
-  if(!info.open){ Audio1.bump(); vibrate(30); toast('C\'è un muro qui.'); shakeView(); return; }
+  if(!info.open){
+    RUN.hp = clamp(RUN.hp-1, 0, RUN.maxHp);
+    markDamageTaken();
+    updateExploreHud(); saveRun();
+    Audio1.bump(); vibrate(30); toast('C\'è un muro qui. (-1 PF)'); shakeView();
+    if(RUN.hp<=0){ RUN.lastDeathCause='uno scontro col muro'; setTimeout(()=>{ if(RUN) endRun(false); },500); }
+    return;
+  }
   if(info.locked){
     if(RUN.keyHeld){
       RUN.keyHeld=false;
@@ -2208,14 +2267,7 @@ function triggerCellContent(){
     saveRun();
   } else if(type==='trap'){
     cell.resolved=true;
-    const dmg = rand(5,12);
-    RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp);
-    markDamageTaken();
-    Audio1.hit(); vibrate([40,20,40]);
-    openSimpleEvent(EVENT_ICONS.trap,'Trappola!', `Una trappola scatta! Subisci ${dmg} danni.`);
-    updateExploreHud();
-    saveRun();
-    if(RUN.hp<=0){ RUN.lastDeathCause='una trappola'; setTimeout(()=>{ if(RUN) endRun(false); },650); }
+    openTrapDice();
   } else if(type==='key'){
     cell.resolved=true;
     RUN.keyHeld=true;
@@ -2247,6 +2299,65 @@ function triggerCellContent(){
    EVENT MODAL
 ========================================================= */
 const evOverlay = $('overlay-event');
+function openTrapDice(){
+  RUN.pendingEvent = 'trapdice';
+  const stage = $('trap-die-stage');
+  stage.classList.remove('rolling');
+  $('trap-die-number').textContent = '?';
+  $('trap-dice-result').style.display = 'none';
+  $('trap-dice-result').textContent = '';
+  $('btn-roll-dice').style.display = '';
+  $('btn-roll-dice').disabled = false;
+  $('btn-trap-continue').style.display = 'none';
+  $('overlay-trap-dice').classList.add('active');
+  renderMinimap();
+}
+$('btn-roll-dice').onclick = ()=>{
+  const btn = $('btn-roll-dice');
+  if(btn.disabled) return;
+  btn.disabled = true;
+  Audio1.click(); vibrate(15);
+  const stage = $('trap-die-stage');
+  stage.classList.add('rolling');
+  const finalValue = rand(1,12);
+  const numEl = $('trap-die-number');
+  const totalMs = 4300 + rand(0,400);
+  let elapsed = 0, delay = 55;
+  function step(){
+    if(elapsed >= totalMs){
+      numEl.textContent = String(finalValue);
+      stage.classList.remove('rolling');
+      Audio1.bump(); vibrate([20,10,20,10,30]);
+      resolveTrapDice(finalValue);
+      return;
+    }
+    numEl.textContent = String(rand(1,12));
+    delay = Math.min(delay*1.14, 420);
+    elapsed += delay;
+    setTimeout(step, delay);
+  }
+  step();
+};
+function resolveTrapDice(dmg){
+  RUN.hp = clamp(RUN.hp-dmg,0,RUN.maxHp);
+  markDamageTaken();
+  Audio1.hit(); vibrate([40,20,40]);
+  updateExploreHud(); saveRun();
+  const resEl = $('trap-dice-result');
+  resEl.style.display = '';
+  resEl.textContent = `Il dado segna ${dmg}: subisci ${dmg} danni!`;
+  $('btn-roll-dice').style.display = 'none';
+  $('btn-trap-continue').style.display = '';
+  if(RUN.hp<=0) RUN.lastDeathCause='una trappola';
+}
+$('btn-trap-continue').onclick = ()=>{
+  Audio1.click();
+  const died = RUN.hp<=0;
+  RUN.pendingEvent = null;
+  $('overlay-trap-dice').classList.remove('active');
+  renderExplore();
+  if(died){ setTimeout(()=>{ if(RUN) endRun(false); },300); }
+};
 function openSimpleEvent(icon, title, desc){
   RUN.pendingEvent='simple';
   $('event-icon').innerHTML=icon;
