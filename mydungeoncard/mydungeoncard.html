@@ -517,6 +517,17 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .card.type-relic .c-icon{font-size:28px; margin-top:4px; width:64px; height:64px; margin-left:auto; margin-right:auto; display:flex; align-items:center; justify-content:center;}
 .card.type-relic .c-icon svg{width:100%; height:100%; display:block;}
 .card.type-relic .c-desc{-webkit-line-clamp:7; font-size:9.5px; line-height:1.32;}
+.card.merged-card{ border:2px solid transparent; background:none; }
+.card.merged-card::before{
+  content:''; position:absolute; inset:-3px; border-radius:15px; z-index:0;
+  background:conic-gradient(from 0deg, var(--torch), var(--gem), var(--purple), var(--danger), var(--torch));
+  animation:crestSpin 5s linear infinite;
+}
+.card.merged-card::after{
+  content:''; position:absolute; inset:2px; border-radius:11px; z-index:0;
+  background:linear-gradient(160deg,#fbf3de,#f0e3c4);
+}
+.card.merged-card > *{ position:relative; z-index:1; }
 .card:active{transform:translateY(-6px) scale(1.04); box-shadow:0 12px 20px rgba(0,0,0,.5);}
 .card.unaffordable{opacity:.42; filter:grayscale(.4);}
 .card .c-cost{
@@ -833,7 +844,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.42';
+const GAME_VERSION = 'v2.5';
 
 /* =========================================================
    UTILITIES
@@ -1048,6 +1059,7 @@ function describeCard(c){
 }
 function getUpgraded(baseId){
   const b = CARDS[baseId];
+  if(b.merged) return b; // le carte unite non si possono ulteriormente potenziare
   const currentPlusCount = (b.name.match(/\+/g)||[]).length;
   if(currentPlusCount>=3) return b; // già al massimo potenziamento ("+++")
   const upId = baseId+'_plus';
@@ -1067,6 +1079,42 @@ function getUpgraded(baseId){
   CARDS[upId] = up;
   discoverCodex('cards', upId);
   return up;
+}
+
+/* ---------- Unione carte (Santuario Antico) ---------- */
+const MERGE_EXCLUDED_BASE_IDS = new Set(['focus','deepbreath','channel','adrenaline']);
+function mergeRootId(id){ return id.split('_plus')[0].replace('_merged',''); }
+function isMergeEligibleId(id){
+  const c = CARDS[id];
+  if(!c || c.merged) return false;
+  return !MERGE_EXCLUDED_BASE_IDS.has(mergeRootId(id));
+}
+function hasEligibleMergePair(){
+  const counts = {};
+  RUN.deck.forEach(id=>{ counts[id]=(counts[id]||0)+1; });
+  return Object.keys(counts).some(id=> counts[id]>=2 && isMergeEligibleId(id));
+}
+function getMerged(id){
+  const mergedId = id+'_merged';
+  if(CARDS[mergedId]) return CARDS[mergedId];
+  const b = CARDS[id];
+  const m = Object.assign({}, b);
+  m.id = mergedId;
+  m.merged = true;
+  m.cost = b.cost + b.cost;
+  if(m.dmg) m.dmg = b.dmg + b.dmg;
+  if(m.block) m.block = b.block + b.block;
+  if(m.heal) m.heal = b.heal + b.heal;
+  if(m.poison) m.poison = b.poison + b.poison;
+  if(m.vulnerable) m.vulnerable = b.vulnerable + b.vulnerable;
+  if(m.weak) m.weak = b.weak + b.weak;
+  if(m.furyBuff) m.furyBuff = b.furyBuff + b.furyBuff;
+  if(m.selfDmg) m.selfDmg = b.selfDmg + b.selfDmg;
+  // colpi (hits), pescaggio (draw) ed energia (gainEnergy) restano invariati, non sommati
+  m.desc = describeCard(m);
+  CARDS[mergedId] = m;
+  discoverCodex('cards', mergedId);
+  return m;
 }
 
 /* =========================================================
@@ -2737,7 +2785,7 @@ function renderCardRewardChoices(count, afterCb){
 }
 function buildCardEl(c, small){
   const el = document.createElement('div');
-  el.className='card type-'+c.type;
+  el.className='card type-'+c.type + (c.merged ? ' merged-card' : '');
   el.innerHTML = `
     <div class="c-cost">${c.cost}</div>
     <div class="c-icon">${c.art || c.icon}</div>
@@ -2854,16 +2902,44 @@ function openShrineEvent(){
   $('event-title').textContent='Santuario Antico';
   $('event-desc').textContent='Scegli il destino di una carta del tuo mazzo. La scelta è permanente per questa run.';
   $('event-cards').innerHTML='';
+  const canMerge = hasEligibleMergePair();
   $('event-actions').innerHTML = `
     <button class="btn gem" id="btn-shrine-upgrade">✨ Potenzia una carta</button>
+    ${canMerge ? '<button class="btn gem" id="btn-shrine-merge">🔗 Unisci 2 carte</button>' : ''}
     <button class="btn danger" id="btn-shrine-remove">🗑️ Rimuovi una carta</button>
     <button class="btn ghost" id="btn-event-ok">Ignora</button>
   `;
   $('btn-event-ok').onclick = closeEvent;
   $('btn-shrine-upgrade').onclick = ()=> openShrinePicker('upgrade');
+  if(canMerge) $('btn-shrine-merge').onclick = ()=> openMergePicker();
   $('btn-shrine-remove').onclick = ()=> openShrinePicker('remove');
   evOverlay.classList.add('active');
   saveRun();
+}
+function openMergePicker(){
+  $('event-title').textContent = 'Quali due carte unire?';
+  $('event-desc').textContent = 'Due copie identiche si fondono in una carta speciale: valori sommati, costo maggiorato. Non potrà più essere potenziata né unita di nuovo.';
+  const wrap = $('event-cards'); wrap.innerHTML='';
+  const counts = {};
+  RUN.deck.forEach(id=>{ counts[id]=(counts[id]||0)+1; });
+  const pairIds = Object.keys(counts).filter(id=> counts[id]>=2 && isMergeEligibleId(id));
+  pairIds.forEach(id=>{
+    const c = CARDS[id];
+    const el = buildCardEl(c);
+    el.onclick = ()=>{
+      const merged = getMerged(id);
+      let removed=0;
+      RUN.deck = RUN.deck.filter(cid=>{ if(cid===id && removed<2){ removed++; return false; } return true; });
+      RUN.deck.push(merged.id);
+      Audio1.treasure(); vibrate([15,10,15,10,20]);
+      closeEvent();
+      toast(`2× ${c.name} si fondono in una carta speciale!`);
+      saveRun();
+    };
+    wrap.appendChild(el);
+  });
+  $('event-actions').innerHTML = '<button class="btn ghost" id="btn-event-ok">Annulla</button>';
+  $('btn-event-ok').onclick = closeEvent;
 }
 function openShrinePicker(mode, afterCb){
   const tooSmall = mode==='remove' && RUN.deck.length<=6;
@@ -2878,7 +2954,7 @@ function openShrinePicker(mode, afterCb){
     const c = CARDS[id];
     const el = buildCardEl(c);
     const plusCount = (c.name.match(/\+/g)||[]).length;
-    const maxedOut = mode==='upgrade' && plusCount>=MAX_UPGRADE_LEVEL;
+    const maxedOut = mode==='upgrade' && (plusCount>=MAX_UPGRADE_LEVEL || c.merged);
     if(tooSmall || maxedOut){
       el.classList.add('unaffordable');
     } else {
