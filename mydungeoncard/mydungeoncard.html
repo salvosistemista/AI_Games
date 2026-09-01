@@ -203,7 +203,6 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
   z-index:5;
 }
 #dpad-group{grid-column:2; justify-self:center; display:flex; align-items:center; gap:14px;}
-#btn-view-deck{justify-self:center;}
 .dpad{display:grid; grid-template-columns:56px 56px 56px; grid-template-rows:56px 56px; gap:8px;}
 .dbtn{
   border:none; border-radius:14px; background:linear-gradient(180deg,var(--dungeon-3),var(--stone));
@@ -741,7 +740,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div class="opt-row"><span>⛶ Schermo intero</span><div class="toggle" id="toggle-fullscreen"></div></div>
       <div class="opt-row"><span>✋ Mancino</span><div class="toggle" id="toggle-lefthand"></div></div>
       <div class="opt-row"><span>📳 Vibrazione (mobile)</span><div class="toggle on" id="toggle-vibrate"></div></div>
-      <button class="btn gem hidden" id="btn-install-app" style="margin-top:6px;">📲 Installa l'app</button>
+      <button class="btn gem hidden" id="btn-install-app" style="margin-top:6px; width:100%; display:block; text-align:center;">📲 Installa l'app</button>
       <div class="panel-actions">
         <button class="btn danger" id="btn-reset">Azzera progressi</button>
         <button class="btn ghost" id="btn-close-options">Chiudi</button>
@@ -757,6 +756,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div class="desc">Piano <span id="pause-floor">1</span> · Punteggio <span id="pause-score">0</span></div>
       <div class="panel-actions">
         <button class="btn primary" id="btn-resume">Riprendi</button>
+        <button class="btn gem" id="btn-save-exit">Salva ed esci</button>
         <button class="btn ghost" id="btn-pause-options">Opzioni</button>
         <button class="btn danger" id="btn-abandon">Abbandona run</button>
       </div>
@@ -795,6 +795,17 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div id="deck-list" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
       <div class="panel-actions">
         <button class="btn ghost" id="btn-close-deck">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay-confirm">
+    <div class="panel" style="text-align:center;">
+      <h2 id="confirm-title">Conferma</h2>
+      <div class="desc" id="confirm-desc"></div>
+      <div class="panel-actions">
+        <button class="btn danger" id="btn-confirm-yes">Conferma</button>
+        <button class="btn ghost" id="btn-confirm-no">Annulla</button>
       </div>
     </div>
   </div>
@@ -844,7 +855,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.5';
+const GAME_VERSION = 'v2.51';
 
 /* =========================================================
    UTILITIES
@@ -1702,6 +1713,19 @@ function announce(msg){ $('sr-live').textContent = msg; }
    TOAST
 ========================================================= */
 let toastTimer=null;
+let _confirmYesHandler = null, _confirmNoHandler = null;
+function confirmModal(message, onConfirm, onCancel, opts){
+  opts = opts || {};
+  $('confirm-title').textContent = opts.title || 'Conferma';
+  $('confirm-desc').textContent = message;
+  $('btn-confirm-yes').textContent = opts.confirmLabel || 'Conferma';
+  $('btn-confirm-no').textContent = opts.cancelLabel || 'Annulla';
+  $('overlay-confirm').classList.add('active');
+  _confirmYesHandler = ()=>{ $('overlay-confirm').classList.remove('active'); if(onConfirm) onConfirm(); };
+  _confirmNoHandler = ()=>{ $('overlay-confirm').classList.remove('active'); if(onCancel) onCancel(); };
+}
+$('btn-confirm-yes').onclick = ()=>{ Audio1.click(); if(_confirmYesHandler) _confirmYesHandler(); };
+$('btn-confirm-no').onclick = ()=>{ Audio1.click(); if(_confirmNoHandler) _confirmNoHandler(); };
 function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), 1700);
@@ -3673,12 +3697,14 @@ function applyHandedness(){
   if(!deckBtn) return;
   if(Settings.leftHanded){
     deckBtn.style.gridColumn = '3';
-    deckBtn.style.marginLeft = '22px';
+    deckBtn.style.justifySelf = 'end';
+    deckBtn.style.marginLeft = '';
     deckBtn.style.marginRight = '';
   } else {
     deckBtn.style.gridColumn = '1';
-    deckBtn.style.marginRight = '22px';
+    deckBtn.style.justifySelf = 'start';
     deckBtn.style.marginLeft = '';
+    deckBtn.style.marginRight = '';
   }
 }
 $('toggle-lefthand').onclick = ()=>{
@@ -3712,13 +3738,15 @@ $('btn-options').onclick = ()=>{ refreshOptionsUI(); $('overlay-options').classL
 $('btn-close-options').onclick = ()=> $('overlay-options').classList.remove('active');
 $('btn-pause-options').onclick = ()=>{ $('overlay-pause').classList.remove('active'); refreshOptionsUI(); $('overlay-options').classList.add('active'); };
 $('btn-reset').onclick = ()=>{
-  if(confirm('Azzerare record, Essenza, Talenti e run salvata? Questa azione non può essere annullata.')){
+  confirmModal('Azzerare record, Essenza, Talenti e run salvata? Questa azione non può essere annullata.', ()=>{
     localStorage.removeItem(LS_META); localStorage.removeItem(LS_SAVE);
     Meta={highScore:0,bestFloor:0,essence:0,talents:{},deathLog:[],tutorialDone:{},codex:{enemies:{},cards:{},relics:{},bivi:{}},achievements:{}}; RUN=null;
     updateTitleMeta();
     $('overlay-options').classList.remove('active');
+    $('overlay-pause').classList.remove('active');
+    if(SCREEN!=='title'){ showScreen('title'); }
     toast('Progressi azzerati.');
-  }
+  });
 };
 
 $('menu-fab').onclick = ()=>{
@@ -3727,13 +3755,21 @@ $('menu-fab').onclick = ()=>{
   $('overlay-pause').classList.add('active');
 };
 $('btn-resume').onclick = ()=> $('overlay-pause').classList.remove('active');
+$('btn-save-exit').onclick = ()=>{
+  Audio1.click();
+  saveRun();
+  RUN = null;
+  $('overlay-pause').classList.remove('active');
+  updateTitleMeta();
+  showScreen('title');
+};
 $('btn-abandon').onclick = ()=>{
-  if(confirm('Abbandonare la run in corso? Perderai i progressi non salvati come record.')){
+  confirmModal('Abbandonare la run in corso? Perderai i progressi non salvati come record.', ()=>{
     clearRun(); RUN=null;
     $('overlay-pause').classList.remove('active');
     updateTitleMeta();
     showScreen('title');
-  }
+  });
 };
 
 /* =========================================================
@@ -3753,7 +3789,17 @@ function updateTitleMeta(){
     frag.textContent = '';
   }
 }
-$('btn-newgame').onclick = ()=>{ renderCharacterSelect(); showScreen('characters'); };
+$('btn-newgame').onclick = ()=>{
+  const saved = loadRun();
+  if(saved){
+    confirmModal('Hai già una run salvata in corso. Iniziarne una nuova la cancellerà definitivamente. Vuoi continuare?', ()=>{
+      clearRun();
+      renderCharacterSelect(); showScreen('characters');
+    });
+  } else {
+    renderCharacterSelect(); showScreen('characters');
+  }
+};
 $('btn-continue').onclick = ()=>{
   const saved = loadRun();
   if(!saved) return;
