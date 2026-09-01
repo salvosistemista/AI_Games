@@ -647,6 +647,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
         <span class="combatant-name">TU</span>
         <div class="hpbar-track" style="flex:1;"><div class="hpbar-fill" id="pc-hp-fill"></div><div class="hpbar-label" id="pc-hp-label"></div></div>
         <div class="block-chip" id="pc-block-chip">🛡️ 0</div>
+        <div class="block-chip" id="pc-poison-chip" style="border-color:var(--purple); color:var(--purple);">☠️ 0</div>
       </div>
     </div>
     <div id="enemy-stage">
@@ -825,7 +826,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.25';
+const GAME_VERSION = 'v2.26';
 
 /* =========================================================
    UTILITIES
@@ -2902,6 +2903,8 @@ function renderCombat(){
   $('pc-hp-label').textContent = `${RUN.hp}/${RUN.maxHp}`;
   $('pc-block-chip').textContent = `🛡️ ${cb.playerBlock}`;
   $('pc-block-chip').style.visibility = cb.playerBlock>0?'visible':'hidden';
+  $('pc-poison-chip').textContent = `☠️ ${cb.playerPoison||0}`;
+  $('pc-poison-chip').style.visibility = (cb.playerPoison>0)?'visible':'hidden';
 
   const targetingBanner = $('targeting-banner');
   targetingBanner.classList.toggle('hidden', cb.targetingCardIdx==null);
