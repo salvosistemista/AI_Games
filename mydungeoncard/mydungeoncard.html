@@ -619,6 +619,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
         <button class="dbtn" id="btn-back" aria-label="Indietro">▼</button>
       </div>
       <button class="dbtn" id="btn-right" aria-label="Gira a destra">↻</button>
+      <button class="dbtn" id="btn-view-deck" aria-label="Vedi il mazzo" style="font-size:20px;">🎴</button>
     </div>
   </div>
 
@@ -702,6 +703,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div class="opt-row"><span>🎵 Musica</span><div class="toggle on" id="toggle-music"></div></div>
       <div class="opt-slider-row"><span>Volume musica</span><input type="range" id="slider-music-volume" min="0" max="100" step="1" value="80"><span class="opt-slider-val" id="music-volume-val">80%</span></div>
       <div class="opt-row"><span>⛶ Schermo intero</span><div class="toggle" id="toggle-fullscreen"></div></div>
+      <div class="opt-row"><span>✋ Mancino</span><div class="toggle" id="toggle-lefthand"></div></div>
       <div class="opt-row"><span>📳 Vibrazione (mobile)</span><div class="toggle on" id="toggle-vibrate"></div></div>
       <button class="btn gem hidden" id="btn-install-app" style="margin-top:6px;">📲 Installa l'app</button>
       <div class="panel-actions">
@@ -746,6 +748,17 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <div id="relics-list"></div>
       <div class="panel-actions">
         <button class="btn ghost" id="btn-close-relics">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay-deck">
+    <div class="panel">
+      <h2>🎴 Il tuo Mazzo</h2>
+      <div class="desc">Tutte le carte che possiedi in questa run, comprese quelle scartate: torneranno quando il mazzo si esaurisce.</div>
+      <div id="deck-list" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;"></div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="btn-close-deck">Chiudi</button>
       </div>
     </div>
   </div>
@@ -915,7 +928,7 @@ const LS_SAVE = 'mdc_save_v1';
 const LS_OPTS = 'mdc_opts_v1';
 
 let Meta = { highScore:0, bestFloor:0, essence:0, talents:{}, deathLog:[], tutorialDone:{}, codex:{enemies:{},cards:{},relics:{},bivi:{}}, achievements:{} };
-let Settings = { audio:true, vibrate:true, music:true, musicVolume:0.8 };
+let Settings = { audio:true, vibrate:true, music:true, musicVolume:0.8, leftHanded:false };
 
 function loadMeta(){ try{ const s=localStorage.getItem(LS_META); if(s) Meta=Object.assign(Meta, JSON.parse(s)); }catch(e){} }
 function saveMeta(){ try{ localStorage.setItem(LS_META, JSON.stringify(Meta)); }catch(e){} }
@@ -2807,6 +2820,7 @@ function checkBossPhaseTransition(e){
 function playCard(idx){
   if(!RUN || !RUN.combat || RUN.combat.busy) return;
   const cb = RUN.combat;
+  if(cb.targetingCardIdx!=null) return;
   const cardId = cb.hand[idx]; if(!cardId) return; const c = CARDS[cardId];
   if(c.cost>cb.energy){ Audio1.bump(); return; }
 
@@ -2916,6 +2930,7 @@ function executeCard(idx, target){
 function endPlayerTurn(){
   if(!RUN || !RUN.combat || RUN.combat.busy) return;
   const cb = RUN.combat;
+  if(cb.targetingCardIdx!=null) return;
   cb.busy = true;
   // discard remaining hand
   cb.discardPile = cb.discardPile.concat(cb.hand);
@@ -3131,7 +3146,22 @@ function refreshOptionsUI(){
   $('slider-music-volume').value = Math.round(Settings.musicVolume*100);
   $('slider-music-volume').disabled = !Settings.music;
   $('music-volume-val').textContent = Math.round(Settings.musicVolume*100)+'%';
+  setToggle($('toggle-lefthand'), Settings.leftHanded);
 }
+function applyHandedness(){
+  const controls = $('controls');
+  const deckBtn = $('btn-view-deck');
+  if(!controls || !deckBtn) return;
+  if(Settings.leftHanded){ controls.appendChild(deckBtn); }
+  else { controls.insertBefore(deckBtn, controls.firstChild); }
+}
+$('toggle-lefthand').onclick = ()=>{
+  Settings.leftHanded = !Settings.leftHanded;
+  setToggle($('toggle-lefthand'), Settings.leftHanded);
+  applyHandedness();
+  saveOpts();
+  if(Settings.audio) Audio1.click();
+};
 $('toggle-audio').onclick = ()=>{ Settings.audio=!Settings.audio; Audio1.setEnabled(Settings.audio); setToggle($('toggle-audio'),Settings.audio); saveOpts(); if(Settings.audio) Audio1.click(); };
 $('toggle-music').onclick = ()=>{
   Settings.music=!Settings.music; Music.setEnabled(Settings.music); setToggle($('toggle-music'),Settings.music);
@@ -3336,6 +3366,26 @@ function renderRelicsPanel(){
 $('hud-relics').onclick = ()=>{ renderRelicsPanel(); $('overlay-relics').classList.add('active'); };
 $('btn-close-relics').onclick = ()=> $('overlay-relics').classList.remove('active');
 
+function renderDeckPanel(){
+  const wrap = $('deck-list'); wrap.innerHTML='';
+  if(!RUN || !RUN.deck || !RUN.deck.length){
+    wrap.innerHTML = '<div class="desc" style="margin:6px 0 0;">Il mazzo è vuoto.</div>';
+    return;
+  }
+  const sorted = RUN.deck.slice().sort((a,b)=>{
+    const ca=CARDS[a], cb=CARDS[b];
+    if(ca.type!==cb.type) return ca.type==='attack' ? -1 : 1;
+    return ca.name.localeCompare(cb.name);
+  });
+  sorted.forEach(id=>{
+    const c = CARDS[id]; if(!c) return;
+    const el = buildCardEl(c);
+    wrap.appendChild(el);
+  });
+}
+$('btn-view-deck').onclick = ()=>{ Audio1.click(); renderDeckPanel(); $('overlay-deck').classList.add('active'); };
+$('btn-close-deck').onclick = ()=> $('overlay-deck').classList.remove('active');
+
 /* =========================================================
    CODEX (v1.2 — narrativa strutturale)
 ========================================================= */
@@ -3499,6 +3549,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 function boot(){
   loadMeta(); loadOpts();
   updateTitleMeta();
+  applyHandedness();
   const vt = document.getElementById('version-tag');
   if(vt) vt.textContent = 'My Dungeon Card — '+GAME_VERSION;
   showScreen('title');
