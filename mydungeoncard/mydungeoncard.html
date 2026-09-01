@@ -1181,15 +1181,14 @@ const BIVI = {
     text:'Un prigioniero incatenato ti supplica di essere liberato. "Ti ricompenserò," sussurra, "se solo mi lasci andare."',
     art:`<svg viewBox="0 0 400 400" width="100%" height="100%"><defs><radialGradient id="prisoner-skin-gradient" cx="45%" cy="30%" r="70%"><stop offset="0%" stop-color="#c9b8a0"/><stop offset="55%" stop-color="#8a7560"/><stop offset="100%" stop-color="#4a3c2e"/></radialGradient><linearGradient id="prisoner-cloth-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5a5450"/><stop offset="100%" stop-color="#241f1c"/></linearGradient><linearGradient id="prisoner-chain-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c9ccd4"/><stop offset="100%" stop-color="#5a5a64"/></linearGradient></defs><g class="prisonerHD-body"><path d="M90,400 Q100,300 200,282 Q300,300 310,400 Z" fill="url(#prisoner-cloth-gradient)"/><ellipse cx="170" cy="370" rx="18" ry="14" fill="url(#prisoner-skin-gradient)"/><ellipse cx="230" cy="370" rx="18" ry="14" fill="url(#prisoner-skin-gradient)"/><rect x="155" y="358" width="30" height="10" rx="4" fill="url(#prisoner-chain-gradient)"/><rect x="215" y="358" width="30" height="10" rx="4" fill="url(#prisoner-chain-gradient)"/><path d="M185,363 Q200,378 215,363" stroke="url(#prisoner-chain-gradient)" stroke-width="4" fill="none"/><rect x="175" y="255" width="50" height="20" rx="6" fill="url(#prisoner-chain-gradient)"/><path d="M185,272 Q170,310 185,350 M215,272 Q230,310 215,350" stroke="url(#prisoner-chain-gradient)" stroke-width="5" fill="none"/><circle cx="176" cy="300" r="4" fill="none" stroke="url(#prisoner-chain-gradient)" stroke-width="2"/><circle cx="224" cy="300" r="4" fill="none" stroke="url(#prisoner-chain-gradient)" stroke-width="2"/><ellipse cx="200" cy="200" rx="62" ry="72" fill="url(#prisoner-skin-gradient)"/><path d="M145,160 Q160,118 200,113 Q240,118 255,160 Q235,144 200,141 Q165,144 145,160 Z" fill="#3a332a"/><path d="M165,180 Q178,187 190,182" stroke="#3a332a" stroke-width="3" fill="none"/><path d="M235,180 Q222,187 210,182" stroke="#3a332a" stroke-width="3" fill="none"/><ellipse cx="178" cy="197" rx="7" ry="9" fill="#241f1c"/><ellipse cx="222" cy="197" rx="7" ry="9" fill="#241f1c"/><circle cx="178" cy="197" r="2" class="prisonerHD-eye"/><circle cx="222" cy="197" r="2" class="prisonerHD-eye"/><path d="M182,232 Q200,242 218,232 Q210,238 200,239 Q190,238 182,232 Z" fill="#3a2418"/></g></svg>`,
     choiceA:{ label:'🗝️ Liberalo', effect: ()=>{
+      let desc = 'Nella fuga, ti lascia questo oggetto.';
       if(RUN.deck.length>6){
         const idx = rand(0, RUN.deck.length-1);
         const removed = CARDS[RUN.deck[idx]];
         RUN.deck.splice(idx,1);
-        toast(`Il prigioniero fugge portando via "${removed.name}" dal tuo mazzo... ma ti lascia qualcosa.`);
-      } else {
-        toast('Il prigioniero fugge nell\u2019ombra... e ti lascia qualcosa.');
+        desc = `Nella fuga, ti ruba "${removed.name}" dal mazzo... ma ti lascia questo oggetto in cambio.`;
       }
-      openRelicReward(null, { icon:EVENT_ICONS.brokenChain, title:'Dono del Prigioniero', desc:'Nella fuga, ti lascia questo oggetto.', emptyMsg:'Il prigioniero non ha nient\u2019altro da offrirti.' });
+      openRelicReward(null, { icon:EVENT_ICONS.brokenChain, title:'Dono del Prigioniero', desc, emptyMsg:'Il prigioniero non ha nient\u2019altro da offrirti.' });
     } },
     choiceB:{ label:'🚶 Ignoralo', effect: ()=>{ toast('Ti allontani. Le sue suppliche svaniscono alle tue spalle.'); } }
   },
