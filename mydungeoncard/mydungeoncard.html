@@ -129,6 +129,8 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 
 /* ---------- TALENTS / RELICS LIST (shared) ---------- */
 .talent-row{display:flex; align-items:center; gap:10px; padding:10px 6px; border-bottom:1px solid var(--line);}
+.talent-row.locked-talent{opacity:.55;}
+.talent-row.locked-talent .talent-name{color:var(--parchment-dim); font-style:italic;}
 .talent-row:last-child{border-bottom:none;}
 .talent-row.owned{opacity:.9;}
 .talent-icon{width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; overflow:hidden;}
@@ -481,6 +483,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 .relicOsso-sparkle2{animation:artPulse 2.1s ease-in-out infinite; transform-box:fill-box; transform-origin:center; animation-delay:.4s;}
 .relicFiala-bubble{animation:artBob 1.6s ease-in-out infinite;}
 .relicFiala-bubble2{animation:artBob 1.9s ease-in-out infinite; animation-delay:.3s;}
+.relicAmuleto-gem{animation:artPulse 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center;}
 #enemy-name{font-size:16px; font-weight:800; margin-top:6px;}
 #enemy-intent{
   margin-top:8px; display:flex; align-items:center; gap:6px; background:rgba(255,85,102,0.14);
@@ -604,6 +607,10 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
       <button class="mode-btn" id="mode-completa" data-mode="completa">
         <div class="mode-title">🗺️ Run Completa</div>
         <div class="mode-sub">9 piani · 3 Atti</div>
+      </button>
+      <button class="mode-btn" id="mode-immensa" data-mode="immensa">
+        <div class="mode-title">🌌 Run Immensa</div>
+        <div class="mode-sub">9 piani · labirinti giganti</div>
       </button>
     </div>
     <div id="character-list"></div>
@@ -826,7 +833,7 @@ h1,h2,h3{margin:0; font-family:Georgia,'Times New Roman',serif; letter-spacing:.
 /* =========================================================
    VERSIONE — aggiornare questa unica riga a ogni release
 ========================================================= */
-const GAME_VERSION = 'v2.26';
+const GAME_VERSION = 'v2.3';
 
 /* =========================================================
    UTILITIES
@@ -1086,6 +1093,18 @@ const RELICS = {
     lore:'Distilalto dalle vene stesse del dungeon.',
     patto:'Le carte Veleno applicano +2 Veleno. Le cure curano il 30% in meno.',
     art:`<svg viewBox="0 0 200 200" width="100%" height="100%"><defs><linearGradient id="fiala-glass-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5a4a7a" stop-opacity=".5"/><stop offset="100%" stop-color="#241c40" stop-opacity=".5"/></linearGradient><radialGradient id="fiala-liquid-gradient" cx="50%" cy="30%" r="75%"><stop offset="0%" stop-color="#4a8f2a"/><stop offset="60%" stop-color="#12280a"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><rect x="88" y="26" width="24" height="16" rx="3" fill="#5a4020"/><path d="M85,42 L115,42 L115,60 Q130,72 130,110 Q130,152 100,157 Q70,152 70,110 Q70,72 85,60 Z" fill="url(#fiala-glass-gradient)" stroke="#4a3a6a" stroke-width="2"/><path d="M74,108 Q74,148 100,153 Q126,148 126,108 Z" fill="url(#fiala-liquid-gradient)"/><circle class="relicFiala-bubble" cx="90" cy="120" r="4" fill="#7ac94a" opacity=".7"/><circle class="relicFiala-bubble2" cx="110" cy="135" r="3" fill="#7ac94a" opacity=".6"/><ellipse cx="82" cy="70" rx="8" ry="14" fill="#ffffff" opacity=".15"/></svg>`},
+  amuleto: { id:'amuleto', name:'Amuleto del Superstite', icon:'🧿', requiresTalent:'sblocca_amuleto',
+    lore:'Un pegno lasciato da chi è quasi morto qui, e non voleva che accadesse di nuovo.',
+    patto:'La prima volta che scendi sotto il 25% dei PF massimi, recuperi il 15% dei PF massimi. -4 PF massimi subito.',
+    art:`<svg viewBox="0 0 200 200" width="100%" height="100%"><defs><radialGradient id="amuleto-gem-gradient" cx="35%" cy="30%" r="75%"><stop offset="0%" stop-color="#9be8dc"/><stop offset="55%" stop-color="#4de2c7"/><stop offset="100%" stop-color="#1c6b5c"/></radialGradient></defs><path d="M100,30 Q112,45 100,58 Q88,45 100,30 Z" fill="#c9a45c"/><circle cx="100" cy="32" r="8" fill="#c9a45c"/><circle cx="100" cy="110" r="52" fill="none" stroke="#c9a45c" stroke-width="9"/><circle class="relicAmuleto-gem" cx="100" cy="110" r="30" fill="url(#amuleto-gem-gradient)"/><ellipse cx="88" cy="98" rx="8" ry="11" fill="#ffffff" opacity=".35"/></svg>`},
+  guanto: { id:'guanto', name:'Guanto del Ladro', icon:'🧤', requiresTalent:'sblocca_guanto',
+    lore:'Appartenne a chi rubava tempo, prima ancora che oro.',
+    patto:'La prima carta che giochi ogni turno costa 1 energia in meno (minimo 0). Trovi il 10% di oro in meno.',
+    art:`<svg viewBox="0 0 200 200" width="100%" height="100%"><defs><linearGradient id="guanto-leather-gradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#8a6d4a"/><stop offset="100%" stop-color="#3a2c1a"/></linearGradient></defs><path d="M65,165 L65,95 Q65,68 85,68 L85,46 Q85,32 96,32 Q106,32 106,46 L106,68 L112,68 L112,40 Q112,26 123,26 Q133,26 133,40 L133,68 L138,68 Q138,60 150,60 Q160,60 160,74 L160,112 Q160,165 128,165 Z" fill="url(#guanto-leather-gradient)"/><path d="M65,165 L160,165 L160,112 Q133,132 65,126 Z" fill="#241a0e"/><path d="M85,68 L133,68" stroke="#241a0e" stroke-width="3"/></svg>`},
+  teschio: { id:'teschio', name:'Teschio Ridente', icon:'💀', requiresTalent:'sblocca_teschio',
+    lore:'Ride ancora, da qualche parte sotto la pietra, per una battuta che nessuno ricorda.',
+    patto:'Sconfiggere un nemico comune frutta +2 oro extra. I nemici Elite hanno il 10% di PF in più.',
+    art:`<svg viewBox="0 0 200 200" width="100%" height="100%"><defs><radialGradient id="teschio-bone-gradient" cx="40%" cy="30%" r="75%"><stop offset="0%" stop-color="#f5f0e0"/><stop offset="55%" stop-color="#d9cfb0"/><stop offset="100%" stop-color="#a89870"/></radialGradient></defs><circle cx="100" cy="88" r="55" fill="url(#teschio-bone-gradient)"/><ellipse cx="80" cy="82" rx="13" ry="17" fill="#1c1006"/><ellipse cx="120" cy="82" rx="13" ry="17" fill="#1c1006"/><circle cx="80" cy="80" r="5" fill="#ffcf5c"/><circle cx="120" cy="80" r="5" fill="#ffcf5c"/><path d="M65,112 Q100,138 135,112 L128,98 Q100,118 72,98 Z" fill="#1c1006"/><rect x="86" y="104" width="9" height="12" fill="#fff"/><rect x="105" y="104" width="9" height="12" fill="#fff"/></svg>`},
 };
 
 /* =========================================================
@@ -1114,14 +1133,22 @@ const EVENT_ICONS = {
    TALENTS (permanent cross-run unlocks — v1.1)
 ========================================================= */
 const TALENTS = {
-  run_completa: { id:'run_completa', name:'Sentiero Completo', icon:'🗺️', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M14,14 L26,10 L38,16 L50,10 L50,46 L38,52 L26,46 L14,52 Z" fill="#e8c98a"/><path d="M26,10 L26,46 M38,16 L38,52" stroke="#8a6d3a" stroke-width="2"/></svg>`, cost:60,
+  run_completa: { id:'run_completa', name:'Sentiero Completo', icon:'🗺️', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M14,14 L26,10 L38,16 L50,10 L50,46 L38,52 L26,46 L14,52 Z" fill="#e8c98a"/><path d="M26,10 L26,46 M38,16 L38,52" stroke="#8a6d3a" stroke-width="2"/></svg>`, cost:60, requires:[],
     desc:'Sblocca la Run Completa: 9 piani in 3 Atti, con incontri Elite ed eventi speciali.' },
-  cuore_robusto: { id:'cuore_robusto', name:'Cuore Robusto', icon:'❤️', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M30,48 Q10,32 10,20 Q10,10 20,10 Q28,10 30,18 Q32,10 40,10 Q50,10 50,20 Q50,32 30,48 Z" fill="#c94a4a"/><path d="M18,20 L25,20 L29,13 L33,27 L37,17 L42,23" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`, cost:40,
-    desc:'+10 PF massimi iniziali in ogni run futura.' },
-  borsa: { id:'borsa', name:'Borsa Capiente', icon:'🪙', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M20,26 Q16,26 16,34 Q16,50 30,52 Q44,50 44,34 Q44,26 40,26 Z" fill="#c9a45c"/><path d="M24,26 Q24,16 30,16 Q36,16 36,26 Z" fill="none" stroke="#8a6d3a" stroke-width="3"/><circle cx="30" cy="36" r="6" fill="#ffe89a"/></svg>`, cost:30,
-    desc:"Inizia ogni run con 20 monete d'oro." },
-  occhio_chiave: { id:'occhio_chiave', name:'Occhio della Chiave', icon:'🗝️', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><ellipse cx="30" cy="30" rx="20" ry="12" fill="#e8c98a"/><circle cx="30" cy="30" r="7" fill="#3a2a12"/><rect x="28" y="30" width="3" height="8" fill="#3a2a12"/><rect x="31" y="35" width="3" height="2" fill="#3a2a12"/></svg>`, cost:25,
+  occhio_chiave: { id:'occhio_chiave', name:'Occhio della Chiave', icon:'🗝️', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><ellipse cx="30" cy="30" rx="20" ry="12" fill="#e8c98a"/><circle cx="30" cy="30" r="7" fill="#3a2a12"/><rect x="28" y="30" width="3" height="8" fill="#3a2a12"/><rect x="31" y="35" width="3" height="2" fill="#3a2a12"/></svg>`, cost:25, requires:[],
     desc:'La chiave del piano è sempre visibile (sfocata) sulla minimappa fin dall\u2019inizio.' },
+  cuore_robusto: { id:'cuore_robusto', name:'Cuore Robusto', icon:'❤️', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M30,48 Q10,32 10,20 Q10,10 20,10 Q28,10 30,18 Q32,10 40,10 Q50,10 50,20 Q50,32 30,48 Z" fill="#c94a4a"/><path d="M18,20 L25,20 L29,13 L33,27 L37,17 L42,23" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`, cost:40, requires:['run_completa'],
+    desc:'+10 PF massimi iniziali in ogni run futura.' },
+  borsa: { id:'borsa', name:'Borsa Capiente', icon:'🪙', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M20,26 Q16,26 16,34 Q16,50 30,52 Q44,50 44,34 Q44,26 40,26 Z" fill="#c9a45c"/><path d="M24,26 Q24,16 30,16 Q36,16 36,26 Z" fill="none" stroke="#8a6d3a" stroke-width="3"/><circle cx="30" cy="36" r="6" fill="#ffe89a"/></svg>`, cost:30, requires:['occhio_chiave'],
+    desc:"Inizia ogni run con 20 monete d'oro." },
+  sblocca_amuleto: { id:'sblocca_amuleto', name:'Patto Ritrovato: Amuleto', icon:'🧿', art:RELICS.amuleto.art, cost:35, requires:['cuore_robusto'],
+    desc:'Sblocca la reliquia "Amuleto del Superstite" nel pool delle ricompense di gioco.' },
+  sblocca_guanto: { id:'sblocca_guanto', name:'Patto Ritrovato: Guanto', icon:'🧤', art:RELICS.guanto.art, cost:35, requires:['borsa'],
+    desc:'Sblocca la reliquia "Guanto del Ladro" nel pool delle ricompense di gioco.' },
+  run_immensa: { id:'run_immensa', name:'Sentiero Immenso', icon:'🌌', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><circle cx="30" cy="30" r="22" fill="none" stroke="#8a6dff" stroke-width="3"/><circle cx="30" cy="30" r="13" fill="#3a2c63"/><circle cx="18" cy="16" r="2" fill="#ffe89a"/><circle cx="46" cy="20" r="1.6" fill="#ffe89a"/><circle cx="42" cy="46" r="1.8" fill="#ffe89a"/><circle cx="14" cy="40" r="1.4" fill="#ffe89a"/></svg>`, cost:90, requires:['run_completa','cuore_robusto'],
+    desc:'Sblocca la Run Immensa: stessi 3 Atti e 9 piani della Run Completa, ma con labirinti alla dimensione massima su ogni piano — molti più nemici comuni ed Elite, tesori e negozi invariati.' },
+  sblocca_teschio: { id:'sblocca_teschio', name:'Patto Ritrovato: Teschio', icon:'💀', art:RELICS.teschio.art, cost:45, requires:['sblocca_amuleto','sblocca_guanto'],
+    desc:'Sblocca la reliquia "Teschio Ridente" nel pool delle ricompense di gioco.' },
 };
 
 /* =========================================================
@@ -1156,7 +1183,7 @@ const ACHIEVEMENTS = {
     check: (ctx)=> !!ctx.run.flags.oneTurnKill },
   conquista: { id:'conquista', name:'Dungeon Conquistato', icon:'🏆', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M20,14 L40,14 L40,28 Q40,38 30,38 Q20,38 20,28 Z" fill="#ffcf5c"/><path d="M20,16 Q10,16 10,24 Q10,30 18,30" stroke="#ffcf5c" stroke-width="3" fill="none"/><path d="M40,16 Q50,16 50,24 Q50,30 42,30" stroke="#ffcf5c" stroke-width="3" fill="none"/><rect x="26" y="38" width="8" height="8" fill="#c9a45c"/><rect x="20" y="46" width="20" height="6" rx="2" fill="#c9a45c"/></svg>`, reward:50,
     desc:'Vinci una Run Completa: tutti e 3 gli Atti, 9 piani.',
-    check: (ctx)=> ctx.victory && ctx.run.mode==='completa' },
+    check: (ctx)=> ctx.victory && ACT_MODES.includes(ctx.run.mode) },
   perunsoffio: { id:'perunsoffio', name:'Per un Soffio', icon:'💔', art:`<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M30,46 Q12,32 12,20 Q12,10 21,10 Q28,10 30,18 Q32,10 39,10 Q48,10 48,20 Q48,32 30,46 Z" fill="#3a2a30" stroke="#c94a4a" stroke-width="2"/><path d="M30,46 Q22,38 22,30 L38,30 Q38,38 30,46 Z" fill="#c94a4a"/></svg>`, reward:25,
     desc:'Vinci una run con 10 PF o meno rimasti.',
     check: (ctx)=> ctx.victory && ctx.run.hp<=10 },
@@ -1302,27 +1329,32 @@ const MAX_FLOOR = 3; // usato solo per Run Breve
    ATTI (v1.3 — Run Breve vs Run Completa)
 ========================================================= */
 const ACT_LENGTH = 3;
-function actOf(mode, floor){ return mode==='completa' ? Math.ceil(floor/ACT_LENGTH) : floor; }
-function subFloorOf(mode, floor){ return mode==='completa' ? ((floor-1)%ACT_LENGTH)+1 : floor; }
-function maxFloorFor(mode){ return mode==='completa' ? ACT_LENGTH*3 : 3; }
+const ACT_MODES = ['completa','immensa']; // modalità strutturate in 3 Atti da 3 piani
+function actOf(mode, floor){ return ACT_MODES.includes(mode) ? Math.ceil(floor/ACT_LENGTH) : floor; }
+function subFloorOf(mode, floor){ return ACT_MODES.includes(mode) ? ((floor-1)%ACT_LENGTH)+1 : floor; }
+function maxFloorFor(mode){ return ACT_MODES.includes(mode) ? ACT_LENGTH*3 : 3; }
 function floorSizeFor(mode, floor){
+  if(mode==='immensa') return 7; // Run Immensa: labirinto alla dimensione massima su ogni piano
   const sub = subFloorOf(mode, floor);
   return 5 + (sub-1); // 5,6,7 — si "resetta" a ogni nuovo Atto
 }
 function exitTypeFor(mode, floor){
-  if(mode!=='completa') return 'boss'; // Run Breve: ogni piano ha un guardiano, come in v1.2
+  if(!ACT_MODES.includes(mode)) return 'boss'; // Run Breve: ogni piano ha un guardiano, come in v1.2
   const sub = subFloorOf(mode, floor);
   if(sub===ACT_LENGTH) return 'boss';
   if(sub===ACT_LENGTH-1) return 'elite';
+  // sotto-piano 1: normalmente scale, ma con una possibilità di elite raro
+  const rareEliteChance = mode==='immensa' ? 0.35 : 0.15;
+  if(Math.random()<rareEliteChance) return 'elite';
   return 'stairs';
 }
 function enemyDifficultyMult(){
-  if(RUN.mode!=='completa') return 1 + (RUN.floor-1)*0.28;
+  if(!ACT_MODES.includes(RUN.mode)) return 1 + (RUN.floor-1)*0.28;
   const act = actOf(RUN.mode, RUN.floor), sub = subFloorOf(RUN.mode, RUN.floor);
   return 1 + (act-1)*0.32 + (sub-1)*0.14;
 }
 function bossDifficultyMult(){
-  if(RUN.mode!=='completa') return 1 + (RUN.floor-1)*0.32;
+  if(!ACT_MODES.includes(RUN.mode)) return 1 + (RUN.floor-1)*0.32;
   const act = actOf(RUN.mode, RUN.floor);
   return 1 + (act-1)*0.55;
 }
@@ -1367,7 +1399,7 @@ function rerollCostFor(kind){
 /* =========================================================
    MAZE GENERATION
 ========================================================= */
-function genMaze(size, exitType){
+function genMaze(size, exitType, mode){
   exitType = exitType || 'boss';
   const cells = [];
   for(let y=0;y<size;y++){ const row=[]; for(let x=0;x<size;x++){ row.push({N:false,E:false,S:false,W:false, content:null, resolved:false}); } cells.push(row); }
@@ -1454,13 +1486,24 @@ function genMaze(size, exitType){
     for(let x=0;x<size;x++){
       if(usedSet.has(x+','+y)) continue;
       const r = Math.random();
-      if(r<0.33) cells[y][x].content = {type:'enemy'};
-      else if(r<0.48) cells[y][x].content = {type:'treasure'};
-      else if(r<0.59) cells[y][x].content = {type:'trap'};
-      else if(r<0.67) cells[y][x].content = {type:'shrine'};
-      else if(r<0.72) cells[y][x].content = {type:'bivio', bivioId: pick(Object.keys(BIVI))};
-      else if(r<0.77) cells[y][x].content = {type:'bottega'};
-      // else empty
+      if(mode==='immensa'){
+        // labirinto molto più grande: più nemici, ma tesori/trappole/bottega restano rari come in un piano normale
+        if(r<0.56) cells[y][x].content = {type:'enemy'};
+        else if(r<0.63) cells[y][x].content = {type:'treasure'};
+        else if(r<0.68) cells[y][x].content = {type:'trap'};
+        else if(r<0.72) cells[y][x].content = {type:'shrine'};
+        else if(r<0.745) cells[y][x].content = {type:'bivio', bivioId: pick(Object.keys(BIVI))};
+        else if(r<0.77) cells[y][x].content = {type:'bottega'};
+        // else empty
+      } else {
+        if(r<0.33) cells[y][x].content = {type:'enemy'};
+        else if(r<0.48) cells[y][x].content = {type:'treasure'};
+        else if(r<0.59) cells[y][x].content = {type:'trap'};
+        else if(r<0.67) cells[y][x].content = {type:'shrine'};
+        else if(r<0.72) cells[y][x].content = {type:'bivio', bivioId: pick(Object.keys(BIVI))};
+        else if(r<0.77) cells[y][x].content = {type:'bottega'};
+        // else empty
+      }
     }
   }
   const discovered = Array.from({length:size},()=>Array(size).fill(false));
@@ -1495,10 +1538,10 @@ let SCREEN = 'title';
 let VIEW_ANIM = null; // for smooth-ish transitions (kept minimal/instant per design: step-based)
 
 function newRun(characterId, mode){
-  mode = mode==='completa' ? 'completa' : 'breve';
+  mode = (mode==='completa'||mode==='immensa') ? mode : 'breve';
   const character = CHARACTERS[characterId] || CHARACTERS.guerriero;
   const size = floorSizeFor(mode, 1);
-  const maze = genMaze(size, exitTypeFor(mode, 1));
+  const maze = genMaze(size, exitTypeFor(mode, 1), mode);
   revealAround(maze, 0, 0);
   let startHp = character.hp;
   let startGold = 0;
@@ -2165,12 +2208,26 @@ function renderMinimap(){
 /* =========================================================
    HUD
 ========================================================= */
+function checkSurvivorAmulet(){
+  if(!RUN || RUN.hp<=0) return;
+  if(!hasRelic('amuleto')) return;
+  RUN.flags = RUN.flags || {};
+  if(RUN.flags.survivorAmuletUsed) return;
+  if(RUN.hp/RUN.maxHp <= 0.25){
+    RUN.flags.survivorAmuletUsed = true;
+    const healAmt = Math.round(RUN.maxHp*0.15);
+    RUN.hp = clamp(RUN.hp+healAmt, 0, RUN.maxHp);
+    Audio1.heal(); vibrate([15,10,15,10,25]);
+    toast(`🧿 L'Amuleto del Superstite si attiva: +${healAmt} PF!`);
+  }
+}
 function updateExploreHud(){
   if(!RUN) return;
+  checkSurvivorAmulet();
   $('hp-text').textContent = `${RUN.hp}/${RUN.maxHp}`;
   $('hp-fill').style.width = clamp(RUN.hp/RUN.maxHp*100,0,100)+'%';
   $('gold-text').textContent = RUN.gold;
-  if(RUN.mode==='completa'){
+  if(ACT_MODES.includes(RUN.mode)){
     $('floor-tag').textContent = 'ATTO '+actOf(RUN.mode,RUN.floor)+' · P.'+subFloorOf(RUN.mode,RUN.floor)+'/'+ACT_LENGTH+' · '+getBiome().name;
   } else {
     $('floor-tag').textContent = 'PIANO '+RUN.floor+' · '+getBiome().name;
@@ -2783,7 +2840,7 @@ function resolveBivio(bivioId, choice){
 /* ---------- Relic reward (guardian's essence after a boss kill, or other sources) ---------- */
 function openRelicReward(afterCb, opts){
   opts = opts || {};
-  const available = Object.values(RELICS).filter(r=>!RUN.relics.includes(r.id));
+  const available = Object.values(RELICS).filter(r=>!RUN.relics.includes(r.id) && (!r.requiresTalent || (Meta.talents && Meta.talents[r.requiresTalent])));
   if(available.length===0){
     toast(opts.emptyMsg || 'Hai già raccolto tutte le reliquie del dungeon.');
     if(afterCb) afterCb();
@@ -2800,6 +2857,7 @@ function openRelicReward(afterCb, opts){
     el.onclick = ()=>{
       RUN.relics.push(r.id);
       if(r.id==='cuore'){ RUN.maxHp=Math.max(10,RUN.maxHp-5); RUN.hp=Math.min(RUN.hp,RUN.maxHp); }
+      if(r.id==='amuleto'){ RUN.maxHp=Math.max(10,RUN.maxHp-4); RUN.hp=Math.min(RUN.hp,RUN.maxHp); }
       discoverCodex('relics', r.id);
       Audio1.treasure(); vibrate([15,10,15]);
       closeEvent();
@@ -2827,6 +2885,7 @@ function startCombat(enemyId, kind, companionId){
   const mult = isBoss ? bossDifficultyMult() : (isElite ? eliteDifficultyMult() : enemyDifficultyMult());
   let hp = Math.round(base.hp * mult);
   if(hasRelic('osso')) hp = Math.round(hp*1.10);
+  if(isElite && hasRelic('teschio')) hp = Math.round(hp*1.10);
   const maxEnergy = 3 + (hasRelic('lanterna')?1:0);
   const initialDraw = hasRelic('lanterna') ? 4 : 5;
 
@@ -2861,6 +2920,7 @@ function startCombat(enemyId, kind, companionId){
     furyBuff:0,
     tookDamage:false,
     turn:1,
+    guantoUsedThisTurn:false,
   };
   const cb = RUN.combat;
   enemies.forEach(rollEnemyIntentFor);
@@ -2898,6 +2958,7 @@ function setupCombatUI(){
 }
 function renderCombat(){
   if(!RUN || !RUN.combat) return;
+  checkSurvivorAmulet();
   const cb = RUN.combat;
   $('pc-hp-fill').style.width = clamp(RUN.hp/RUN.maxHp*100,0,100)+'%';
   $('pc-hp-label').textContent = `${RUN.hp}/${RUN.maxHp}`;
@@ -3060,12 +3121,18 @@ function checkBossPhaseTransition(e){
   return true;
 }
 
+function effectiveCardCost(c, cb){
+  let cost = c.cost;
+  if(cost>0 && hasRelic('guanto') && !cb.guantoUsedThisTurn) cost = Math.max(0, cost-1);
+  return cost;
+}
 function playCard(idx){
   if(!RUN || !RUN.combat || RUN.combat.busy) return;
   const cb = RUN.combat;
   if(cb.targetingCardIdx!=null) return;
   const cardId = cb.hand[idx]; if(!cardId) return; const c = CARDS[cardId];
-  if(c.cost>cb.energy){ Audio1.bump(); return; }
+  const cost = effectiveCardCost(c, cb);
+  if(cost>cb.energy){ Audio1.bump(); return; }
 
   const needsTarget = !!(c.dmg || c.poison || c.vulnerable || c.weak) && !c.aoe;
   const livingEnemies = cb.enemies.filter(en=>en.hp>0);
@@ -3094,7 +3161,9 @@ function executeCard(idx, target){
   if(!RUN || !RUN.combat) return;
   const cb = RUN.combat;
   const cardId = cb.hand[idx]; if(!cardId) return; const c = CARDS[cardId];
-  cb.energy -= c.cost;
+  const chargedCost = effectiveCardCost(c, cb);
+  if(hasRelic('guanto') && !cb.guantoUsedThisTurn) cb.guantoUsedThisTurn = true;
+  cb.energy -= chargedCost;
   cb.hand.splice(idx,1);
   cb.discardPile.push(cardId);
   Audio1.cardplay();
@@ -3254,6 +3323,7 @@ function finishEnemyRound(){
   // prossimo turno del giocatore
   cb.playerBlock = 0;
   cb.energy = cb.maxEnergy;
+  cb.guantoUsedThisTurn = false;
   cb.turn++;
   cb.busy = false;
   cb.enemies.forEach(e=>{
@@ -3279,7 +3349,8 @@ function winCombat(){
   const base = (wasBoss?60:(wasElite?35:15)) * act;
   const bonus = Math.round(base * (1+RUN.streak*0.1));
   RUN.score += bonus;
-  const goldGain = rand(...GOLD_RANGES[wasBoss?'boss':(wasElite?'elite':'enemy')][Math.min(act,3)-1]);
+  const teschioBonus = (!wasBoss && !wasElite && hasRelic('teschio')) ? 2 : 0;
+  const goldGain = rand(...GOLD_RANGES[wasBoss?'boss':(wasElite?'elite':'enemy')][Math.min(act,3)-1]) + teschioBonus;
   RUN.gold += goldGain;
   Audio1.win(); vibrate([20,40,20,40]);
 
@@ -3294,7 +3365,7 @@ function winCombat(){
     setTimeout(()=>{
       if(!RUN) return;
       const isFinalAct = RUN.floor>=RUN.maxFloor;
-      const clearTitle = RUN.mode==='completa' ? (isFinalAct?'Guardiano Sconfitto!':'Atto Superato!') : 'Piano Superato!';
+      const clearTitle = ACT_MODES.includes(RUN.mode) ? (isFinalAct?'Guardiano Sconfitto!':'Atto Superato!') : 'Piano Superato!';
       openSimpleEvent(EVENT_ICONS.trophy, clearTitle, `Hai sconfitto ${primary.name}! +${bonus} punti, +${goldGain} oro.`);
       const okBtn = document.getElementById('btn-event-ok');
       okBtn.onclick = ()=>{
@@ -3325,14 +3396,14 @@ function nextFloor(){
   RUN.hp = clamp(RUN.hp, 0, RUN.maxHp);
   RUN.keyHeld = false;
   const size = floorSizeFor(RUN.mode, RUN.floor);
-  RUN.maze = genMaze(size, exitTypeFor(RUN.mode, RUN.floor));
+  RUN.maze = genMaze(size, exitTypeFor(RUN.mode, RUN.floor), RUN.mode);
   revealAround(RUN.maze,0,0);
   updateExploreHud();
   renderExplore();
   const sub = subFloorOf(RUN.mode, RUN.floor);
   const act = actOf(RUN.mode, RUN.floor);
   Music.playAct(act);
-  if(RUN.mode==='completa' && sub===1){
+  if(ACT_MODES.includes(RUN.mode) && sub===1){
     toast(`⚜️ Atto ${act}: ${getBiome().name} — resta vigile.`);
   } else {
     toast('Piano '+RUN.floor+' · '+getBiome().name+' — resta vigile.');
@@ -3347,7 +3418,7 @@ function endRun(victory){
   if(RUN.hp<=0) RUN.hp=0;
   Meta.highScore = Math.max(Meta.highScore, RUN.score);
   Meta.bestFloor = Math.max(Meta.bestFloor, RUN.floor);
-  const victoryBonus = victory ? (RUN.mode==='completa' ? 60 : 30) : 0;
+  const victoryBonus = victory ? (RUN.mode==='immensa' ? 90 : (RUN.mode==='completa' ? 60 : 30)) : 0;
   const essenceFromScore = Math.floor(RUN.score/12) + RUN.kills*2 + victoryBonus;
   const essenceFromGold = Math.floor(RUN.gold/10);
   const essenceEarned = essenceFromScore + essenceFromGold;
@@ -3362,8 +3433,8 @@ function endRun(victory){
   clearRun();
   $('screen-end').className = 'screen active ' + (victory?'victory':'defeat');
   $('end-icon').innerHTML = victory?EVENT_ICONS.trophy:EVENT_ICONS.skull;
-  $('end-title').textContent = victory? (RUN.mode==='completa'?'Dungeon Conquistato!':'Vittoria!') : 'Sei Caduto...';
-  const floorLabel = RUN.mode==='completa' ? `Atto ${actOf(RUN.mode,RUN.floor)}, Piano ${subFloorOf(RUN.mode,RUN.floor)}` : `Piano ${RUN.floor}`;
+  $('end-title').textContent = victory? (ACT_MODES.includes(RUN.mode)?'Dungeon Conquistato!':'Vittoria!') : 'Sei Caduto...';
+  const floorLabel = ACT_MODES.includes(RUN.mode) ? `Atto ${actOf(RUN.mode,RUN.floor)}, Piano ${subFloorOf(RUN.mode,RUN.floor)}` : `Piano ${RUN.floor}`;
   const goldNote = essenceFromGold>0 ? ` (di cui ${essenceFromGold} dall'oro residuo)` : '';
   const achievementNote = unlockedAchievements.length
     ? ` 🏅 ${unlockedAchievements.length>1?'Nuovi traguardi':'Nuovo traguardo'}: ${unlockedAchievements.map(a=>a.icon+' '+a.name).join(', ')} (+${unlockedAchievements.reduce((s,a)=>s+a.reward,0)} ⚗️).`
@@ -3501,21 +3572,32 @@ let selectedRunMode = 'breve';
 function renderCharacterSelect(){
   selectedRunMode = 'breve';
   const completaUnlocked = !!(Meta.talents && Meta.talents.run_completa);
-  const modeBreveBtn = $('mode-breve'), modeCompletaBtn = $('mode-completa');
-  modeBreveBtn.classList.add('active'); modeCompletaBtn.classList.remove('active');
+  const immensaUnlocked = !!(Meta.talents && Meta.talents.run_immensa);
+  const modeBreveBtn = $('mode-breve'), modeCompletaBtn = $('mode-completa'), modeImmensaBtn = $('mode-immensa');
+  modeBreveBtn.classList.add('active'); modeCompletaBtn.classList.remove('active'); modeImmensaBtn.classList.remove('active');
   modeCompletaBtn.classList.toggle('locked', !completaUnlocked);
   modeCompletaBtn.querySelector('.mode-sub').textContent = completaUnlocked
     ? '9 piani · 3 Atti'
     : '🔒 Sblocca nel Santuario dell\u2019Eco';
+  modeImmensaBtn.classList.toggle('locked', !immensaUnlocked);
+  modeImmensaBtn.querySelector('.mode-sub').textContent = immensaUnlocked
+    ? '9 piani · labirinti giganti'
+    : '🔒 Sblocca nel Santuario dell\u2019Eco';
   modeBreveBtn.onclick = ()=>{
     selectedRunMode='breve';
-    modeBreveBtn.classList.add('active'); modeCompletaBtn.classList.remove('active');
+    modeBreveBtn.classList.add('active'); modeCompletaBtn.classList.remove('active'); modeImmensaBtn.classList.remove('active');
     Audio1.click();
   };
   modeCompletaBtn.onclick = ()=>{
     if(!completaUnlocked){ Audio1.bump(); toast('Sblocca la Run Completa nel Santuario dell\u2019Eco (⚗️ Progressione, titolo).'); return; }
     selectedRunMode='completa';
-    modeCompletaBtn.classList.add('active'); modeBreveBtn.classList.remove('active');
+    modeCompletaBtn.classList.add('active'); modeBreveBtn.classList.remove('active'); modeImmensaBtn.classList.remove('active');
+    Audio1.click();
+  };
+  modeImmensaBtn.onclick = ()=>{
+    if(!immensaUnlocked){ Audio1.bump(); toast('Sblocca la Run Immensa nel Santuario dell\u2019Eco (⚗️ Progressione, titolo).'); return; }
+    selectedRunMode='immensa';
+    modeImmensaBtn.classList.add('active'); modeBreveBtn.classList.remove('active'); modeCompletaBtn.classList.remove('active');
     Audio1.click();
   };
   const wrap = $('character-list'); wrap.innerHTML='';
@@ -3549,7 +3631,7 @@ function startNewRunWithCharacter(characterId, mode){
     }, 300);
   });
   if(!firstEver){
-    const msg = RUN.mode==='completa' ? 'Il dungeon completo ti attende: 3 Atti, 9 piani. Buona fortuna.' : 'Il dungeon ti attende. Trova la chiave e sconfiggi il guardiano.';
+    const msg = RUN.mode==='immensa' ? 'Il dungeon immenso ti attende: 3 Atti, 9 piani ai massimi confini. Buona fortuna.' : (RUN.mode==='completa' ? 'Il dungeon completo ti attende: 3 Atti, 9 piani. Buona fortuna.' : 'Il dungeon ti attende. Trova la chiave e sconfiggi il guardiano.');
     toast(msg);
   }
 }
@@ -3562,17 +3644,31 @@ function renderProgressPanel(){
   const wrap = $('talent-list'); wrap.innerHTML='';
   Object.values(TALENTS).forEach(t=>{
     const owned = !!(Meta.talents && Meta.talents[t.id]);
+    const reqs = t.requires || [];
+    const missingReqs = reqs.filter(rid => !(Meta.talents && Meta.talents[rid]));
+    const locked = !owned && missingReqs.length>0;
     const row = document.createElement('div');
-    row.className = 'talent-row' + (owned?' owned':'');
+    row.className = 'talent-row' + (owned?' owned':'') + (locked?' locked-talent':'');
+    let actionHtml;
+    let lockedDesc = '';
+    if(owned){
+      actionHtml = `<button class="btn ghost talent-buy" disabled>Ottenuto</button>`;
+    } else if(locked){
+      const reqNames = missingReqs.map(rid => TALENTS[rid] ? TALENTS[rid].name : rid).join(', ');
+      actionHtml = `<button class="btn ghost talent-buy" disabled>🔒</button>`;
+      lockedDesc = `Richiede: ${reqNames}`;
+    } else {
+      actionHtml = `<button class="btn gem talent-buy">⚗️ ${t.cost}</button>`;
+    }
     row.innerHTML = `
-      <div class="talent-icon">${t.art || t.icon}</div>
+      <div class="talent-icon" style="${locked?'filter:grayscale(1) brightness(.5);':''}">${locked ? '🔒' : (t.art || t.icon)}</div>
       <div class="talent-info">
-        <div class="talent-name">${t.name}</div>
-        <div class="talent-desc">${t.desc}</div>
+        <div class="talent-name">${locked ? '???' : t.name}</div>
+        <div class="talent-desc">${locked ? lockedDesc : t.desc}</div>
       </div>
-      <button class="btn ${owned?'ghost':'gem'} talent-buy" ${owned?'disabled':''}>${owned?'Ottenuto':'⚗️ '+t.cost}</button>
+      ${actionHtml}
     `;
-    if(!owned){
+    if(!owned && !locked){
       const btn = row.querySelector('.talent-buy');
       if((Meta.essence||0) < t.cost) btn.disabled = true;
       btn.onclick = ()=>{
