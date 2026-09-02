@@ -54,7 +54,7 @@
         }
         #node-art svg { max-width: 100%; max-height: 200px; }
         #text-output {
-            flex-grow: 1; overflow-y: auto; line-height: 1.6; font-size: 14px;
+            flex-grow: 1; overflow-y: auto; line-height: 1.6; font-size: var(--story-font-size, 14px);
             white-space: pre-line; padding-right: 10px; margin-bottom: 15px;
             border-left: 2px solid #005522; padding-left: 10px;
         }
@@ -164,6 +164,7 @@
             <button id="btn-music" class="btn-center">MUSICA: ATTIVATA</button>
             <button id="btn-sfx" class="btn-center">EFFETTI SONORI: ATTIVATI</button>
             <button id="btn-fullscreen" class="btn-center">FULLSCREEN: OFF</button>
+            <button id="btn-text-size" class="btn-center">DIMENSIONE TESTO: PICCOLA</button>
         </div>
         <div class="display-settings">
             <label>VOLUME MUSICA</label>
@@ -174,7 +175,7 @@
             <input type="range" id="range-brightness" min="60" max="140" value="100">
             <label>TONALITA' COLORE</label>
             <input type="range" id="range-hue" min="-60" max="60" value="0">
-            <button id="btn-reset-display" class="btn-center">RIPRISTINA ASPETTO</button>
+            <button id="btn-reset-all" class="btn-center" style="display: block; margin: 12px auto 0; max-width: 260px;">RIPRISTINA IMPOSTAZIONI</button>
         </div>
         <button id="btn-options-back" class="btn-center">INDIETRO</button>
     </div>

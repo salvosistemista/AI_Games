@@ -309,34 +309,66 @@ const UI = (() => {
     // Filtro CSS sopra l'intera UI: non tocca i colori del tema, li regola soltanto.
     // Persistente in localStorage, indipendente dalla singola storia/avventura.
     const DISPLAY_PREFS_KEY = 'engine_display_prefs';
+    const TEXT_SIZES = ['14px', '17px', '20px'];
+    const TEXT_SIZE_LABELS = ['PICCOLA', 'MEDIA', 'GRANDE'];
+    let textSizeIndex = 0;
 
-    function applyDisplayPrefs(brightness, hue) {
+    function applyDisplayPrefs(brightness, hue, sizeIndex) {
         document.documentElement.style.setProperty('--display-brightness', brightness / 100);
         document.documentElement.style.setProperty('--display-hue', hue + 'deg');
+        document.documentElement.style.setProperty('--story-font-size', TEXT_SIZES[sizeIndex]);
+    }
+
+    function updateTextSizeButton() {
+        document.getElementById('btn-text-size').innerText = `DIMENSIONE TESTO: ${TEXT_SIZE_LABELS[textSizeIndex]}`;
     }
 
     function saveDisplayPrefs() {
         const brightness = parseInt(document.getElementById('range-brightness').value, 10);
         const hue = parseInt(document.getElementById('range-hue').value, 10);
-        applyDisplayPrefs(brightness, hue);
-        try { localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify({ brightness, hue })); } catch (e) {}
+        applyDisplayPrefs(brightness, hue, textSizeIndex);
+        try { localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify({ brightness, hue, textSizeIndex })); } catch (e) {}
     }
 
     function loadDisplayPrefs() {
-        let prefs = { brightness: 100, hue: 0 };
+        let prefs = { brightness: 100, hue: 0, textSizeIndex: 0 };
         try {
             const raw = localStorage.getItem(DISPLAY_PREFS_KEY);
             if (raw) prefs = Object.assign(prefs, JSON.parse(raw));
         } catch (e) {}
         document.getElementById('range-brightness').value = prefs.brightness;
         document.getElementById('range-hue').value = prefs.hue;
-        applyDisplayPrefs(prefs.brightness, prefs.hue);
+        textSizeIndex = prefs.textSizeIndex;
+        updateTextSizeButton();
+        applyDisplayPrefs(prefs.brightness, prefs.hue, prefs.textSizeIndex);
     }
 
-    function resetDisplayPrefs() {
+    function cycleTextSize() {
+        textSizeIndex = (textSizeIndex + 1) % TEXT_SIZES.length;
+        updateTextSizeButton();
+        saveDisplayPrefs();
+        playBeep(550, 'square', 0.04);
+    }
+
+    // Ripristina TUTTE le impostazioni del giocatore ai valori di default —
+    // aspetto (luminosità, tonalità, dimensione testo) E audio (musica, sfx,
+    // volumi) — non solo l'aspetto.
+    function resetAllSettings() {
         document.getElementById('range-brightness').value = 100;
         document.getElementById('range-hue').value = 0;
+        textSizeIndex = 0;
+        updateTextSizeButton();
         saveDisplayPrefs();
+
+        GameAudio.setMusicEnabled(true);
+        GameAudio.setSfxEnabled(true);
+        GameAudio.setMusicVolume(0.8);
+        GameAudio.setSfxVolume(0.8);
+        document.getElementById('range-music-volume').value = 80;
+        document.getElementById('range-sfx-volume').value = 80;
+        updateAudioButtons();
+        saveAudioPrefs();
+
         playBeep(500, 'square', 0.05);
     }
 
@@ -362,11 +394,12 @@ const UI = (() => {
         document.getElementById('range-music-volume').oninput = onMusicVolumeChange;
         document.getElementById('range-sfx-volume').oninput = onSfxVolumeChange;
         document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
+        document.getElementById('btn-text-size').onclick = cycleTextSize;
         document.getElementById('btn-options-back').onclick = () => showScreen(previousScreen);
         document.getElementById('btn-save-cancel').onclick = () => showScreen(previousScreen);
         document.getElementById('range-brightness').oninput = saveDisplayPrefs;
         document.getElementById('range-hue').oninput = saveDisplayPrefs;
-        document.getElementById('btn-reset-display').onclick = resetDisplayPrefs;
+        document.getElementById('btn-reset-all').onclick = resetAllSettings;
         loadDisplayPrefs();
         loadAudioPrefs();
         document.querySelectorAll('.modal-close').forEach(b => b.onclick = closeModals);
