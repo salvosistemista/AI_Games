@@ -1,20 +1,21 @@
 /* ============================================================
    AUDIO DI GIOCO
    ------------------------------------------------------------
-   Tre livelli:
-   - uiBeep(...)      suoni brevi di interfaccia (click, notifiche) - sempre sintetizzati
-   - playSfx(nome)     effetti sonori nominati, definiti in story.sfx - sintetizzati
-   - playTrack(id)     musica di sottofondo, definita in story.music
-                        - sintetizzata (campo 'notes') oppure
-                        - file esterno .ogg/.mp3/... (campo 'src')
+   Due categorie indipendenti, ciascuna con attivazione e volume
+   propri (default: entrambe attive, volume 80%):
+   - musica di sottofondo (playTrack/stopTrack/pause/resume)
+   - effetti sonori, incluso il feedback di interfaccia (uiBeep/playSfx)
    ============================================================ */
 
 const GameAudio = (() => {
     let audioCtx = null;
-    let soundEnabled = true;      // sonoro attivo di default
-    let activeTrackId = null;     // traccia "logicamente" in corso (persiste col mute)
-    let musicToken = 0;           // invalida i loop sintetizzati quando cambia traccia/mute
-    let fileAudioEl = null;       // elemento <audio> riusato per le tracce da file
+    let musicEnabled = true;
+    let sfxEnabled = true;
+    let musicVolume = 0.8;   // 0-1
+    let sfxVolume = 0.8;     // 0-1
+    let activeTrackId = null; // traccia "logicamente" in corso (persiste col mute)
+    let musicToken = 0;       // invalida i loop sintetizzati quando cambia traccia/mute
+    let fileAudioEl = null;   // elemento <audio> riusato per le tracce da file
 
     function ensureCtx() {
         if (!audioCtx) {
@@ -24,14 +25,14 @@ const GameAudio = (() => {
         return true;
     }
 
-    // ---------------- BEEP DI INTERFACCIA ----------------
+    // ---------------- BEEP DI INTERFACCIA (categoria: effetti sonori) ----------------
     function uiBeep(freq = 440, type = 'square', duration = 0.05) {
-        if (!soundEnabled || !ensureCtx()) return;
+        if (!sfxEnabled || !ensureCtx()) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.value = freq;
-        gain.gain.value = 0.05;
+        gain.gain.value = 0.05 * sfxVolume;
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
@@ -41,7 +42,7 @@ const GameAudio = (() => {
     // ---------------- EFFETTI SONORI NOMINATI ----------------
     // story.sfx = { nome: [ {freq, dur, type, volume}, ... ] }  (sequenza, non loop)
     function playSfx(name) {
-        if (!soundEnabled || !ensureCtx()) return;
+        if (!sfxEnabled || !ensureCtx()) return;
         const seq = (Engine.getStory().sfx || {})[name];
         if (!seq) { console.warn('SFX non definito nella storia:', name); return; }
         let t = audioCtx.currentTime + 0.02;
@@ -50,7 +51,7 @@ const GameAudio = (() => {
             const gain = audioCtx.createGain();
             osc.type = step.type || 'square';
             osc.frequency.value = step.freq;
-            gain.gain.value = step.volume ?? 0.06;
+            gain.gain.value = (step.volume ?? 0.06) * sfxVolume;
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start(t);
@@ -62,8 +63,8 @@ const GameAudio = (() => {
     // ---------------- MUSICA DI SOTTOFONDO (SINTETIZZATA) ----------------
     // story.music = { id: { wave, volume, loop, notes:[{freq,dur}, ...] } }
     function scheduleLoop(track, token) {
-        if (!soundEnabled || token !== musicToken || !ensureCtx()) return;
-        const vol = track.volume ?? 0.025;
+        if (!musicEnabled || token !== musicToken || !ensureCtx()) return;
+        const vol = (track.volume ?? 0.025) * musicVolume;
         let t = audioCtx.currentTime + 0.05;
         let totalDur = 0;
         track.notes.forEach(n => {
@@ -90,9 +91,6 @@ const GameAudio = (() => {
 
     // ---------------- MUSICA DI SOTTOFONDO (FILE ESTERNO) ----------------
     // story.music = { id: { src: "musiche/tema.ogg", volume, loop } }
-    // 'src' accetta sia un percorso relativo (file da distribuire insieme
-    // all'HTML) sia una data URI ("data:audio/ogg;base64,...") per restare
-    // completamente self-contained in un unico file.
     function stopFileTrack() {
         if (fileAudioEl) fileAudioEl.pause();
     }
@@ -101,10 +99,10 @@ const GameAudio = (() => {
         if (!fileAudioEl) fileAudioEl = new Audio();
         fileAudioEl.src = track.src;
         fileAudioEl.loop = track.loop !== false;
-        fileAudioEl.volume = track.volume ?? 0.5;
-        if (soundEnabled) {
+        fileAudioEl.volume = (track.volume ?? 0.5) * musicVolume;
+        if (musicEnabled) {
             fileAudioEl.currentTime = 0;
-            fileAudioEl.play().catch(() => { /* verra' ritentato al prossimo toggle sonoro */ });
+            fileAudioEl.play().catch(() => { /* verra' ritentato al prossimo toggle musica */ });
         }
     }
 
@@ -113,8 +111,8 @@ const GameAudio = (() => {
     function playTrack(trackId) {
         if (trackId === activeTrackId) return;
         activeTrackId = trackId;
-        musicToken++;       // ferma qualunque loop sintetizzato in corso
-        stopFileTrack();    // ferma qualunque file in riproduzione
+        musicToken++;
+        stopFileTrack();
         if (!trackId) return;
         const track = (Engine.getStory().music || {})[trackId];
         if (!track) { console.warn('Traccia musicale non definita:', trackId); return; }
@@ -128,12 +126,12 @@ const GameAudio = (() => {
     // traccia era attiva — servono per "torna al menu senza abbandonare
     // la partita" (vedi ui.js, pulsante Menu Principale / Continua Partita).
     function pause() {
-        musicToken++;            // ferma il loop sintetizzato schedulato
+        musicToken++;
         if (fileAudioEl) fileAudioEl.pause();
     }
 
     function resume() {
-        if (!activeTrackId || !soundEnabled) return;
+        if (!activeTrackId || !musicEnabled) return;
         const track = (Engine.getStory().music || {})[activeTrackId];
         if (!track) return;
         if (track.src) {
@@ -144,28 +142,42 @@ const GameAudio = (() => {
         }
     }
 
-    // ---------------- ON/OFF GENERALE ----------------
-    function toggle() {
-        soundEnabled = !soundEnabled;
-        if (soundEnabled) {
-            uiBeep(880, 'square', 0.1);
-            const track = activeTrackId ? (Engine.getStory().music || {})[activeTrackId] : null;
-            if (track) {
-                if (track.src) {
-                    fileAudioEl && fileAudioEl.play().catch(() => {});
-                } else {
-                    musicToken++;
-                    scheduleLoop(track, musicToken);
-                }
-            }
-        } else {
-            musicToken++;    // ferma qualunque loop sintetizzato schedulato
-            stopFileTrack();
-        }
-        return soundEnabled;
+    function resumeActiveTrackPlayback() {
+        const track = activeTrackId ? (Engine.getStory().music || {})[activeTrackId] : null;
+        if (!track) return;
+        if (track.src) { fileAudioEl && fileAudioEl.play().catch(() => {}); }
+        else { musicToken++; scheduleLoop(track, musicToken); }
     }
 
-    function isEnabled() { return soundEnabled; }
+    // ---------------- ON/OFF E VOLUME, PER CATEGORIA ----------------
+    function setMusicEnabled(enabled) {
+        if (enabled === musicEnabled) return;
+        musicEnabled = enabled;
+        if (musicEnabled) resumeActiveTrackPlayback();
+        else { musicToken++; stopFileTrack(); }
+    }
 
-    return { uiBeep, playSfx, playTrack, stopTrack, pause, resume, toggle, isEnabled };
+    function setSfxEnabled(enabled) { sfxEnabled = enabled; }
+
+    function setMusicVolume(v) {
+        musicVolume = Math.max(0, Math.min(1, v));
+        if (fileAudioEl && activeTrackId) {
+            const track = (Engine.getStory().music || {})[activeTrackId];
+            if (track && track.src) fileAudioEl.volume = (track.volume ?? 0.5) * musicVolume;
+        }
+        // per le tracce sintetizzate il nuovo volume si applica dal prossimo giro di loop
+    }
+
+    function setSfxVolume(v) { sfxVolume = Math.max(0, Math.min(1, v)); }
+
+    function isMusicEnabled() { return musicEnabled; }
+    function isSfxEnabled() { return sfxEnabled; }
+    function getMusicVolume() { return musicVolume; }
+    function getSfxVolume() { return sfxVolume; }
+
+    return {
+        uiBeep, playSfx, playTrack, stopTrack, pause, resume,
+        setMusicEnabled, setSfxEnabled, setMusicVolume, setSfxVolume,
+        isMusicEnabled, isSfxEnabled, getMusicVolume, getSfxVolume
+    };
 })();

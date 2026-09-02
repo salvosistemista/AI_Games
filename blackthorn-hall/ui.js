@@ -38,8 +38,12 @@ const UI = (() => {
     }
 
     // ---------------- SCHERMATE ----------------
+    let previousScreen = 'screen-main'; // per far tornare "Indietro" alla schermata di provenienza vera, non indovinata
+
     function showScreen(id) {
         playBeep(600, 'square', 0.03);
+        const current = document.querySelector('.screen.active-screen');
+        if (current && current.id !== id) previousScreen = current.id;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
         document.getElementById(id).classList.add('active-screen');
         document.getElementById('btn-continue').disabled = !Engine.isInGame();
@@ -233,9 +237,62 @@ const UI = (() => {
     }
 
     // ---------------- OPZIONI SISTEMA ----------------
-    function toggleAudio() {
-        const enabled = GameAudio.toggle();
-        document.getElementById('btn-audio').innerText = `SONORO: ${enabled ? 'ATTIVATO' : 'DISATTIVATO'}`;
+    // ---------------- AUDIO: MUSICA / EFFETTI SONORI (preferenze del giocatore) ----------------
+    const AUDIO_PREFS_KEY = 'engine_audio_prefs';
+
+    function updateAudioButtons() {
+        document.getElementById('btn-music').innerText = `MUSICA: ${GameAudio.isMusicEnabled() ? 'ATTIVATA' : 'DISATTIVATA'}`;
+        document.getElementById('btn-sfx').innerText = `EFFETTI SONORI: ${GameAudio.isSfxEnabled() ? 'ATTIVATI' : 'DISATTIVATI'}`;
+    }
+
+    function saveAudioPrefs() {
+        try {
+            localStorage.setItem(AUDIO_PREFS_KEY, JSON.stringify({
+                musicEnabled: GameAudio.isMusicEnabled(),
+                sfxEnabled: GameAudio.isSfxEnabled(),
+                musicVolume: GameAudio.getMusicVolume(),
+                sfxVolume: GameAudio.getSfxVolume()
+            }));
+        } catch (e) {}
+    }
+
+    function loadAudioPrefs() {
+        let prefs = { musicEnabled: true, sfxEnabled: true, musicVolume: 0.8, sfxVolume: 0.8 };
+        try {
+            const raw = localStorage.getItem(AUDIO_PREFS_KEY);
+            if (raw) prefs = Object.assign(prefs, JSON.parse(raw));
+        } catch (e) {}
+        GameAudio.setMusicEnabled(prefs.musicEnabled);
+        GameAudio.setSfxEnabled(prefs.sfxEnabled);
+        GameAudio.setMusicVolume(prefs.musicVolume);
+        GameAudio.setSfxVolume(prefs.sfxVolume);
+        document.getElementById('range-music-volume').value = Math.round(prefs.musicVolume * 100);
+        document.getElementById('range-sfx-volume').value = Math.round(prefs.sfxVolume * 100);
+        updateAudioButtons();
+    }
+
+    function toggleMusic() {
+        GameAudio.setMusicEnabled(!GameAudio.isMusicEnabled());
+        updateAudioButtons();
+        saveAudioPrefs();
+    }
+
+    function toggleSfx() {
+        GameAudio.setSfxEnabled(!GameAudio.isSfxEnabled());
+        updateAudioButtons();
+        saveAudioPrefs();
+        if (GameAudio.isSfxEnabled()) GameAudio.uiBeep(880, 'square', 0.1); // conferma udibile solo quando si riattivano
+    }
+
+    function onMusicVolumeChange() {
+        GameAudio.setMusicVolume(document.getElementById('range-music-volume').value / 100);
+        saveAudioPrefs();
+    }
+
+    function onSfxVolumeChange() {
+        GameAudio.setSfxVolume(document.getElementById('range-sfx-volume').value / 100);
+        saveAudioPrefs();
+        GameAudio.uiBeep(600, 'square', 0.05); // anteprima del volume appena impostato
     }
 
     function toggleFullscreen() {
@@ -300,14 +357,18 @@ const UI = (() => {
         // si mette in pausa (non si ferma per sempre): riprende dallo stesso
         // punto se si preme "Continua Partita".
         document.getElementById('btn-main-menu').onclick = () => { GameAudio.pause(); showScreen('screen-main'); };
-        document.getElementById('btn-audio').onclick = toggleAudio;
+        document.getElementById('btn-music').onclick = toggleMusic;
+        document.getElementById('btn-sfx').onclick = toggleSfx;
+        document.getElementById('range-music-volume').oninput = onMusicVolumeChange;
+        document.getElementById('range-sfx-volume').oninput = onSfxVolumeChange;
         document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
-        document.getElementById('btn-options-back').onclick = () => showScreen(Engine.isInGame() ? 'screen-game' : 'screen-main');
-        document.getElementById('btn-save-cancel').onclick = () => showScreen(Engine.isInGame() ? 'screen-game' : 'screen-main');
+        document.getElementById('btn-options-back').onclick = () => showScreen(previousScreen);
+        document.getElementById('btn-save-cancel').onclick = () => showScreen(previousScreen);
         document.getElementById('range-brightness').oninput = saveDisplayPrefs;
         document.getElementById('range-hue').oninput = saveDisplayPrefs;
         document.getElementById('btn-reset-display').onclick = resetDisplayPrefs;
         loadDisplayPrefs();
+        loadAudioPrefs();
         document.querySelectorAll('.modal-close').forEach(b => b.onclick = closeModals);
     }
 

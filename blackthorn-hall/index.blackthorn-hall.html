@@ -161,10 +161,15 @@
     <div id="screen-options" class="screen">
         <div class="game-title" style="text-align: center; margin-top: 20px;">OPZIONI SISTEMA</div>
         <div class="btn-list" style="max-width: 350px; margin: 0 auto;">
-            <button id="btn-audio" class="btn-center">SONORO: ATTIVATO</button>
+            <button id="btn-music" class="btn-center">MUSICA: ATTIVATA</button>
+            <button id="btn-sfx" class="btn-center">EFFETTI SONORI: ATTIVATI</button>
             <button id="btn-fullscreen" class="btn-center">FULLSCREEN: OFF</button>
         </div>
         <div class="display-settings">
+            <label>VOLUME MUSICA</label>
+            <input type="range" id="range-music-volume" min="0" max="100" value="80">
+            <label>VOLUME EFFETTI SONORI</label>
+            <input type="range" id="range-sfx-volume" min="0" max="100" value="80">
             <label>LUMINOSITA'</label>
             <input type="range" id="range-brightness" min="60" max="140" value="100">
             <label>TONALITA' COLORE</label>
