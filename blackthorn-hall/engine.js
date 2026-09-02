@@ -13,15 +13,47 @@ const Engine = (() => {
     let state = null;   // stato di gioco corrente
     let inGame = false;
 
+    // ---------------- CONTINUITA' TRA ATTI (stessa "serie") ----------------
+    // Se story.meta.series e' definito, un atto puo' esportare il proprio
+    // stato finale (flag/stat/inventario/log) perche' l'atto successivo lo
+    // riprenda come punto di partenza invece dei suoi default. Facoltativo:
+    // se non c'e' nulla da recuperare (o meta.series manca), si procede con
+    // gli initialState della storia, esattamente come prima.
+    function carryOverKey() {
+        return story.meta && story.meta.series ? `engine_carryover_${story.meta.series}` : null;
+    }
+
+    function loadCarryOver() {
+        const key = carryOverKey();
+        if (!key) return null;
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    }
+
+    function saveCarryOver() {
+        const key = carryOverKey();
+        if (!key) return;
+        try {
+            localStorage.setItem(key, JSON.stringify({
+                flags: state.flags, stats: state.stats, inventory: state.inventory, logs: state.logs
+            }));
+        } catch (e) {}
+    }
+
     // ---------------- STATO ----------------
     function freshState() {
         const init = story.initialState || {};
+        const carry = loadCarryOver();
         return {
             currentNode: story.startNode || 'start',
-            flags: JSON.parse(JSON.stringify(init.flags || {})),
-            stats: JSON.parse(JSON.stringify(init.stats || {})),
-            inventory: JSON.parse(JSON.stringify(init.inventory || [])),
-            logs: [],
+            // I default della storia restano la base (per poterla giocare anche da sola);
+            // quanto recuperato dall'atto precedente li sovrascrive dove coincide.
+            flags: Object.assign({}, JSON.parse(JSON.stringify(init.flags || {})), carry ? carry.flags : {}),
+            stats: Object.assign({}, JSON.parse(JSON.stringify(init.stats || {})), carry ? carry.stats : {}),
+            inventory: carry ? JSON.parse(JSON.stringify(carry.inventory)) : JSON.parse(JSON.stringify(init.inventory || [])),
+            logs: carry ? JSON.parse(JSON.stringify(carry.logs)) : [],
             visited: [],
             examinedItems: []
         };
@@ -102,6 +134,9 @@ const Engine = (() => {
                 break;
             case 'playSfx':
                 GameAudio.playSfx(eff.sfx);
+                break;
+            case 'carryOverState':
+                saveCarryOver();
                 break;
             default:
                 console.warn('Effetto sconosciuto:', eff.type);

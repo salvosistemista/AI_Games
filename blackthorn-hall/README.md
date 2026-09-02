@@ -252,6 +252,28 @@ in base al nome del file referenziato — funziona con qualunque copia di
 `index.html` come base (anche `index.echoes-of-trinity.html`), quindi non serve
 mantenerne una "pulita" apposta.
 
+## Continuità tra atti (saghe multi-atto)
+
+Ogni atto resta un file storia a sé (proprio `meta.id`, proprio `initialState`) — ma se più atti condividono lo stesso `meta.series`, l'atto successivo può ereditare lo stato con cui è finito quello precedente, invece di ripartire sempre dagli stessi default.
+
+```js
+// story.miasaga-atto1.js
+meta: { id: "miasaga-atto1", series: "miasaga", ... }
+// ...
+nomeNodoFinale: {
+    ...,
+    onArrive: [ { type: "carryOverState" } ],   // esporta flag/stat/inventario/log correnti
+    options: [ { text: "> Fine dell'Atto I", target: "__mainMenu__" } ]
+}
+```
+```js
+// story.miasaga-atto2.js
+meta: { id: "miasaga-atto2", series: "miasaga", ... }   // stessa 'series' dell'Atto I
+initialState: { flags: { nuovoFlag: false }, stats: { nervi: 10 }, inventory: [] }
+```
+
+All'avvio di una nuova partita, il motore controlla se esiste uno stato esportato per quella `series`: se sì, lo usa come base, sovrascrivendo i default della storia dove i valori coincidono. Un flag/stat nuovo dell'Atto II che non esisteva nell'Atto I resta al suo valore di default — non serve dichiararlo ovunque. Se non c'è nulla da ereditare (o `series` non è definita), la storia funziona esattamente come prima: **retrocompatibile, zero impatto sulle avventure che non lo usano**.
+
 ## Cosa fa già il motore (v1.0 - questo scheletro)
 
 - Flags booleani, statistiche numeriche, inventario con quantità
@@ -264,10 +286,8 @@ mantenerne una "pulita" apposta.
 
 ## Cosa manca ancora (prossimi step del progetto)
 
-- ~~Validatore di storie~~ — fatto (`validator.html`)
-- ~~Migrazione di "Echoes of Trinity"~~ — fatto (`index.echoes-of-trinity.html`, `story.echoes-of-trinity.js`, `theme.echoes-of-trinity.js`) — 17 nodi, 0 errori/avvisi del validatore, musica e sfx aggiunti ex novo (non presenti nell'originale)
-- ~~Script di build~~ — fatto (`build.html`), testato: file singolo da 50 KB, tutti i blocchi inline sintatticamente validi
+Il piano iniziale (validatore, migrazione di prova, build) è completo. Ora in corso: **Nebbie su Blackthorn Hall**, avventura gotica in 5 atti.
 
-Il piano iniziale è completo. Prossimi passi possibili, non ancora decisi:
-scrivere una nuova avventura vera e propria con questo motore, oppure
-implementare le variazioni di tema per nodo/scena accennate in precedenza.
+- ✅ **Atto I — La Lettera** (`story.blackthorn-hall-act1.js`) — 38 nodi, tutti gli step completati
+- ✅ **Atto II — Le Ombre del Mattino** (`story.blackthorn-hall-act2.js`) — 29 nodi, tutti gli step completati, continuità reale con l'Atto I verificata end-to-end
+- ⏳ Atti III, IV, V — da scrivere

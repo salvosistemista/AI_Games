@@ -9,6 +9,7 @@
 const STORY = {
     meta: {
         id: "blackthorn-hall-act1",
+        series: "blackthorn-hall",
         title: "Nebbie su Blackthorn Hall - Atto I: La Lettera",
         version: "0.1-atto1"
     },
@@ -828,8 +829,11 @@ const STORY = {
             music: "ending_dawn",
             theme: { colorMain: "#e0b96b", colorDim: "#a3823f" },
             text: "La luce del mattino rende Blackthorn Hall quasi ordinaria — quasi. Arthur si veste con cura, ripensando alla notte appena trascorsa, alla lettera che lo ha portato fin qui, allo sguardo di Edmund carico di qualcosa che non è ancora riuscito a nominare. Oggi, si ripromette, otterrà delle risposte. Con o senza il permesso di nessuno.\n\n[FINE DELL'ATTO I — continua nell'Atto II]",
+            onArrive: [
+                { type: "carryOverState" }
+            ],
             options: [
-                { text: "> Fine dell'Atto I (Atto II non ancora disponibile)", target: "__mainMenu__" }
+                { text: "> Fine dell'Atto I — prosegui nell'Atto II", target: "__mainMenu__" }
             ]
         }
     }
