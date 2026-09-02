@@ -287,7 +287,7 @@ const UI = (() => {
     function init() {
         document.getElementById('btn-continue').disabled = true;
         document.getElementById('btn-new').onclick = () => Engine.newGame();
-        document.getElementById('btn-continue').onclick = () => showScreen('screen-game');
+        document.getElementById('btn-continue').onclick = () => { GameAudio.resume(); showScreen('screen-game'); };
         document.getElementById('btn-load').onclick = () => openSaveMenu(true);
         document.getElementById('btn-options').onclick = () => showScreen('screen-options');
         document.getElementById('btn-inventory').onclick = openInventory;
@@ -296,8 +296,10 @@ const UI = (() => {
         // Nota: NON si tocca Engine.setInGame qui — si torna al menu senza
         // abbandonare la partita, cosi' "Continua Partita" resta disponibile.
         // inGame diventa false solo quando la storia arriva davvero a un
-        // finale (goTo('__mainMenu__') dentro engine.js).
-        document.getElementById('btn-main-menu').onclick = () => showScreen('screen-main');
+        // finale (goTo('__mainMenu__') dentro engine.js). La musica invece
+        // si mette in pausa (non si ferma per sempre): riprende dallo stesso
+        // punto se si preme "Continua Partita".
+        document.getElementById('btn-main-menu').onclick = () => { GameAudio.pause(); showScreen('screen-main'); };
         document.getElementById('btn-audio').onclick = toggleAudio;
         document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
         document.getElementById('btn-options-back').onclick = () => showScreen(Engine.isInGame() ? 'screen-game' : 'screen-main');

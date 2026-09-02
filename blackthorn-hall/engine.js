@@ -126,6 +126,7 @@ const Engine = (() => {
     function goTo(nodeId) {
         if (nodeId === '__mainMenu__') {
             inGame = false;
+            GameAudio.stopTrack(); // finale vero: niente da riprendere, si ferma per sempre
             UI.showMainMenu();
             return;
         }

@@ -124,6 +124,26 @@ const GameAudio = (() => {
 
     function stopTrack() { playTrack(null); }
 
+    // Pausa/ripresa: a differenza di stopTrack(), NON dimenticano quale
+    // traccia era attiva — servono per "torna al menu senza abbandonare
+    // la partita" (vedi ui.js, pulsante Menu Principale / Continua Partita).
+    function pause() {
+        musicToken++;            // ferma il loop sintetizzato schedulato
+        if (fileAudioEl) fileAudioEl.pause();
+    }
+
+    function resume() {
+        if (!activeTrackId || !soundEnabled) return;
+        const track = (Engine.getStory().music || {})[activeTrackId];
+        if (!track) return;
+        if (track.src) {
+            fileAudioEl && fileAudioEl.play().catch(() => {});
+        } else {
+            musicToken++;
+            scheduleLoop(track, musicToken);
+        }
+    }
+
     // ---------------- ON/OFF GENERALE ----------------
     function toggle() {
         soundEnabled = !soundEnabled;
@@ -147,5 +167,5 @@ const GameAudio = (() => {
 
     function isEnabled() { return soundEnabled; }
 
-    return { uiBeep, playSfx, playTrack, stopTrack, toggle, isEnabled };
+    return { uiBeep, playSfx, playTrack, stopTrack, pause, resume, toggle, isEnabled };
 })();
