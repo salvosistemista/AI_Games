@@ -1,0 +1,2442 @@
+/* ============================================================
+   NEBBIE SU BLACKTHORN HALL — STORIA COMPLETA (TUTTI GLI ATTI)
+   ------------------------------------------------------------
+   Un solo file, una sola sessione di gioco continua: nessuna
+   schermata 'scegli l'atto', nessun trasferimento di stato tra
+   file diversi — la continuità è automatica perché è tutto lo
+   stesso oggetto STORY. Gli identificatori (nodi, musica, sfx)
+   sono prefissati per atto (act1_/act2_/...) solo per evitare
+   collisioni di nome scrivendo atti diversi: non hanno altro
+   significato speciale per il motore.
+
+   Generato unendo story.blackthorn-hall-act1.js e -act2.js
+   (script di supporto, non incluso nella distribuzione finale).
+   Da qui in avanti, i nuovi atti si aggiungono direttamente a
+   questo file — non servono più file .js separati per atto.
+   ============================================================ */
+
+const STORY = {
+    meta: {
+        "id": "blackthorn-hall",
+        "title": "Nebbie su Blackthorn Hall",
+        "version": "0.2-atto1-2"
+    },
+
+    startNode: "act1_intro_letter",
+
+    initialState: {
+        "flags": {
+            "hasLamp": false,
+            "hasRevolver": false,
+            "knowsLayout": false,
+            "talkedToAgnes": false,
+            "pembertonWarmedUp": false,
+            "noticedTremor": false,
+            "noticedJoshiahEyes": false,
+            "sawSilhouette": false,
+            "waitedTillDawn": false,
+            "metConstance": false,
+            "knowsFamilyHistory": false,
+            "deskExamined": false,
+            "edmundConfessedPartial": false,
+            "hasWestWingKey": false,
+            "sawErasedGraves": false,
+            "readInscription": false,
+            "pickAttempted": false,
+            "scoutedGrounds": false
+        },
+        "stats": {
+            "fiducia": 5,
+            "nervi": 10,
+            "indagine": 3
+        },
+        "inventory": [
+            {
+                "id": "borsa_medica",
+                "name": "Borsa medica",
+                "desc": "Gli strumenti del mestiere: non si sa mai.",
+                "examine": "Ferri chirurgici, bende pulite, una boccetta di laudano. La borsa di un medico di provincia — sufficiente per le emergenze comuni, non certo per ciò che Arthur sta per trovare."
+            }
+        ]
+    },
+
+    // ---------------- MUSICA — ATTO I ----------------
+    music: {
+        "act1_home": {
+            "wave": "triangle",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 293.66,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 369.99,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 440,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 392,
+                    "dur": 1.1
+                }
+            ]
+        },
+        "act1_journey": {
+            "wave": "sine",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 196,
+                    "dur": 0.45
+                },
+                {
+                    "freq": 246.94,
+                    "dur": 0.45
+                },
+                {
+                    "freq": 293.66,
+                    "dur": 0.45
+                },
+                {
+                    "freq": 261.63,
+                    "dur": 0.5
+                }
+            ]
+        },
+        "act1_arrival": {
+            "wave": "triangle",
+            "volume": 0.022,
+            "notes": [
+                {
+                    "freq": 110,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 130.81,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 155.56,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 146.83,
+                    "dur": 1.4
+                }
+            ]
+        },
+        "act1_house_day": {
+            "wave": "square",
+            "volume": 0.015,
+            "notes": [
+                {
+                    "freq": 164.81,
+                    "dur": 0.55
+                },
+                {
+                    "freq": 196,
+                    "dur": 0.55
+                },
+                {
+                    "freq": 233.08,
+                    "dur": 0.55
+                },
+                {
+                    "freq": 220,
+                    "dur": 0.7
+                }
+            ]
+        },
+        "act1_night": {
+            "wave": "sine",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 92.5,
+                    "dur": 1.5
+                },
+                {
+                    "freq": 130.81,
+                    "dur": 1.5
+                },
+                {
+                    "freq": 155.56,
+                    "dur": 1.5
+                },
+                {
+                    "freq": 146.83,
+                    "dur": 1.8
+                }
+            ]
+        },
+        "act1_library": {
+            "wave": "sine",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 220,
+                    "dur": 0.6
+                },
+                {
+                    "freq": 261.63,
+                    "dur": 0.6
+                },
+                {
+                    "freq": 329.63,
+                    "dur": 0.6
+                },
+                {
+                    "freq": 293.66,
+                    "dur": 0.8
+                }
+            ]
+        },
+        "act1_danger": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 98,
+                    "dur": 0.25
+                },
+                {
+                    "freq": 103.83,
+                    "dur": 0.25
+                },
+                {
+                    "freq": 98,
+                    "dur": 0.25
+                },
+                {
+                    "freq": 87.31,
+                    "dur": 0.4
+                }
+            ]
+        },
+        "act1_ending_death": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 146.83,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 130.81,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 110,
+                    "dur": 1.4
+                }
+            ]
+        },
+        "act1_ending_dawn": {
+            "wave": "triangle",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 174.61,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 220,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 261.63,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 233.08,
+                    "dur": 1
+                }
+            ]
+        },
+        "act2_morning": {
+            "wave": "triangle",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 261.63,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 329.63,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 392,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 349.23,
+                    "dur": 1
+                }
+            ]
+        },
+        "act2_grounds": {
+            "wave": "sine",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 220,
+                    "dur": 0.6
+                },
+                {
+                    "freq": 246.94,
+                    "dur": 0.6
+                },
+                {
+                    "freq": 293.66,
+                    "dur": 0.6
+                },
+                {
+                    "freq": 261.63,
+                    "dur": 0.7
+                }
+            ]
+        },
+        "act2_crypt": {
+            "wave": "sine",
+            "volume": 0.022,
+            "notes": [
+                {
+                    "freq": 87.31,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 103.83,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 98,
+                    "dur": 1.9
+                }
+            ]
+        },
+        "act2_danger": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 100,
+                    "dur": 0.25
+                },
+                {
+                    "freq": 106,
+                    "dur": 0.25
+                },
+                {
+                    "freq": 100,
+                    "dur": 0.25
+                },
+                {
+                    "freq": 88,
+                    "dur": 0.4
+                }
+            ]
+        },
+        "act2_ending_death": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 155.56,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 138.59,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 98,
+                    "dur": 1.4
+                }
+            ]
+        },
+        "act2_threshold": {
+            "wave": "sine",
+            "volume": 0.022,
+            "notes": [
+                {
+                    "freq": 146.83,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 174.61,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 130.81,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 1.6
+                }
+            ]
+        }
+    },
+
+    // ---------------- EFFETTI SONORI (entrambi gli atti) ----------------
+    sfx: {
+        "act1_sigillo_rotto": [
+            {
+                "freq": 300,
+                "dur": 0.04,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 180,
+                "dur": 0.06,
+                "type": "sawtooth"
+            }
+        ],
+        "act1_oggetto": [
+            {
+                "freq": 660,
+                "dur": 0.06
+            },
+            {
+                "freq": 880,
+                "dur": 0.1
+            }
+        ],
+        "act1_porta_cigolio": [
+            {
+                "freq": 220,
+                "dur": 0.15,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 200,
+                "dur": 0.15,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 180,
+                "dur": 0.2,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 210,
+                "dur": 0.15,
+                "type": "sawtooth"
+            }
+        ],
+        "act1_presagio": [
+            {
+                "freq": 466,
+                "dur": 0.15,
+                "type": "triangle"
+            },
+            {
+                "freq": 440,
+                "dur": 0.15,
+                "type": "triangle"
+            },
+            {
+                "freq": 220,
+                "dur": 0.35,
+                "type": "triangle"
+            }
+        ],
+        "act1_sussurro": [
+            {
+                "freq": 300,
+                "dur": 0.12,
+                "type": "sine",
+                "volume": 0.03
+            },
+            {
+                "freq": 260,
+                "dur": 0.18,
+                "type": "sine",
+                "volume": 0.025
+            }
+        ],
+        "act1_cigolio_muro": [
+            {
+                "freq": 90,
+                "dur": 0.1,
+                "type": "square"
+            },
+            {
+                "freq": 70,
+                "dur": 0.15,
+                "type": "square"
+            },
+            {
+                "freq": 90,
+                "dur": 0.1,
+                "type": "square"
+            },
+            {
+                "freq": 70,
+                "dur": 0.2,
+                "type": "square"
+            }
+        ],
+        "act1_impatto": [
+            {
+                "freq": 180,
+                "dur": 0.08,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 90,
+                "dur": 0.12,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 50,
+                "dur": 0.25,
+                "type": "sawtooth"
+            }
+        ],
+        "act1_carta_furtiva": [
+            {
+                "freq": 900,
+                "dur": 0.04,
+                "type": "sine",
+                "volume": 0.03
+            },
+            {
+                "freq": 1100,
+                "dur": 0.05,
+                "type": "sine",
+                "volume": 0.025
+            },
+            {
+                "freq": 850,
+                "dur": 0.04,
+                "type": "sine",
+                "volume": 0.02
+            }
+        ],
+        "act2_campana": [
+            {
+                "freq": 440,
+                "dur": 0.3,
+                "type": "sine"
+            },
+            {
+                "freq": 440,
+                "dur": 0.3,
+                "type": "sine"
+            }
+        ],
+        "act2_passi_pietra": [
+            {
+                "freq": 120,
+                "dur": 0.08,
+                "type": "square"
+            },
+            {
+                "freq": 100,
+                "dur": 0.08,
+                "type": "square"
+            }
+        ],
+        "act2_chiave_gira": [
+            {
+                "freq": 300,
+                "dur": 0.06,
+                "type": "square"
+            },
+            {
+                "freq": 500,
+                "dur": 0.08,
+                "type": "square"
+            },
+            {
+                "freq": 700,
+                "dur": 0.12,
+                "type": "square"
+            }
+        ],
+        "act2_lucchetto_forzato": [
+            {
+                "freq": 250,
+                "dur": 0.05,
+                "type": "square"
+            },
+            {
+                "freq": 600,
+                "dur": 0.1,
+                "type": "square"
+            }
+        ],
+        "act2_pergamena": [
+            {
+                "freq": 800,
+                "dur": 0.05,
+                "type": "sine",
+                "volume": 0.03
+            },
+            {
+                "freq": 700,
+                "dur": 0.06,
+                "type": "sine",
+                "volume": 0.025
+            }
+        ],
+        "act2_oggetto": [
+            {
+                "freq": 660,
+                "dur": 0.06
+            },
+            {
+                "freq": 880,
+                "dur": 0.1
+            }
+        ],
+        "act2_impatto": [
+            {
+                "freq": 180,
+                "dur": 0.08,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 90,
+                "dur": 0.12,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 50,
+                "dur": 0.25,
+                "type": "sawtooth"
+            }
+        ]
+    },
+
+    // ================================================================
+    // NODI — ATTO I (39 nodi)
+    // ================================================================
+    // NODI — ATTO II (29 nodi)
+    // ================================================================
+    nodes: {
+        "act1_intro_letter": {
+            "location": "STUDIO DEL DOTTOR WREN — ALDERBROOK",
+            "music": "act1_home",
+            "art": "<svg viewBox=\"0 0 300 140\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"70\" y=\"55\" width=\"160\" height=\"75\" />\n                <path d=\"M70,55 L150,105 L230,55\" />\n                <rect x=\"95\" y=\"18\" width=\"110\" height=\"55\" fill=\"var(--color-bg)\" />\n                <line x1=\"105\" y1=\"33\" x2=\"185\" y2=\"33\" />\n                <line x1=\"105\" y1=\"43\" x2=\"185\" y2=\"43\" />\n                <line x1=\"105\" y1=\"53\" x2=\"160\" y2=\"53\" />\n                <circle cx=\"150\" cy=\"92\" r=\"12\" />\n                <line x1=\"245\" y1=\"28\" x2=\"270\" y2=\"88\" />\n                <path d=\"M245,28 Q233,18 250,8\" />\n            </svg>",
+            "text": "La sera è già scesa quando il messaggero bussa. Arthur Wren posa la penna, i registri dei pazienti ancora aperti sulla scrivania, e riceve una busta sporca di fango di strada.\n\nLa calligrafia sulla busta è quella di Edmund Ashcombe — ma tremante, affrettata, così diversa dalla mano ordinata che ricordava dai tempi dell'università. Arthur rompe il sigillo.\n\nLe righe sono poche, scritte di fretta: parlano di rumori nella notte, della salute di Constance che peggiora, e di un 'vieni prima che sia troppo tardi' senza altra spiegazione. Non è da Edmund, scrivere così.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_sigillo_rotto"
+                },
+                {
+                    "type": "addItem",
+                    "id": "lettera_edmund",
+                    "name": "Lettera di Edmund",
+                    "desc": "Poche righe frettolose, macchiate d'inchiostro.",
+                    "examine": "'Arthur — perdonami la fretta, ma non ho tempo da perdere in cortesie. Le cose qui a Blackthorn Hall non vanno. Constance non sta bene, i medici del paese non sanno che pesci pigliare, o forse hanno troppa paura per dirlo apertamente. Ci sono rumori, la notte. Nei muri. Non oso scrivere altro su questa carta. Vieni, ti prego, e vieni presto — vieni prima che sia troppo tardi. Il tuo E.A.'\n\nRileggendola con più calma, noti che l'inchiostro trema visibilmente verso la fine, come se la mano di chi scriveva avesse esitato — o avesse sentito qualcosa.",
+                    "examineEffects": [
+                        {
+                            "type": "setFlag",
+                            "flag": "noticedTremor",
+                            "value": true
+                        },
+                        {
+                            "type": "modifyStat",
+                            "stat": "indagine",
+                            "delta": 1
+                        }
+                    ]
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA LETTERA DI EDMUND",
+                    "entry": "Edmund Ashcombe scrive da Blackthorn Hall: rumori notturni, la salute di Constance in declino. 'Vieni prima che sia troppo tardi.'"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Chiedi al messaggero se sa qualcosa di più",
+                    "target": "act1_messenger_query"
+                },
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details"
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories"
+                },
+                {
+                    "text": "> Non c'è tempo da perdere: prepara i bagagli",
+                    "target": "act1_packing"
+                }
+            ]
+        },
+        "act1_study_details": {
+            "location": "STUDIO DEL DOTTOR WREN",
+            "text": "Lo studio è piccolo ma ordinato: scaffali di testi di medicina, un microscopio ereditato dal suo maestro a Edimburgo, e sulla scrivania una fotografia in una cornice d'argento — Eleanor, sua moglie, morta di febbre puerperale quasi sei anni fa insieme al bambino che portava in grembo. Da allora Arthur ha riempito ogni ora vuota con il lavoro, i pazienti, i libri. Non ha più avuto, in fondo, una vera ragione per restare fermo in un posto — né per lasciarlo, finché qualcuno come Edmund non gliene desse motivo.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "ELEANOR",
+                    "entry": "Sua moglie Eleanor è morta quasi sei anni fa. Da allora, il lavoro ha riempito il vuoto."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Chiedi al messaggero se sa qualcosa di più",
+                    "target": "act1_messenger_query"
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories"
+                },
+                {
+                    "text": "> Non c'è tempo da perdere: prepara i bagagli",
+                    "target": "act1_packing"
+                }
+            ]
+        },
+        "act1_university_memories": {
+            "location": "STUDIO DEL DOTTOR WREN",
+            "text": "Cambridge, quindici anni prima: Arthur, figlio di un medico di provincia, e Edmund, erede di una delle famiglie più antiche della contea, si erano ritrovati compagni di stanza per puro capriccio dell'amministrazione universitaria. Non sarebbe dovuta funzionare, quell'amicizia — troppo diversi per censo, per temperamento — eppure Edmund era stato l'unico, tra tutti i rampolli di buona famiglia, a trattarlo mai come un pari e mai come un progetto di carità. Gli deve, se non altro, questo viaggio.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "L'AMICIZIA CON EDMUND",
+                    "entry": "Compagni di stanza a Cambridge, quindici anni fa. Edmund fu l'unico a trattarlo sempre da pari."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Chiedi al messaggero se sa qualcosa di più",
+                    "target": "act1_messenger_query"
+                },
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details"
+                },
+                {
+                    "text": "> Non c'è tempo da perdere: prepara i bagagli",
+                    "target": "act1_packing"
+                }
+            ]
+        },
+        "act1_messenger_query": {
+            "location": "STUDIO DEL DOTTOR WREN",
+            "text": "Il messaggero, un ragazzo del villaggio vicino ad Alderbrook, si stringe nelle spalle. 'So solo che m'hanno pagato per portarla in fretta, signore. Ma laggiù, a Blackthorn Hall...' esita, poi scuote la testa. 'La gente non ci va più volentieri, ecco tutto. Da quando il vecchio Lord è morto, dicono che quella casa non sia più la stessa.' Non aggiunge altro, e non sembra intenzionato a farlo.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "VOCI SU ALDERBROOK",
+                    "entry": "Il messaggero conferma solo che la gente del posto evita Blackthorn Hall 'da quando il vecchio Lord è morto'."
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details"
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories"
+                },
+                {
+                    "text": "> Non c'è tempo da perdere: prepara i bagagli",
+                    "target": "act1_packing"
+                }
+            ]
+        },
+        "act1_packing": {
+            "location": "CASA DEL DOTTOR WREN",
+            "text": "Mentre prepara la valigia, lo sguardo di Arthur cade sullo sgabuzzino in fondo al corridoio, dove tiene una vecchia lanterna a olio — utile per le visite notturne ai pazienti di campagna, quando i lampioni a gas finiscono ben prima delle strade.",
+            "options": [
+                {
+                    "text": "> Prendi la lanterna a olio",
+                    "target": "act1_packing_revolver",
+                    "effects": [
+                        {
+                            "type": "setFlag",
+                            "flag": "hasLamp",
+                            "value": true
+                        },
+                        {
+                            "type": "addItem",
+                            "id": "lanterna",
+                            "name": "Lanterna a olio",
+                            "desc": "Vecchia ma affidabile.",
+                            "examine": "Il vetro è incrinato in un angolo ma la fiamma tiene bene. L'ha portata in decine di case buie, di notte, per parti difficili e febbri improvvise. Non l'ha mai delusa."
+                        },
+                        {
+                            "type": "playSfx",
+                            "sfx": "act1_oggetto"
+                        }
+                    ]
+                },
+                {
+                    "text": "> Lasciala: sarà solo una breve visita a un amico",
+                    "target": "act1_packing_revolver"
+                }
+            ]
+        },
+        "act1_packing_revolver": {
+            "location": "CASA DEL DOTTOR WREN",
+            "text": "Nell'ultimo cassetto della scrivania, sotto vecchie carte, la mano di Arthur sfiora il revolver che fu di suo padre. Non l'ha mai portato con sé per una visita, prima d'ora. Ma la lettera di Edmund non è come le altre.",
+            "options": [
+                {
+                    "text": "> Prendi il vecchio revolver di famiglia",
+                    "target": "act1_packing_thoughts",
+                    "effects": [
+                        {
+                            "type": "setFlag",
+                            "flag": "hasRevolver",
+                            "value": true
+                        },
+                        {
+                            "type": "addItem",
+                            "id": "revolver",
+                            "name": "Revolver di famiglia",
+                            "desc": "Appartenuto a suo padre.",
+                            "examine": "Un'arma vecchio stile, curata con più affetto che necessità negli anni. Arthur non l'ha mai usata contro nulla di vivo. Spera non gli servirà nemmeno stavolta."
+                        },
+                        {
+                            "type": "playSfx",
+                            "sfx": "act1_oggetto"
+                        }
+                    ]
+                },
+                {
+                    "text": "> Lascialo: è solo una visita a un vecchio amico, non una spedizione",
+                    "target": "act1_packing_thoughts"
+                }
+            ]
+        },
+        "act1_packing_thoughts": {
+            "location": "CASA DEL DOTTOR WREN",
+            "text": "Chiude la valigia. Per un istante pensa ai pazienti che dovrà lasciare per qualche giorno, alla routine tranquilla di Alderbrook — poi rilegge mentalmente le parole di Edmund, 'vieni prima che sia troppo tardi', e ogni esitazione svanisce. Al mattino presto è già alla stazione.",
+            "options": [
+                {
+                    "text": "> Parti per Blackthorn Hall",
+                    "target": "act1_journey_train"
+                }
+            ]
+        },
+        "act1_journey_train": {
+            "location": "TRENO PER ALDERBROOK",
+            "music": "act1_journey",
+            "text": "Il treno lascia presto la città alle spalle. Colline, siepi, villaggi di pietra grigia scorrono fuori dal finestrino, e col passare delle ore la campagna si fa più selvaggia, meno curata. Verso il tardo pomeriggio una nebbia sottile inizia a salire dai campi, anche se il sole non è ancora tramontato — un dettaglio che Arthur, uomo di scienza, si sforza di non trovare inquietante.",
+            "options": [
+                {
+                    "text": "> Un compagno di viaggio attacca discorso",
+                    "target": "act1_train_stranger"
+                },
+                {
+                    "text": "> Osserva il paesaggio in silenzio, immerso nei pensieri",
+                    "target": "act1_arrival_gates"
+                }
+            ]
+        },
+        "act1_train_stranger": {
+            "location": "TRENO PER ALDERBROOK",
+            "text": "Un uomo anziano seduto di fronte, notando la destinazione scritta sul suo biglietto, inarca un sopracciglio. 'Blackthorn Hall, dice? Vecchia famiglia, gli Ashcombe. Vecchia e...' si interrompe, sceglie le parole con cura, 'particolare. Mio nonno diceva che certe famiglie con troppa terra e troppa storia finiscono per dovere qualcosa a qualcosa, se capisce cosa intendo.' Non capisce, ma qualcosa nel tono dell'uomo gli fa venire la pelle d'oca.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "SUPERSTIZIONI LOCALI",
+                    "entry": "Un passeggero allude a un debito antico della famiglia Ashcombe, senza spiegarsi oltre."
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Prosegui verso Blackthorn Hall",
+                    "target": "act1_arrival_gates"
+                }
+            ]
+        },
+        "act1_arrival_gates": {
+            "location": "CANCELLO DI BLACKTHORN HALL",
+            "music": "act1_arrival",
+            "art": "<svg viewBox=\"0 0 300 160\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <path d=\"M90,90 L90,58 L150,18 L210,58 L210,90\" />\n                <rect x=\"105\" y=\"68\" width=\"20\" height=\"22\" />\n                <rect x=\"175\" y=\"68\" width=\"20\" height=\"22\" />\n                <rect x=\"140\" y=\"72\" width=\"20\" height=\"18\" />\n                <path d=\"M40,150 L55,98 L70,150\" />\n                <path d=\"M230,150 L245,93 L260,150\" />\n                <line x1=\"60\" y1=\"158\" x2=\"60\" y2=\"98\" />\n                <line x1=\"240\" y1=\"158\" x2=\"240\" y2=\"98\" />\n                <path d=\"M60,98 Q150,68 240,98\" />\n                <line x1=\"90\" y1=\"158\" x2=\"90\" y2=\"103\" />\n                <line x1=\"120\" y1=\"158\" x2=\"120\" y2=\"98\" />\n                <line x1=\"150\" y1=\"158\" x2=\"150\" y2=\"96\" />\n                <line x1=\"180\" y1=\"158\" x2=\"180\" y2=\"98\" />\n                <line x1=\"210\" y1=\"158\" x2=\"210\" y2=\"103\" />\n            </svg>",
+            "text": "La carrozza a noleggio si ferma davanti a un cancello di ferro battuto, arrugginito, semiaperto su un viale che si perde nel verde. Oltre gli alberi, appena visibile nella luce che cala, la sagoma di Blackthorn Hall — enorme, silenziosa, con più finestre buie che illuminate.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Osserva il giardino incolto prima di entrare",
+                    "target": "act1_grounds_garden"
+                },
+                {
+                    "text": "> Attraversa il cancello e avvicinati alla casa",
+                    "target": "act1_arrival_pemberton"
+                }
+            ]
+        },
+        "act1_grounds_garden": {
+            "location": "GIARDINO DI BLACKTHORN HALL",
+            "text": "Quello che doveva essere un giardino ordinato è ormai un groviglio di rovi ed erbacce. Una statua — un angelo, forse, o un bambino, è difficile dirlo — giace spezzata a metà tra le foglie morte, il volto eroso dal tempo o forse deliberatamente scalpellato via.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "IL GIARDINO",
+                    "entry": "Statua spezzata e volto cancellato nel giardino incolto — nessuno cura questo posto da anni."
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Attraversa il cancello e avvicinati alla casa",
+                    "target": "act1_arrival_pemberton"
+                }
+            ]
+        },
+        "act1_arrival_pemberton": {
+            "location": "INGRESSO DI BLACKTHORN HALL",
+            "music": "act1_house_day",
+            "text": "La porta si apre prima ancora che Arthur bussi. Una donna anziana in nero, la schiena dritta come un fuso, lo osserva con una cortesia troppo formale per essere calorosa. 'Dottor Wren, presumo. Il signor Ashcombe l'aspetta. Sono Mrs. Pemberton — governante di questa casa da prima che il signor Edmund nascesse.' Non aggiunge altro, e si volta per farlo entrare.",
+            "options": [
+                {
+                    "text": "> Prova a fare due chiacchiere con la governante",
+                    "target": "act1_pemberton_smalltalk"
+                },
+                {
+                    "text": "> Dai un'occhiata ai ritratti appesi nell'ingresso",
+                    "target": "act1_hall_portraits"
+                },
+                {
+                    "text": "> Seguila dentro, verso Edmund",
+                    "target": "act1_arrival_edmund"
+                }
+            ]
+        },
+        "act1_pemberton_smalltalk": {
+            "location": "INGRESSO DI BLACKTHORN HALL",
+            "text": "Arthur tenta un commento cortese sul viaggio, sul tempo. Mrs. Pemberton risponde con monosillabi impeccabili e un sorriso che non raggiunge mai gli occhi. È chiaro che con lei la cordialità spicciola non funziona — servirà ben altro, se mai vorrà parlare davvero.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "MRS. PEMBERTON",
+                    "entry": "Cortese ma impenetrabile. La cordialità superficiale non basta a farla parlare."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Dai un'occhiata ai ritratti appesi nell'ingresso",
+                    "target": "act1_hall_portraits"
+                },
+                {
+                    "text": "> Seguila dentro, verso Edmund",
+                    "target": "act1_arrival_edmund"
+                }
+            ]
+        },
+        "act1_hall_portraits": {
+            "location": "INGRESSO DI BLACKTHORN HALL",
+            "text": "Una fila di ritratti sorveglia l'ingresso — generazioni di Ashcombe in abiti d'epoca, sguardi severi dipinti a olio. Uno in particolare attira la sua attenzione: un uomo dai lineamenti duri, una targhetta d'ottone alla base che recita 'Lord Josiah Ashcombe, 1791-1856'.",
+            "options": [
+                {
+                    "text": "> Osserva con attenzione il ritratto di Josiah",
+                    "target": "act1_arrival_edmund",
+                    "skillCheck": {
+                        "stat": "indagine",
+                        "difficulty": 5,
+                        "success": "act1_hall_portraits_notice",
+                        "failure": "act1_hall_portraits_nothing"
+                    }
+                },
+                {
+                    "text": "> Non c'è tempo per i quadri: raggiungi Edmund",
+                    "target": "act1_arrival_edmund"
+                }
+            ]
+        },
+        "act1_hall_portraits_notice": {
+            "location": "INGRESSO DI BLACKTHORN HALL",
+            "text": "Più lo osserva, più Arthur nota un dettaglio strano: qualunque punto dell'ingresso scelga, gli occhi dipinti di Josiah Ashcombe sembrano sempre puntati esattamente su di lui. Sa che è un trucco della prospettiva pittorica, comune in questo tipo di ritratti — eppure non riesce a scrollarsi di dosso la sensazione di essere osservato.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "noticedJoshiahEyes",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "LORD JOSIAH",
+                    "entry": "Il ritratto di Josiah Ashcombe (1791-1856) sembra seguire chi si muove nell'ingresso."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_presagio"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Raggiungi Edmund",
+                    "target": "act1_arrival_edmund"
+                }
+            ]
+        },
+        "act1_hall_portraits_nothing": {
+            "location": "INGRESSO DI BLACKTHORN HALL",
+            "text": "Un ritratto come tanti altri, si dice — un antenato austero come tutti gli antenati dipinti nei corridoi di famiglia. Non c'è tempo da perdere in fantasie: Edmund lo aspetta.",
+            "options": [
+                {
+                    "text": "> Raggiungi Edmund",
+                    "target": "act1_arrival_edmund"
+                }
+            ]
+        },
+        "act1_arrival_edmund": {
+            "location": "SALOTTO PRINCIPALE",
+            "text": "Edmund è in piedi davanti al camino spento, più magro di come Arthur lo ricordava, le occhiaie profonde di chi non dorme da settimane. Quando lo vede, un sollievo genuino gli attraversa il volto — ma dura solo un istante, prima che la cautela riprenda il sopravvento. 'Arthur. Sei venuto.' Non sembra sorpreso quanto grato.",
+            "options": [
+                {
+                    "text": "> Abbraccialo e chiedigli subito cosa sta succedendo",
+                    "target": "act1_dinner",
+                    "effects": [
+                        {
+                            "type": "modifyStat",
+                            "stat": "fiducia",
+                            "delta": 1
+                        }
+                    ]
+                },
+                {
+                    "text": "> Sii cauto: lascia che sia lui a parlare, quando sarà pronto",
+                    "target": "act1_dinner",
+                    "effects": [
+                        {
+                            "type": "modifyStat",
+                            "stat": "indagine",
+                            "delta": 1
+                        }
+                    ]
+                },
+                {
+                    "text": "> Chiedigli un momento da solo, lontano da orecchie indiscrete",
+                    "target": "act1_edmund_aside"
+                }
+            ]
+        },
+        "act1_edmund_aside": {
+            "location": "SALOTTO PRINCIPALE",
+            "text": "Edmund lancia un'occhiata alla porta, poi abbassa la voce. 'Non qui. Non con Pemberton che gira per casa.' Per un istante sembra sul punto di dire qualcosa di importante — poi scuote la testa. 'Dopo cena. Ti prego, Arthur, abbi pazienza con me. Non è che non mi fidi di te. È che a dirlo ad alta voce... diventa vero.' Il sollievo di avere un amico vicino, però, è visibile sul suo volto.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "EDMUND TRATTIENE QUALCOSA",
+                    "entry": "'A dirlo ad alta voce diventa vero,' dice Edmund. Promette di parlare dopo cena."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Rispetta la sua richiesta, per ora",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_dinner": {
+            "location": "SALA DA PRANZO",
+            "text": "La cena si consuma in un salone troppo grande per due persone sole, il servizio d'argento che tintinna nel silenzio. Edmund parla di cose superficiali — il raccolto, la ferrovia, vecchi conoscenti comuni — evitando con cura ogni domanda che si avvicini troppo al motivo della lettera. Di Constance, non fa parola.",
+            "options": [
+                {
+                    "text": "> Chiedi apertamente notizie di Constance",
+                    "target": "act1_retiring",
+                    "effects": [
+                        {
+                            "type": "modifyStat",
+                            "stat": "nervi",
+                            "delta": -1
+                        },
+                        {
+                            "type": "modifyStat",
+                            "stat": "indagine",
+                            "delta": 1
+                        },
+                        {
+                            "type": "addLog",
+                            "title": "IL SILENZIO SU CONSTANCE",
+                            "entry": "Alla domanda diretta, Edmund risponde solo che sua sorella 'non sta bene' e cambia argomento."
+                        }
+                    ]
+                },
+                {
+                    "text": "> Lascia correre: è ancora presto per insistere",
+                    "target": "act1_retiring"
+                },
+                {
+                    "text": "> Nota il posto apparecchiato ma vuoto in fondo al tavolo",
+                    "target": "act1_dinner_empty_seat"
+                },
+                {
+                    "text": "> Osserva i dettagli della sala mentre si parla del più e del meno",
+                    "target": "act1_dinner_local_color"
+                },
+                {
+                    "text": "> Chiedi di suo padre, il vecchio Lord Ashcombe",
+                    "target": "act1_dinner_father"
+                },
+                {
+                    "text": "> Nota quanto sembra nervoso il personale di servizio",
+                    "target": "act1_dinner_staff_unease"
+                }
+            ]
+        },
+        "act1_dinner_father": {
+            "location": "SALA DA PRANZO",
+            "text": "Alla menzione del padre, qualcosa nello sguardo di Edmund si irrigidisce. 'È morto tre anni fa. Malattia di famiglia, dicono i medici del paese — un lento declino delle facoltà mentali, non diverso da quello che portò via anche nostro nonno, a suo tempo.' Beve un sorso di vino prima di continuare, quasi controvoglia: 'A quanto pare è cosa che si tramanda, negli Ashcombe. Una specie di... maledizione di famiglia, se si crede alle superstizioni di paese. Io preferisco pensare fosse solo malattia.' Il modo in cui lo dice, però, non suona affatto convinto.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA 'MALATTIA DI FAMIGLIA'",
+                    "entry": "Il padre e il nonno di Edmund sono morti dello stesso 'lento declino mentale'. Lui la chiama malattia. Non sembra crederci del tutto."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna alla conversazione",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_dinner_staff_unease": {
+            "location": "SALA DA PRANZO",
+            "text": "Il giovane valletto che versa il vino ha le mani che tremano appena, gli occhi che scattano verso le finestre ad ogni scricchiolio della vecchia casa. Non è il nervosismo di chi serve per la prima volta a tavola — è qualcosa di più simile alla paura, accuratamente mascherata sotto un contegno professionale che sembra costargli uno sforzo evidente.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "IL NERVOSISMO DELLA SERVITÙ",
+                    "entry": "Anche il personale di servizio sembra vivere nella paura, non solo nella discrezione."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna alla conversazione",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_dinner_empty_seat": {
+            "location": "SALA DA PRANZO",
+            "text": "In fondo al tavolo, un posto è apparecchiato con la stessa cura degli altri — tovagliolo piegato, bicchiere pulito — eppure nessuno vi si siede, e nessuno lo nomina. Arthur immagina sia il posto di Constance. Il fatto che venga comunque preparato ogni sera, per un'assenza che tutti fingono di non notare, gli sembra più inquietante di una sedia vuota e basta.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "IL POSTO DI CONSTANCE",
+                    "entry": "Apparecchiato ogni sera, mai occupato, mai nominato."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna alla conversazione",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_dinner_local_color": {
+            "location": "SALA DA PRANZO",
+            "text": "L'argenteria porta lo stemma di famiglia, consumato da generazioni di lucidatura. Il vino è buono ma la bottiglia ha evidentemente anni sul groppone, presa da una cantina che nessuno rifornisce più con regolarità. Ogni dettaglio di Blackthorn Hall racconta la stessa storia: una ricchezza antica che si mantiene per inerzia, non più per cura.",
+            "options": [
+                {
+                    "text": "> Torna alla conversazione",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_retiring": {
+            "location": "STANZA DEGLI OSPITI",
+            "music": "act1_night",
+            "theme": {
+                "colorMain": "#8fa8bd",
+                "colorDim": "#5c7285"
+            },
+            "text": "Mrs. Pemberton lo accompagna nella stanza degli ospiti, nell'ala est della casa. 'Se le serve qualcosa, signore, tiri il cordone del campanello. Sebbene, di notte...' si interrompe, e per la prima volta la sua compostezza vacilla appena. '...di notte è meglio non girare troppo per la casa.' Poi se ne va, senza aggiungere altro.",
+            "options": [
+                {
+                    "text": "> Esamina la stanza prima di coricarti",
+                    "target": "act1_room_details"
+                },
+                {
+                    "text": "> Affacciati alla finestra, verso il giardino",
+                    "target": "act1_window_silhouette"
+                },
+                {
+                    "text": "> Nel corridoio, una cameriera sta spegnendo le candele",
+                    "target": "act1_corridor_agnes"
+                },
+                {
+                    "text": "> Esplora il corridoio verso l'ala ovest",
+                    "target": "act1_westwing_door"
+                },
+                {
+                    "text": "> Prima di dormire, sbircia nella biblioteca poco distante",
+                    "target": "act1_library_glance"
+                },
+                {
+                    "text": "> Una porta socchiusa in fondo al corridoio lascia filtrare un lamento sommesso",
+                    "target": "act1_constance_glimpse"
+                },
+                {
+                    "text": "> Sei stanco dal viaggio: prova a dormire",
+                    "target": "act1_night_sounds"
+                }
+            ]
+        },
+        "act1_constance_glimpse": {
+            "location": "CORRIDOIO DELL'ALA EST",
+            "text": "Attraverso lo spiraglio di una porta socchiusa, Arthur scorge una giovane donna seduta accanto alla finestra, il volto pallido illuminato dalla luna — dev'essere Constance. Lei si accorge di lui e, invece di allontanarsi spaventata, gli fa cenno di avvicinarsi. 'Lei è l'amico di Edmund,' sussurra, la voce roca come se parlasse poco, di rado. 'Non si fidi. Non di quello che mio fratello sta per fare.' Prima che Arthur possa chiedere altro, dei passi decisi risuonano in fondo al corridoio — Mrs. Pemberton — e Constance richiude la porta con un gesto rapido, quasi impaurito.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "CONSTANCE",
+                    "entry": "'Non si fidi di quello che mio fratello sta per fare,' sussurra Constance, prima di richiudersi in fretta."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_sussurro"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "metConstance",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Allontanati prima che Mrs. Pemberton ti trovi lì",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_room_details": {
+            "location": "STANZA DEGLI OSPITI",
+            "text": "La stanza è arredata con gusto vittoriano ormai fuori moda — pesanti tende di velluto, un armadio scuro che scricchiola nel silenzio. Sopra il caminetto, un dipinto raffigura Blackthorn Hall vista dal giardino, ma qualcosa nella prospettiva non torna: una delle finestre dell'ala ovest, nel quadro, è illuminata. Nella realtà, quell'ala è buia e sigillata da anni, per quanto ne sa.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "IL DIPINTO SBAGLIATO",
+                    "entry": "Un vecchio dipinto della casa mostra una finestra illuminata nell'ala ovest — oggi sigillata e buia."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_window_silhouette": {
+            "location": "STANZA DEGLI OSPITI — FINESTRA",
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"20\" y=\"10\" width=\"120\" height=\"130\" />\n                <line x1=\"80\" y1=\"10\" x2=\"80\" y2=\"140\" />\n                <line x1=\"20\" y1=\"75\" x2=\"140\" y2=\"75\" />\n                <path d=\"M170,140 L185,80 L200,140\" />\n                <path d=\"M250,140 L262,95 L274,140\" />\n                <path d=\"M212,140 L212,110 Q212,102 224,102 Q236,102 236,110 L236,140 Z\" fill=\"var(--color-dim)\" stroke=\"none\" />\n                <circle cx=\"224\" cy=\"94\" r=\"8\" fill=\"var(--color-dim)\" stroke=\"none\" />\n            </svg>",
+            "text": "Il giardino, sotto la luna velata di foschia, è immobile e silenzioso. Per un istante, però, tra gli alberi al margine del prato, Arthur crede di scorgere una sagoma ferma — alta, immobile, rivolta verso la casa. Sbatte le palpebre, e quando riguarda non c'è più nulla. Poteva essere un cervo. Poteva essere un ramo spezzato dal vento. Il suo battito cardiaco, però, non sembra convinto di nessuna delle due spiegazioni.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA SAGOMA NEL GIARDINO",
+                    "entry": "Una figura immobile tra gli alberi, rivolta verso la casa. Scomparsa in un battito di ciglia."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_presagio"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "sawSilhouette",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -2
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Allontanati dalla finestra",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_corridor_agnes": {
+            "location": "CORRIDOIO DELL'ALA EST",
+            "text": "Una giovane cameriera, intenta a spegnere le candele lungo il corridoio, sussulta vedendolo. 'Oh! Scusi, signore, non volevo... 'Si chiama Agnes, scopre, ed è l'unica persona in casa disposta a parlare con qualcosa che somigli alla sincerità. Abbassa la voce: 'Lei è amico del signor Edmund, vero? Allora forse la ascolterà. Dica alla signorina Constance che non è pazza. Qualunque cosa dicano in paese, non è pazzia quella che ha.' Prima che Arthur possa chiedere altro, sente dei passi e si affretta via.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "AGNES",
+                    "entry": "'Non è pazzia quella che ha la signorina Constance,' dice la cameriera, prima di allontanarsi in fretta."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_sussurro"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "talkedToAgnes",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "knowsLayout",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna verso la tua stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_westwing_door": {
+            "location": "ALA OVEST — PORTA SIGILLATA",
+            "text": "Il corridoio verso l'ala ovest termina in una pesante porta di quercia, chiusa da un lucchetto che sembra più recente del resto della casa. Da sotto la porta filtra una corrente d'aria fredda, sorprendente per una casa altrimenti così soffocante. Non c'è modo di aprirla, non stanotte — ma Arthur si ripromette di scoprire cosa Edmund tenga così ostinatamente chiuso.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "knowsLayout",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "L'ALA OVEST SIGILLATA",
+                    "entry": "Una porta di quercia, lucchetto recente, corrente d'aria fredda da sotto la soglia."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_porta_cigolio"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna verso la tua stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_library_glance": {
+            "location": "BIBLIOTECA",
+            "music": "act1_library",
+            "theme": {
+                "colorMain": "#d4a441",
+                "colorDim": "#8a6a28"
+            },
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"10\" y=\"10\" width=\"90\" height=\"130\" />\n                <line x1=\"10\" y1=\"45\" x2=\"100\" y2=\"45\" />\n                <line x1=\"10\" y1=\"80\" x2=\"100\" y2=\"80\" />\n                <line x1=\"10\" y1=\"115\" x2=\"100\" y2=\"115\" />\n                <line x1=\"25\" y1=\"10\" x2=\"25\" y2=\"130\" />\n                <line x1=\"40\" y1=\"10\" x2=\"40\" y2=\"130\" />\n                <line x1=\"55\" y1=\"10\" x2=\"55\" y2=\"130\" />\n                <line x1=\"70\" y1=\"10\" x2=\"70\" y2=\"130\" />\n                <line x1=\"85\" y1=\"10\" x2=\"85\" y2=\"130\" />\n                <ellipse cx=\"200\" cy=\"112\" rx=\"70\" ry=\"18\" />\n                <line x1=\"150\" y1=\"112\" x2=\"150\" y2=\"140\" />\n                <line x1=\"250\" y1=\"112\" x2=\"250\" y2=\"140\" />\n                <path d=\"M175,102 L200,94 L225,102\" />\n                <line x1=\"255\" y1=\"97\" x2=\"255\" y2=\"72\" />\n                <path d=\"M240,72 L270,72 L262,52 L248,52 Z\" />\n            </svg>",
+            "text": "La porta della biblioteca è socchiusa. Dentro, scaffali di quercia scura arrivano fino al soffitto, carichi di volumi che sembrano non essere stati spolverati da anni — eppure, stranamente, alcuni dorsi sono più consumati di altri, come se qualcuno li consultasse spesso. Un tavolo al centro della stanza è ingombro di carte. Arthur sa che dovrebbe essere a letto, ma la curiosità è più forte del sonno.",
+            "options": [
+                {
+                    "text": "> Sfoglia l'albero genealogico della famiglia",
+                    "target": "act1_library_genealogy"
+                },
+                {
+                    "text": "> Osserva i volumi più antichi sugli scaffali alti",
+                    "target": "act1_library_old_books"
+                },
+                {
+                    "text": "> Dai un'occhiata alle carte sparse sul tavolo",
+                    "target": "act1_library_desk",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "deskExamined",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Dai un'occhiata alle carte sparse sul tavolo",
+                    "target": "act1_library_desk_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "deskExamined"
+                    }
+                },
+                {
+                    "text": "> È tardi: torna verso la tua stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_library_genealogy": {
+            "location": "BIBLIOTECA — ALBERO GENEALOGICO",
+            "text": "Un enorme volume rilegato in pelle raccoglie l'albero genealogico degli Ashcombe, generazione dopo generazione, fin dal Seicento. Arthur nota però qualcosa di strano: due nomi, in due punti diversi dell'albero — sempre un primogenito, sempre a distanza di circa due generazioni l'uno dall'altro — sono stati accuratamente cancellati con l'inchiostro, al punto da rendere la carta quasi consumata in quei punti. Non manomessi per errore: cancellati con cura, con pazienza, come se qualcuno non volesse che restasse traccia.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "I NOMI CANCELLATI",
+                    "entry": "Nell'albero genealogico, due primogenoti Ashcombe sono stati cancellati con cura, a distanza di circa due generazioni l'uno dall'altro."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "knowsFamilyHistory",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Osserva anche i volumi più antichi",
+                    "target": "act1_library_old_books"
+                },
+                {
+                    "text": "> Dai un'occhiata alle carte sul tavolo",
+                    "target": "act1_library_desk"
+                },
+                {
+                    "text": "> Torna verso la tua stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_library_old_books": {
+            "location": "BIBLIOTECA — SCAFFALI ALTI",
+            "text": "I volumi più antichi trattano di argomenti che stridono con la razionalità vittoriana del resto della casa: trattati di botanica esoterica, resoconti di viaggio in terre remote, un paio di testi di filosofia naturale che sfiorano l'occulto più che la scienza. Uno in particolare, più consumato degli altri, porta sul dorso solo le iniziali 'J.A.' impresse in oro. Arthur prova ad aprirlo, ma il testo è in un latino talmente arcaico e specialistico da restargli quasi incomprensibile.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "IL LIBRO DI J.A.",
+                    "entry": "Un volume antico, iniziali 'J.A.' in oro sul dorso, testo in un latino troppo arcaico da decifrare stanotte."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Sfoglia anche l'albero genealogico",
+                    "target": "act1_library_genealogy"
+                },
+                {
+                    "text": "> Dai un'occhiata alle carte sul tavolo",
+                    "target": "act1_library_desk"
+                },
+                {
+                    "text": "> Torna verso la tua stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_library_desk": {
+            "location": "BIBLIOTECA — SCRIVANIA DI EDMUND",
+            "text": "Le carte sul tavolo sono chiaramente opera di Edmund: appunti fitti, alcuni depennati con foga, in mezzo a libri di religione comparata e folklore locale aperti a metà. Una frase, sottolineata due volte, cattura l'attenzione di Arthur: 'deve esistere un modo per sciogliere un legame senza pagarne il prezzo intero.' Non è chiaro a cosa si riferisca — ma il tono, disperato più che accademico, dice più di quanto Edmund abbia mai detto a voce alta.",
+            "options": [
+                {
+                    "text": "> Osserva le carte senza toccarle",
+                    "target": "act1_library_glance",
+                    "effects": [
+                        {
+                            "type": "modifyStat",
+                            "stat": "indagine",
+                            "delta": 1
+                        },
+                        {
+                            "type": "addLog",
+                            "title": "LE RICERCHE DI EDMUND",
+                            "entry": "'Deve esistere un modo per sciogliere un legame senza pagarne il prezzo intero,' ha scritto Edmund."
+                        },
+                        {
+                            "type": "setFlag",
+                            "flag": "deskExamined",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "text": "> Prendi discretamente uno dei fogli di appunti",
+                    "target": "act1_library_glance",
+                    "effects": [
+                        {
+                            "type": "modifyStat",
+                            "stat": "fiducia",
+                            "delta": -1
+                        },
+                        {
+                            "type": "addItem",
+                            "id": "appunti_edmund",
+                            "name": "Appunti di Edmund",
+                            "desc": "Un foglio sottratto dalla sua scrivania.",
+                            "examine": "'...un legame senza pagarne il prezzo intero. Ho provato ogni via nei testi di Josiah, ma ogni pagina mi riporta alla stessa conclusione che rifiuto di accettare. Deve esserci un'alternativa al patto. Deve.' Le parole 'il patto' sono sottolineate tre volte, con una violenza quasi visibile nel tratto di penna."
+                        },
+                        {
+                            "type": "addLog",
+                            "title": "UN FOGLIO SOTTRATTO",
+                            "entry": "Hai preso un appunto di Edmund. Menziona 'il patto' — sottolineato tre volte."
+                        },
+                        {
+                            "type": "playSfx",
+                            "sfx": "act1_carta_furtiva"
+                        },
+                        {
+                            "type": "setFlag",
+                            "flag": "deskExamined",
+                            "value": true
+                        }
+                    ]
+                }
+            ]
+        },
+        "act1_library_desk_revisited": {
+            "location": "BIBLIOTECA — SCRIVANIA DI EDMUND",
+            "text": "Le carte sulla scrivania sono le stesse di prima. Le ha già esaminate con attenzione — non c'è altro da scoprire qui, per ora.",
+            "options": [
+                {
+                    "text": "> Torna a considerare la biblioteca",
+                    "target": "act1_library_glance"
+                }
+            ]
+        },
+        "act1_night_sounds": {
+            "location": "STANZA DEGLI OSPITI — NOTTE FONDA",
+            "music": "act1_danger",
+            "theme": {
+                "colorMain": "#b3552f",
+                "colorDim": "#7a3a1f"
+            },
+            "text": "Arthur si sveglia di soprassalto. La casa è immersa nel silenzio più totale — troppo totale, se non fosse per un suono sordo, ritmico, che sembra provenire da dentro i muri stessi. Non è il vento. Non sono tubature che si raffreddano. È qualcosa che si muove, lentamente, in uno spazio che secondo ogni logica architettonica non dovrebbe esistere.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -2
+                },
+                {
+                    "type": "addLog",
+                    "title": "RUMORE NEI MURI",
+                    "entry": "Un suono sordo e ritmico dentro i muri, nel cuore della notte. Non è il vento."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_cigolio_muro"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Alzati e scendi a controllare",
+                    "target": "act1_night_investigate_safe",
+                    "condition": {
+                        "any": [
+                            {
+                                "type": "flag",
+                                "flag": "hasLamp"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "knowsLayout"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "text": "> Alzati e scendi a controllare",
+                    "target": "act1_night_investigate_dark",
+                    "condition": {
+                        "all": [
+                            {
+                                "type": "flag",
+                                "flag": "hasLamp",
+                                "equals": false
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "knowsLayout",
+                                "equals": false
+                            }
+                        ]
+                    }
+                },
+                {
+                    "text": "> Resta a letto: qualunque cosa sia, aspetterà fino a domani",
+                    "target": "act1_night_wait"
+                }
+            ]
+        },
+        "act1_night_investigate_safe": {
+            "location": "CORRIDOIO DI SERVIZIO",
+            "text": "Con la lanterna in mano — o forte della conoscenza della casa raccolta durante la giornata — Arthur scende con cautela verso la scala di servizio, da dove sembrava provenire il suono. Non trova nulla di conclusivo: solo una porta che dovrebbe essere chiusa a chiave, socchiusa, e un'impronta di fango fresco sul pavimento di pietra, diretta verso l'ala ovest. Il suono, ormai, è cessato del tutto.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "L'IMPRONTA NEL CORRIDOIO",
+                    "entry": "Una porta socchiusa che dovrebbe essere chiusa a chiave, e un'impronta di fango fresco verso l'ala ovest."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_porta_cigolio"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a letto: ne parlerai con Edmund domani mattina",
+                    "target": "act1_act1_close"
+                }
+            ]
+        },
+        "act1_night_investigate_dark": {
+            "location": "SCALA DI SERVIZIO — BUIO TOTALE",
+            "music": "act1_ending_death",
+            "theme": {
+                "colorMain": "#8b1e1e",
+                "colorDim": "#4a0f0f"
+            },
+            "text": "Senza luce, e senza la minima idea di come sia fatta questa parte della casa, Arthur avanza a tentoni nel corridoio di servizio, una mano contro il muro freddo. Il suono si è fatto più vicino, più insistente — e proprio mentre si volta per capire da dove venga, il suo piede trova il vuoto invece di un gradino.\n\nLa caduta lungo la scala di servizio è breve, ma la testa sbatte contro la pietra con un suono secco che Arthur, da medico, riconosce anche mentre gli si spegne la coscienza. Nessuno lo troverà prima dell'alba.\n\n[FINALE PREMATURO — UN PASSO NEL BUIO]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act1_impatto"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act1_night_wait": {
+            "location": "STANZA DEGLI OSPITI — NOTTE FONDA",
+            "text": "Arthur resta immobile sotto le coperte, il cuore che batte forte, finché il suono non svanisce da solo. Il sonno che segue è leggero e pieno di sogni che non ricorderà, ma almeno arriva. Quando apre di nuovo gli occhi, una luce grigia e incerta filtra dalle tende: è mattina.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "waitedTillDawn",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Alzati: è ora di affrontare la giornata",
+                    "target": "act1_act1_close"
+                }
+            ]
+        },
+        "act1_act1_close": {
+            "location": "BLACKTHORN HALL — ALL'ALBA",
+            "music": "act1_ending_dawn",
+            "theme": {
+                "colorMain": "#e0b96b",
+                "colorDim": "#a3823f"
+            },
+            "text": "La luce del mattino rende Blackthorn Hall quasi ordinaria — quasi. Arthur si veste con cura, ripensando alla notte appena trascorsa, alla lettera che lo ha portato fin qui, allo sguardo di Edmund carico di qualcosa che non è ancora riuscito a nominare. Oggi, si ripromette, otterrà delle risposte. Con o senza il permesso di nessuno.\n\n[FINE DELL'ATTO I — continua nell'Atto II]",
+            "onArrive": [],
+            "options": [
+                {
+                    "text": "> Fine dell'Atto I — prosegui nell'Atto II",
+                    "target": "act2_dawn_wake"
+                }
+            ]
+        },
+        "act2_dawn_wake": {
+            "location": "STANZA DEGLI OSPITI — MATTINO",
+            "music": "act2_morning",
+            "theme": {
+                "colorMain": "#e0b96b",
+                "colorDim": "#a3823f"
+            },
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"60\" y=\"20\" width=\"120\" height=\"110\" />\n                <line x1=\"120\" y1=\"20\" x2=\"120\" y2=\"130\" />\n                <line x1=\"60\" y1=\"75\" x2=\"180\" y2=\"75\" />\n                <line x1=\"130\" y1=\"10\" x2=\"160\" y2=\"40\" />\n                <line x1=\"145\" y1=\"5\" x2=\"175\" y2=\"35\" />\n                <line x1=\"160\" y1=\"15\" x2=\"190\" y2=\"45\" />\n                <circle cx=\"220\" cy=\"30\" r=\"18\" />\n            </svg>",
+            "text": "Un fascio di luce grigia e polverosa filtra dalle tende pesanti. Arthur si sveglia con la sensazione di non aver dormito affatto, per quanto la notte gli sembri già distante, quasi irreale alla luce del giorno. Da qualche parte, in lontananza, una campana di chiesa rintocca due volte — le otto del mattino ad Alderbrook.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_campana"
+                },
+                {
+                    "type": "addLog",
+                    "title": "SECONDO GIORNO",
+                    "entry": "Il mattino dopo la prima notte a Blackthorn Hall. Arthur è deciso a ottenere risposte."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Vestiti e scendi per la colazione",
+                    "target": "act2_breakfast_edmund"
+                }
+            ]
+        },
+        "act2_breakfast_edmund": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Edmund è già seduto, un piatto intatto davanti a sé. Ha l'aria di chi non ha dormito meglio di Arthur. Il silenzio tra i due si allunga, carico di tutto ciò che non è stato ancora detto.",
+            "options": [
+                {
+                    "text": "> Racconta cosa hai sentito e visto la notte scorsa, senza giri di parole",
+                    "target": "act2_breakfast_press"
+                },
+                {
+                    "text": "> Lascia che sia Edmund a parlare per primo, con calma",
+                    "target": "act2_breakfast_patient"
+                },
+                {
+                    "text": "> Mostragli l'appunto che hai preso dalla sua scrivania",
+                    "target": "act2_breakfast_notes_confront",
+                    "condition": {
+                        "type": "item",
+                        "item": "appunti_edmund",
+                        "quantity": 1
+                    }
+                },
+                {
+                    "text": "> Chiedigli un momento, prima che l'atmosfera si irrigidisca",
+                    "target": "act2_edmund_aside2"
+                },
+                {
+                    "text": "> Nota un giornale locale ripiegato accanto al piatto di Edmund",
+                    "target": "act2_breakfast_newspaper"
+                }
+            ]
+        },
+        "act2_edmund_aside2": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Arthur posa una mano sul braccio dell'amico, un gesto semplice, quello di sempre. 'Sono qui per te, Edmund. Qualunque cosa sia.' Per un istante gli occhi di Edmund si inumidiscono — poi annuisce, senza riuscire ancora a parlare, e il momento passa.",
+            "options": [
+                {
+                    "text": "> Torna alla colazione",
+                    "target": "act2_breakfast_edmund",
+                    "effects": [
+                        {
+                            "type": "modifyStat",
+                            "stat": "fiducia",
+                            "delta": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        "act2_breakfast_newspaper": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "La Gazzetta di Alderbrook riporta, in un trafiletto in seconda pagina, la scomparsa di un bracciante della zona 'in circostanze poco chiare', e un editoriale che si lamenta genericamente dei 'nervi deboli' che affliggerebbero sempre più famiglie di campagna. Nessun nome. Nessun collegamento esplicito a Blackthorn Hall. Eppure.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA GAZZETTA DI ALDERBROOK",
+                    "entry": "Un bracciante scomparso 'in circostanze poco chiare'. Nessun nome fatto, ma il sospetto resta."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna alla colazione",
+                    "target": "act2_breakfast_edmund"
+                }
+            ]
+        },
+        "act2_breakfast_press": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Arthur non gira più intorno alla questione: il rumore nei muri, gli sguardi di Mrs. Pemberton, il posto vuoto di Constance. Edmund lo ascolta senza interromperlo, il volto sempre più teso, ma quando Arthur finisce si limita a dire: 'Non qui dentro. Ti prego. Dopo, in giardino — te lo prometto.' Non è un rifiuto, ma nemmeno una vera risposta.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Accetta, per ora",
+                    "target": "act2_pemberton_morning"
+                }
+            ]
+        },
+        "act2_breakfast_patient": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Arthur sceglie la pazienza. Mangiano quasi in silenzio, e proprio quando sembra che la colazione finirà senza una parola di senso, Edmund dice, piano: 'Grazie di non avermi obbligato a spiegare tutto stamattina. Non sono ancora pronto. Ma lo sarò, prima che tu debba ripartire.' Sembra sincero — o disperatamente voglioso di esserlo.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Concedigli il tempo che chiede",
+                    "target": "act2_pemberton_morning"
+                }
+            ]
+        },
+        "act2_breakfast_notes_confront": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Arthur posa il foglio sul tavolo, tra loro. Edmund lo fissa a lungo prima di alzare lo sguardo — non c'è rabbia nei suoi occhi, solo un sollievo quasi doloroso, come chi non deve più portare da solo un peso. 'Allora l'hai visto,' mormora. 'Il patto.' Si passa una mano sul volto. 'Non qui. Ma sì — hai ragione a chiedere. Te lo dirò. Tutto.'",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": -1
+                },
+                {
+                    "type": "addLog",
+                    "title": "EDMUND SA CHE SAI",
+                    "entry": "Messo di fronte all'appunto, Edmund promette di raccontare tutto — ma non qui."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Accetta la sua promessa",
+                    "target": "act2_edmund_confession_partial"
+                }
+            ]
+        },
+        "act2_edmund_confession_partial": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "'Non posso dirti tutto a stomaco vuoto e con Pemberton che passa ogni cinque minuti,' dice Edmund a bassa voce, 'ma questo sì: la mia famiglia deve qualcosa a qualcosa, da molto prima che io nascessi. E credo che tocchi a me pagare il conto. Sto solo cercando di capire se esiste un altro modo.' Non aggiunge altro — ma per la prima volta, Arthur ha la sensazione che Edmund voglia davvero essere aiutato, non solo consolato.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "edmundConfessedPartial",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 2
+                },
+                {
+                    "type": "addLog",
+                    "title": "IL PATTO, IN PARTE",
+                    "entry": "Edmund conferma: la famiglia 'deve qualcosa' e teme che tocchi a lui pagare. Cerca un'alternativa."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Prosegui la giornata",
+                    "target": "act2_pemberton_morning"
+                }
+            ]
+        },
+        "act2_pemberton_morning": {
+            "location": "CORRIDOIO PRINCIPALE — MATTINO",
+            "text": "Mrs. Pemberton attraversa il corridoio con una pila di lenzuola tra le braccia, il passo un po' meno saldo del solito. Alla luce del giorno, senza le ombre di candela a nasconderlo, Arthur nota per la prima volta quanto sia pallida — e quanto le tremino leggermente le mani.",
+            "options": [
+                {
+                    "text": "> Nota che Mrs. Pemberton non sembra stare bene, e offriti di aiutarla",
+                    "target": "act2_pemberton_kindness",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "pembertonWarmedUp",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Esci in giardino a cercare Edmund",
+                    "target": "act2_grounds_daylight"
+                }
+            ]
+        },
+        "act2_pemberton_kindness": {
+            "location": "CORRIDOIO PRINCIPALE — MATTINO",
+            "text": "'Non è nulla, dottore, solo il cuore che invecchia più in fretta del resto,' dice lei, quasi seccata — ma non si sottrae quando Arthur insiste, con la delicatezza di chi lo fa per mestiere, per controllarle il polso. Qualcosa, in quel gesto professionale e privo di morbosità, sembra spezzare una diga tenuta a forza per anni. Per un istante, i suoi occhi si inumidiscono. 'Nessuno, in questa casa, chiede più come sto io. Da molto tempo.'",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "MRS. PEMBERTON SI APRE",
+                    "entry": "Un semplice gesto di cura medica, offerto senza secondi fini, sembra aver raggiunto qualcosa che anni di cortesia non avevano scalfito."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_oggetto"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "pembertonWarmedUp",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Chiedile, con delicatezza, cosa sa davvero di questa casa",
+                    "target": "act2_pemberton_reveals"
+                }
+            ]
+        },
+        "act2_pemberton_reveals": {
+            "location": "CORRIDOIO PRINCIPALE — MATTINO",
+            "text": "Mrs. Pemberton abbassa la voce fino a un sussurro, come se le pareti stesse potessero ascoltare. 'Ho servito il padre del signor Edmund, e prima ancora suo nonno. So che nell'ala ovest c'è qualcosa che nessun Ashcombe ha mai osato spiegarmi del tutto — solo che la chiave della porta grande è nascosta dietro il ritratto di Lord Josiah, nell'ingresso. Non gliel'ho mai detto a nessuno. Gliela dico a lei perché forse lei può ancora salvarlo, quel ragazzo, dove io non sono mai riuscita.'",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA CHIAVE NASCOSTA",
+                    "entry": "Mrs. Pemberton rivela: la chiave dell'ala ovest è nascosta dietro il ritratto di Lord Josiah nell'ingresso."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Ringraziala ed esci in giardino a cercare Edmund",
+                    "target": "act2_grounds_daylight"
+                }
+            ]
+        },
+        "act2_grounds_daylight": {
+            "location": "GIARDINO DI BLACKTHORN HALL — MATTINO",
+            "music": "act2_grounds",
+            "theme": {
+                "colorMain": "#8fae6b",
+                "colorDim": "#5c7a3f"
+            },
+            "text": "Alla luce del giorno il giardino incolto perde parte della sua minaccia notturna, ma non tutta: i rovi, la statua spezzata, il silenzio innaturale di un luogo che nessuno cura più restano lì, semplicemente più visibili. Di Edmund, nessuna traccia immediata — ma un sentiero appena distinguibile tra i rovi conduce verso il bosco, in direzione della vecchia cappella di famiglia.",
+            "options": [
+                {
+                    "text": "> Osserva di nuovo la statua spezzata, ora alla luce del giorno",
+                    "target": "act2_statue_daylight"
+                },
+                {
+                    "text": "> Dai un'occhiata alla vecchia serra abbandonata",
+                    "target": "act2_greenhouse"
+                },
+                {
+                    "text": "> Incamminati lungo il sentiero verso la cappella e il cimitero di famiglia",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_statue_daylight": {
+            "location": "GIARDINO DI BLACKTHORN HALL — MATTINO",
+            "text": "Da vicino, il volto scalpellato via della statua rivela tracce di scalpellature deliberate e recenti — non l'usura di decenni, ma il lavoro di qualcuno che ha voluto, in tempi non troppo lontani, cancellare un viso specifico. Sul basamento, a stento leggibile, resta solo la prima lettera di un nome: una 'J'.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA STATUA SFIGURATA",
+                    "entry": "Il volto della statua è stato scalpellato di proposito, non consumato dal tempo. Resta solo una 'J' sul basamento."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare il giardino",
+                    "target": "act2_grounds_daylight"
+                }
+            ]
+        },
+        "act2_greenhouse": {
+            "location": "SERRA ABBANDONATA",
+            "text": "Una serra di ferro e vetro, per metà crollata, ospita ancora file di vasi con piante esotiche ormai secche — orchidee, forse, o qualcosa di più insolito, impossibile dirlo ormai. Un cartellino ingiallito su uno dei vasi porta una scritta a mano: 'J.A. — coltivazione sperimentale, non disturbare.' La stessa calligrafia del libro nella biblioteca.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA SERRA DI J.A.",
+                    "entry": "Piante esotiche essiccate, etichettate dalla stessa mano del libro in biblioteca: 'J.A. — non disturbare.'"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare il giardino",
+                    "target": "act2_grounds_daylight"
+                }
+            ]
+        },
+        "act2_crypt_entrance": {
+            "location": "CIMITERO DI FAMIGLIA",
+            "music": "act2_crypt",
+            "theme": {
+                "colorMain": "#6b8f8a",
+                "colorDim": "#3f5c58"
+            },
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <path d=\"M110,140 L110,60 L150,20 L190,60 L190,140\" />\n                <rect x=\"140\" y=\"90\" width=\"20\" height=\"50\" />\n                <line x1=\"150\" y1=\"30\" x2=\"150\" y2=\"10\" />\n                <line x1=\"142\" y1=\"18\" x2=\"158\" y2=\"18\" />\n                <path d=\"M30,140 Q40,120 50,140\" />\n                <path d=\"M230,140 Q245,115 260,140\" />\n                <rect x=\"60\" y=\"125\" width=\"18\" height=\"15\" />\n                <rect x=\"210\" y=\"128\" width=\"18\" height=\"12\" />\n            </svg>",
+            "text": "Il bosco si apre su una piccola cappella di pietra scura, la porta socchiusa su un interno che Arthur non ha intenzione di esplorare per primo. Intorno, un piccolo cimitero di famiglia: lapidi consumate dal tempo e dal muschio, alcune quasi illeggibili. Sulla porta della cappella, un'iscrizione latina è incisa in caratteri più profondi delle altre.",
+            "options": [
+                {
+                    "text": "> Osserva le lapidi del cimitero",
+                    "target": "act2_crypt_graves"
+                },
+                {
+                    "text": "> Prova a leggere l'iscrizione sulla porta della cappella",
+                    "target": "act2_crypt_inscription"
+                },
+                {
+                    "text": "> Entra nella cappella",
+                    "target": "act2_crypt_enter_check"
+                }
+            ]
+        },
+        "act2_crypt_graves": {
+            "location": "CIMITERO DI FAMIGLIA",
+            "text": "La maggior parte delle lapidi è quello che ci si aspetterebbe: nomi consumati, date illeggibili, muschio ovunque. Ma due tombe, poco distanti l'una dall'altra, spiccano per un dettaglio sconcertante — sono chiaramente più curate delle altre. L'erba intorno è tagliata, la pietra ripulita di recente. Nessun nome inciso su nessuna delle due: solo uno spazio liscio, dove un nome avrebbe dovuto esserci.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LE TOMBE SENZA NOME",
+                    "entry": "Due tombe, curate meglio di tutte le altre, senza alcun nome inciso. Combaciano con i due nomi cancellati dall'albero genealogico."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "sawErasedGraves",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "scoutedGrounds",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare il cimitero",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_crypt_inscription": {
+            "location": "CIMITERO DI FAMIGLIA — PORTA DELLA CAPPELLA",
+            "text": "L'iscrizione è consumata ma non del tutto persa. Il latino di Arthur, arrugginito dai tempi dell'università, fatica a ricostruire il senso completo della frase.",
+            "options": [
+                {
+                    "text": "> Concentrati e prova a tradurla per intero",
+                    "target": "act2_crypt_entrance",
+                    "skillCheck": {
+                        "stat": "indagine",
+                        "difficulty": 6,
+                        "success": "act2_crypt_inscription_success",
+                        "failure": "act2_crypt_inscription_fail"
+                    }
+                },
+                {
+                    "text": "> Lascia perdere per ora, non è il momento",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_crypt_inscription_success": {
+            "location": "CIMITERO DI FAMIGLIA — PORTA DELLA CAPPELLA",
+            "text": "Pezzo per pezzo, il senso emerge: 'Ciò che riceviamo dal bosco, al bosco un giorno torna. Che il custode non dimentichi mai il prezzo pattuito.' Non è una preghiera. È un promemoria — inciso in pietra perché nessuno, mai, potesse fingere di aver dimenticato i termini.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_pergamena"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "readInscription",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "scoutedGrounds",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare il cimitero",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_crypt_inscription_fail": {
+            "location": "CIMITERO DI FAMIGLIA — PORTA DELLA CAPPELLA",
+            "text": "Il latino resta ostinatamente frammentario — Arthur riconosce solo poche parole isolate, 'bosco' e 'prezzo', senza riuscire a comporne il senso completo. Forse con più tempo, o più luce.",
+            "options": [
+                {
+                    "text": "> Torna a considerare il cimitero",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_crypt_enter_check": {
+            "location": "SOGLIA DELLA CAPPELLA",
+            "text": "La porta socchiusa lascia intravedere solo buio, oltre la soglia.",
+            "options": [
+                {
+                    "text": "> Entra nella cappella",
+                    "target": "act2_crypt_safe",
+                    "condition": {
+                        "any": [
+                            {
+                                "type": "flag",
+                                "flag": "hasLamp"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "knowsLayout"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "scoutedGrounds"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "text": "> Entra nella cappella",
+                    "target": "act2_crypt_danger",
+                    "condition": {
+                        "all": [
+                            {
+                                "type": "flag",
+                                "flag": "hasLamp",
+                                "equals": false
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "knowsLayout",
+                                "equals": false
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "scoutedGrounds",
+                                "equals": false
+                            }
+                        ]
+                    }
+                },
+                {
+                    "text": "> Ripensaci: torna a considerare il cimitero",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_crypt_danger": {
+            "location": "INTERNO DELLA CAPPELLA — BUIO TOTALE",
+            "music": "act2_ending_death",
+            "theme": {
+                "colorMain": "#8b1e1e",
+                "colorDim": "#4a0f0f"
+            },
+            "text": "Senza luce, Arthur avanza a tentoni tra le panche di pietra. Il pavimento, sotto i suoi piedi, cede improvvisamente — non terra, ma il vuoto di una cripta sotterranea mai segnalata, celata sotto lastre di pietra marce. La caduta è breve ma la posizione in cui atterra, tra ossa antiche e pietra spezzata, non lascia scampo: il collo si spezza nell'impatto.\n\n[FINALE PREMATURO — IL PAVIMENTO CHE INGHIOTTE]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_impatto"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act2_crypt_safe": {
+            "location": "INTERNO DELLA CAPPELLA",
+            "text": "Con la lanterna a rischiarare il passo — o semplicemente sapendo dove non mettere i piedi — Arthur esplora l'interno della cappella senza incidenti. È spoglia, quasi dimessa, tranne per un dettaglio: un piccolo altare laterale, ripulito di recente, con tracce di cera fresca. Qualcuno viene ancora qui. Di recente. Forse regolarmente.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "L'ALTARE CURATO",
+                    "entry": "Un altare laterale nella cappella è ripulito di recente, con tracce di cera fresca. Qualcuno lo usa ancora."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Esci e va' a cercare Edmund",
+                    "target": "act2_key_search_intro"
+                }
+            ]
+        },
+        "act2_key_search_intro": {
+            "location": "BLACKTHORN HALL — TARDO MATTINO",
+            "text": "Tornato in casa, Arthur è ormai deciso: prima o poi dovrà vedere con i suoi occhi cosa nasconde l'ala ovest. La domanda è come procurarsi la chiave.",
+            "options": [
+                {
+                    "text": "> Segui l'indicazione di Mrs. Pemberton: cerca dietro il ritratto di Lord Josiah",
+                    "target": "act2_key_from_pemberton",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "pembertonWarmedUp"
+                    }
+                },
+                {
+                    "text": "> Fruga nello studio di Edmund quando non guarda",
+                    "target": "act2_key_from_study"
+                },
+                {
+                    "text": "> Usa gli strumenti della borsa medica per forzare la serratura",
+                    "target": "act2_key_pick_lock",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "pickAttempted",
+                        "equals": false
+                    }
+                }
+            ]
+        },
+        "act2_key_from_pemberton": {
+            "location": "INGRESSO DI BLACKTHORN HALL",
+            "text": "Come indicato, dietro la cornice del ritratto di Lord Josiah, le dita di Arthur trovano una piccola chiave di ferro battuto, fredda e pesante. Per un istante, alzando lo sguardo, ha di nuovo l'impressione che gli occhi dipinti di Josiah lo stiano osservando con qualcosa che somiglia, stranamente, a un'approvazione.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "hasWestWingKey",
+                    "value": true
+                },
+                {
+                    "type": "addItem",
+                    "id": "chiave_ala_ovest",
+                    "name": "Chiave dell'Ala Ovest",
+                    "desc": "Ferro battuto, pesante, fredda al tatto.",
+                    "examine": "Una chiave antica, di fattura non recente. Il ferro è freddo anche tenuto in mano a lungo — più freddo di quanto la temperatura della stanza giustifichi."
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA CHIAVE TROVATA",
+                    "entry": "Trovata dietro il ritratto di Lord Josiah, esattamente come indicato da Mrs. Pemberton."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_oggetto"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Vai alla porta dell'ala ovest",
+                    "target": "act2_westwing_threshold"
+                }
+            ]
+        },
+        "act2_key_from_study": {
+            "location": "STUDIO DI EDMUND",
+            "text": "Con il cuore in gola, Arthur fruga rapidamente tra i cassetti dello studio di Edmund mentre la casa è silenziosa. Nel terzo cassetto, sotto una pila di lettere non spedite, trova una chiave di ferro battuto che sembra fatta apposta per una porta pesante. Si sente in colpa — ma non abbastanza da rimetterla al suo posto.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "hasWestWingKey",
+                    "value": true
+                },
+                {
+                    "type": "addItem",
+                    "id": "chiave_ala_ovest",
+                    "name": "Chiave dell'Ala Ovest",
+                    "desc": "Ferro battuto, pesante, fredda al tatto.",
+                    "examine": "Una chiave antica, di fattura non recente. Il ferro è freddo anche tenuto in mano a lungo — più freddo di quanto la temperatura della stanza giustifichi."
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": -2
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA CHIAVE SOTTRATTA",
+                    "entry": "Trovata di nascosto nello studio di Edmund. Un peso sulla coscienza, ma un passo avanti."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_oggetto"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Vai alla porta dell'ala ovest",
+                    "target": "act2_westwing_threshold"
+                }
+            ]
+        },
+        "act2_key_pick_lock": {
+            "location": "ALA OVEST — PORTA SIGILLATA",
+            "text": "Arthur si inginocchia davanti al lucchetto, tirando fuori dalla borsa medica un paio di strumenti chirurgici sottili — non fatti per quello scopo, ma sufficientemente simili a dei grimaldelli da poter funzionare, forse.",
+            "options": [
+                {
+                    "text": "> Tenta di forzare la serratura",
+                    "target": "act2_westwing_threshold",
+                    "effects": [
+                        {
+                            "type": "setFlag",
+                            "flag": "pickAttempted",
+                            "value": true
+                        }
+                    ],
+                    "skillCheck": {
+                        "stat": "indagine",
+                        "difficulty": 8,
+                        "success": "act2_key_pick_success",
+                        "failure": "act2_key_pick_fail"
+                    }
+                }
+            ]
+        },
+        "act2_key_pick_success": {
+            "location": "ALA OVEST — PORTA SIGILLATA",
+            "text": "Con un ultimo scatto secco, il meccanismo cede. Arthur si rialza, il cuore che batte forte più per l'adrenalina che per lo sforzo — ha appena scassinato una serratura in casa di un amico, e in qualche modo questo pensiero lo diverte quasi, nel mezzo di tutto il resto.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "hasWestWingKey",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "SERRATURA FORZATA",
+                    "entry": "Nessuna chiave: solo pazienza, mano ferma e gli strumenti sbagliati usati nel modo giusto."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_lucchetto_forzato"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Entra nell'ala ovest",
+                    "target": "act2_westwing_threshold"
+                }
+            ]
+        },
+        "act2_key_pick_fail": {
+            "location": "ALA OVEST — PORTA SIGILLATA",
+            "text": "Gli strumenti scivolano, il meccanismo non cede, e uno schiocco metallico troppo rumoroso rimbomba nel corridoio deserto. Arthur si blocca, il fiato sospeso, aspettando passi che non arrivano. Il lucchetto, però, resta ostinatamente chiuso. Serve un'altra strada.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "TENTATIVO FALLITO",
+                    "entry": "Il lucchetto non ha ceduto. Rumore pericoloso, nessun risultato."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Cerca un'altra via per procurarti la chiave",
+                    "target": "act2_key_search_intro"
+                }
+            ]
+        },
+        "act2_westwing_threshold": {
+            "location": "ALA OVEST — PORTA SIGILLATA",
+            "music": "act2_threshold",
+            "theme": {
+                "colorMain": "#7a6bb0",
+                "colorDim": "#4a3f7a"
+            },
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"90\" y=\"15\" width=\"120\" height=\"130\" />\n                <rect x=\"95\" y=\"20\" width=\"110\" height=\"120\" />\n                <circle cx=\"180\" cy=\"80\" r=\"6\" />\n                <line x1=\"186\" y1=\"80\" x2=\"230\" y2=\"80\" />\n                <rect x=\"225\" y=\"65\" width=\"30\" height=\"30\" />\n                <circle cx=\"240\" cy=\"80\" r=\"4\" fill=\"var(--color-main)\" stroke=\"none\" />\n            </svg>",
+            "text": "La chiave entra nella serratura con una precisione che sembra quasi innaturale, come se la porta stesse solo aspettando di essere aperta. Il meccanismo cede con un rumore secco che riecheggia lungo tutto il corridoio silenzioso. Al di là, solo buio — e una corrente d'aria fredda che sembra esalare dalla casa stessa, come un respiro trattenuto per troppo tempo.\n\n[FINE DELL'ATTO II — continua nell'Atto III]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act2_chiave_gira"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Fine dell'Atto II — prosegui nell'Atto III",
+                    "target": "__mainMenu__"
+                }
+            ]
+        }
+    }
+};

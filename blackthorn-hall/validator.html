@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validatore Storia</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #050505; color: #00ff66; font-family: 'Courier New', monospace;
+            padding: 30px; line-height: 1.6;
+        }
+        h1 { font-size: 20px; letter-spacing: 1px; margin-bottom: 4px; }
+        .subtitle { color: #00aa44; font-size: 12px; margin-bottom: 20px; }
+        .summary {
+            border: 1px solid #00ff66; padding: 12px 16px; margin-bottom: 20px;
+            font-size: 14px; max-width: 600px;
+        }
+        .summary.has-errors { border-color: #ff4444; color: #ff4444; }
+        .summary.clean { border-color: #00ff66; color: #00ff66; }
+        h2 { font-size: 14px; margin: 20px 0 8px; }
+        ul { list-style: none; max-width: 800px; }
+        li { padding: 6px 10px; margin-bottom: 4px; font-size: 13px; border-left: 3px solid; }
+        li.error { border-color: #ff4444; background: rgba(255, 68, 68, 0.08); color: #ff8888; }
+        li.warning { border-color: #ffaa00; background: rgba(255, 170, 0, 0.08); color: #ffcc66; }
+        .empty { color: #008833; font-size: 13px; }
+        code { color: #66ffaa; }
+    </style>
+</head>
+<body>
+    <h1>VALIDATORE STORIA</h1>
+    <div class="subtitle" id="subtitle">Analisi statica — nessun rendering di gioco</div>
+
+    <div id="output">Caricamento...</div>
+
+    <!-- Cambia questo src per validare un'altra storia (stesso file che punti in index.html) -->
+    <script src="story.sample.js"></script>
+    <script src="validator.js"></script>
+    <script>
+        (function () {
+            const output = document.getElementById('output');
+            const subtitle = document.getElementById('subtitle');
+
+            if (typeof STORY === 'undefined') {
+                output.innerHTML = '<div class="summary has-errors">Nessun oggetto STORY trovato. Controlla lo &lt;script src&gt; in fondo a questo file.</div>';
+                return;
+            }
+
+            subtitle.innerText = `Storia: ${STORY.meta ? STORY.meta.title : '(senza titolo)'} — id: ${STORY.meta ? STORY.meta.id : '?'}`;
+
+            const result = validateStory(STORY);
+            const hasErrors = result.errors.length > 0;
+
+            let html = '';
+            html += `<div class="summary ${hasErrors ? 'has-errors' : 'clean'}">`;
+            html += `${result.nodeCount} nodi analizzati — `;
+            html += `<strong>${result.errors.length} errori</strong>, `;
+            html += `<strong>${result.warnings.length} avvisi</strong>`;
+            html += `</div>`;
+
+            html += '<h2>ERRORI (da correggere: link rotti o dati mancanti)</h2>';
+            html += result.errors.length
+                ? '<ul>' + result.errors.map(e => `<li class="error">${escapeHtml(e)}</li>`).join('') + '</ul>'
+                : '<div class="empty">Nessun errore.</div>';
+
+            html += '<h2>AVVISI (da controllare: potrebbero essere voluti)</h2>';
+            html += result.warnings.length
+                ? '<ul>' + result.warnings.map(w => `<li class="warning">${escapeHtml(w)}</li>`).join('') + '</ul>'
+                : '<div class="empty">Nessun avviso.</div>';
+
+            output.innerHTML = html;
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+        })();
+    </script>
+</body>
+</html>
