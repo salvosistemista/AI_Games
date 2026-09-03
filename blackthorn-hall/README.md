@@ -143,6 +143,50 @@ oggetto diverso tenta la combinazione; un secondo click sullo stesso oggetto lo 
 Se non esiste una combinazione per quella coppia, il gioco mostra semplicemente
 "Non succede nulla di particolare." — nessun errore, nessun vicolo cieco.
 
+### Nota di design: usare davvero `examineEffects` per sbloccare, non solo per dare punti
+
+Il meccanismo sopra può già fare più di quanto sia stato sfruttato finora in
+Blackthorn Hall: `examineEffects` non deve limitarsi a un +1 a una statistica —
+può impostare un flag che sblocca una **nuova opzione altrove**, non
+disponibile finché quell'oggetto (o quel dettaglio di una stanza) non è stato
+osservato con attenzione. Lo stesso principio vale per i dialoghi: una domanda
+"profonda" a un personaggio può comparire solo se il giocatore ha già raccolto
+abbastanza indizi altrove — non solo alle grandi svolte (come la Fiducia
+nell'Atto III), ma anche a grana più fine, scena per scena.
+
+Il rischio da evitare, scrivendo tante scelte multiple in sequenza, è che
+un'avventura diventi un "binario" — il giocatore non deve mai fermarsi a
+ragionare perché ogni percorso è sempre ovviamente disponibile. Osservare un
+oggetto, un dettaglio di una stanza, o insistere in un dialogo dovrebbe poter
+*sbloccare* qualcosa che prima non c'era, non solo arricchire il testo. Da
+tenere presente per il prossimo progetto scritto con questo motore.
+
+### Due controlli da fare SEMPRE prima di considerare un atto finito
+
+Due problemi trovati in Blackthorn Hall dopo che sembrava già completa —
+vale la pena controllarli sistematicamente ad ogni atto, non fidarsi di
+averli evitati scrivendo con attenzione.
+
+**1. Nessun oggetto unico deve poter essere raccolto più volte.** Un nodo
+rivisitabile (raggiungibile di nuovo da se stesso seguendo le opzioni in
+avanti — un "hub" con rami opzionali che tornano indietro) con `addItem` o
+`modifyStat` dentro `onArrive` invece di `onArriveOnce` accumula ad ogni
+rivisita: un oggetto narrativamente unico diventa "x3", una statistica sale
+all'infinito. Prima di consegnare un atto, cerca ogni nodo rivisitabile
+(costruisci il grafo nodo→target, individua i cicli) e verifica che
+`addItem`/`modifyStat` siano SEMPRE in `onArriveOnce`, mai in `onArrive`.
+
+**2. Nessuna scena/dialogo con un personaggio deve ripetersi identica.**
+Un nodo rivisitabile che contiene una scoperta unica (in genere riconoscibile
+da un `addLog` — dialogo, osservazione rilevante, reazione di un personaggio)
+va **sempre** protetto con un flag: la prima volta si vede la scena vera,
+dalla seconda in poi un'opzione diversa (stesso testo o simile) porta a un
+nodo "già visto" con un testo breve e coerente, mai una ripetizione verbatim.
+Il giocatore può mantenere la possibilità di tornarci, ma non deve mai
+rivivere la stessa battuta di dialogo due volte. Per trovare i casi mancanti:
+cerca ogni nodo rivisitabile con un `addLog` che non sia già raggiunto da
+un'opzione condizionata da un flag — quelli sono i candidati da correggere.
+
 ## Aspetto: tema d'autore, variazioni per scena, preferenze del giocatore
 
 Tre livelli distinti, da non confondere:
@@ -309,5 +353,6 @@ Il piano iniziale (validatore, migrazione di prova, build) è completo. Ora in c
 - ✅ **Atto III — Il Cuore della Casa** — 16 nodi
 - ✅ **Atto IV — La Notte della Tempesta** — 14 nodi
 - ✅ **Atto V — L'Alba** — 8 nodi, 5 finali diversi
-- **Saga completa**: tutti uniti in un solo file, `story.blackthorn-hall.js` (106 nodi, 32 tracce musicali, 30 sfx, ~34 minuti di sola lettura sull'intera storia), giocabile da `index.blackthorn-hall.html` in un'unica sessione continua dalla prima lettera all'alba finale
+- **Saga completa**: tutti uniti in un solo file, `story.blackthorn-hall.js` (136 nodi), giocabile da `index.blackthorn-hall.html` in un'unica sessione continua dalla prima lettera all'alba finale
+- **Revisione narrativa post-completamento** (onestà delle scelte pericolose, reazioni vere invece di salti silenziosi, Nervi come leva narrativa reale legata al lutto per Eleanor, Constance da testimone ad agente) — vedi i due paragrafi "Nota di design" e "Due controlli da fare sempre" più sopra per il dettaglio dei principi
 - ⏳ Atti III, IV, V — da scrivere

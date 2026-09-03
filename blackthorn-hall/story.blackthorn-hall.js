@@ -66,7 +66,10 @@ const STORY = {
             "hadPrivateMomentEdmund": false,
             "examinedCircle": false,
             "examinedApparatus": false,
-            "inscriptionAttempted": false
+            "inscriptionAttempted": false,
+            "constanceInsight": false,
+            "facedGriefVision": false,
+            "constanceFoundEnRoute": false
         },
         "stats": {
             "fiducia": 5,
@@ -1790,25 +1793,11 @@ const STORY = {
             "options": [
                 {
                     "text": "> Abbraccialo e chiedigli subito cosa sta succedendo",
-                    "target": "act1_dinner",
-                    "effects": [
-                        {
-                            "type": "modifyStat",
-                            "stat": "fiducia",
-                            "delta": 1
-                        }
-                    ]
+                    "target": "act1_arrival_edmund_direct"
                 },
                 {
                     "text": "> Sii cauto: lascia che sia lui a parlare, quando sarà pronto",
-                    "target": "act1_dinner",
-                    "effects": [
-                        {
-                            "type": "modifyStat",
-                            "stat": "indagine",
-                            "delta": 1
-                        }
-                    ]
+                    "target": "act1_arrival_edmund_cautious"
                 },
                 {
                     "text": "> Chiedigli un momento da solo, lontano da orecchie indiscrete",
@@ -2220,7 +2209,7 @@ const STORY = {
         "act1_window_silhouette": {
             "location": "STANZA DEGLI OSPITI — FINESTRA",
             "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"20\" y=\"10\" width=\"120\" height=\"130\" />\n                <line x1=\"80\" y1=\"10\" x2=\"80\" y2=\"140\" />\n                <line x1=\"20\" y1=\"75\" x2=\"140\" y2=\"75\" />\n                <path d=\"M170,140 L185,80 L200,140\" />\n                <path d=\"M250,140 L262,95 L274,140\" />\n                <path d=\"M212,140 L212,110 Q212,102 224,102 Q236,102 236,110 L236,140 Z\" fill=\"var(--color-dim)\" stroke=\"none\" />\n                <circle cx=\"224\" cy=\"94\" r=\"8\" fill=\"var(--color-dim)\" stroke=\"none\" />\n            </svg>",
-            "text": "Il giardino, sotto la luna velata di foschia, è immobile e silenzioso. Per un istante, però, tra gli alberi al margine del prato, Arthur crede di scorgere una sagoma ferma — alta, immobile, rivolta verso la casa. Sbatte le palpebre, e quando riguarda non c'è più nulla. Poteva essere un cervo. Poteva essere un ramo spezzato dal vento. Il suo battito cardiaco, però, non sembra convinto di nessuna delle due spiegazioni.",
+            "text": "Il giardino, sotto la luna velata di foschia, è immobile e silenzioso. Per un istante, però, tra gli alberi al margine del prato, Arthur crede di scorgere una sagoma ferma — alta, immobile, rivolta verso la casa. Sbatte le palpebre, e quando riguarda non c'è più nulla. Poteva essere un cervo. Poteva essere un ramo spezzato dal vento. Il suo battito cardiaco, però, non sembra convinto di nessuna delle due spiegazioni. Per un istante, irrazionalmente, il suo primo pensiero corre a Eleanor — a quanto avrebbe voluto lei stesse a guardare quella stessa nebbia, e a quanto sia strano che la paura, più della malinconia, sia ciò che continua a farla riaffiorare.",
             "onArrive": [
                 {
                     "type": "addLog",
@@ -2594,7 +2583,7 @@ const STORY = {
             ],
             "options": [
                 {
-                    "text": "> Alzati e scendi a controllare",
+                    "text": "> Scendi a controllare, sicuro del cammino",
                     "target": "act1_night_investigate_safe",
                     "condition": {
                         "any": [
@@ -2610,7 +2599,7 @@ const STORY = {
                     }
                 },
                 {
-                    "text": "> Alzati e scendi a controllare",
+                    "text": "> Scendi a controllare, a tentoni nel buio",
                     "target": "act1_night_investigate_dark",
                     "condition": {
                         "all": [
@@ -3293,7 +3282,7 @@ const STORY = {
             "text": "La porta socchiusa lascia intravedere solo buio, oltre la soglia.",
             "options": [
                 {
-                    "text": "> Entra nella cappella",
+                    "text": "> Entra, sicuro del passo",
                     "target": "act2_crypt_safe",
                     "condition": {
                         "any": [
@@ -3313,7 +3302,7 @@ const STORY = {
                     }
                 },
                 {
-                    "text": "> Entra nella cappella",
+                    "text": "> Entra a tentoni, nel buio più totale",
                     "target": "act2_crypt_danger",
                     "condition": {
                         "all": [
@@ -3703,6 +3692,16 @@ const STORY = {
                         "type": "flag",
                         "flag": "readSecondDiary"
                     }
+                },
+                {
+                    "text": "> Un capogiro improvviso ti costringe a fermarti un istante",
+                    "target": "act3_lab_vision_eleanor",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "nervi",
+                        "op": "<=",
+                        "value": 6
+                    }
                 }
             ]
         },
@@ -4066,6 +4065,10 @@ const STORY = {
             ],
             "options": [
                 {
+                    "text": "> Chiedile cosa intende: come si può \"restituire\" qualcosa alla cosa nel bosco?",
+                    "target": "act3_constance_reveals_ring"
+                },
+                {
                     "text": "> Esci, il tempo stringe",
                     "target": "act3_act3_close"
                 }
@@ -4235,8 +4238,8 @@ const STORY = {
             "text": "Pochi passi più a monte, Arthur individua un punto dove il torrente si allarga e rallenta — più lento, meno profondo, sicuro da guadare con attenzione. Fradicio fino alle ossa ma incolume, raggiunge l'altra sponda e ritrova le impronte, ormai quasi cancellate dalla pioggia, dirette verso la cappella.",
             "options": [
                 {
-                    "text": "> Prosegui verso il bosco",
-                    "target": "act4_woods_approach"
+                    "text": "> Prosegui, seguendo le tracce residue",
+                    "target": "act4_constance_found_in_woods"
                 }
             ]
         },
@@ -4245,8 +4248,8 @@ const STORY = {
             "text": "Non trova un punto più sicuro in tempo utile — la corrente sembra ugualmente furiosa ovunque guardi. Alla fine attraversa comunque il ponticello, più lentamente e con più cautela della prima volta che ci aveva pensato, e questa volta le assi reggono.",
             "options": [
                 {
-                    "text": "> Prosegui verso il bosco",
-                    "target": "act4_woods_approach"
+                    "text": "> Prosegui, seguendo le tracce residue",
+                    "target": "act4_constance_found_in_woods"
                 }
             ]
         },
@@ -4396,7 +4399,23 @@ const STORY = {
                 },
                 {
                     "text": "> Non c'è tempo: agisci subito",
-                    "target": "act5_chapel_climax"
+                    "target": "act5_chapel_climax",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "nervi",
+                        "op": ">",
+                        "value": 4
+                    }
+                },
+                {
+                    "text": "> Non c'è tempo: agisci subito",
+                    "target": "act5_chapel_eleanor_temptation",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "nervi",
+                        "op": "<=",
+                        "value": 4
+                    }
                 }
             ]
         },
@@ -4418,7 +4437,23 @@ const STORY = {
             "options": [
                 {
                     "text": "> Agisci, ora",
-                    "target": "act5_chapel_climax"
+                    "target": "act5_chapel_climax",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "nervi",
+                        "op": ">",
+                        "value": 4
+                    }
+                },
+                {
+                    "text": "> Agisci, ora",
+                    "target": "act5_chapel_eleanor_temptation",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "nervi",
+                        "op": "<=",
+                        "value": 4
+                    }
                 }
             ]
         },
@@ -4435,10 +4470,20 @@ const STORY = {
                     "text": "> Offriti al posto di Edmund, consapevole di ciò che significa",
                     "target": "act5_ending_sacrifice",
                     "condition": {
-                        "type": "stat",
-                        "stat": "fiducia",
-                        "op": ">=",
-                        "value": 8
+                        "all": [
+                            {
+                                "type": "stat",
+                                "stat": "fiducia",
+                                "op": ">=",
+                                "value": 8
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "nervi",
+                                "op": ">=",
+                                "value": 4
+                            }
+                        ]
                     }
                 },
                 {
@@ -4452,8 +4497,22 @@ const STORY = {
                                 "quantity": 1
                             },
                             {
-                                "type": "flag",
-                                "flag": "readSecondDiary"
+                                "any": [
+                                    {
+                                        "type": "flag",
+                                        "flag": "readSecondDiary"
+                                    },
+                                    {
+                                        "type": "flag",
+                                        "flag": "constanceInsight"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "nervi",
+                                "op": ">=",
+                                "value": 4
                             }
                         ]
                     }
@@ -4838,6 +4897,156 @@ const STORY = {
                 {
                     "text": "> Prosegui",
                     "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act1_arrival_edmund_direct": {
+            "location": "SALOTTO PRINCIPALE",
+            "text": "Arthur lo abbraccia senza esitare, poi lo tiene per le spalle. 'Edmund. Cosa sta succedendo, davvero?' Per un istante sembra che Edmund stia per rispondere — la bocca si apre, gli occhi si inumidiscono — ma poi scuote la testa. 'Non qui. Non ora. Ma grazie di avermelo chiesto senza girarci intorno.' La sua gratitudine è genuina, anche se la risposta continua a mancare.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Andate a cena",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_arrival_edmund_cautious": {
+            "location": "SALOTTO PRINCIPALE",
+            "text": "Arthur si trattiene, lasciando che sia Edmund a scegliere i tempi. Il sollievo sul volto dell'amico è visibile — non per la domanda evitata, ma per la pazienza offerta senza che gliela chiedesse. 'Sei sempre stato bravo ad aspettare,' dice piano. 'Te ne sarò grato, quando sarò pronto.'",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Andate a cena",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act3_constance_reveals_ring": {
+            "location": "STANZA DI CONSTANCE",
+            "text": "Per la prima volta da quando Arthur la conosce, Constance sorride — un sorriso stanco, ma vero. 'L'anello. L'ho visto nei sogni di mio fratello prima ancora che iniziasse a cercarlo davvero — so che lo custodisce lei stesso, in un modo che non riesce a spiegarsi.' Si china verso di lui. 'Non basta prenderlo. Va restituito al bosco, volontariamente, da chi lo porta con l'intenzione di chiudere il debito — non di pagarlo soltanto. C'è una differenza, dottore. Una differenza che vale tutto.'",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "constanceInsight",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "CIÒ CHE SA CONSTANCE",
+                    "entry": "L'anello non va sottratto, va restituito volontariamente, con l'intenzione di chiudere il debito. Una distinzione che potrebbe fare la differenza."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Esci, il tempo stringe",
+                    "target": "act3_act3_close"
+                }
+            ]
+        },
+        "act3_lab_vision_eleanor": {
+            "location": "LABORATORIO DI LORD JOSIAH",
+            "theme": {
+                "colorMain": "#8a6bb0",
+                "colorDim": "#4a3a6a"
+            },
+            "text": "Per un istante — non più di un battito di ciglia, eppure interminabile — la stanza si dissolve. Eleanor è lì, tra gli scaffali, esattamente come l'ultima mattina che Arthur ricorda con chiarezza. Non parla. Non deve. Il capogiro passa, la stanza torna quella di sempre, ma Arthur resta fermo un istante di troppo, il cuore che batte come se avesse corso. Capisce, con un orrore quasi clinico, che questa casa si nutre esattamente di dolori come il suo.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act3_pergamena"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "facedGriefVision",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "ELEANOR, TRA GLI SCAFFALI",
+                    "entry": "Un istante di vertigine, ed Eleanor è lì — o sembra esserlo. La casa si nutre di dolori irrisolti come il suo."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act4_constance_found_in_woods": {
+            "location": "IL BOSCO — NOTTE DI TEMPESTA",
+            "theme": {
+                "colorMain": "#7a8fb0",
+                "colorDim": "#3f4a6a"
+            },
+            "text": "Le tracce finiscono contro Constance stessa, ferma tra due alberi come se avesse aspettato lui e non il contrario. Non è confusa, non è in fuga — è lucida, terribilmente lucida, gli occhi che riflettono i lampi senza sbattere le palpebre. Prima che Arthur possa dire qualcosa, è lei ad afferrargli la mano. 'Faccia in fretta, dottore. Non per me. Per Edmund. Io so già come va a finire, per me — ma lui ancora può scegliere.' Non aspetta una risposta: si incammina lei stessa verso la cappella, decisa, trascinandolo con sé.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "constanceFoundEnRoute",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "CONSTANCE GUIDA LA VIA",
+                    "entry": "Non l'ha solo trovata: lei lo aspettava, lucida e decisa, e lo guida lei stessa verso la cappella."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Seguila verso la cappella",
+                    "target": "act4_woods_approach"
+                }
+            ]
+        },
+        "act5_chapel_eleanor_temptation": {
+            "location": "INTERNO DELLA CAPPELLA — IL MOMENTO DECISIVO",
+            "theme": {
+                "colorMain": "#8a6bb0",
+                "colorDim": "#4a3a6a"
+            },
+            "text": "Per un istante, sopra il ronzio del cerchio, Arthur crede di sentire una voce che conosce fin troppo bene. Non è una minaccia. È peggio: è una promessa, mai detta a parole ma capita comunque — che qualcosa di perduto potrebbe, forse, tornare a sfiorarlo, se solo restasse, se solo si lasciasse portare dentro quel cerchio invece di lottare contro. Il pensiero dura un solo battito di cuore. È sufficiente a fargli tremare le mani.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA PROMESSA CRUDELE",
+                    "entry": "Per un istante, la casa gli offre Eleanor — o la sua promessa. Arthur resiste, ma il pensiero lascia il segno."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Resisti, e scegli",
+                    "target": "act5_chapel_climax"
                 }
             ]
         }
