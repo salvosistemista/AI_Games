@@ -307,6 +307,7 @@ Il piano iniziale (validatore, migrazione di prova, build) è completo. Ora in c
 - ✅ **Atto I — La Lettera** — 39 nodi
 - ✅ **Atto II — Le Ombre del Mattino** — 29 nodi
 - ✅ **Atto III — Il Cuore della Casa** — 16 nodi
-- ✅ **Atto IV — La Notte della Tempesta** — 14 nodi (tre percorsi che convergono verso l'arrivo alla cappella)
-- Tutti uniti in **un solo file**, `story.blackthorn-hall.js` (98 nodi totali), giocabile da `index.blackthorn-hall.html` in un'unica sessione continua
+- ✅ **Atto IV — La Notte della Tempesta** — 14 nodi
+- ✅ **Atto V — L'Alba** — 8 nodi, 5 finali diversi
+- **Saga completa**: tutti uniti in un solo file, `story.blackthorn-hall.js` (106 nodi, 32 tracce musicali, 30 sfx, ~34 minuti di sola lettura sull'intera storia), giocabile da `index.blackthorn-hall.html` in un'unica sessione continua dalla prima lettera all'alba finale
 - ⏳ Atti III, IV, V — da scrivere

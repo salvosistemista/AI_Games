@@ -638,6 +638,138 @@ const STORY = {
                     "dur": 2
                 }
             ]
+        },
+        "act5_ritual": {
+            "wave": "sawtooth",
+            "volume": 0.024,
+            "notes": [
+                {
+                    "freq": 82.41,
+                    "dur": 0.5
+                },
+                {
+                    "freq": 87.31,
+                    "dur": 0.5
+                },
+                {
+                    "freq": 77.78,
+                    "dur": 0.5
+                },
+                {
+                    "freq": 69.3,
+                    "dur": 0.8
+                }
+            ]
+        },
+        "act5_ending_broken": {
+            "wave": "triangle",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 174.61,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 196,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 220,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 164.81,
+                    "dur": 1.8
+                }
+            ]
+        },
+        "act5_ending_flight": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 130.81,
+                    "dur": 0.35
+                },
+                {
+                    "freq": 138.59,
+                    "dur": 0.35
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 0.35
+                },
+                {
+                    "freq": 98,
+                    "dur": 0.6
+                }
+            ]
+        },
+        "act5_ending_custode": {
+            "wave": "sine",
+            "volume": 0.024,
+            "notes": [
+                {
+                    "freq": 41.2,
+                    "dur": 2.2
+                },
+                {
+                    "freq": 43.65,
+                    "dur": 2.2
+                },
+                {
+                    "freq": 38.89,
+                    "dur": 2.2
+                },
+                {
+                    "freq": 36.71,
+                    "dur": 2.8
+                }
+            ]
+        },
+        "act5_ending_saved": {
+            "wave": "triangle",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 196,
+                    "dur": 1
+                },
+                {
+                    "freq": 174.61,
+                    "dur": 1
+                },
+                {
+                    "freq": 155.56,
+                    "dur": 1
+                },
+                {
+                    "freq": 146.83,
+                    "dur": 1.5
+                }
+            ]
+        },
+        "act5_ending_sacrifice": {
+            "wave": "sine",
+            "volume": 0.022,
+            "notes": [
+                {
+                    "freq": 220,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 196,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 174.61,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 130.81,
+                    "dur": 2.4
+                }
+            ]
         }
     },
 
@@ -1017,6 +1149,80 @@ const STORY = {
                 "freq": 120,
                 "dur": 0.06,
                 "type": "square"
+            }
+        ],
+        "act5_presenza": [
+            {
+                "freq": 45,
+                "dur": 0.6,
+                "type": "sine",
+                "volume": 0.035
+            },
+            {
+                "freq": 50,
+                "dur": 0.8,
+                "type": "sine",
+                "volume": 0.03
+            }
+        ],
+        "act5_rottura": [
+            {
+                "freq": 700,
+                "dur": 0.06,
+                "type": "square"
+            },
+            {
+                "freq": 300,
+                "dur": 0.1,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 150,
+                "dur": 0.2,
+                "type": "sawtooth"
+            }
+        ],
+        "act5_respiro": [
+            {
+                "freq": 300,
+                "dur": 0.3,
+                "type": "sine",
+                "volume": 0.025
+            },
+            {
+                "freq": 250,
+                "dur": 0.4,
+                "type": "sine",
+                "volume": 0.02
+            }
+        ],
+        "act5_campana_finale": [
+            {
+                "freq": 220,
+                "dur": 0.6,
+                "type": "sine"
+            },
+            {
+                "freq": 220,
+                "dur": 0.6,
+                "type": "sine"
+            },
+            {
+                "freq": 220,
+                "dur": 1,
+                "type": "sine"
+            }
+        ],
+        "act5_urlo_lontano": [
+            {
+                "freq": 500,
+                "dur": 0.15,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 350,
+                "dur": 0.2,
+                "type": "sawtooth"
             }
         ]
     },
@@ -3535,6 +3741,223 @@ const STORY = {
             "options": [
                 {
                     "text": "> Fine dell'Atto IV — prosegui nell'Atto V",
+                    "target": "act5_chapel_scene"
+                }
+            ]
+        },
+        "act5_chapel_scene": {
+            "location": "INTERNO DELLA CAPPELLA — NOTTE DI TEMPESTA",
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <circle cx=\"150\" cy=\"90\" r=\"55\" stroke-dasharray=\"4,3\" />\n                <circle cx=\"150\" cy=\"90\" r=\"3\" fill=\"var(--color-main)\" stroke=\"none\" />\n                <path d=\"M100,140 L100,60 L150,15 L200,60 L200,140\" />\n                <path d=\"M120,90 L145,75 L145,110\" fill=\"var(--color-main)\" stroke=\"none\" opacity=\"0.6\" />\n                <path d=\"M180,90 L155,105 L155,70\" fill=\"var(--color-main)\" stroke=\"none\" opacity=\"0.4\" />\n            </svg>",
+            "text": "All'interno, il cerchio inciso nel pavimento della cappella pulsa di una luce fredda e senza fonte apparente. Edmund è in ginocchio al suo margine, il volto rigato di pioggia e lacrime insieme. Poco distante, Constance è immobile, gli occhi chiusi, come in un sonno che non è sonno. E oltre il cerchio, ai limiti della percezione, qualcosa si muove — non visto direttamente, ma presente, in attesa, da tre generazioni.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act5_presenza"
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA CAPPELLA",
+                    "entry": "Edmund in ginocchio al margine del cerchio, Constance immobile, e qualcosa che aspetta, presente ma invisibile."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Osserva la scena un istante, prima di agire",
+                    "target": "act5_chapel_observe"
+                },
+                {
+                    "text": "> Non c'è tempo: agisci subito",
+                    "target": "act5_chapel_climax"
+                }
+            ]
+        },
+        "act5_chapel_observe": {
+            "location": "INTERNO DELLA CAPPELLA — NOTTE DI TEMPESTA",
+            "text": "Un istante di più, e Arthur nota che Edmund non sta recitando alcuna formula, non sta collaborando: sta resistendo, ogni muscolo teso contro una forza che lo tira verso il centro del cerchio suo malgrado. Non è un sacrificio volontario. È una cattura in corso.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "EDMUND RESISTE",
+                    "entry": "Non sta collaborando al rito: sta lottando contro una forza che lo trascina verso il cerchio."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Agisci, ora",
+                    "target": "act5_chapel_climax"
+                }
+            ]
+        },
+        "act5_chapel_climax": {
+            "location": "INTERNO DELLA CAPPELLA — IL MOMENTO DECISIVO",
+            "music": "act5_ritual",
+            "theme": {
+                "colorMain": "#6a3a8a",
+                "colorDim": "#33184a"
+            },
+            "text": "Non c'è più tempo per pensare. Qualunque cosa Arthur decida, dovrà deciderla adesso.",
+            "options": [
+                {
+                    "text": "> Offriti al posto di Edmund, consapevole di ciò che significa",
+                    "target": "act5_ending_sacrifice",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "fiducia",
+                        "op": ">=",
+                        "value": 8
+                    }
+                },
+                {
+                    "text": "> Usa l'anello e ciò che hai appreso dal diario per spezzare il patto",
+                    "target": "act5_ending_broken",
+                    "condition": {
+                        "all": [
+                            {
+                                "type": "item",
+                                "item": "anello_ashcombe",
+                                "quantity": 1
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "readSecondDiary"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "text": "> Intervieni con decisione per strappare Edmund alla presa, corpo e anima",
+                    "target": "act5_ending_saved",
+                    "condition": {
+                        "all": [
+                            {
+                                "type": "stat",
+                                "stat": "fiducia",
+                                "op": ">=",
+                                "value": 6
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "readSecondDiary"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "text": "> Afferra Edmund e trascinalo via: si fugge, subito",
+                    "target": "act5_ending_flight"
+                },
+                {
+                    "text": "> Gettati nel cerchio per fermarlo, senza sapere davvero cosa fare",
+                    "target": "act5_ending_custode"
+                }
+            ]
+        },
+        "act5_ending_broken": {
+            "location": "INTERNO DELLA CAPPELLA — ALL'ALBA",
+            "music": "act5_ending_broken",
+            "theme": {
+                "colorMain": "#c9a227",
+                "colorDim": "#7a5c2e"
+            },
+            "text": "L'anello degli Ashcombe non è un gioiello: è un sigillo, esattamente come suggeriva il diario. Arthur lo pone al centro del cerchio mentre recita, quasi a memoria ormai, le parole dell'iscrizione sulla porta della cappella — non una preghiera, ma la clausola di un contratto che nessuno aveva mai pensato di invocare fino in fondo.\n\nLa presenza ai margini del cerchio si ritira, non sconfitta ma soddisfatta di un pagamento diverso, definitivo. Edmund cade in avanti, libero, singhiozzando. Constance apre gli occhi, davvero sveglia per la prima volta da giorni.\n\nMa qualcosa, in Arthur, non torna più come prima. Da quella notte, percepirà sempre — ai margini della vista, ai margini del sonno — cose che nessun uomo di scienza dovrebbe percepire. Il prezzo non è stato pagato da Edmund. È stato spostato. Solo spostato.\n\n[FINALE — IL PATTO SPEZZATO]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act5_rottura"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act5_ending_flight": {
+            "location": "VIA DALLA CAPPELLA — ALL'ALBA",
+            "music": "act5_ending_flight",
+            "theme": {
+                "colorMain": "#8a6a3a",
+                "colorDim": "#4a3818"
+            },
+            "text": "Arthur non pensa al patto, ai diari, alle risposte. Pensa solo ad afferrare Edmund per le spalle e trascinarlo fuori dal cerchio, lontano dalla cappella, di corsa nella tempesta che finalmente comincia a placarsi verso l'alba.\n\nFunziona. In qualche modo, funziona: il rito resta incompiuto, e qualunque cosa attendesse nel bosco non li insegue oltre il limite degli alberi. Ma un rito interrotto non è un rito annullato. Nei mesi successivi, Arthur si sorprende a contare le generazioni, a chiedersi quando — non se — il conto tornerà a presentarsi, e su chi.\n\nConstance non guarisce mai del tutto. Nessuno, in casa Ashcombe, torna mai a dormire sereno.\n\n[FINALE — LA FUGA]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act5_urlo_lontano"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act5_ending_custode": {
+            "location": "DENTRO IL CERCHIO — NOTTE SENZA FINE",
+            "music": "act5_ending_custode",
+            "theme": {
+                "colorMain": "#2a1a3a",
+                "colorDim": "#150d1f"
+            },
+            "text": "Arthur si getta nel cerchio senza un piano, solo con la disperata volontà di interrompere qualunque cosa stia accadendo — e la presenza, per la prima volta, si volta davvero verso di lui.\n\nNon è rabbia, quello che sente. È interesse. Un'offerta volontaria, per quanto ignara, vale più di una presa forzata su un erede riluttante. Il legame si sposta, in un istante che dura insieme un secondo e tre generazioni, da Edmund ad Arthur.\n\nEdmund lo vede accadere, urla il suo nome, ma è già tardi. Quando il temporale si placa, Arthur è ancora in piedi, ancora se stesso — ma sa, con la stessa certezza con cui conosce il proprio nome, che ora è lui a dovere qualcosa al bosco dietro Blackthorn Hall. Non stanotte. Ma un giorno.\n\n[FINALE — IL NUOVO CUSTODE]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act5_presenza"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act5_ending_saved": {
+            "location": "INTERNO DELLA CAPPELLA — ALL'ALBA",
+            "music": "act5_ending_saved",
+            "theme": {
+                "colorMain": "#5a8a6a",
+                "colorDim": "#2a4a35"
+            },
+            "text": "Arthur sa esattamente cosa dice il diario, esattamente cosa significa quella resistenza nel corpo di Edmund. Non è forza fisica che serve — è interrompere la presa nel punto esatto in cui il rito diventa vincolante, un istante preciso che il testo di Josiah aveva descritto con orrore quasi clinico.\n\nArthur lo trova. Afferra Edmund proprio in quell'istante e lo strappa indietro, fuori dal cerchio, mentre la presenza ruggisce — non fisicamente, ma dentro la testa di Arthur, un suono che non dimenticherà mai per il resto dei suoi giorni.\n\nEdmund vive. Respira, tossisce, piange, ma vive. Il prezzo lo paga Arthur, in incubi che non lo lasceranno mai del tutto — ma quando guarda Edmund respirare accanto a sé, decide che è un prezzo che pagherebbe di nuovo, senza esitare.\n\n[FINALE — IL FRATELLO SALVATO]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act5_respiro"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act5_ending_sacrifice": {
+            "location": "DENTRO IL CERCHIO — ALL'ALBA",
+            "music": "act5_ending_sacrifice",
+            "theme": {
+                "colorMain": "#d4c088",
+                "colorDim": "#8a7a4a"
+            },
+            "text": "Arthur non esita. Non più. Spinge Edmund indietro, fuori dal margine del cerchio, e prende il suo posto con una calma che sorprende persino se stesso — l'unico gesto interamente suo, in giorni interi passati a rincorrere segreti altrui.\n\n'Arthur, no—' Ma è già fatto. La presenza accetta senza esitazione: non conta il sangue, conta la volontà offerta liberamente, e quella di Arthur è più pura di qualunque erede riluttante potesse mai offrire.\n\nEdmund vive. Constance guarisce, davvero, per la prima volta in anni. Blackthorn Hall, con l'alba, sembra quasi una casa qualunque. Ma in certe notti di tempesta, chi passa vicino al cancello arrugginito giura di scorgere, tra gli alberi, una figura immobile — non minacciosa, solo presente. Un medico di campagna che ha scelto, una volta, di restare.\n\n[FINALE — IL SACRIFICIO]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act5_campana_finale"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
                     "target": "__mainMenu__"
                 }
             ]
