@@ -1679,24 +1679,7 @@ const STORY = {
             "options": [
                 {
                     "text": "> Chiedi apertamente notizie di Constance",
-                    "target": "act1_retiring",
-                    "effects": [
-                        {
-                            "type": "modifyStat",
-                            "stat": "nervi",
-                            "delta": -1
-                        },
-                        {
-                            "type": "modifyStat",
-                            "stat": "indagine",
-                            "delta": 1
-                        },
-                        {
-                            "type": "addLog",
-                            "title": "IL SILENZIO SU CONSTANCE",
-                            "entry": "Alla domanda diretta, Edmund risponde solo che sua sorella 'non sta bene' e cambia argomento."
-                        }
-                    ]
+                    "target": "act1_dinner_constance_reaction"
                 },
                 {
                     "text": "> Lascia correre: è ancora presto per insistere",
@@ -1758,6 +1741,33 @@ const STORY = {
                 {
                     "text": "> Torna alla conversazione",
                     "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_dinner_constance_reaction": {
+            "location": "SALA DA PRANZO",
+            "text": "'Come sta Constance, Edmund?' La domanda cade nel silenzio come una pietra in uno stagno. Per un istante lungo abbastanza da essere eloquente, Edmund smette di masticare, la forchetta immobile a mezz'aria. 'Non sta bene,' dice infine, gli occhi fissi sul piatto. 'I medici del paese... non sono d'accordo tra loro su cosa sia. Preferirei non parlarne a cena, se non ti dispiace.' Cambia argomento prima che Arthur possa insistere, la voce un po' troppo controllata per essere naturale.",
+            "onArrive": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "IL SILENZIO SU CONSTANCE",
+                    "entry": "Alla domanda diretta, Edmund risponde solo che sua sorella 'non sta bene' e cambia argomento, la voce innaturalmente controllata."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Non insistere, per ora",
+                    "target": "act1_retiring"
                 }
             ]
         },
