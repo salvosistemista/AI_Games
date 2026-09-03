@@ -3702,6 +3702,14 @@ const STORY = {
                         "op": "<=",
                         "value": 6
                     }
+                },
+                {
+                    "text": "> È tempo di parlare con Edmund",
+                    "target": "act3_confront_edmund_intro",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "readSecondDiary"
+                    }
                 }
             ]
         },
@@ -3712,6 +3720,10 @@ const STORY = {
                 {
                     "text": "> Torna a considerare la stanza",
                     "target": "act3_lab_examine"
+                },
+                {
+                    "text": "> È tempo di parlare con Edmund",
+                    "target": "act3_confront_edmund_intro"
                 }
             ]
         },
