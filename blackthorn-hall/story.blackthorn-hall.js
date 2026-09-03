@@ -44,7 +44,12 @@ const STORY = {
             "edmundFullConfession": false,
             "edmundDenialPath": false,
             "witnessedConstanceCrisis": false,
-            "knowsTonightIsNight": false
+            "knowsTonightIsNight": false,
+            "constanceMissing": false,
+            "searchedGroundsFirst": false,
+            "confrontedEdmundFirst": false,
+            "preparedAtChapelFirst": false,
+            "edmundWentTogether": false
         },
         "stats": {
             "fiducia": 5,
@@ -545,6 +550,94 @@ const STORY = {
                     "dur": 1.4
                 }
             ]
+        },
+        "act4_storm": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 55,
+                    "dur": 0.7
+                },
+                {
+                    "freq": 58.27,
+                    "dur": 0.7
+                },
+                {
+                    "freq": 51.91,
+                    "dur": 0.7
+                },
+                {
+                    "freq": 49,
+                    "dur": 1
+                }
+            ]
+        },
+        "act4_danger": {
+            "wave": "sawtooth",
+            "volume": 0.022,
+            "notes": [
+                {
+                    "freq": 116.54,
+                    "dur": 0.2
+                },
+                {
+                    "freq": 123.47,
+                    "dur": 0.2
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 0.2
+                },
+                {
+                    "freq": 98,
+                    "dur": 0.32
+                }
+            ]
+        },
+        "act4_ending_death": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 130.81,
+                    "dur": 0.7
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 0.7
+                },
+                {
+                    "freq": 98,
+                    "dur": 0.7
+                },
+                {
+                    "freq": 82.41,
+                    "dur": 1.2
+                }
+            ]
+        },
+        "act4_climax": {
+            "wave": "sine",
+            "volume": 0.024,
+            "notes": [
+                {
+                    "freq": 61.74,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 69.3,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 55,
+                    "dur": 1.6
+                },
+                {
+                    "freq": 51.91,
+                    "dur": 2
+                }
+            ]
         }
     },
 
@@ -852,6 +945,78 @@ const STORY = {
                 "freq": 329.63,
                 "dur": 0.35,
                 "type": "triangle"
+            }
+        ],
+        "act4_tuono": [
+            {
+                "freq": 55,
+                "dur": 0.4,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 40,
+                "dur": 0.6,
+                "type": "sawtooth"
+            }
+        ],
+        "act4_vetro_rotto": [
+            {
+                "freq": 1200,
+                "dur": 0.04,
+                "type": "square"
+            },
+            {
+                "freq": 900,
+                "dur": 0.05,
+                "type": "square"
+            },
+            {
+                "freq": 600,
+                "dur": 0.06,
+                "type": "square"
+            }
+        ],
+        "act4_acqua_impetuosa": [
+            {
+                "freq": 200,
+                "dur": 0.15,
+                "type": "sawtooth",
+                "volume": 0.03
+            },
+            {
+                "freq": 150,
+                "dur": 0.2,
+                "type": "sawtooth",
+                "volume": 0.025
+            }
+        ],
+        "act4_annegamento": [
+            {
+                "freq": 180,
+                "dur": 0.1,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 100,
+                "dur": 0.2,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 40,
+                "dur": 0.4,
+                "type": "sawtooth"
+            }
+        ],
+        "act4_passi_corsa": [
+            {
+                "freq": 140,
+                "dur": 0.06,
+                "type": "square"
+            },
+            {
+                "freq": 120,
+                "dur": 0.06,
+                "type": "square"
             }
         ]
     },
@@ -3077,6 +3242,299 @@ const STORY = {
             "options": [
                 {
                     "text": "> Fine dell'Atto III — prosegui nell'Atto IV",
+                    "target": "act4_storm_night_start"
+                }
+            ]
+        },
+        "act4_storm_night_start": {
+            "location": "BLACKTHORN HALL — NOTTE DI TEMPESTA",
+            "music": "act4_storm",
+            "theme": {
+                "colorMain": "#5a5a7a",
+                "colorDim": "#2a2a45"
+            },
+            "art": "<svg viewBox=\"0 0 300 150\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <rect x=\"40\" y=\"40\" width=\"220\" height=\"110\" />\n                <path d=\"M60,150 L90,80 L75,80 L100,20 L85,55 L105,55 L70,150\" fill=\"var(--color-main)\" stroke=\"none\" opacity=\"0.7\" />\n                <line x1=\"20\" y1=\"30\" x2=\"35\" y2=\"55\" />\n                <line x1=\"270\" y1=\"20\" x2=\"255\" y2=\"45\" />\n                <path d=\"M40,100 Q150,90 260,100\" stroke-dasharray=\"4,4\" />\n            </svg>",
+            "text": "Un tuono esplode così vicino che le finestre vibrano nei telai. Arthur si sveglia di scatto — non dal sonno leggero di prima, ma da un buio profondo, come se qualcosa avesse voluto tenerlo sotto più a lungo del dovuto. Fuori, la tempesta non è più in arrivo: è già sopra la casa, furiosa, innaturale nella sua violenza.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act4_tuono"
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA TEMPESTA",
+                    "entry": "La tempesta è esplosa sulla casa con una violenza innaturale. È la notte del rinnovo del patto."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Corri a controllare Constance",
+                    "target": "act4_constance_missing"
+                }
+            ]
+        },
+        "act4_constance_missing": {
+            "location": "STANZA DI CONSTANCE",
+            "text": "La porta è spalancata. La stanza è vuota. La finestra sbatte contro il muro esterno a ogni raffica, i vetri di una delle ante in frantumi sul pavimento — non forzata dall'esterno, ma spalancata dall'interno, con urgenza. Di Constance, nessuna traccia se non una vestaglia abbandonata sul letto disfatto.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "constanceMissing",
+                    "value": true
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act4_vetro_rotto"
+                },
+                {
+                    "type": "addLog",
+                    "title": "CONSTANCE È SCOMPARSA",
+                    "entry": "La sua stanza è vuota, la finestra spalancata dall'interno. È uscita nella tempesta."
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Decidi cosa fare",
+                    "target": "act4_decision_hub"
+                }
+            ]
+        },
+        "act4_decision_hub": {
+            "location": "CORRIDOIO PRINCIPALE — NOTTE DI TEMPESTA",
+            "text": "Il tempo stringe, e Arthur non può fare tutto insieme. Deve scegliere: cercare subito Constance nella tempesta, correre a fermare Edmund prima che raggiunga la cappella, oppure andare lui stesso alla cappella per cercare un modo di interrompere il rito prima che qualcuno vi arrivi.",
+            "options": [
+                {
+                    "text": "> Esci subito nella tempesta a cercare Constance",
+                    "target": "act4_grounds_storm_search"
+                },
+                {
+                    "text": "> Corri a fermare Edmund prima che parta",
+                    "target": "act4_edmund_departure"
+                },
+                {
+                    "text": "> Va' tu stesso alla cappella, a cercare un modo per interrompere il rito",
+                    "target": "act4_gather_tools"
+                }
+            ]
+        },
+        "act4_grounds_storm_search": {
+            "location": "GIARDINO — NOTTE DI TEMPESTA",
+            "text": "Il giardino è irriconoscibile sotto la pioggia battente, i rovi che si aggrappano ai vestiti, il fango che rende ogni passo un'incognita. Ma nel fango, appena visibile prima che la pioggia lo cancelli, Arthur individua delle impronte — piccole, scalze, dirette verso il bosco.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "searchedGroundsFirst",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "LE IMPRONTE NEL FANGO",
+                    "entry": "Impronte scalze nel fango, dirette verso il bosco e la cappella."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act4_passi_corsa"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Segui le impronte verso il bosco",
+                    "target": "act4_stream_crossing"
+                }
+            ]
+        },
+        "act4_stream_crossing": {
+            "location": "IL TORRENTE IN PIENA",
+            "text": "Il sentiero verso il bosco è tagliato da un torrente che in condizioni normali sarebbe un rigagnolo, ma che la tempesta ha trasformato in una corrente violenta e marrone. Un vecchio ponticello di assi attraversa il punto più stretto, scricchiolando visibilmente a ogni raffica.",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act4_acqua_impetuosa"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Attraversa di corsa, non c'è tempo da perdere",
+                    "target": "act4_stream_danger"
+                },
+                {
+                    "text": "> Cerca un punto più sicuro per guadare, con calma",
+                    "target": "act4_stream_safe",
+                    "skillCheck": {
+                        "stat": "indagine",
+                        "difficulty": 6,
+                        "success": "act4_stream_safe",
+                        "failure": "act4_stream_delay"
+                    }
+                }
+            ]
+        },
+        "act4_stream_danger": {
+            "location": "IL TORRENTE IN PIENA",
+            "music": "act4_ending_death",
+            "theme": {
+                "colorMain": "#2a4a6a",
+                "colorDim": "#15253a"
+            },
+            "text": "A metà del ponticello, un'asse marcia cede sotto il suo peso. Arthur precipita nella corrente gelida, e la furia dell'acqua è più forte di qualunque bracciata — lo trascina, lo sbatte contro pietre invisibili, gli riempie i polmoni prima che possa anche solo gridare. La tempesta si porta via ogni traccia di lui prima dell'alba.\n\n[FINALE PREMATURO — LA CORRENTE]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act4_annegamento"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act4_stream_safe": {
+            "location": "IL TORRENTE IN PIENA",
+            "text": "Pochi passi più a monte, Arthur individua un punto dove il torrente si allarga e rallenta — più lento, meno profondo, sicuro da guadare con attenzione. Fradicio fino alle ossa ma incolume, raggiunge l'altra sponda e ritrova le impronte, ormai quasi cancellate dalla pioggia, dirette verso la cappella.",
+            "options": [
+                {
+                    "text": "> Prosegui verso il bosco",
+                    "target": "act4_woods_approach"
+                }
+            ]
+        },
+        "act4_stream_delay": {
+            "location": "IL TORRENTE IN PIENA",
+            "text": "Non trova un punto più sicuro in tempo utile — la corrente sembra ugualmente furiosa ovunque guardi. Alla fine attraversa comunque il ponticello, più lentamente e con più cautela della prima volta che ci aveva pensato, e questa volta le assi reggono.",
+            "options": [
+                {
+                    "text": "> Prosegui verso il bosco",
+                    "target": "act4_woods_approach"
+                }
+            ]
+        },
+        "act4_edmund_departure": {
+            "location": "INGRESSO DI BLACKTHORN HALL — NOTTE DI TEMPESTA",
+            "text": "Arthur lo raggiunge proprio mentre Edmund si sta infilando un cappotto fradicio, una lanterna già accesa in mano. Non sembra sorpreso di essere stato scoperto. 'Non puoi fermarmi, Arthur. E non puoi venire con me.'",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "confrontedEdmundFirst",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "EDMUND STA PER PARTIRE",
+                    "entry": "Arthur lo intercetta all'ingresso, già pronto per raggiungere la cappella da solo."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Insisti: qualunque cosa sia, la affronterete insieme",
+                    "target": "act4_edmund_final_words"
+                }
+            ]
+        },
+        "act4_edmund_final_words": {
+            "location": "INGRESSO DI BLACKTHORN HALL — NOTTE DI TEMPESTA",
+            "text": "Per un lungo istante Edmund sembra sul punto di rifiutare di nuovo. Poi qualcosa in lui cede — non resa, ma sollievo, lo stesso che Arthur ha già visto altre volte in questi giorni. 'Va bene,' dice infine, la voce rotta dal vento. 'Ma quando arriveremo là, fai esattamente quello che ti dico. Non per orgoglio, Arthur. Per restare vivo.'",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "edmundWentTogether",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                },
+                {
+                    "type": "addLog",
+                    "title": "INSIEME",
+                    "entry": "Edmund accetta che Arthur lo accompagni alla cappella."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Uscite insieme nella tempesta",
+                    "target": "act4_woods_approach"
+                }
+            ]
+        },
+        "act4_gather_tools": {
+            "location": "BLACKTHORN HALL — NOTTE DI TEMPESTA",
+            "text": "Prima di uscire, Arthur si ferma un istante a pensare a cosa potrebbe davvero servire — non un'arma, ma qualcosa che sappia di più di lui su questa casa e sul suo debito.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "preparedAtChapelFirst",
+                    "value": true
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Prendi l'anello degli Ashcombe: forse conta ancora qualcosa, per la cosa nel bosco",
+                    "target": "act4_chapel_prep_result",
+                    "condition": {
+                        "type": "item",
+                        "item": "anello_ashcombe",
+                        "quantity": 1
+                    }
+                },
+                {
+                    "text": "> Porta con te il diario: la conoscenza sarà l'unica arma disponibile",
+                    "target": "act4_chapel_prep_result"
+                }
+            ]
+        },
+        "act4_chapel_prep_result": {
+            "location": "BLACKTHORN HALL — NOTTE DI TEMPESTA",
+            "text": "Non è molto, ma è quello che ha. Arthur esce nella tempesta da solo, diretto verso il bosco, sapendo che potrebbe arrivare prima di chiunque altro — per bene o per male.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "VERSO LA CAPPELLA",
+                    "entry": "Arthur si dirige da solo verso la cappella, prima ancora di sapere dove siano Edmund e Constance."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Avanza nella tempesta",
+                    "target": "act4_woods_approach"
+                }
+            ]
+        },
+        "act4_woods_approach": {
+            "location": "IL BOSCO — NOTTE DI TEMPESTA",
+            "music": "act4_climax",
+            "theme": {
+                "colorMain": "#3a3a5a",
+                "colorDim": "#1a1a30"
+            },
+            "text": "Gli alberi si piegano sotto il vento, i lampi squarciano il buio a intervalli sempre più brevi, e attraverso i rami Arthur scorge finalmente un bagliore innaturale — non una lanterna, qualcosa di più freddo — proveniente dalla cappella in fondo al sentiero.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "LA LUCE NELLA CAPPELLA",
+                    "entry": "Un bagliore freddo e innaturale proviene dalla cappella. Qualcuno — o qualcosa — è già lì."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Avanza verso la cappella",
+                    "target": "act4_chapel_arrival"
+                }
+            ]
+        },
+        "act4_chapel_arrival": {
+            "location": "SOGLIA DELLA CAPPELLA — NOTTE DI TEMPESTA",
+            "text": "Arthur raggiunge la soglia della cappella. Dentro, la luce fredda pulsa debolmente, e sagome che non riesce ancora a distinguere del tutto si muovono nel bagliore. Qualunque cosa stia per succedere, sta per succedere ora.\n\n[FINE DELL'ATTO IV — continua nell'Atto V]",
+            "options": [
+                {
+                    "text": "> Fine dell'Atto IV — prosegui nell'Atto V",
                     "target": "__mainMenu__"
                 }
             ]
