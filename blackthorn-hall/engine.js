@@ -162,6 +162,7 @@ const Engine = (() => {
         if (nodeId === '__mainMenu__') {
             inGame = false;
             GameAudio.stopTrack(); // finale vero: niente da riprendere, si ferma per sempre
+            UI.applyThemeOverride(null); // il menu ha il suo colore fisso, non eredita la scena dell'ultimo finale
             UI.showMainMenu();
             return;
         }
@@ -256,6 +257,7 @@ const Engine = (() => {
     function newGame() {
         state = freshState();
         inGame = true;
+        UI.applyThemeOverride(null); // partita nuova: si riparte sempre dal tema base, non dai colori dell'ultima partita
         goTo(state.currentNode);
     }
 
