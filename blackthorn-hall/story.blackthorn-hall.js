@@ -49,7 +49,24 @@ const STORY = {
             "searchedGroundsFirst": false,
             "confrontedEdmundFirst": false,
             "preparedAtChapelFirst": false,
-            "edmundWentTogether": false
+            "edmundWentTogether": false,
+            "askedMessenger": false,
+            "recalledUniversity": false,
+            "askedAboutFather": false,
+            "examinedRoom": false,
+            "examinedWestWingDoor": false,
+            "examinedOldBooks": false,
+            "hadPrivateMomentAct2": false,
+            "readNewspaper": false,
+            "examinedStatueDaylight": false,
+            "examinedGreenhouse": false,
+            "examinedStudy": false,
+            "noticedEmptySeat": false,
+            "noticedStaffUnease": false,
+            "hadPrivateMomentEdmund": false,
+            "examinedCircle": false,
+            "examinedApparatus": false,
+            "inscriptionAttempted": false
         },
         "stats": {
             "fiducia": 5,
@@ -1266,15 +1283,54 @@ const STORY = {
             "options": [
                 {
                     "text": "> Chiedi al messaggero se sa qualcosa di più",
-                    "target": "act1_messenger_query"
+                    "target": "act1_messenger_query",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Chiedi al messaggero se sa qualcosa di più",
+                    "target": "act1_messenger_query_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger"
+                    }
                 },
                 {
                     "text": "> Guarda ancora un momento lo studio, prima di partire",
-                    "target": "act1_study_details"
+                    "target": "act1_study_details",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy"
+                    }
                 },
                 {
                     "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
-                    "target": "act1_university_memories"
+                    "target": "act1_university_memories",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity"
+                    }
                 },
                 {
                     "text": "> Non c'è tempo da perdere: prepara i bagagli",
@@ -1295,15 +1351,48 @@ const STORY = {
             "options": [
                 {
                     "text": "> Chiedi al messaggero se sa qualcosa di più",
-                    "target": "act1_messenger_query"
+                    "target": "act1_messenger_query",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Chiedi al messaggero se sa qualcosa di più",
+                    "target": "act1_messenger_query_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger"
+                    }
                 },
                 {
                     "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
-                    "target": "act1_university_memories"
+                    "target": "act1_university_memories",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity"
+                    }
                 },
                 {
                     "text": "> Non c'è tempo da perdere: prepara i bagagli",
                     "target": "act1_packing"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "examinedStudy",
+                    "value": true
                 }
             ]
         },
@@ -1320,15 +1409,53 @@ const STORY = {
             "options": [
                 {
                     "text": "> Chiedi al messaggero se sa qualcosa di più",
-                    "target": "act1_messenger_query"
+                    "target": "act1_messenger_query",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Chiedi al messaggero se sa qualcosa di più",
+                    "target": "act1_messenger_query_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger"
+                    }
                 },
                 {
                     "text": "> Guarda ancora un momento lo studio, prima di partire",
-                    "target": "act1_study_details"
+                    "target": "act1_study_details",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy"
+                    }
                 },
                 {
                     "text": "> Non c'è tempo da perdere: prepara i bagagli",
                     "target": "act1_packing"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "recalledUniversity",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "recalledUniversity",
+                    "value": true
                 }
             ]
         },
@@ -1340,21 +1467,59 @@ const STORY = {
                     "type": "addLog",
                     "title": "VOCI SU ALDERBROOK",
                     "entry": "Il messaggero conferma solo che la gente del posto evita Blackthorn Hall 'da quando il vecchio Lord è morto'."
-                },
+                }
+            ],
+            "onArriveOnce": [
                 {
                     "type": "modifyStat",
                     "stat": "indagine",
                     "delta": 1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "askedMessenger",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "askedMessenger",
+                    "value": true
                 }
             ],
             "options": [
                 {
                     "text": "> Guarda ancora un momento lo studio, prima di partire",
-                    "target": "act1_study_details"
+                    "target": "act1_study_details",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy"
+                    }
                 },
                 {
                     "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
-                    "target": "act1_university_memories"
+                    "target": "act1_university_memories",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity"
+                    }
                 },
                 {
                     "text": "> Non c'è tempo da perdere: prepara i bagagli",
@@ -1687,7 +1852,20 @@ const STORY = {
                 },
                 {
                     "text": "> Nota il posto apparecchiato ma vuoto in fondo al tavolo",
-                    "target": "act1_dinner_empty_seat"
+                    "target": "act1_dinner_empty_seat",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "noticedEmptySeat",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Nota il posto apparecchiato ma vuoto in fondo al tavolo",
+                    "target": "act1_dinner_empty_seat_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "noticedEmptySeat"
+                    }
                 },
                 {
                     "text": "> Osserva i dettagli della sala mentre si parla del più e del meno",
@@ -1695,11 +1873,37 @@ const STORY = {
                 },
                 {
                     "text": "> Chiedi di suo padre, il vecchio Lord Ashcombe",
-                    "target": "act1_dinner_father"
+                    "target": "act1_dinner_father",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedAboutFather",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Chiedi di suo padre, il vecchio Lord Ashcombe",
+                    "target": "act1_dinner_father_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedAboutFather"
+                    }
                 },
                 {
                     "text": "> Nota quanto sembra nervoso il personale di servizio",
-                    "target": "act1_dinner_staff_unease"
+                    "target": "act1_dinner_staff_unease",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "noticedStaffUnease",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Nota quanto sembra nervoso il personale di servizio",
+                    "target": "act1_dinner_staff_unease_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "noticedStaffUnease"
+                    }
                 }
             ]
         },
@@ -1718,6 +1922,18 @@ const STORY = {
                     "text": "> Torna alla conversazione",
                     "target": "act1_dinner"
                 }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "askedAboutFather",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "askedAboutFather",
+                    "value": true
+                }
             ]
         },
         "act1_dinner_staff_unease": {
@@ -1735,6 +1951,11 @@ const STORY = {
                     "type": "modifyStat",
                     "stat": "indagine",
                     "delta": 1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "noticedStaffUnease",
+                    "value": true
                 }
             ],
             "options": [
@@ -1786,6 +2007,13 @@ const STORY = {
                     "text": "> Torna alla conversazione",
                     "target": "act1_dinner"
                 }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "noticedEmptySeat",
+                    "value": true
+                }
             ]
         },
         "act1_dinner_local_color": {
@@ -1809,19 +2037,71 @@ const STORY = {
             "options": [
                 {
                     "text": "> Esamina la stanza prima di coricarti",
-                    "target": "act1_room_details"
+                    "target": "act1_room_details",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedRoom",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Esamina la stanza prima di coricarti",
+                    "target": "act1_room_details_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedRoom"
+                    }
                 },
                 {
                     "text": "> Affacciati alla finestra, verso il giardino",
-                    "target": "act1_window_silhouette"
+                    "target": "act1_window_silhouette",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "sawSilhouette",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Affacciati alla finestra, verso il giardino",
+                    "target": "act1_window_silhouette_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "sawSilhouette"
+                    }
                 },
                 {
                     "text": "> Nel corridoio, una cameriera sta spegnendo le candele",
-                    "target": "act1_corridor_agnes"
+                    "target": "act1_corridor_agnes",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "talkedToAgnes",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Torna a cercare la cameriera nel corridoio",
+                    "target": "act1_corridor_agnes_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "talkedToAgnes"
+                    }
                 },
                 {
                     "text": "> Esplora il corridoio verso l'ala ovest",
-                    "target": "act1_westwing_door"
+                    "target": "act1_westwing_door",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedWestWingDoor",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Esplora il corridoio verso l'ala ovest",
+                    "target": "act1_westwing_door_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedWestWingDoor"
+                    }
                 },
                 {
                     "text": "> Prima di dormire, sbircia nella biblioteca poco distante",
@@ -1829,11 +2109,44 @@ const STORY = {
                 },
                 {
                     "text": "> Una porta socchiusa in fondo al corridoio lascia filtrare un lamento sommesso",
-                    "target": "act1_constance_glimpse"
+                    "target": "act1_constance_glimpse",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "metConstance",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Torna verso la porta socchiusa di Constance",
+                    "target": "act1_constance_glimpse_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "metConstance"
+                    }
                 },
                 {
                     "text": "> Sei stanco dal viaggio: prova a dormire",
                     "target": "act1_night_sounds"
+                }
+            ]
+        },
+        "act1_corridor_agnes_revisited": {
+            "location": "CORRIDOIO DELL'ALA EST",
+            "text": "Il corridoio è vuoto adesso — Agnes dev'essere già passata oltre con le sue candele. In fondo, dietro un uscio socchiuso, Arthur crede di sentire dei passi affrettati, ma quando arriva non c'è più nessuno.",
+            "options": [
+                {
+                    "text": "> Torna verso la tua stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_constance_glimpse_revisited": {
+            "location": "CORRIDOIO DELL'ALA EST",
+            "text": "La porta che prima era socchiusa adesso è chiusa a chiave. Da dentro, silenzio assoluto — o forse, se si sforza ad ascoltare, un respiro trattenuto dall'altra parte del legno. Arthur non osa bussare: Constance ha già detto quello che aveva il coraggio di dire, e rischiare di farla scoprire di nuovo non aiuterebbe nessuno dei due.",
+            "options": [
+                {
+                    "text": "> Torna verso la tua stanza",
+                    "target": "act1_retiring"
                 }
             ]
         },
@@ -1885,6 +2198,16 @@ const STORY = {
                     "type": "modifyStat",
                     "stat": "nervi",
                     "delta": -1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedRoom",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedRoom",
+                    "value": true
                 }
             ],
             "options": [
@@ -1990,6 +2313,18 @@ const STORY = {
                     "text": "> Torna verso la tua stanza",
                     "target": "act1_retiring"
                 }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "examinedWestWingDoor",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedWestWingDoor",
+                    "value": true
+                }
             ]
         },
         "act1_library_glance": {
@@ -2004,11 +2339,37 @@ const STORY = {
             "options": [
                 {
                     "text": "> Sfoglia l'albero genealogico della famiglia",
-                    "target": "act1_library_genealogy"
+                    "target": "act1_library_genealogy",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "knowsFamilyHistory",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Sfoglia l'albero genealogico della famiglia",
+                    "target": "act1_library_genealogy_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "knowsFamilyHistory"
+                    }
                 },
                 {
                     "text": "> Osserva i volumi più antichi sugli scaffali alti",
-                    "target": "act1_library_old_books"
+                    "target": "act1_library_old_books",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedOldBooks",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Osserva i volumi più antichi sugli scaffali alti",
+                    "target": "act1_library_old_books_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedOldBooks"
+                    }
                 },
                 {
                     "text": "> Dai un'occhiata alle carte sparse sul tavolo",
@@ -2058,7 +2419,20 @@ const STORY = {
             "options": [
                 {
                     "text": "> Osserva anche i volumi più antichi",
-                    "target": "act1_library_old_books"
+                    "target": "act1_library_old_books",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedOldBooks",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Osserva anche i volumi più antichi",
+                    "target": "act1_library_old_books_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedOldBooks"
+                    }
                 },
                 {
                     "text": "> Dai un'occhiata alle carte sul tavolo",
@@ -2085,12 +2459,35 @@ const STORY = {
                     "type": "modifyStat",
                     "stat": "nervi",
                     "delta": -1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedOldBooks",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedOldBooks",
+                    "value": true
                 }
             ],
             "options": [
                 {
                     "text": "> Sfoglia anche l'albero genealogico",
-                    "target": "act1_library_genealogy"
+                    "target": "act1_library_genealogy",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "knowsFamilyHistory",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Sfoglia anche l'albero genealogico",
+                    "target": "act1_library_genealogy_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "knowsFamilyHistory"
+                    }
                 },
                 {
                     "text": "> Dai un'occhiata alle carte sul tavolo",
@@ -2376,11 +2773,37 @@ const STORY = {
                 },
                 {
                     "text": "> Chiedigli un momento, prima che l'atmosfera si irrigidisca",
-                    "target": "act2_edmund_aside2"
+                    "target": "act2_edmund_aside2",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "hadPrivateMomentAct2",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Chiedigli un momento, prima che l'atmosfera si irrigidisca",
+                    "target": "act2_edmund_aside2_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "hadPrivateMomentAct2"
+                    }
                 },
                 {
                     "text": "> Nota un giornale locale ripiegato accanto al piatto di Edmund",
-                    "target": "act2_breakfast_newspaper"
+                    "target": "act2_breakfast_newspaper",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "readNewspaper",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Nota un giornale locale ripiegato accanto al piatto di Edmund",
+                    "target": "act2_breakfast_newspaper_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "readNewspaper"
+                    }
                 }
             ]
         },
@@ -2390,14 +2813,24 @@ const STORY = {
             "options": [
                 {
                     "text": "> Torna alla colazione",
-                    "target": "act2_breakfast_edmund",
-                    "effects": [
-                        {
-                            "type": "modifyStat",
-                            "stat": "fiducia",
-                            "delta": 1
-                        }
-                    ]
+                    "target": "act2_breakfast_edmund"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "hadPrivateMomentAct2",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "hadPrivateMomentEdmund",
+                    "value": true
                 }
             ]
         },
@@ -2415,6 +2848,18 @@ const STORY = {
                 {
                     "text": "> Torna alla colazione",
                     "target": "act2_breakfast_edmund"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "readNewspaper",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "readNewspaper",
+                    "value": true
                 }
             ]
         },
@@ -2581,11 +3026,37 @@ const STORY = {
             "options": [
                 {
                     "text": "> Osserva di nuovo la statua spezzata, ora alla luce del giorno",
-                    "target": "act2_statue_daylight"
+                    "target": "act2_statue_daylight",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStatueDaylight",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Osserva di nuovo la statua spezzata, ora alla luce del giorno",
+                    "target": "act2_statue_daylight_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStatueDaylight"
+                    }
                 },
                 {
                     "text": "> Dai un'occhiata alla vecchia serra abbandonata",
-                    "target": "act2_greenhouse"
+                    "target": "act2_greenhouse",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedGreenhouse",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Dai un'occhiata alla vecchia serra abbandonata",
+                    "target": "act2_greenhouse_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedGreenhouse"
+                    }
                 },
                 {
                     "text": "> Incamminati lungo il sentiero verso la cappella e il cimitero di famiglia",
@@ -2608,6 +3079,18 @@ const STORY = {
                     "text": "> Torna a considerare il giardino",
                     "target": "act2_grounds_daylight"
                 }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "examinedStatueDaylight",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedStatueDaylight",
+                    "value": true
+                }
             ]
         },
         "act2_greenhouse": {
@@ -2625,6 +3108,16 @@ const STORY = {
                     "type": "modifyStat",
                     "stat": "nervi",
                     "delta": -1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedGreenhouse",
+                    "value": true
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedGreenhouse",
+                    "value": true
                 }
             ],
             "options": [
@@ -2646,11 +3139,37 @@ const STORY = {
             "options": [
                 {
                     "text": "> Osserva le lapidi del cimitero",
-                    "target": "act2_crypt_graves"
+                    "target": "act2_crypt_graves",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "sawErasedGraves",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Osserva le lapidi del cimitero",
+                    "target": "act2_crypt_graves_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "sawErasedGraves"
+                    }
                 },
                 {
                     "text": "> Prova a leggere l'iscrizione sulla porta della cappella",
-                    "target": "act2_crypt_inscription"
+                    "target": "act2_crypt_inscription",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "inscriptionAttempted",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Prova a leggere l'iscrizione sulla porta della cappella",
+                    "target": "act2_crypt_inscription_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "inscriptionAttempted"
+                    }
                 },
                 {
                     "text": "> Entra nella cappella",
@@ -2704,11 +3223,25 @@ const STORY = {
                         "difficulty": 6,
                         "success": "act2_crypt_inscription_success",
                         "failure": "act2_crypt_inscription_fail"
-                    }
+                    },
+                    "effects": [
+                        {
+                            "type": "setFlag",
+                            "flag": "inscriptionAttempted",
+                            "value": true
+                        }
+                    ]
                 },
                 {
                     "text": "> Lascia perdere per ora, non è il momento",
                     "target": "act2_crypt_entrance"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "setFlag",
+                    "flag": "readInscription",
+                    "value": true
                 }
             ]
         },
@@ -3105,19 +3638,91 @@ const STORY = {
             "options": [
                 {
                     "text": "> Osserva il cerchio inciso nel pavimento",
-                    "target": "act3_lab_symbols"
+                    "target": "act3_lab_symbols",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedCircle",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Osserva il cerchio inciso nel pavimento",
+                    "target": "act3_lab_symbols_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedCircle"
+                    }
                 },
                 {
                     "text": "> Esamina gli strumenti sul tavolo da lavoro",
-                    "target": "act3_lab_apparatus"
+                    "target": "act3_lab_apparatus",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedApparatus",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Esamina gli strumenti sul tavolo da lavoro",
+                    "target": "act3_lab_apparatus_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedApparatus"
+                    }
                 },
                 {
                     "text": "> C'è un baule di ferro chiuso in un angolo",
-                    "target": "act3_chest"
+                    "target": "act3_chest",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "chestOpened",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> C'è un baule di ferro chiuso in un angolo",
+                    "target": "act3_chest_already_open",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "chestOpened"
+                    }
                 },
                 {
                     "text": "> Fruga tra le carte sulla scrivania",
-                    "target": "act3_lab_desk"
+                    "target": "act3_lab_desk",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "readSecondDiary",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Fruga tra le carte sulla scrivania",
+                    "target": "act3_lab_desk_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "readSecondDiary"
+                    }
+                }
+            ]
+        },
+        "act3_lab_desk_revisited": {
+            "location": "LABORATORIO DI LORD JOSIAH — LA SCRIVANIA",
+            "text": "Il resto delle carte sulla scrivania sono appunti sparsi, poco più che promemoria illeggibili. Il diario che contava, Arthur lo ha già preso.",
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_chest_already_open": {
+            "location": "LABORATORIO DI LORD JOSIAH — IL BAULE",
+            "text": "Il baule è già aperto, il coperchio sollevato esattamente come Arthur lo ha lasciato. Non c'è altro da trovarci.",
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
                 }
             ]
         },
@@ -3136,6 +3741,11 @@ const STORY = {
                     "type": "modifyStat",
                     "stat": "nervi",
                     "delta": -1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedCircle",
+                    "value": true
                 }
             ],
             "options": [
@@ -3160,6 +3770,11 @@ const STORY = {
                     "type": "modifyStat",
                     "stat": "indagine",
                     "delta": 1
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "examinedApparatus",
+                    "value": true
                 }
             ],
             "options": [
@@ -3219,6 +3834,12 @@ const STORY = {
             "text": "Studiando il meccanismo con calma, Arthur individua un piccolo fermo nascosto sotto il bordo — non una serratura da forzare, ma da capire. Il baule si apre senza resistenza, rivelando altri documenti di famiglia e un pesante anello con lo stemma degli Ashcombe, mai indossato da nessuno negli ultimi anni.",
             "onArrive": [
                 {
+                    "type": "playSfx",
+                    "sfx": "act3_meccanismo"
+                }
+            ],
+            "onArriveOnce": [
+                {
                     "type": "setFlag",
                     "flag": "chestOpened",
                     "value": true
@@ -3234,10 +3855,6 @@ const STORY = {
                     "type": "addLog",
                     "title": "IL BAULE APERTO",
                     "entry": "Documenti di famiglia e un anello con lo stemma Ashcombe, mai indossato da anni."
-                },
-                {
-                    "type": "playSfx",
-                    "sfx": "act3_meccanismo"
                 }
             ],
             "options": [
@@ -3262,6 +3879,12 @@ const STORY = {
             "text": "Sotto una pila di carte ingiallite, Arthur trova un secondo diario — più recente del primo, la calligrafia meno formale, quasi frettolosa in alcuni punti. Non è opera di Josiah: è di suo figlio, il primo a dover davvero fare i conti con l'eredità che il padre gli aveva lasciato.",
             "onArrive": [
                 {
+                    "type": "playSfx",
+                    "sfx": "act3_pergamena"
+                }
+            ],
+            "onArriveOnce": [
+                {
                     "type": "addItem",
                     "id": "diario_josiah",
                     "name": "Secondo Diario",
@@ -3277,10 +3900,6 @@ const STORY = {
                     "type": "addLog",
                     "title": "IL SECONDO DIARIO",
                     "entry": "Il patto, spiegato senza ambiguità: un primogenito ogni due generazioni, offerto nella cappella — o la 'fame' si prende comunque chi le sta vicino, lentamente."
-                },
-                {
-                    "type": "playSfx",
-                    "sfx": "act3_pergamena"
                 }
             ],
             "options": [
@@ -3969,6 +4588,256 @@ const STORY = {
                 {
                     "text": "> Torna al Menu Principale",
                     "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act1_messenger_query_revisited": {
+            "location": "STUDIO DEL DOTTOR WREN",
+            "text": "Il messaggero è già ripartito, il compito assolto. Non c'è nessuno a cui chiedere altro, per ora.",
+            "options": [
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Guarda ancora un momento lo studio, prima di partire",
+                    "target": "act1_study_details_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "examinedStudy"
+                    }
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Ripensa a come conobbe Edmund, tanti anni fa",
+                    "target": "act1_university_memories_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "recalledUniversity"
+                    }
+                },
+                {
+                    "text": "> Non c'è tempo da perdere: prepara i bagagli",
+                    "target": "act1_packing"
+                }
+            ]
+        },
+        "act1_university_memories_revisited": {
+            "location": "STUDIO DEL DOTTOR WREN",
+            "text": "Il ricordo di Cambridge resta lo stesso di poco fa — non c'è bisogno di riviverlo una seconda volta.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_messenger_query",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_messenger_query_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger"
+                    }
+                }
+            ]
+        },
+        "act1_dinner_father_revisited": {
+            "location": "SALA DA PRANZO",
+            "text": "Edmund non ha altro da aggiungere sul padre. L'argomento, chiaramente, resta chiuso.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_room_details_revisited": {
+            "location": "STANZA DEGLI OSPITI",
+            "text": "La stanza resta quella di prima — il dipinto sbagliato, le tende pesanti. Niente di nuovo da scoprire qui.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_westwing_door_revisited": {
+            "location": "ALA OVEST — PORTA SIGILLATA",
+            "text": "La porta dell'ala ovest resta sigillata come prima, la stessa corrente fredda da sotto la soglia. Non c'è altro da fare qui, per ora.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_library_genealogy_revisited": {
+            "location": "BIBLIOTECA — ALBERO GENEALOGICO",
+            "text": "L'albero genealogico è sempre lì, aperto sulla stessa pagina. Arthur ha già visto ciò che c'era da vedere.",
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act1_library_old_books_revisited": {
+            "location": "BIBLIOTECA — SCAFFALI ALTI",
+            "text": "Il volume di J.A. resta indecifrabile quanto prima — non è stanotte che Arthur ne verrà a capo.",
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act2_edmund_aside2_revisited": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Edmund le ha già dette, le parole che contavano. Non serve ripeterle.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act2_breakfast_edmund"
+                }
+            ]
+        },
+        "act2_breakfast_newspaper_revisited": {
+            "location": "SALA DA PRANZO — MATTINO",
+            "text": "Il giornale è ripiegato esattamente come prima. Arthur lo ha già letto per intero.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act2_breakfast_edmund"
+                }
+            ]
+        },
+        "act2_statue_daylight_revisited": {
+            "location": "GIARDINO DI BLACKTHORN HALL — MATTINO",
+            "text": "La statua resta quella di prima, il volto scalpellato, la 'J' sul basamento. Non c'è altro da notare alla luce del giorno.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act2_grounds_daylight"
+                }
+            ]
+        },
+        "act2_greenhouse_revisited": {
+            "location": "SERRA ABBANDONATA",
+            "text": "La serra resta silenziosa come prima, le piante secche di J.A. immobili nei loro vasi.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act2_grounds_daylight"
+                }
+            ]
+        },
+        "act2_crypt_graves_revisited": {
+            "location": "CIMITERO DI FAMIGLIA",
+            "text": "Le due tombe senza nome restano lì, curate e silenziose. Arthur ha già visto ciò che dovevano mostrargli.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act2_crypt_inscription_revisited": {
+            "location": "CIMITERO DI FAMIGLIA — PORTA DELLA CAPPELLA",
+            "text": "L'iscrizione sulla porta resta quella di prima. Non c'è altro da scoprirci, per ora.",
+            "options": [
+                {
+                    "text": "> Torna a considerare il cimitero",
+                    "target": "act2_crypt_entrance"
+                }
+            ]
+        },
+        "act1_study_details_revisited": {
+            "location": "STUDIO DEL DOTTOR WREN",
+            "text": "Lo studio è come lo ha lasciato: ordinato, silenzioso, in attesa del suo ritorno. Non c'è altro da vedere qui, non stasera.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_messenger_query",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger",
+                        "equals": false
+                    }
+                },
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_messenger_query_revisited",
+                    "condition": {
+                        "type": "flag",
+                        "flag": "askedMessenger"
+                    }
+                }
+            ]
+        },
+        "act1_dinner_empty_seat_revisited": {
+            "location": "SALA DA PRANZO",
+            "text": "Il posto di Constance resta lì, apparecchiato e vuoto, esattamente come prima.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_dinner_staff_unease_revisited": {
+            "location": "SALA DA PRANZO",
+            "text": "Il valletto continua il suo servizio, teso come prima. Non c'è altro da notare, per ora.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_dinner"
+                }
+            ]
+        },
+        "act1_window_silhouette_revisited": {
+            "location": "STANZA DEGLI OSPITI — FINESTRA",
+            "text": "Il giardino, sotto la finestra, è tornato immobile e silenzioso. Della sagoma di prima, nessuna traccia.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act1_retiring"
+                }
+            ]
+        },
+        "act3_lab_symbols_revisited": {
+            "location": "LABORATORIO DI LORD JOSIAH",
+            "text": "Il cerchio resta esattamente come prima, i simboli inalterati, la macchia scura sempre lì.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_lab_apparatus_revisited": {
+            "location": "LABORATORIO DI LORD JOSIAH",
+            "text": "Gli strumenti sul tavolo restano dove erano. Arthur li ha già osservati a sufficienza.",
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act3_lab_examine"
                 }
             ]
         }
