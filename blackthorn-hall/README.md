@@ -340,6 +340,7 @@ si può anche rimuoverli dal motore: fammi sapere.)*
 - Condizioni singole o combinate (AND/OR) su flag, stat, oggetti
 - Skill check con tiro casuale + statistica vs difficoltà
 - Salvataggi su 10 slot, namespaced per storia (niente collisioni tra avventure diverse)
+- Salvataggio automatico separato dai 10 slot: si aggiorna ad ogni spostamento, sopravvive alla chiusura del browser — "Continua Partita" funziona anche riaprendo la pagina, non solo mettendo in pausa nella stessa sessione. Si cancella solo quando la storia arriva a un vero finale (`goTo('__mainMenu__')`)
 - Tema completamente separato dal motore (variabili CSS)
 - Illustrazioni SVG opzionali per nodo (`art`)
 - Musica di sottofondo a loop per zona/nodo (sintetizzata o file esterno .ogg/.mp3) + effetti sonori nominati sintetizzati

@@ -46,7 +46,9 @@ const UI = (() => {
         if (current && current.id !== id) previousScreen = current.id;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
         document.getElementById(id).classList.add('active-screen');
-        document.getElementById('btn-continue').disabled = !Engine.isInGame();
+        // Attivo anche se non c'e' una sessione in memoria ma esiste un salvataggio
+        // automatico (partita ripresa dopo la chiusura del browser).
+        document.getElementById('btn-continue').disabled = !(Engine.isInGame() || Engine.hasAutosave());
     }
 
     function showMainMenu() { showScreen('screen-main'); }
@@ -374,9 +376,20 @@ const UI = (() => {
 
     // ---------------- INIT ----------------
     function init() {
-        document.getElementById('btn-continue').disabled = true;
+        document.getElementById('btn-continue').disabled = !Engine.hasAutosave();
         document.getElementById('btn-new').onclick = () => Engine.newGame();
-        document.getElementById('btn-continue').onclick = () => { GameAudio.resume(); showScreen('screen-game'); };
+        document.getElementById('btn-continue').onclick = () => {
+            if (Engine.isInGame()) {
+                // Partita solo in pausa nella sessione corrente: riprendo al volo.
+                GameAudio.resume();
+                showScreen('screen-game');
+            } else {
+                // Pagina appena aperta: carico il salvataggio automatico da disco
+                // (goTo() dentro loadAutosave avvia gia' da solo la musica corretta).
+                Engine.loadAutosave();
+                showScreen('screen-game');
+            }
+        };
         document.getElementById('btn-load').onclick = () => openSaveMenu(true);
         document.getElementById('btn-options').onclick = () => showScreen('screen-options');
         document.getElementById('btn-inventory').onclick = openInventory;

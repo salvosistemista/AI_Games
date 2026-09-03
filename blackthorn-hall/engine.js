@@ -163,6 +163,7 @@ const Engine = (() => {
             inGame = false;
             GameAudio.stopTrack(); // finale vero: niente da riprendere, si ferma per sempre
             UI.applyThemeOverride(null); // il menu ha il suo colore fisso, non eredita la scena dell'ultimo finale
+            clearAutoSave(); // partita davvero finita: niente da riprendere neanche riaprendo il browser
             UI.showMainMenu();
             return;
         }
@@ -176,6 +177,7 @@ const Engine = (() => {
         if (firstVisit) state.visited.push(nodeId);
         applyEffects(node.onArrive);           // eseguiti ad ogni visita (sicuri da ripetere: flag, addLog, sfx)
         if (firstVisit) applyEffects(node.onArriveOnce); // solo alla prima visita (stat, oggetti — evita l'accumulo rivisitando un nodo)
+        autoSave(); // aggiorna il salvataggio automatico ad ogni spostamento reale
         UI.renderNode(node, nodeId);
     }
 
@@ -253,6 +255,45 @@ const Engine = (() => {
         return raw ? JSON.parse(raw) : null;
     }
 
+    // ---------------- SALVATAGGIO AUTOMATICO ----------------
+    // Chiave separata dai 10 slot manuali: si aggiorna ad ogni spostamento,
+    // cosi' "Continua Partita" sopravvive anche alla chiusura del browser
+    // (i 10 slot restano per i salvataggi deliberati dell'utente).
+    function autoSaveKey() {
+        return `engine_${story.meta.id}_autosave`;
+    }
+
+    function autoSave() {
+        try {
+            const payload = {
+                state,
+                location: story.nodes[state.currentNode].location,
+                date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString().slice(0, 5)
+            };
+            localStorage.setItem(autoSaveKey(), JSON.stringify(payload));
+        } catch (e) {}
+    }
+
+    function clearAutoSave() {
+        try { localStorage.removeItem(autoSaveKey()); } catch (e) {}
+    }
+
+    function hasAutosave() {
+        try { return !!localStorage.getItem(autoSaveKey()); } catch (e) { return false; }
+    }
+
+    function loadAutosave() {
+        try {
+            const raw = localStorage.getItem(autoSaveKey());
+            if (!raw) return false;
+            const payload = JSON.parse(raw);
+            state = payload.state;
+            inGame = true;
+            goTo(state.currentNode);
+            return true;
+        } catch (e) { return false; }
+    }
+
     // ---------------- CICLO DI VITA ----------------
     function newGame() {
         state = freshState();
@@ -270,7 +311,7 @@ const Engine = (() => {
 
     return {
         init, newGame, save, load, slotInfo, goTo, chooseOption, checkCondition,
-        examineItem, tryCombine,
+        examineItem, tryCombine, hasAutosave, loadAutosave,
         getState: () => state,
         getStory: () => story,
         isInGame: () => inGame,
