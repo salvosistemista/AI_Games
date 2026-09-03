@@ -1,18 +1,12 @@
 /* ============================================================
    NEBBIE SU BLACKTHORN HALL — STORIA COMPLETA (TUTTI GLI ATTI)
    ------------------------------------------------------------
-   Un solo file, una sola sessione di gioco continua: nessuna
-   schermata 'scegli l'atto', nessun trasferimento di stato tra
-   file diversi — la continuità è automatica perché è tutto lo
-   stesso oggetto STORY. Gli identificatori (nodi, musica, sfx)
-   sono prefissati per atto (act1_/act2_/...) solo per evitare
-   collisioni di nome scrivendo atti diversi: non hanno altro
-   significato speciale per il motore.
+   Un solo file, una sola sessione di gioco continua. Gli
+   identificatori sono prefissati per atto (act1_/act2_/act3_/...)
+   solo per evitare collisioni di nome tra atti scritti in tempi
+   diversi — nessun significato speciale per il motore.
 
-   Generato unendo story.blackthorn-hall-act1.js e -act2.js
-   (script di supporto, non incluso nella distribuzione finale).
-   Da qui in avanti, i nuovi atti si aggiungono direttamente a
-   questo file — non servono più file .js separati per atto.
+   I nuovi atti si aggiungono direttamente qui.
    ============================================================ */
 
 const STORY = {
@@ -43,7 +37,14 @@ const STORY = {
             "sawErasedGraves": false,
             "readInscription": false,
             "pickAttempted": false,
-            "scoutedGrounds": false
+            "scoutedGrounds": false,
+            "enteredLab": false,
+            "readSecondDiary": false,
+            "chestOpened": false,
+            "edmundFullConfession": false,
+            "edmundDenialPath": false,
+            "witnessedConstanceCrisis": false,
+            "knowsTonightIsNight": false
         },
         "stats": {
             "fiducia": 5,
@@ -60,7 +61,6 @@ const STORY = {
         ]
     },
 
-    // ---------------- MUSICA — ATTO I ----------------
     music: {
         "act1_home": {
             "wave": "triangle",
@@ -391,10 +391,163 @@ const STORY = {
                     "dur": 1.6
                 }
             ]
+        },
+        "act3_westwing": {
+            "wave": "sine",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 73.42,
+                    "dur": 1.8
+                },
+                {
+                    "freq": 82.41,
+                    "dur": 1.8
+                },
+                {
+                    "freq": 69.3,
+                    "dur": 1.8
+                },
+                {
+                    "freq": 77.78,
+                    "dur": 2.2
+                }
+            ]
+        },
+        "act3_lab": {
+            "wave": "sawtooth",
+            "volume": 0.016,
+            "notes": [
+                {
+                    "freq": 110,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 116.54,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 103.83,
+                    "dur": 1.2
+                },
+                {
+                    "freq": 98,
+                    "dur": 1.5
+                }
+            ]
+        },
+        "act3_danger": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 105,
+                    "dur": 0.22
+                },
+                {
+                    "freq": 112,
+                    "dur": 0.22
+                },
+                {
+                    "freq": 105,
+                    "dur": 0.22
+                },
+                {
+                    "freq": 90,
+                    "dur": 0.35
+                }
+            ]
+        },
+        "act3_ending_death": {
+            "wave": "sawtooth",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 164.81,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 146.83,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 123.47,
+                    "dur": 0.8
+                },
+                {
+                    "freq": 103.83,
+                    "dur": 1.3
+                }
+            ]
+        },
+        "act3_confrontation": {
+            "wave": "triangle",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 196,
+                    "dur": 1
+                },
+                {
+                    "freq": 174.61,
+                    "dur": 1
+                },
+                {
+                    "freq": 220,
+                    "dur": 1
+                },
+                {
+                    "freq": 164.81,
+                    "dur": 1.3
+                }
+            ]
+        },
+        "act3_constance": {
+            "wave": "sine",
+            "volume": 0.02,
+            "notes": [
+                {
+                    "freq": 293.66,
+                    "dur": 1.4
+                },
+                {
+                    "freq": 261.63,
+                    "dur": 1.4
+                },
+                {
+                    "freq": 246.94,
+                    "dur": 1.4
+                },
+                {
+                    "freq": 220,
+                    "dur": 1.8
+                }
+            ]
+        },
+        "act3_storm": {
+            "wave": "sawtooth",
+            "volume": 0.018,
+            "notes": [
+                {
+                    "freq": 65.41,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 61.74,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 58.27,
+                    "dur": 0.9
+                },
+                {
+                    "freq": 55,
+                    "dur": 1.4
+                }
+            ]
         }
     },
 
-    // ---------------- EFFETTI SONORI (entrambi gli atti) ----------------
     sfx: {
         "act1_sigillo_rotto": [
             {
@@ -623,14 +776,86 @@ const STORY = {
                 "dur": 0.25,
                 "type": "sawtooth"
             }
+        ],
+        "act3_pergamena": [
+            {
+                "freq": 800,
+                "dur": 0.05,
+                "type": "sine",
+                "volume": 0.03
+            },
+            {
+                "freq": 700,
+                "dur": 0.06,
+                "type": "sine",
+                "volume": 0.025
+            }
+        ],
+        "act3_meccanismo": [
+            {
+                "freq": 300,
+                "dur": 0.08,
+                "type": "square"
+            },
+            {
+                "freq": 350,
+                "dur": 0.08,
+                "type": "square"
+            },
+            {
+                "freq": 400,
+                "dur": 0.1,
+                "type": "square"
+            }
+        ],
+        "act3_trappola": [
+            {
+                "freq": 900,
+                "dur": 0.05,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 200,
+                "dur": 0.15,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 80,
+                "dur": 0.3,
+                "type": "sawtooth"
+            }
+        ],
+        "act3_tuono": [
+            {
+                "freq": 60,
+                "dur": 0.4,
+                "type": "sawtooth"
+            },
+            {
+                "freq": 45,
+                "dur": 0.6,
+                "type": "sawtooth"
+            }
+        ],
+        "act3_rivelazione": [
+            {
+                "freq": 220,
+                "dur": 0.2,
+                "type": "triangle"
+            },
+            {
+                "freq": 277.18,
+                "dur": 0.2,
+                "type": "triangle"
+            },
+            {
+                "freq": 329.63,
+                "dur": 0.35,
+                "type": "triangle"
+            }
         ]
     },
 
-    // ================================================================
-    // NODI — ATTO I (39 nodi)
-    // ================================================================
-    // NODI — ATTO II (29 nodi)
-    // ================================================================
     nodes: {
         "act1_intro_letter": {
             "location": "STUDIO DEL DOTTOR WREN — ALDERBROOK",
@@ -2434,6 +2659,424 @@ const STORY = {
             "options": [
                 {
                     "text": "> Fine dell'Atto II — prosegui nell'Atto III",
+                    "target": "act3_westwing_corridor"
+                }
+            ]
+        },
+        "act3_westwing_corridor": {
+            "location": "ALA OVEST — CORRIDOIO",
+            "music": "act3_westwing",
+            "theme": {
+                "colorMain": "#7a6bb0",
+                "colorDim": "#4a3f7a"
+            },
+            "art": "<svg viewBox=\"0 0 300 140\" xmlns=\"http://www.w3.org/2000/svg\" stroke=\"var(--color-main)\" fill=\"none\" stroke-width=\"2\">\n                <path d=\"M10,140 L10,20 L290,20 L290,140\" />\n                <line x1=\"60\" y1=\"140\" x2=\"60\" y2=\"20\" />\n                <line x1=\"120\" y1=\"140\" x2=\"120\" y2=\"20\" />\n                <line x1=\"180\" y1=\"140\" x2=\"180\" y2=\"20\" />\n                <line x1=\"240\" y1=\"140\" x2=\"240\" y2=\"20\" />\n                <path d=\"M40,140 Q120,130 260,110\" stroke-dasharray=\"3,4\" />\n                <rect x=\"250\" y=\"55\" width=\"35\" height=\"60\" />\n            </svg>",
+            "text": "Oltre la soglia, il corridoio dell'ala ovest è sepolto sotto uno strato di polvere indisturbata da anni — tranne che per un sentiero, un'unica linea più chiara nel grigiore, che conduce dritta verso una porta in fondo. Qualcuno, regolarmente, cammina fin qui. Solo fin qui.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "enteredLab",
+                    "value": false
+                },
+                {
+                    "type": "addLog",
+                    "title": "L'ALA OVEST",
+                    "entry": "Polvere ovunque, tranne un sentiero che conduce a un'unica porta. Qualcuno lo percorre regolarmente."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Segui il sentiero nella polvere",
+                    "target": "act3_lab_entrance"
+                }
+            ]
+        },
+        "act3_lab_entrance": {
+            "location": "ALA OVEST — PORTA DELLO STUDIO",
+            "text": "La porta in fondo al corridoio è socchiusa, e da dentro filtra un'aria fredda che non ha nulla a che vedere con la temperatura del resto della casa — come se quella stanza non fosse mai stata davvero riscaldata, in tutti gli anni trascorsi da quando è stata sigillata.",
+            "options": [
+                {
+                    "text": "> Entra",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_lab_examine": {
+            "location": "LABORATORIO DI LORD JOSIAH",
+            "music": "act3_lab",
+            "theme": {
+                "colorMain": "#8b6bb0",
+                "colorDim": "#4a3f6a"
+            },
+            "text": "La stanza è rimasta esattamente come Josiah Ashcombe l'ha lasciata: scaffali di libri proibiti, un tavolo da lavoro ingombro di strumenti dallo scopo poco chiaro, e — inciso nel legno del pavimento, profondo e deliberato — un ampio cerchio circondato da simboli che Arthur non riconosce, ma che gli fanno accapponare la pelle comunque.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "enteredLab",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "IL LABORATORIO",
+                    "entry": "La stanza sigillata di Josiah Ashcombe: un cerchio rituale inciso nel pavimento, strumenti di scopo ignoto."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Osserva il cerchio inciso nel pavimento",
+                    "target": "act3_lab_symbols"
+                },
+                {
+                    "text": "> Esamina gli strumenti sul tavolo da lavoro",
+                    "target": "act3_lab_apparatus"
+                },
+                {
+                    "text": "> C'è un baule di ferro chiuso in un angolo",
+                    "target": "act3_chest"
+                },
+                {
+                    "text": "> Fruga tra le carte sulla scrivania",
+                    "target": "act3_lab_desk"
+                }
+            ]
+        },
+        "act3_lab_symbols": {
+            "location": "LABORATORIO DI LORD JOSIAH",
+            "text": "Il cerchio è tracciato con una precisione quasi ossessiva, i simboli ripetuti a intervalli regolari — non decorazione, ma struttura. Al centro, una macchia scura è penetrata così a fondo nel legno che nessuna pulizia potrebbe mai davvero rimuoverla.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "IL CERCHIO",
+                    "entry": "Simboli ripetuti con precisione ossessiva. Al centro, una macchia scura permanente nel legno."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_lab_apparatus": {
+            "location": "LABORATORIO DI LORD JOSIAH",
+            "text": "Boccette annerite dal tempo, erbe essiccate che riconosce dalla serra abbandonata in giardino, e uno strumento di ottone dalla funzione indecifrabile — qualcosa a metà tra uno strumento scientifico e un oggetto rituale, come se per Josiah la distinzione non fosse mai stata così netta.",
+            "onArrive": [
+                {
+                    "type": "addLog",
+                    "title": "GLI STRUMENTI DI JOSIAH",
+                    "entry": "Erbe della stessa serra abbandonata, uno strumento di ottone tra scienza e rito."
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "indagine",
+                    "delta": 1
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_chest": {
+            "location": "LABORATORIO DI LORD JOSIAH — IL BAULE",
+            "text": "Un baule di ferro battuto, più recente del resto dell'arredamento, chiuso da un meccanismo complesso che non sembra una semplice serratura.",
+            "options": [
+                {
+                    "text": "> Forza il coperchio con la forza bruta",
+                    "target": "act3_chest_danger"
+                },
+                {
+                    "text": "> Osserva con attenzione il meccanismo, prima di agire",
+                    "target": "act3_lab_examine",
+                    "skillCheck": {
+                        "stat": "indagine",
+                        "difficulty": 7,
+                        "success": "act3_chest_success",
+                        "failure": "act3_chest_fail"
+                    }
+                },
+                {
+                    "text": "> Lascialo perdere, per ora",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_chest_danger": {
+            "location": "LABORATORIO DI LORD JOSIAH — IL BAULE",
+            "music": "act3_ending_death",
+            "theme": {
+                "colorMain": "#8b1e1e",
+                "colorDim": "#4a0f0f"
+            },
+            "text": "Il coperchio cede di scatto sotto la forza — e con esso un meccanismo a molla nascosto, un ago avvelenato che si conficca profondamente nel palmo di Arthur prima che possa ritrarre la mano. Riconosce il sapore metallico che gli sale in gola quasi subito: uno dei composti della serra di Josiah, non certo innocuo. Non c'è tempo per raggiungere la sua borsa medica prima che tutto si faccia buio.\n\n[FINALE PREMATURO — IL BAULE AVVELENATO]",
+            "onArrive": [
+                {
+                    "type": "playSfx",
+                    "sfx": "act3_trappola"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna al Menu Principale",
+                    "target": "__mainMenu__"
+                }
+            ]
+        },
+        "act3_chest_success": {
+            "location": "LABORATORIO DI LORD JOSIAH — IL BAULE",
+            "text": "Studiando il meccanismo con calma, Arthur individua un piccolo fermo nascosto sotto il bordo — non una serratura da forzare, ma da capire. Il baule si apre senza resistenza, rivelando altri documenti di famiglia e un pesante anello con lo stemma degli Ashcombe, mai indossato da nessuno negli ultimi anni.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "chestOpened",
+                    "value": true
+                },
+                {
+                    "type": "addItem",
+                    "id": "anello_ashcombe",
+                    "name": "Anello degli Ashcombe",
+                    "desc": "Pesante, con lo stemma di famiglia.",
+                    "examine": "Un anello d'oro annerito, mai indossato da generazioni a giudicare dalla polvere. Lo stemma raffigura un albero contorto — non i tipici simboli araldici, ma qualcosa che assomiglia più a un albero del bosco dietro casa."
+                },
+                {
+                    "type": "addLog",
+                    "title": "IL BAULE APERTO",
+                    "entry": "Documenti di famiglia e un anello con lo stemma Ashcombe, mai indossato da anni."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act3_meccanismo"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_chest_fail": {
+            "location": "LABORATORIO DI LORD JOSIAH — IL BAULE",
+            "text": "Il meccanismo resta un mistero. Arthur non riesce a individuare come aprirlo senza rischiare di forzarlo — meglio lasciar perdere, per ora, piuttosto che tentare la sorte.",
+            "options": [
+                {
+                    "text": "> Torna a considerare la stanza",
+                    "target": "act3_lab_examine"
+                }
+            ]
+        },
+        "act3_lab_desk": {
+            "location": "LABORATORIO DI LORD JOSIAH — LA SCRIVANIA",
+            "text": "Sotto una pila di carte ingiallite, Arthur trova un secondo diario — più recente del primo, la calligrafia meno formale, quasi frettolosa in alcuni punti. Non è opera di Josiah: è di suo figlio, il primo a dover davvero fare i conti con l'eredità che il padre gli aveva lasciato.",
+            "onArrive": [
+                {
+                    "type": "addItem",
+                    "id": "diario_josiah",
+                    "name": "Secondo Diario",
+                    "desc": "Più recente, più esplicito, terribilmente chiaro.",
+                    "examine": "'Mio padre lo chiamava un dono. Io lo chiamo per quello che è: un debito. Nel bosco dietro casa, tre generazioni fa, ha promesso qualcosa in cambio di ricchezza e discendenza sicura — e ogni due generazioni, quel qualcosa reclama la sua parte. Un primogenito, offerto nella cappella, o l'alternativa: che la cosa si prenda comunque ciò che vuole, lentamente, divorando la mente di chi le sta più vicino. Non è follia di famiglia. È fame, che si nutre di chi rifiuta di pagare.'"
+                },
+                {
+                    "type": "setFlag",
+                    "flag": "readSecondDiary",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "IL SECONDO DIARIO",
+                    "entry": "Il patto, spiegato senza ambiguità: un primogenito ogni due generazioni, offerto nella cappella — o la 'fame' si prende comunque chi le sta vicino, lentamente."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act3_pergamena"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Continua a esaminare la stanza",
+                    "target": "act3_lab_examine"
+                },
+                {
+                    "text": "> È tempo di parlare con Edmund",
+                    "target": "act3_confront_edmund_intro"
+                }
+            ]
+        },
+        "act3_confront_edmund_intro": {
+            "location": "SALOTTO PRINCIPALE — PRIMO POMERIGGIO",
+            "music": "act3_confrontation",
+            "theme": {
+                "colorMain": "#b08a4a",
+                "colorDim": "#6a5228"
+            },
+            "text": "Edmund è dove Arthur lo ha lasciato, ma qualcosa nel suo sguardo cambia non appena vede il diario in mano all'amico. Non c'è più sorpresa da nascondere — solo la domanda, tacita, di cosa succederà adesso.",
+            "options": [
+                {
+                    "text": "> Mostragli il diario e chiedigli la verità, da amico a amico",
+                    "target": "act3_edmund_confession",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "fiducia",
+                        "op": ">=",
+                        "value": 7
+                    }
+                },
+                {
+                    "text": "> Mettilo alle strette con quello che hai scoperto",
+                    "target": "act3_edmund_denial",
+                    "condition": {
+                        "type": "stat",
+                        "stat": "fiducia",
+                        "op": "<",
+                        "value": 7
+                    }
+                }
+            ]
+        },
+        "act3_edmund_confession": {
+            "location": "SALOTTO PRINCIPALE — PRIMO POMERIGGIO",
+            "text": "Edmund non nega nulla. Si siede pesantemente, il viso tra le mani, e per la prima volta da quando Arthur è arrivato racconta tutto senza reticenze: il patto, il prezzo, il fatto che tocchi a lui — e che ha passato l'ultimo anno cercando disperatamente un modo per romperlo senza pagarlo. 'Volevo dirtelo subito. Non sapevo come. Non sapevo se avresti anche solo potuto crederci.'",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "edmundFullConfession",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": 2
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA CONFESSIONE",
+                    "entry": "Edmund racconta tutto apertamente: il patto, il prezzo, il suo tentativo disperato di trovare un'alternativa."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act3_tonight_revelation"
+                }
+            ]
+        },
+        "act3_edmund_denial": {
+            "location": "SALOTTO PRINCIPALE — PRIMO POMERIGGIO",
+            "text": "'È solo una vecchia superstizione di famiglia,' tenta Edmund, la voce troppo tesa per essere convincente. Ma quando Arthur elenca, uno per uno, gli appunti trovati, le tombe senza nome, il diario stesso — la resistenza di Edmund si sgretola, non in confessione serena ma in un crollo amaro. 'Bene. Sì. È tutto vero. Sei contento adesso?' Non è gratitudine, quella nella sua voce. È rabbia, mescolata a un sollievo che non riesce a nascondere del tutto.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "edmundDenialPath",
+                    "value": true
+                },
+                {
+                    "type": "modifyStat",
+                    "stat": "fiducia",
+                    "delta": -2
+                },
+                {
+                    "type": "addLog",
+                    "title": "LA VERITÀ STRAPPATA",
+                    "entry": "Messo alle strette dalle prove, Edmund ammette tutto — ma con rabbia, non sollievo."
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Prosegui",
+                    "target": "act3_tonight_revelation"
+                }
+            ]
+        },
+        "act3_tonight_revelation": {
+            "location": "SALOTTO PRINCIPALE — POMERIGGIO INOLTRATO",
+            "music": "act3_storm",
+            "theme": {
+                "colorMain": "#5a5a7a",
+                "colorDim": "#33334a"
+            },
+            "text": "Contando le generazioni, facendo i conti con le date del diario, la conclusione è inevitabile: il rinnovo del patto è dovuto stanotte. Fuori dalle finestre, un temporale si sta addensando con una rapidità che non ha nulla di naturale per la stagione — come se il tempo stesso avesse fretta di arrivare a una scadenza.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "knowsTonightIsNight",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "STANOTTE",
+                    "entry": "Il rinnovo del patto è dovuto stanotte. Una tempesta innaturalmente rapida si sta addensando fuori."
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act3_tuono"
+                },
+                {
+                    "type": "playSfx",
+                    "sfx": "act3_rivelazione"
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Cerca di vedere come sta Constance, prima che sia troppo tardi",
+                    "target": "act3_constance_crisis"
+                },
+                {
+                    "text": "> Prenditi un momento per prepararti a quello che verrà",
+                    "target": "act3_act3_close"
+                }
+            ]
+        },
+        "act3_constance_crisis": {
+            "location": "STANZA DI CONSTANCE",
+            "music": "act3_constance",
+            "theme": {
+                "colorMain": "#7a8fb0",
+                "colorDim": "#3f4a6a"
+            },
+            "text": "Constance è seduta composta accanto alla finestra, e per la prima volta non sembra spaventata — sembra stranamente lucida, quasi in pace. 'Lo sento arrivare,' dice, senza girarsi. 'Stanotte sarà più vicino di quanto sia mai stato. Non per me, dottore. Per lui.' Il modo in cui lo dice, calmo e terribile insieme, resta con Arthur molto più a lungo di qualunque urlo.",
+            "onArrive": [
+                {
+                    "type": "setFlag",
+                    "flag": "witnessedConstanceCrisis",
+                    "value": true
+                },
+                {
+                    "type": "addLog",
+                    "title": "CONSTANCE, STANOTTE",
+                    "entry": "'Lo sento arrivare. Stanotte sarà più vicino di quanto sia mai stato. Non per me. Per lui.'"
+                }
+            ],
+            "onArriveOnce": [
+                {
+                    "type": "modifyStat",
+                    "stat": "nervi",
+                    "delta": -2
+                }
+            ],
+            "options": [
+                {
+                    "text": "> Esci, il tempo stringe",
+                    "target": "act3_act3_close"
+                }
+            ]
+        },
+        "act3_act3_close": {
+            "location": "BLACKTHORN HALL — VERSO SERA",
+            "text": "Il temporale si avvicina mentre la luce del giorno si spegne prematuramente dietro le nuvole. Arthur conosce ora la forma di ciò che lo aspetta stanotte, anche se non ancora come fermarlo. In casa, ogni ombra sembra più densa del solito — come se anche le pareti stessero trattenendo il fiato.\n\n[FINE DELL'ATTO III — continua nell'Atto IV]",
+            "options": [
+                {
+                    "text": "> Fine dell'Atto III — prosegui nell'Atto IV",
                     "target": "__mainMenu__"
                 }
             ]
