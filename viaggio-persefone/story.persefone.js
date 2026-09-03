@@ -123,6 +123,16 @@ const STORY = {
             wave: "sawtooth",
             volume: 0.022,
             notes: [ {freq:120, dur:0.3}, {freq:90, dur:0.3}, {freq:150, dur:0.4}, {freq:80, dur:0.5} ]
+        },
+        alba: {
+            wave: "sine",
+            volume: 0.02,
+            notes: [ {freq:262, dur:1.2}, {freq:330, dur:1.4}, {freq:392, dur:1.8} ]
+        },
+        smarrimento: {
+            wave: "triangle",
+            volume: 0.012,
+            notes: [ {freq:180, dur:1.0}, {freq:170, dur:1.0}, {freq:185, dur:1.4} ]
         }
     },
 
@@ -1490,6 +1500,105 @@ const STORY = {
             ],
             options: [
                 { text: "> Atto V — L'Alba", target: "act5_intro" }
+            ]
+        },
+
+        // =====================================================
+        // ATTO V — L'ALBA
+        // =====================================================
+        // Cinque finali, determinati da ciò che il giocatore ha accumulato
+        // negli atti precedenti — non dalle ultime scelte soltanto.
+        // Priorità di valutazione (la prima condizione vera vince):
+        //   1. lucidità <= 2                          -> Naufragio dei Nervi
+        //   2. ammutinamento_aperto (Atto IV)          -> Ammutinamento
+        //   3. tracce_fresche == false (Atto IV)       -> Sola
+        //   4. tracce_fresche + verita_registrata      -> Redenzione
+        //   5. tracce_fresche + non verita_registrata  -> Il Prezzo del Silenzio
+
+        act5_intro: {
+            location: "IL GHIACCIO SI APRE — ALBA",
+            text: "Durante la notte il pack si è spaccato con un boato lungo come un tuono continuo. All'alba la Persefone galleggia di nuovo libera, in un canale d'acqua nera tra i ghiacci che si allontanano. È il momento di scoprire cosa resta, di tutto questo, quando la nave punterà finalmente a sud.",
+            art: "<svg viewBox='0 0 300 140' xmlns='http://www.w3.org/2000/svg'><rect x='0' y='0' width='300' height='75' fill='none'/><circle cx='150' cy='60' r='28' stroke='var(--color-main)' fill='none'/><line x1='0' y1='95' x2='300' y2='95' stroke='var(--color-main)'/><path d='M20 95 L45 75 L90 75 L100 95 Z' stroke='var(--color-main)' stroke-width='1.5' fill='none'/></svg>",
+            music: "alba",
+            options: [
+                { text: "> Guarda cosa porta con sé quest'alba", target: "act5_bivio" }
+            ]
+        },
+
+        act5_bivio: {
+            location: "PONTE PRINCIPALE — ROTTA VERSO SUD",
+            text: "Rebecca stringe la balaustra bagnata di brina e guarda l'acqua libera davanti alla prua. Qualunque cosa sia successa su questa nave, tra questi ghiacci, ora bisogna portarla a casa — dentro di sé, prima ancora che nel racconto.",
+            options: [
+                { text: "> Il ghiaccio nella mente non si è mai davvero sciolto", condition: { type: "stat", stat: "lucidita", op: "<=", value: 2 }, target: "act5_naufragio_nervi" },
+                { text: "> La nave che torna a casa non è più la stessa", condition: { all: [ { type: "stat", stat: "lucidita", op: ">", value: 2 }, { type: "flag", flag: "ammutinamento_aperto", equals: true } ] }, target: "act5_ammutinamento" },
+                { text: "> Il mare non restituisce sempre quello che prende", condition: { all: [ { type: "stat", stat: "lucidita", op: ">", value: 2 }, { type: "flag", flag: "ammutinamento_aperto", equals: false }, { type: "flag", flag: "tracce_fresche", equals: false } ] }, target: "act5_sola" },
+                { text: "> Un fuoco acceso su una roccia lontana", condition: { all: [ { type: "stat", stat: "lucidita", op: ">", value: 2 }, { type: "flag", flag: "ammutinamento_aperto", equals: false }, { type: "flag", flag: "tracce_fresche", equals: true }, { type: "flag", flag: "verita_registrata", equals: true } ] }, target: "act5_redenzione" },
+                { text: "> Un fuoco acceso su una roccia lontana", condition: { all: [ { type: "stat", stat: "lucidita", op: ">", value: 2 }, { type: "flag", flag: "ammutinamento_aperto", equals: false }, { type: "flag", flag: "tracce_fresche", equals: true }, { type: "flag", flag: "verita_registrata", equals: false } ] }, target: "act5_prezzo_silenzio" }
+            ]
+        },
+
+        // ---------- FINALE 1: REDENZIONE ----------
+
+        act5_redenzione: {
+            location: "FINALE — REDENZIONE",
+            text: "Lo trovano al terzo giorno di navigazione lungo la costa, magrissimo ma vivo, che accende un fuoco di segnalazione con mani che tremano più per l'emozione che per il freddo. Edwin non dice quasi nulla, all'inizio — solo stringe sua sorella come se non credesse ancora che sia reale. Al ritorno a Whitmoor, il registro di Kessler racconta tutto: la quarantena, la decisione, l'abbandono. Il Capitano affronterà l'armatore, forse un processo. Ma sul ponte, quel giorno, Finch, Crane, Peter e persino Old Ove si stringono attorno a Edwin e Rebecca come un solo equipaggio — non più diviso da un segreto che finalmente ha smesso di pesare su tutti loro in silenzio.",
+            onArriveOnce: [
+                { type: "addLog", title: "Redenzione", entry: "Edwin è vivo. La verità è scritta nero su bianco. La Persefone torna a casa come un equipaggio intero, non più spaccato da un segreto." }
+            ],
+            options: [
+                { text: "> Torna al menu principale", target: "__mainMenu__" }
+            ]
+        },
+
+        // ---------- FINALE 2: IL PREZZO DEL SILENZIO ----------
+
+        act5_prezzo_silenzio: {
+            location: "FINALE — IL PREZZO DEL SILENZIO",
+            text: "Lo trovano vivo, più magro e più silenzioso dell'uomo che era, ma vivo. La gioia di riportarlo a bordo è vera, enorme — eppure il registro ufficiale della Persefone continuerà a raccontare di una tempesta, non di una quarantena e di un abbandono. Kessler manterrà il comando, l'armatore non saprà mai. Rebecca ha suo fratello indietro; non ha la giustizia che era venuta a cercare. Sul molo di Whitmoor, mesi dopo, si chiederà ancora se sia stato un prezzo giusto da pagare — e non troverà mai una risposta che la convinca del tutto.",
+            onArriveOnce: [
+                { type: "addLog", title: "Il Prezzo del Silenzio", entry: "Edwin è vivo, ma la verità resta sepolta. Rebecca ha ottenuto ciò per cui era partita, al prezzo di lasciare tutto il resto irrisolto." }
+            ],
+            options: [
+                { text: "> Torna al menu principale", target: "__mainMenu__" }
+            ]
+        },
+
+        // ---------- FINALE 3: SOLA ----------
+
+        act5_sola: {
+            location: "FINALE — SOLA",
+            text: "Non lo trovano. La costa oltre la roccia nera resta silenziosa, il canale d'acqua libera si richiude un poco più ogni giorno, e alla fine anche Crane, con gli occhi bassi, ammette che non c'è più tempo. La Persefone torna a Whitmoor con una sola mezza verità a bordo: che Edwin è sopravvissuto più a lungo di quanto chiunque credesse, da qualche parte, per un tempo che nessuno saprà mai con certezza. Rebecca scende sul molo da sola, cambiata, con un ciondolo d'ottone in tasca e un vuoto che nessuna verità, a questo punto, potrà davvero colmare. Finch le scrive, ogni tanto. Peter, dicono, è diventato un buon marinaio.",
+            onArriveOnce: [
+                { type: "addLog", title: "Sola", entry: "Edwin non viene ritrovato. Rebecca torna a casa da sola, con una verità parziale e un dolore che il tempo non ha ancora imparato a portare." }
+            ],
+            options: [
+                { text: "> Torna al menu principale", target: "__mainMenu__" }
+            ]
+        },
+
+        // ---------- FINALE 4: NAUFRAGIO DEI NERVI ----------
+
+        act5_naufragio_nervi: {
+            location: "FINALE — NAUFRAGIO DEI NERVI",
+            text: "Rebecca non è più sicura di cosa sia successo davvero, tra quei ghiacci. Ricorda un fuoco sulla roccia, o crede di ricordarlo. Ricorda la voce di Kessler che confessa, o forse era solo il vento tra il sartiame a suonare come una voce umana. Sul registro ufficiale della Persefone, alla voce 'passeggera aggiunta, Vane R.', qualcuno ha scritto una sola parola: 'instabile'. Nessuno, a Whitmoor, saprà mai dire con certezza cosa sia realmente accaduto in quelle settimane — nemmeno lei.",
+            onArriveOnce: [
+                { type: "addLog", title: "Naufragio dei Nervi", entry: "Tra ghiaccio, isolamento e rivelazioni troppo pesanti da reggere, Rebecca non è più certa di cosa fosse reale e cosa no. Il confine tra verità e allucinazione resta, per sempre, sfumato." }
+            ],
+            options: [
+                { text: "> Torna al menu principale", target: "__mainMenu__" }
+            ]
+        },
+
+        // ---------- FINALE 5: AMMUTINAMENTO ----------
+
+        act5_ammutinamento: {
+            location: "FINALE — AMMUTINAMENTO",
+            text: "La Persefone che attracca a Whitmoor non è la stessa nave che era salpata. La notizia dell'ammutinamento la precede, sussurrata sui moli prima ancora che getti l'ancora: uomini che si sono rivoltati contro il proprio Capitano, in mezzo al ghiaccio, per una donna e una storia di famiglia. Alcuni marinai non lavoreranno mai più su una nave dell'armatore. Kessler, umiliato ma tecnicamente ancora al comando, non perdonerà mai chi si è schierato contro di lui — Finch tra i primi. Di Edwin, in tutto questo, si è quasi smesso di parlare: la sua sorte resta una nota a margine di una storia più grande, e più amara, di lui.",
+            onArriveOnce: [
+                { type: "addLog", title: "Ammutinamento", entry: "L'aperto scontro con Kessler ha spaccato l'equipaggio in modo irreparabile. Il prezzo pagato dalla nave e dai suoi uomini finisce per pesare più della stessa ricerca di Edwin." }
+            ],
+            options: [
+                { text: "> Torna al menu principale", target: "__mainMenu__" }
             ]
         }
 
