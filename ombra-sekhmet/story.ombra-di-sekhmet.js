@@ -20,7 +20,8 @@ const STORY = {
             magazzinoVisitato: false, forgeriaTrovata: false,
             scenaAnalizzata: false,
             discoveredMotive: false, cartoucheCombined: false,
-            askedAshworthDeep: false, askedMarchettiDeep: false, askedKaneDeep: false, askedLowryDeep: false
+            askedAshworthDeep: false, askedMarchettiDeep: false, askedKaneDeep: false, askedLowryDeep: false,
+            noticedRingLowry: false, contraddizioneColta: false
         },
         stats: { percezione: 2, fascino: 2, cultura: 2 },
         inventory: []
@@ -188,7 +189,7 @@ const STORY = {
             onArriveOnce: [
                 { type: "setFlag", flag: "bodyFound", value: true },
                 { type: "addLog", title: "Il Corpo di Adrian Voss", entry: "Il curatore giace ai piedi della teca del pugnale, che ora è vuota. Nessuno dei presenti dice di aver visto nulla." },
-                { type: "addItem", id: "frammento_cartiglio_a", name: "Frammento di Cartiglio (A)", desc: "Un pezzo di metallo inciso con geroglifici, spezzato in modo netto.", examine: "Un frammento triangolare, forse metà di un sigillo o di un ciondolo. I bordi della rottura sono recenti — troppo netti per essere antichi." },
+                { type: "addItem", id: "frammento_cartiglio_a", name: "Frammento di Cartiglio (A)", desc: "Un pezzo di metallo inciso con geroglifici, spezzato in modo netto.", examine: "Un frammento triangolare, forse metà di un sigillo o di un ciondolo. I bordi della rottura sono recenti — troppo netti per essere antichi. Sembra essersi staccato di netto durante una colluttazione, non caduto per caso." },
                 { type: "playSfx", sfx: "impatto" }
             ],
             text: `Adrian Voss giace immobile ai piedi della teca ormai vuota — il pugnale rituale è scomparso. Sul pavimento, vicino alla sua mano, luccica un piccolo frammento di metallo inciso. Gli ospiti si accalcano sulla porta, ma nessuno osa entrare. Qualcuno chiama la polizia; tu ti chini, per prima, a raccogliere quel frammento prima che qualcun altro lo calpesti.`,
@@ -230,7 +231,8 @@ const STORY = {
 
                 { text: "> Parla con Vivian Lowry, l'assistente di Voss", target: "act2_lowry", condition: { type: "flag", flag: "metLowry", equals: false } },
                 { text: "> Parla ancora con Vivian Lowry", target: "act2_lowry_again", condition: { all: [ { type: "flag", flag: "metLowry", equals: true }, { any: [ { type: "flag", flag: "cartoucheCombined", equals: false }, { type: "flag", flag: "askedLowryDeep", equals: true } ] } ] } },
-                { text: "> Mostra a Lowry il cartiglio ricomposto", target: "act2_lowry_deep", condition: { all: [ { type: "flag", flag: "cartoucheCombined", equals: true }, { type: "flag", flag: "askedLowryDeep", equals: false } ] } },
+                { text: "> Mostra a Lowry il cartiglio ricomposto", target: "act2_lowry_deep", condition: { all: [ { type: "flag", flag: "cartoucheCombined", equals: true }, { type: "flag", flag: "askedLowryDeep", equals: false }, { type: "flag", flag: "noticedRingLowry", equals: true } ] } },
+                { text: "> Mostra a Lowry il cartiglio ricomposto", target: "act2_lowry_deep_debole", condition: { all: [ { type: "flag", flag: "cartoucheCombined", equals: true }, { type: "flag", flag: "askedLowryDeep", equals: false }, { type: "flag", flag: "noticedRingLowry", equals: false } ] } },
 
                 { text: "> Chiedi ad Ashworth del suo passato", target: "act2_ashworth2", condition: { all: [ { type: "flag", flag: "bibliotecaVisitata", equals: true }, { type: "flag", flag: "askedAshworthDeep", equals: false } ] } },
                 { text: "> Parla ancora con Ashworth", target: "act2_ashworth2_again", condition: { type: "flag", flag: "askedAshworthDeep", equals: true } },
@@ -335,7 +337,7 @@ const STORY = {
                 { type: "setFlag", flag: "ufficioVisitato", value: true },
                 { type: "addLog", title: "L'Ufficio di Adrian Voss", entry: "Un ufficio in perfetto ordine, tranne il primo cassetto della scrivania, forzato e svuotato in fretta." },
                 { type: "addItem", id: "diario_voss", name: "Diario di Adrian Voss", desc: "Un taccuino di pelle nera, pieno di appunti fitti e nervosi.", examine: "Le ultime pagine parlano di 'pezzi sostituiti', di confronti tra registri d'inventario e certificati d'autenticità che non tornano. L'ultima riga, scritta in fretta: 'Stasera lo dirò a tutti. Non posso più fingere di non sapere chi.'", examineEffects: [ { type: "setFlag", flag: "discoveredMotive", value: true }, { type: "addLog", title: "Il Movente", entry: "Voss aveva scoperto che pezzi autentici della collezione venivano sostituiti con copie. Stava per rivelare pubblicamente chi c'era dietro." }, { type: "playSfx", sfx: "rivelazione" } ] },
-                { type: "addItem", id: "frammento_cartiglio_b", name: "Frammento di Cartiglio (B)", desc: "Una seconda metà di sigillo inciso, gemella di quella trovata sulla scena del delitto.", examine: "I bordi spezzati combaciano perfettamente, a colpo d'occhio, con l'altro frammento che hai già in tasca." },
+                { type: "addItem", id: "frammento_cartiglio_b", name: "Frammento di Cartiglio (B)", desc: "Una seconda metà di sigillo inciso, gemella di quella trovata sulla scena del delitto.", examine: "I bordi spezzati combaciano perfettamente, a colpo d'occhio, con l'altro frammento che hai già in tasca. Chiuso a chiave in questo cassetto, sembra qualcosa che Voss aveva già trovato per conto suo, prima di stasera, e messo da parte come prova — senza ancora sapere, forse, a chi imputarla." },
                 { type: "playSfx", sfx: "oggetto" }
             ],
             text: `L'ufficio è ordinato, quasi impersonale — tranne il primo cassetto della scrivania, forzato e svuotato in fretta. Sul piano di lavoro trovi un diario di pelle nera e, in un angolo nascosto del cassetto forzato, un secondo frammento di metallo inciso, identico per fattura a quello raccolto sulla scena del delitto.`,
@@ -367,23 +369,26 @@ const STORY = {
             location: "LABORATORIO DI RESTAURO",
             onArriveOnce: [
                 { type: "setFlag", flag: "laboratorioVisitato", value: true },
-                { type: "addLog", title: "Il Panno Macchiato", entry: "Un panno per la pulizia dei metalli, ancora umido, macchiato di un residuo scuro. Solo il personale del museo ha accesso a questa stanza dopo l'orario di chiusura." }
+                { type: "addLog", title: "Il Panno Macchiato", entry: "Un panno per la pulizia dei metalli, ancora umido, macchiato di un residuo scuro. Solo il personale del museo ha accesso a questa stanza dopo l'orario di chiusura." },
+                { type: "addLog", title: "Il Timbro dei Restauratori", entry: "Su una mensola, il timbro di ceralacca personale che i restauratori usano per richiudere le casse dopo un intervento: un piccolo falco stilizzato, inciso nel manico di legno consumato dall'uso." }
             ],
-            text: `Bisturi, pennelli e solventi sono allineati con cura maniacale. Su un banco, però, un panno per la pulizia dei metalli è stato lasciato in disordine, ancora umido, con un residuo scuro sui bordi. Questa stanza si chiude a chiave dall'interno fuori orario: solo lo staff del museo può esservi entrato stasera.`,
+            text: `Bisturi, pennelli e solventi sono allineati con cura maniacale. Su un banco, però, un panno per la pulizia dei metalli è stato lasciato in disordine, ancora umido, con un residuo scuro sui bordi. Su una mensola accanto, tra gli attrezzi, noti il timbro di ceralacca che i restauratori usano per risigillare le casse dopo un intervento: un piccolo falco stilizzato, il manico di legno lucido nel punto in cui lo si impugna ogni giorno. Questa stanza si chiude a chiave dall'interno fuori orario: solo lo staff del museo può esservi entrato stasera.`,
             options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
         },
         act2_laboratorio_again: {
             location: "LABORATORIO DI RESTAURO",
-            text: `Il laboratorio è tornato silenzioso. Hai già notato ciò che conta.`,
+            text: `Il laboratorio è tornato silenzioso. Hai già notato ciò che conta — incluso quel piccolo timbro a forma di falco, sulla mensola.`,
             options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
         },
 
         act2_magazzino: {
             location: "MAGAZZINO DEI REPERTI",
             onArriveOnce: [ { type: "setFlag", flag: "magazzinoVisitato", value: true } ],
-            text: `File di casse numerate riempiono il magazzino sotterraneo, ognuna con un'etichetta d'inventario ordinata. Una cassa, in fondo, ha il sigillo di ceralacca rotto e richiuso alla bell'e meglio.`,
+            text: `File di casse numerate riempiono il magazzino sotterraneo. Tre di esse, vicino al fondo, portano lo stesso sigillo di ceralacca ancora fresca — un dettaglio che tutte le altre, chiuse da anni, non hanno. Ma i tre sigilli non sono identici: uno reca uno scarabeo, uno un falco stilizzato, uno un ankh.`,
             options: [
-                { text: "> Apri e ispeziona la cassa manomessa", skillCheck: { stat: "percezione", difficulty: 13, modifier: 0, success: "act2_magazzino_trovato", failure: "act2_magazzino_niente" } },
+                { text: "> Apri la cassa sigillata con lo scarabeo", target: "act2_magazzino_scarabeo" },
+                { text: "> Apri la cassa sigillata con il falco stilizzato", target: "act2_magazzino_trovato" },
+                { text: "> Apri la cassa sigillata con l'ankh", target: "act2_magazzino_ankh" },
                 { text: "> Torna nell'atrio", target: "act2_atrio" }
             ]
         },
@@ -397,17 +402,25 @@ const STORY = {
             onArriveOnce: [
                 { type: "setFlag", flag: "forgeriaTrovata", value: true },
                 { type: "addItem", id: "statuetta_falsa", name: "Statuetta Falsa", desc: "Una statuetta di Sekhmet in gesso dipinto, spacciata per basalto originale.", examine: "Da vicino, la vernice che imita il basalto si sta già scrostando su un bordo. È un falso di buona fattura, ma pur sempre un falso — pronto a sostituire silenziosamente l'originale nell'inventario." },
-                { type: "addLog", title: "La Prova della Frode", entry: "Nella cassa manomessa, una copia in gesso pronta a sostituire un reperto autentico. Qualcuno, dentro il museo, sta scambiando gli originali con dei falsi." },
+                { type: "addLog", title: "La Prova della Frode", entry: "Nella cassa sigillata con il timbro a falco — lo stesso timbro visto nel laboratorio di restauro — una copia in gesso pronta a sostituire un reperto autentico. Solo chi lavora in laboratorio poteva sigillarla con quel marchio." },
                 { type: "playSfx", sfx: "rivelazione" }
             ],
-            text: `Sotto uno strato di paglia da imballaggio, trovi una statuetta di Sekhmet dipinta per sembrare basalto antico. È un falso — e non l'unico, a giudicare dall'ordine quasi professionale con cui è stato nascosto qui, in attesa di essere piazzato al posto giusto.`,
+            text: `Il sigillo a falco è lo stesso, identico, che hai visto nel laboratorio di restauro: chiunque abbia richiuso questa cassa aveva accesso a quel timbro, e quindi al laboratorio stesso. Sotto uno strato di paglia da imballaggio, trovi una statuetta di Sekhmet dipinta per sembrare basalto antico. È un falso, nascosto qui con un ordine quasi professionale, in attesa di essere piazzato al posto giusto.`,
             options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
         },
-        act2_magazzino_niente: {
+        act2_magazzino_scarabeo: {
             location: "MAGAZZINO DEI REPERTI",
-            text: `Sposti paglia e imballaggi senza trovare nulla di utile. Forse hai controllato la cassa sbagliata, o troppo in fretta.`,
+            text: `Sotto il sigillo a scarabeo trovi solo repliche da negozio di souvenir, dichiarate come tali nel registro accanto. Niente di sospetto qui — il sigillo fresco, a quanto pare, è dei magazzinieri che hanno appena riordinato lo scaffale.`,
             options: [
-                { text: "> Guarda ancora meglio", skillCheck: { stat: "percezione", difficulty: 13, modifier: 0, success: "act2_magazzino_trovato", failure: "act2_magazzino_niente" } },
+                { text: "> Prova un'altra cassa", target: "act2_magazzino" },
+                { text: "> Torna nell'atrio", target: "act2_atrio" }
+            ]
+        },
+        act2_magazzino_ankh: {
+            location: "MAGAZZINO DEI REPERTI",
+            text: `Sotto il sigillo ad ankh trovi reperti autentici, catalogati e sigillati dopo un prestito a un altro museo, rientrati proprio questa settimana. Anche qui, nulla che non torni.`,
+            options: [
+                { text: "> Prova un'altra cassa", target: "act2_magazzino" },
                 { text: "> Torna nell'atrio", target: "act2_atrio" }
             ]
         },
@@ -419,21 +432,46 @@ const STORY = {
                 { type: "addLog", title: "Vivian Lowry", entry: "Assistente di Adrian Voss da tre anni. In lacrime, ma composta. Dice di aver lasciato il museo prima del blackout — un dettaglio che nessun altro conferma." }
             ],
             text: `Vivian Lowry siede rigida su una poltrona del salotto del personale, gli occhi rossi ma asciutti ormai. "Lavoravo con lui ogni giorno," dice piano. "Non so chi possa avergli fatto una cosa simile." Alla tua domanda su dove fosse durante il blackout, risponde in fretta: "Ero già uscita, prima del discorso. Non ho visto niente."`,
+            options: [
+                { text: "> Osserva i suoi gioielli con attenzione", target: "act2_lowry_anello", condition: { type: "flag", flag: "noticedRingLowry", equals: false } },
+                { text: "> Torna nell'atrio", target: "act2_atrio" }
+            ]
+        },
+        act2_lowry_anello: {
+            location: "SALOTTO DEL PERSONALE — CON VIVIAN LOWRY",
+            onArriveOnce: [
+                { type: "setFlag", flag: "noticedRingLowry", value: true },
+                { type: "addLog", title: "Un Anello Fuori Posto", entry: "Vivian Lowry porta un anello sottile con un piccolo simbolo inciso — qualcosa tra un calice e una figura felina stilizzata. Troppo elaborato per lo stipendio di un'assistente museale, e non è il tipo di gioiello da museum-shop." }
+            ],
+            text: `Mentre parla, le sue mani non stanno mai ferme — e proprio per questo noti l'anello che porta al mignolo della destra: sottile, quasi discreto, ma inciso con un piccolo simbolo che non hai mai visto nei cataloghi del negozio del museo. Qualcosa tra un calice e una figura felina stilizzata. Non ci pensi più di un istante, in quel momento — ma te lo segni.`,
             options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
         },
         act2_lowry_again: {
             location: "SALOTTO DEL PERSONALE — CON VIVIAN LOWRY",
             text: `Vivian si stringe le braccia al petto, gli occhi fissi sul pavimento. "Non ho altro da aggiungere," ripete, come una frase imparata a memoria.`,
-            options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
+            options: [
+                { text: "> Osserva i suoi gioielli con attenzione", target: "act2_lowry_anello", condition: { type: "flag", flag: "noticedRingLowry", equals: false } },
+                { text: "> Torna nell'atrio", target: "act2_atrio" }
+            ]
         },
         act2_lowry_deep: {
             location: "SALOTTO DEL PERSONALE — CON VIVIAN LOWRY",
             onArriveOnce: [
                 { type: "setFlag", flag: "askedLowryDeep", value: true },
-                { type: "addLog", title: "La Contraddizione di Lowry", entry: "Il cartiglio ricomposto porta inciso lo stesso simbolo di un anello che Vivian Lowry indossa sempre. Messa alle strette, ammette di essere stata nella sala egizia durante il blackout — smentendo la propria versione precedente." },
+                { type: "setFlag", flag: "contraddizioneColta", value: true },
+                { type: "addLog", title: "La Contraddizione di Lowry", entry: "Il cartiglio ricomposto porta inciso lo stesso simbolo dell'anello che porti alla memoria di quando l'hai osservata con attenzione. Messa di fronte al confronto preciso, ammette di essere stata nella sala egizia durante il blackout — smentendo la propria versione precedente." },
                 { type: "playSfx", sfx: "rivelazione" }
             ],
-            text: `Le mostri il cartiglio ricomposto. Per un istante lunghissimo, Vivian non dice nulla — poi il suo sguardo scivola sull'anello che porta al mignolo, inciso con lo stesso identico simbolo. "Quello era... un regalo," balbetta. Ma le sue mani tremano, e la storia di essere uscita "prima del blackout" comincia a sgretolarsi sotto i tuoi occhi.`,
+            text: `Le mostri il cartiglio ricomposto, e questa volta sai esattamente cosa cercare: il tuo sguardo va dritto al mignolo della sua mano destra, allo stesso simbolo che avevi già notato osservandola con attenzione. "È lo stesso disegno del suo anello, Miss Lowry," dici, senza lasciarle spazio per l'ambiguità. Per un istante lunghissimo Vivian non dice nulla — poi qualcosa in lei cede. "Quello era... un regalo," balbetta, ma le sue mani tremano, e la storia di essere uscita "prima del blackout" comincia a sgretolarsi sotto i tuoi occhi.`,
+            options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
+        },
+        act2_lowry_deep_debole: {
+            location: "SALOTTO DEL PERSONALE — CON VIVIAN LOWRY",
+            onArriveOnce: [
+                { type: "setFlag", flag: "askedLowryDeep", value: true },
+                { type: "addLog", title: "Un'Occasione Mancata", entry: "Mostri a Lowry il cartiglio ricomposto, ma senza aver già notato da sola il dettaglio dell'anello, non riesci a incalzarla sul punto preciso. Lei si riprende in fretta, e il momento di vantaggio sfuma." }
+            ],
+            text: `Le mostri il cartiglio ricomposto, aspettandoti una reazione. Vivian lo osserva un istante di troppo — ma tu non sai bene cosa cercare nella sua reazione, e l'esitazione ti costa il momento. "Un motivo decorativo comune, immagino," dice, ricomponendosi. "Non significa nulla." Hai la sensazione netta che ti sia sfuggito qualcosa — un dettaglio che avresti dovuto notare prima di arrivare fin qui con le prove in mano.`,
             options: [ { text: "> Torna nell'atrio", target: "act2_atrio" } ]
         },
 
@@ -497,8 +535,8 @@ const STORY = {
             location: "SALA CONFERENZE — RESA DEI CONTI",
             text: `Tutti gli occhi sono puntati su di te. Hai un frammento di prove, alcune certezze, e qualche sospetto che potrebbe rivelarsi infondato. Scegli con attenzione chi accusare — o se è meglio aspettare ancora.`,
             options: [
-                { text: "> Accusa Vivian Lowry", target: "act3_finale_verita", condition: { all: [ { type: "flag", flag: "discoveredMotive", equals: true }, { type: "flag", flag: "cartoucheCombined", equals: true }, { type: "flag", flag: "laboratorioVisitato", equals: true } ] } },
-                { text: "> Accusa Vivian Lowry, pur con prove ancora incomplete", target: "act3_lowry_debole", condition: { any: [ { type: "flag", flag: "discoveredMotive", equals: false }, { type: "flag", flag: "cartoucheCombined", equals: false }, { type: "flag", flag: "laboratorioVisitato", equals: false } ] } },
+                { text: "> Accusa Vivian Lowry", target: "act3_finale_verita", condition: { all: [ { type: "flag", flag: "discoveredMotive", equals: true }, { type: "flag", flag: "cartoucheCombined", equals: true }, { type: "flag", flag: "laboratorioVisitato", equals: true }, { type: "flag", flag: "contraddizioneColta", equals: true } ] } },
+                { text: "> Accusa Vivian Lowry, pur con prove ancora incomplete", target: "act3_lowry_debole", condition: { any: [ { type: "flag", flag: "discoveredMotive", equals: false }, { type: "flag", flag: "cartoucheCombined", equals: false }, { type: "flag", flag: "laboratorioVisitato", equals: false }, { type: "flag", flag: "contraddizioneColta", equals: false } ] } },
                 { text: "> Accusa il professor Ashworth", target: "act3_finale_ashworth" },
                 { text: "> Accusa la Contessa Marchetti", target: "act3_finale_marchetti" },
                 { text: "> Accusa Silas Kane", target: "act3_finale_kane", condition: { type: "flag", flag: "forgeriaTrovata", equals: true } },
@@ -512,7 +550,7 @@ const STORY = {
             onArriveOnce: [
                 { type: "addLog", title: "Il Caso Risolto", entry: "Vivian Lowry crolla e confessa: aiutava Kane a sostituire i pezzi autentici per pagare i debiti del fratello. Quando Voss la scoprì quella sera, in preda al panico, afferrò il pugnale dalla teca che lei stessa aveva la chiave per aprire." }
             ],
-            text: `Posi sul tavolo il cartiglio ricomposto, il diario di Voss, la statuetta falsa. "Il movente, i mezzi, l'occasione," dici, la voce ferma nonostante il cuore che batte forte. "Solo una persona in questa stanza aveva tutti e tre." Vivian Lowry non aspetta che tu pronunci il suo nome: scoppia in lacrime e confessa. Sostituiva reperti autentici con falsi per Kane, per pagare i debiti di gioco del fratello. Quando Voss la scoprì, quella sera, il panico ebbe la meglio su di lei. Kane viene arrestato per traffico di reperti; Ashworth ti stringe la mano, in silenzio, come a dire che forse, dopo dieci anni, qualcuno gli ha finalmente creduto.`,
+            text: `Posi sul tavolo il cartiglio ricomposto, il diario di Voss, la statuetta falsa. "Il movente, i mezzi, l'occasione," dici, la voce ferma nonostante il cuore che batte forte. "E un anello che ho notato al suo dito la prima volta che ci siamo parlate, Miss Lowry — lo stesso disegno inciso su questo cartiglio." Vivian Lowry non aspetta che tu pronunci altro: scoppia in lacrime e confessa. Sostituiva reperti autentici con falsi per Kane, per pagare i debiti di gioco del fratello. Quando Voss la scoprì, quella sera, il panico ebbe la meglio su di lei. Kane viene arrestato per traffico di reperti; Ashworth ti stringe la mano, in silenzio, come a dire che forse, dopo dieci anni, qualcuno gli ha finalmente creduto.`,
             options: [ { text: "> Torna al Menu Principale", target: "__mainMenu__" } ]
         },
 
