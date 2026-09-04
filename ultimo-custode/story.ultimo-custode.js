@@ -26,6 +26,7 @@ const STORY = {
 
             cappellaRaggiunta: false, criptaEsplorata: false, medaglioneCombinato: false,
             orsoliniConfrontoFinale: false, guidoRedento: false, mappaOttenuta: false,
+            identitaHalvardIntuita: false,
 
             isolaRaggiunta: false, halvardConfrontato: false
         },
@@ -117,7 +118,7 @@ const STORY = {
             onArriveOnce: [
                 { type: "setFlag", flag: "sceneAnalizzata", value: true },
                 { type: "modifyStat", stat: "intuito", delta: 1 },
-                { type: "addItem", id: "pagine_codice", name: "Pagine Superstiti del Codice", desc: "Alcuni fogli del Codice di Fra Bonifacio, rimasti nella teca forzata.", examine: "Pergamena duecentesca, scrittura mista di latino e volgare. Servirà tempo, e Livia, per tradurla per intero." },
+                { type: "addItem", id: "pagine_codice", name: "Pagine Superstiti del Codice", desc: "Alcuni fogli del Codice di Fra Bonifacio, rimasti nella teca forzata.", examine: "Pergamena duecentesca, scrittura mista di latino e volgare. Servirà tempo, e Livia, per tradurla per intero. In un margine, quasi cancellato dal tempo, uno scarabocchio ripetuto tre volte, come per non dimenticarlo: un calice tra due mezzelune spezzate." },
                 { type: "addItem", id: "guanto_gemello", name: "Gemello Monogrammato", desc: "Un gemello da polsino d'argento, perso nella fuga, inciso con due iniziali.", examine: "Le iniziali incise sono 'R. H.' Un lavoro d'oreficeria costoso — non da semplice scassinatore.", examineEffects: [ { type: "setFlag", flag: "indizioGuantoTrovato", value: true }, { type: "addLog", title: "Le Iniziali R. H.", entry: "Un gemello d'argento perso dal ladro reca le iniziali 'R. H.' Non un nome, ancora, ma un indizio concreto." } ] },
                 { type: "playSfx", sfx: "oggetto" }
             ],
@@ -292,16 +293,27 @@ const STORY = {
         },
         act2_cisterna_ricerca: {
             location: "CISTERNA DI TEODORA — TRA LE COLONNE",
-            text: `Colonna dopo colonna, cerchi un simbolo che spicchi tra i motivi decorativi bizantini: qualcosa che non dovrebbe essere lì.`,
+            text: `Colonna dopo colonna, cerchi un simbolo che spicchi tra i motivi decorativi bizantini: qualcosa che non dovrebbe essere lì. Tre colonne, più avanti nel buio, portano ciascuna un'incisione diversa da tutte le altre: una su un'ancora intrecciata a un pesce, una su un calice tra due mezzelune spezzate, una su un'aquila bicipite.`,
             options: [
-                { text: "> Continua a cercare con attenzione", skillCheck: { stat: "intuito", difficulty: 12, modifier: 0, success: "act2_cisterna_trovato", failure: "act2_cisterna_ricerca_fallita" } }
+                { text: "> Esamina la colonna con l'ancora e il pesce", target: "act2_cisterna_colonna_sbagliata_a" },
+                { text: "> Esamina la colonna con il calice tra le mezzelune spezzate", target: "act2_cisterna_trovato" },
+                { text: "> Esamina la colonna con l'aquila bicipite", target: "act2_cisterna_colonna_sbagliata_b" },
+                { text: "> Risali per ora", target: "act2_piazza" }
             ]
         },
-        act2_cisterna_ricerca_fallita: {
+        act2_cisterna_colonna_sbagliata_a: {
             location: "CISTERNA DI TEODORA — TRA LE COLONNE",
-            text: `Nulla, solo pietra levigata e riflessi d'acqua. Forse la colonna giusta è più avanti, verso il fondo della cisterna.`,
+            text: `L'ancora e il pesce sono un comune simbolo cristiano dei primi secoli, inciso su decine di colonne in tutta la cisterna. Niente che riguardi Fra Bonifacio o i Custodi.`,
             options: [
-                { text: "> Continua a cercare", skillCheck: { stat: "intuito", difficulty: 12, modifier: 0, success: "act2_cisterna_trovato", failure: "act2_cisterna_ricerca_fallita" } },
+                { text: "> Continua a cercare tra le altre colonne", target: "act2_cisterna_ricerca" },
+                { text: "> Risali per ora", target: "act2_piazza" }
+            ]
+        },
+        act2_cisterna_colonna_sbagliata_b: {
+            location: "CISTERNA DI TEODORA — TRA LE COLONNE",
+            text: `L'aquila bicipite è lo stemma imperiale bizantino, scolpito su metà delle colonne portanti della cisterna. Troppo comune per essere il segno che cerchi.`,
+            options: [
+                { text: "> Continua a cercare tra le altre colonne", target: "act2_cisterna_ricerca" },
                 { text: "> Risali per ora", target: "act2_piazza" }
             ]
         },
@@ -320,7 +332,7 @@ const STORY = {
                 { type: "addLog", title: "Il Mezzo Medaglione Bizantino", entry: "Incastonata in una colonna, la metà di un antico medaglione bronzeo, spezzato di proposito secoli fa." },
                 { type: "playSfx", sfx: "rivelazione" }
             ],
-            text: `Una colonna, più bassa delle altre, reca inciso un simbolo che non appartiene a nessun repertorio bizantino che Elia conosca: un calice affiancato da una mezzaluna spezzata. Incastonata nella pietra, trovi metà di un medaglione di bronzo. Un rumore di passi nell'acqua, alle tue spalle, ti fa gelare il sangue: non sei solo, quaggiù.`,
+            text: `Una colonna, più bassa delle altre, reca inciso esattamente il simbolo che Fra Bonifacio aveva disegnato a margine delle sue pagine: un calice tra due mezzelune spezzate. Incastonata nella pietra, trovi metà di un medaglione di bronzo. Un rumore di passi nell'acqua, alle tue spalle, ti fa gelare il sangue: non sei solo, quaggiù.`,
             options: [ { text: "> Ti volti verso il rumore", target: "act2_orsolini_incontro" } ]
         },
         act2_orsolini_incontro: {
@@ -513,12 +525,29 @@ const STORY = {
                 { type: "addLog", title: "La Cappella di Rosmoor", entry: "L'interno della cappella conserva intatti i simboli dei Custodi del Calice Bianco, scolpiti nella pietra accanto agli stemmi del clan che li accolse." }
             ],
             text: `L'interno della cappella è freddo e silenzioso, illuminato appena da strette finestre. Sulle pareti, accanto agli stemmi di un antico clan scozzese, riconosci lo stesso simbolo del calice tra due mezzelune spezzate visto a Istanbul e Gerusalemme. Una botola di pietra, semi-nascosta dietro l'altare, scende sotto terra.`,
-            options: [ { text: "> Scendi nella cripta sotterranea", target: "act4_cripta" } ]
+            options: [
+                { text: "> Confronta il gemello monogrammato con gli stemmi della cappella", target: "act4_stemmi_confronto", condition: { all: [ { type: "flag", flag: "indizioGuantoTrovato", equals: true }, { type: "flag", flag: "identitaHalvardIntuita", equals: false } ] } },
+                { text: "> Scendi nella cripta sotterranea", target: "act4_cripta" }
+            ]
         },
         act4_cappella_again: {
             location: "INTERNO DELLA CAPPELLA DI ROSMOOR",
             text: `La cappella custodisce ancora il suo silenzio di pietra. Tutto quello che conta, ormai, è sotto i tuoi piedi.`,
-            options: [ { text: "> Scendi nella cripta sotterranea", target: "act4_cripta" }, { text: "> Torna fuori", target: "act4_piazza" } ]
+            options: [
+                { text: "> Confronta il gemello monogrammato con gli stemmi della cappella", target: "act4_stemmi_confronto", condition: { all: [ { type: "flag", flag: "indizioGuantoTrovato", equals: true }, { type: "flag", flag: "identitaHalvardIntuita", equals: false } ] } },
+                { text: "> Scendi nella cripta sotterranea", target: "act4_cripta" },
+                { text: "> Torna fuori", target: "act4_piazza" }
+            ]
+        },
+        act4_stemmi_confronto: {
+            location: "INTERNO DELLA CAPPELLA DI ROSMOOR — GLI STEMMI",
+            onArriveOnce: [
+                { type: "setFlag", flag: "identitaHalvardIntuita", value: true },
+                { type: "modifyStat", stat: "cultura", delta: 1 },
+                { type: "addLog", title: "R. H. — Un Nome, Non Più Solo Iniziali", entry: "Tra le genealogie incise ai margini degli stemmi, un ramo cadetto del clan riporta un nome anglicizzato nei secoli: 'Rutger von Halvard, il cavaliere espulso'. Le stesse iniziali del gemello trovato a Serranova." }
+            ],
+            text: `Tieni il gemello accanto alla pietra scolpita, confrontando le iniziali con le genealogie incise ai margini degli stemmi del clan. Tra i rami cadetti, quasi illeggibile, un nome: "Rutger von Halvard, il cavaliere espulso" — un cognome che i secoli hanno smussato in "Halvard". Le iniziali coincidono esattamente con quelle del gemello. Non è più un sospetto senza volto: ha già, da questo momento, un nome e una storia di famiglia.`,
+            options: [ { text: "> Torna a guardarti intorno nella cappella", target: "act4_cappella_again" } ]
         },
 
         act4_cripta: {
@@ -615,7 +644,10 @@ const STORY = {
                 <polygon points="130,40 150,15 170,40"/>
             </svg>`,
             text: `L'isola è brulla, battuta dal vento, disabitata da secoli a giudicare dall'assenza di ogni traccia moderna. In cima a un promontorio, i resti di una piccola cappella-santuario sono scavati direttamente nella roccia viva.`,
-            options: [ { text: "> Entra nella grotta-santuario", target: "act5_santuario" } ]
+            options: [
+                { text: "> Entra nella grotta-santuario", target: "act5_santuario", condition: { type: "flag", flag: "identitaHalvardIntuita", equals: false } },
+                { text: "> Entra nella grotta-santuario, pronta ad affrontarlo per nome", target: "act5_santuario_riconosciuto", condition: { type: "flag", flag: "identitaHalvardIntuita", equals: true } }
+            ]
         },
 
         act5_santuario: {
@@ -628,16 +660,37 @@ const STORY = {
             text: `Al centro della grotta, su un altare di pietra consumato dai secoli, riposa un calice bianco, semplice oltre ogni aspettativa. Accanto ad esso, ad attenderli con calma glaciale, un uomo anziano in abiti scuri: "Conte Rutger Halvard," si presenta. "Discendente dell'unico cavaliere che i Custodi osarono espellere dal loro ordine. Questo calice, professore, appartiene alla mia famiglia da otto secoli — e questa notte, finalmente, tornerà a casa."`,
             options: [ { text: "> Ascolta ciò che il Conte ha da dire", target: "act5_confronto" } ]
         },
+        act5_santuario_riconosciuto: {
+            location: "GROTTA-SANTUARIO DI SAN VANEO",
+            onArriveOnce: [
+                { type: "setFlag", flag: "halvardConfrontato", value: true },
+                { type: "addLog", title: "Un Nome Detto per Primo", entry: "Elia riconosce Rutger von Halvard ancora prima che l'uomo apra bocca, mostrandogli il gemello ritrovato mesi prima a Serranova. Per la prima volta da quando è iniziata questa storia, è lui ad avere il controllo del confronto." },
+                { type: "playSfx", sfx: "impatto" }
+            ],
+            text: `Al centro della grotta, su un altare di pietra consumato dai secoli, riposa un calice bianco, semplice oltre ogni aspettativa. Accanto ad esso, un uomo anziano in abiti scuri si volta verso di loro — ma prima che possa aprire bocca, Elia estrae dalla tasca il gemello monogrammato raccolto sul pavimento del museo di Serranova, mesi prima. "Conte Rutger von Halvard," dice, senza un filo di esitazione. "Ha lasciato questo nella sala dei manoscritti." Per un istante, l'uomo che si aspettava di dominare la scena resta, visibilmente, spiazzato.`,
+            options: [ { text: "> Approfitta del vantaggio", target: "act5_confronto" } ]
+        },
 
         act5_confronto: {
             location: "GROTTA-SANTUARIO DI SAN VANEO",
             text: `Halvard non alza la voce, non ha bisogno di farlo: la sua calma è quella di chi ha già vinto, nella propria testa, da molto tempo. Tocca a te decidere come affrontare quest'ultimo, decisivo confronto.`,
             options: [
+                { text: "> Chiamalo per nome, mostrandogli il gemello ritrovato a Serranova", target: "act5_finale_confronto_preparato", condition: { type: "flag", flag: "identitaHalvardIntuita", equals: true } },
                 { text: "> Sfidalo a viso aperto, giocando d'astuzia", skillCheck: { stat: "intuito", difficulty: 14, modifier: 0, success: "act5_finale_vittoria_confronto", failure: "act5_finale_rischio" } },
                 { text: "> Convincilo con la vera Storia, non con la forza", skillCheck: { stat: "cultura", difficulty: 13, modifier: 0, success: "act5_finale_persuasione", failure: "act5_finale_rischio" } },
                 { text: "> Chiama Guido, che vi ha seguiti fin qui", target: "act5_finale_fratelli", condition: { type: "flag", flag: "guidoRedento", equals: true } },
                 { text: "> Rinuncia al Calice e sigilla per sempre la grotta", target: "act5_finale_rinuncia" }
             ]
+        },
+
+        act5_finale_confronto_preparato: {
+            location: "GROTTA-SANTUARIO — UN VANTAGGIO GIÀ CONQUISTATO",
+            music: "tema_finale_vittoria",
+            onArriveOnce: [
+                { type: "addLog", title: "Il Vantaggio della Preparazione", entry: "Sapere già chi fosse Halvard, prima ancora di sbarcare sull'isola, cambia tutto: di fronte a un avversario che non ha più nulla da rivelare, il Conte non trova le forze per continuare il bluff. Consegna il calice senza opporre resistenza, e con esso una cassa di documenti di famiglia sul cavaliere espulso." }
+            ],
+            text: `Sapere già il suo nome, la sua storia, il suo antenato disonorato, toglie a Halvard l'unica arma che gli restava: la sorpresa. "Come..." comincia, e si ferma. Non finisce la domanda — non ne ha bisogno. "Otto secoli di ossessione di famiglia, Conte, e nessuno le ha mai detto la verità intera," dici, posando il gemello sull'altare accanto al calice. Qualcosa, nel suo sguardo, cede prima ancora che tu finisca di parlare. Consegna il calice senza una parola, e con esso una cassa di lettere e documenti di famiglia che nessuno storico aveva mai potuto consultare. Il Codice, il calice, e la vera storia dei Custodi del Calice Bianco troveranno posto in un museo — insieme, per la prima volta, alla storia completa dell'uomo che per tutta la vita aveva inseguito un fantasma di famiglia.`,
+            options: [ { text: "> Torna al Menu Principale", target: "__mainMenu__" } ]
         },
 
         act5_finale_vittoria_confronto: {
