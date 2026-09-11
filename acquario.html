@@ -369,7 +369,11 @@ function processDailyTick(daysPassed){
     dailyDiseaseProgress();
     dailyReproductionCheck();
     dailyMarketFluctuation();
-    if (state.filter.life>0) state.filter.life = Math.max(0, state.filter.life-1);
+    if (state.filter.life>0){
+      const dirty = clamp((state.water.ammonia + state.water.nitrite)/2, 0, 100);
+      const wearRate = 1 + (dirty/100)*4; // fino a 5x più veloce con acqua molto sporca
+      state.filter.life = Math.max(0, state.filter.life - wearRate);
+    }
   }
   refreshDailyMissionsIfNeeded();
 }
@@ -612,7 +616,7 @@ function feedAll(){
       tryOnsetDisease2(f, 'dropsy');
     }
   });
-  state.water.ammonia = clamp(state.water.ammonia + 3, 0, 100);
+  state.water.ammonia = clamp(state.water.ammonia + 1, 0, 100);
   playSound('feed');
   markMissionProgress('feed');
 }
@@ -906,9 +910,12 @@ function spawnSparkle(x,y){
 }
 
 function updateAndDrawFx(w,h){
-  // pellet di cibo che affondano lentamente
+  // pellet di cibo che affondano lentamente; se non mangiato entro il fondo, sporca l'acqua
   fx.pellets.forEach(p=> p.y += p.vy);
-  fx.pellets = fx.pellets.filter(p=> p.y < 0.95);
+  fx.pellets = fx.pellets.filter(p=>{
+    if (p.y >= 0.95){ state.water.ammonia = clamp(state.water.ammonia + 1, 0, 100); return false; }
+    return true;
+  });
   fx.pellets.forEach(p=>{
     ctx.fillStyle = '#d9a85a';
     ctx.beginPath();
@@ -1101,7 +1108,7 @@ function statusHTML(){
     <div class="row"><div><div class="name">Nitrati</div><div class="sub">${Math.round(w.nitrate)}%</div></div><span class="badge-mini">${w.nitrate>60?'⚠️ alti':'ok'}</span></div>
     <div class="row"><div><div class="name">Ossigeno</div><div class="sub">${Math.round(w.oxygen)}%</div></div></div>
     <div class="row"><div><div class="name">Temperatura</div><div class="sub">${w.temperature.toFixed(1)}°C</div></div></div>
-    <div class="row"><div><div class="name">Stato filtro</div><div class="sub">${state.filter.life} giorni residui</div></div><span class="badge-mini">${filterPct<=20?'⚠️ da sostituire':'ok'}</span></div>`;
+    <div class="row"><div><div class="name">Stato filtro</div><div class="sub">${Math.max(0,Math.round(state.filter.life))} giorni residui</div></div><span class="badge-mini">${filterPct<=20?'⚠️ da sostituire':'ok'}</span></div>`;
 }
 function settingsHTML(){
   return `<h2>⚙️ Impostazioni</h2>
@@ -1170,6 +1177,7 @@ function openFishPanel(fishId){
   document.getElementById('fishContent').innerHTML = `
     <h2>${sp.name}</h2>
     <div class="sub">Stadio: ${f.stage} · Taglia: ${Math.round((f.size/sp.maxSize)*100)}% · In vasca da ${Math.floor(f.age)} giorni</div>
+    <div class="row"><div class="name">Fame</div><div class="sub">${f.hunger>70?'⚠️ affamato':(f.hunger>40?'poco sazio':'sazio')} (${Math.round(f.hunger)}%)</div></div>
     <div class="row"><div class="name">Salute</div><div class="sub">${Math.round(f.health)}%</div></div>
     <div class="row"><div class="name">Umore</div><div class="sub">${Math.round(f.happiness)}%</div></div>
     ${dis ? `<div class="row"><div class="name">⚠️ ${dis.name}</div><div class="sub">${dis.symptom}</div></div>` : ''}
