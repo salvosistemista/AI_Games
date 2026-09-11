@@ -160,6 +160,7 @@
       <button class="close-x" id="menuClose">✕</button>
       <h2>Menu</h2>
       <div class="row" data-open="shop"><div><div class="name">🛒 Negozio</div><div class="sub">Pesci, cibo, filtro</div></div><button>Apri</button></div>
+      <div class="row" data-open="garden"><div><div class="name">🌿 Giardino</div><div class="sub">Piante e decorazioni</div></div><button>Apri</button></div>
       <div class="row" data-open="pharmacy" id="pharmacyRow" style="display:none;"><div><div class="name">💊 Farmacia</div><div class="sub">Medicine</div></div><button>Apri</button></div>
       <div class="row" data-open="encyclopedia"><div><div class="name">📖 Enciclopedia</div><div class="sub">Specie e malattie</div></div><button>Apri</button></div>
       <div class="row" data-open="missions"><div><div class="name">🎯 Missioni</div><div class="sub">Obiettivi del giorno</div></div><button>Apri</button></div>
@@ -236,7 +237,19 @@ const MEDICINES = {
 const CONSUMABLES = {
   cibo:   { id:'cibo', name:'Cibo', cost:4, unitsPerPack:10 },
   filtro: { id:'filtro', name:'Ricambio filtro', cost:20, life:6 },
+  fertilizzante: { id:'fertilizzante', name:'Fertilizzante', cost:8, unitsPerPack:6 },
 };
+
+const PLANT_TYPES = {
+  muschio:    { id:'muschio',    name:'Muschio di Giava', cost:6,  oxygen:0.35, filter:0.30, growthRate:0.05 },
+  vallisneria:{ id:'vallisneria',name:'Vallisneria',       cost:10, oxygen:0.55, filter:0.45, growthRate:0.035 },
+  anubias:    { id:'anubias',    name:'Anubias',           cost:16, oxygen:0.45, filter:0.65, growthRate:0.02 },
+};
+const DECORATION_TYPES = {
+  grotta:   { id:'grotta',   name:'Grotta',            cost:14, hidingSpot:true },
+  castello: { id:'castello', name:'Castello sommerso', cost:22, enrichment:true },
+};
+const MAX_TANK_ITEMS = 6;
 
 const OFFLINE_CAP_HOURS = 72;
 const SAVE_KEY = 'acquario_save_v1';
@@ -256,7 +269,11 @@ function newGameState(){
     lastDayProcessed: 1,
     fish: [],          // {id, speciesId, birthDay, age, size, hunger, happiness, health, stage, diseaseId, diseaseDay, medicineId, medicineDaysLeft, pairId, selected}
     nextFishId: 1,
-    plants: [],         // {id, name, health, growth, pruned}
+    plants: [],         // {id, kind, isPlant, health, growth, overgrownDays} oppure {id, kind, isPlant:false, health:100} per decorazioni
+    nextPlantId: 1,
+    fertilizerUnits: 0,
+    light: { intensity: 0.7, upgraded: false },
+    substrate: 'standard', // 'standard' | 'fine'
     water: { ammonia:0, nitrite:0, nitrate:0, bacteria:0, temperature:25, oxygen:80 },
     filter: { life: 6, maxLife: 6 },
     foodUnits: 20,
@@ -323,7 +340,9 @@ function stageForAge(fish){
 
 /* ---- Tick "continuo" (chiamato ogni ~2s durante il gioco attivo, effetto leggero) ---- */
 function tickLogic(){
+  const hasHidingSpot = state.plants.some(p=>!p.isPlant && p.kind==='grotta' && p.health>0);
   state.fish.forEach(f=>{
+    const sp = speciesOf(f);
     // fame cresce lentamente
     f.hunger = clamp(f.hunger + 0.15, 0, 100);
     // felicità influenzata da fame, malattia, solitudine
@@ -332,6 +351,8 @@ function tickLogic(){
     if (f.diseaseId) happinessDelta -= 0.05;
     if (isLonely(f)) happinessDelta -= 0.08;
     if (isBored(f)) happinessDelta -= 0.05;
+    if (state.substrate==='fine' && sp.social==='scavatore') happinessDelta += 0.05;
+    if (hasHidingSpot && sp.social==='territoriale') happinessDelta += 0.03;
     f.happiness = clamp(f.happiness + happinessDelta, 0, 100);
     // salute scende se fame o infelicità estreme
     if (f.hunger > 90) f.health = clamp(f.health - 0.1, 0, 100);
@@ -382,22 +403,53 @@ function dailyWaterDegrade(){
   const w = state.water;
   const totalBioLoad = state.fish.reduce((s,f)=> s + 0.5 + f.size, 0);
   const filterEfficiency = state.filter.life>0 ? 1 : 0.4;
-  const plantFiltering = state.plants.reduce((s,p)=> s + (p.health>30 ? 0.05 : 0), 0);
+  const livePlants = state.plants.filter(p=>p.isPlant && p.health>30);
+  const plantFilterBonus = livePlants.reduce((s,p)=> s + PLANT_TYPES[p.kind].filter*(0.5+Math.min(p.growth,1)*0.5), 0);
+  const plantOxygenBonus = livePlants.reduce((s,p)=> s + PLANT_TYPES[p.kind].oxygen*(0.5+Math.min(p.growth,1)*0.5), 0);
 
-  w.ammonia = clamp(w.ammonia + totalBioLoad*0.8 - filterEfficiency*1.2 - plantFiltering, 0, 100);
-  // batteri maturano lentamente (ciclo azoto, ~14 giorni per maturità piena)
-  w.bacteria = clamp(w.bacteria + 0.07, 0, 1);
+  w.ammonia = clamp(w.ammonia + totalBioLoad*0.8 - filterEfficiency*1.2 - plantFilterBonus*0.6, 0, 100);
+  // batteri maturano lentamente (ciclo azoto, ~14 giorni per maturità piena), il fondale fine li aiuta
+  w.bacteria = clamp(w.bacteria + 0.07*(state.substrate==='fine'?1.3:1), 0, 1);
   const nitriteProd = w.ammonia * (0.15 + w.bacteria*0.3);
   w.nitrite = clamp(w.nitrite + nitriteProd*0.3 - w.bacteria*1.0, 0, 100);
   const nitrateProd = w.nitrite * (0.1 + w.bacteria*0.25);
   w.nitrate = clamp(w.nitrate + nitrateProd*0.25, 0, 100);
 
-  w.oxygen = clamp(80 + plantFiltering*40 - totalBioLoad*1.5 - (w.temperature>28?10:0), 10, 100);
+  w.oxygen = clamp(80 + plantOxygenBonus*25 - totalBioLoad*1.5 - (w.temperature>28?10:0), 10, 100);
 
   // rischio malattie ambientali
   if (w.ammonia>55 || w.nitrite>50) tryOnsetDisease('finrot', 0.20);
-  const rotting = state.plants.some(p=>p.health<15);
-  if (rotting) tryOnsetDisease('fungus', 0.18);
+  const rottingPlant = state.plants.some(p=>p.isPlant && p.health<15);
+  if (rottingPlant) tryOnsetDisease('fungus', 0.18);
+
+  dailyPlantGrowth();
+}
+
+function dailyPlantGrowth(){
+  const livePlants = state.plants.filter(p=>p.isPlant);
+  if (!livePlants.length) return;
+  const fertilized = state.fertilizerUnits > 0;
+  if (fertilized) state.fertilizerUnits = Math.max(0, state.fertilizerUnits - 1);
+  const lightFactor = state.light.upgraded ? 1.3 : 1.0;
+  livePlants.forEach(p=>{
+    const type = PLANT_TYPES[p.kind];
+    if (fertilized){
+      p.growth = clamp(p.growth + type.growthRate*lightFactor, 0, 1.6);
+      p.health = clamp(p.health + 4, 0, 100);
+    } else {
+      // pianta trascurata: perde salute lentamente
+      p.health = clamp(p.health - 5, 0, 100);
+    }
+    if (p.growth > 1){
+      p.overgrownDays = (p.overgrownDays||0) + 1;
+      if (p.overgrownDays > 4){
+        // troppo cresciuta e non potata: soffoca la vasca
+        p.health = clamp(p.health - 6, 0, 100);
+      }
+    } else {
+      p.overgrownDays = 0;
+    }
+  });
 }
 
 function tryOnsetDisease(diseaseId, baseChance){
@@ -685,16 +737,51 @@ function buyConsumable(id){
   state.money -= c.cost;
   if (id==='cibo') state.foodUnits += c.unitsPerPack;
   if (id==='filtro') { state.filter.life = state.filter.maxLife; }
+  if (id==='fertilizzante') { state.fertilizerUnits += c.unitsPerPack; }
   playSound('coin');
   renderShopIfOpen();
 }
 
-function pruneOrAddPlant(){
-  if (state.plants.length===0){
-    state.plants.push({id:1, name:'Pianta comune', health:100, growth:0.3});
-    return;
-  }
-  state.plants.forEach(p=> p.health = clamp(p.health+40,0,100));
+function buyPlant(kind){
+  const type = PLANT_TYPES[kind];
+  if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); return; }
+  if (state.money < type.cost){ pushToast('Fondi insufficienti'); return; }
+  state.money -= type.cost;
+  state.plants.push({ id: state.nextPlantId++, kind, isPlant:true, health:80, growth:0.15, overgrownDays:0 });
+  playSound('coin');
+}
+function buyDecoration(kind){
+  const type = DECORATION_TYPES[kind];
+  if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); return; }
+  if (state.money < type.cost){ pushToast('Fondi insufficienti'); return; }
+  state.money -= type.cost;
+  state.plants.push({ id: state.nextPlantId++, kind, isPlant:false, health:100 });
+  playSound('coin');
+}
+function prunePlant(plantId){
+  const p = state.plants.find(x=>x.id===plantId);
+  if (!p || !p.isPlant) return;
+  p.growth = 0.5;
+  p.overgrownDays = 0;
+  p.health = clamp(p.health + 20, 0, 100);
+  playSound('clean');
+}
+function buyLightUpgrade(){
+  if (state.light.upgraded) return;
+  const cost = 40;
+  if (state.money < cost){ pushToast('Fondi insufficienti'); return; }
+  state.money -= cost;
+  state.light.upgraded = true;
+  state.light.intensity = 1;
+  playSound('coin');
+}
+function buySubstrateUpgrade(){
+  if (state.substrate==='fine') return;
+  const cost = 15;
+  if (state.money < cost){ pushToast('Fondi insufficienti'); return; }
+  state.money -= cost;
+  state.substrate = 'fine';
+  playSound('coin');
 }
 
 /* =========================================================================
@@ -754,7 +841,7 @@ function render(){
   ctx.clearRect(0,0,w,h);
 
   drawBackground(w,h);
-  state.plants.forEach(p=>drawPlant(p,w,h));
+  state.plants.forEach((p,idx)=>drawPlant(p,w,h,idx));
   state.fish.forEach(f=>drawFish(f,w,h));
   drawWaterOverlay(w,h);
   updateAndDrawFx(w,h);
@@ -768,17 +855,41 @@ function drawBackground(w,h){
   ctx.fillRect(0,0,w,h);
 }
 
-function drawPlant(p,w,h){
-  const baseX = w*0.15 + (p.id*40)%(w*0.7);
+function drawPlant(p, w, h, idx){
+  const count = Math.max(state.plants.length, 1);
+  const baseX = w*(0.12 + (idx/count)*0.76) + Math.sin(idx*2)*6;
   const baseY = h;
-  const height = h*0.18*(0.5+p.growth);
-  const alpha = clamp(p.health/100,0.2,1);
-  ctx.strokeStyle = `rgba(90,209,154,${alpha})`;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(baseX, baseY);
-  ctx.quadraticCurveTo(baseX+15, baseY-height*0.6, baseX, baseY-height);
-  ctx.stroke();
+
+  if (p.isPlant){
+    const type = PLANT_TYPES[p.kind];
+    const height = h*0.14*(0.6+Math.min(p.growth,1));
+    const alpha = clamp(p.health/100,0.2,1);
+    ctx.strokeStyle = `rgba(90,209,154,${alpha})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY);
+    ctx.quadraticCurveTo(baseX+14, baseY-height*0.6, baseX + (p.growth>1?10:2), baseY-height);
+    ctx.stroke();
+    if (p.growth > 1){
+      // seconda fronda per dare il senso di crescita eccessiva da potare
+      ctx.beginPath();
+      ctx.moveTo(baseX, baseY);
+      ctx.quadraticCurveTo(baseX-14, baseY-height*0.5, baseX-8, baseY-height*0.9);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = 'rgba(130,120,150,0.9)';
+    if (p.kind==='grotta'){
+      ctx.beginPath();
+      ctx.arc(baseX, baseY-2, 18, Math.PI, 0);
+      ctx.fill();
+    } else {
+      ctx.fillRect(baseX-11, baseY-34, 22, 34);
+      ctx.beginPath();
+      ctx.moveTo(baseX-11, baseY-34); ctx.lineTo(baseX, baseY-46); ctx.lineTo(baseX+11, baseY-34);
+      ctx.closePath(); ctx.fill();
+    }
+  }
 }
 
 function drawFish(f,w,h){
@@ -1027,6 +1138,7 @@ function renderPanel(){
   else if (currentPanel==='missions') c.innerHTML = missionsHTML();
   else if (currentPanel==='settings') c.innerHTML = settingsHTML();
   else if (currentPanel==='status') c.innerHTML = statusHTML();
+  else if (currentPanel==='garden') c.innerHTML = gardenHTML();
   attachPanelHandlers();
 }
 function renderShopIfOpen(){ if (currentPanel==='shop') renderPanel(); updateTopBarBadges(); }
@@ -1042,7 +1154,36 @@ function shopHTML(){
   rows += `<h2 style="margin-top:16px;">Consumabili</h2>`;
   rows += `<div class="row"><div><div class="name">Cibo (x10)</div><div class="sub">${CONSUMABLES.cibo.cost}€</div></div><button data-buyc="cibo">Compra</button></div>`;
   rows += `<div class="row"><div><div class="name">Ricambio filtro</div><div class="sub">${CONSUMABLES.filtro.cost}€</div></div><button data-buyc="filtro">Compra</button></div>`;
+  rows += `<div class="row"><div><div class="name">Fertilizzante (x6)</div><div class="sub">${CONSUMABLES.fertilizzante.cost}€ · per le piante vive</div></div><button data-buyc="fertilizzante">Compra</button></div>`;
   return rows;
+}
+function gardenHTML(){
+  let html = `<h2>🌿 Giardino</h2><div class="sub" style="margin-bottom:10px;">Fertilizzante disponibile: ${state.fertilizerUnits} · Elementi in vasca: ${state.plants.length}/${MAX_TANK_ITEMS}</div>`;
+  if (!state.plants.length){
+    html += `<div class="sub">Nessuna pianta o decorazione ancora.</div>`;
+  }
+  state.plants.forEach(p=>{
+    if (p.isPlant){
+      const type = PLANT_TYPES[p.kind];
+      const overgrown = p.growth > 1;
+      html += `<div class="row"><div><div class="name">${type.name}</div><div class="sub">Salute ${Math.round(p.health)}%${overgrown?' · da potare 🌱':''}</div></div><button data-prune="${p.id}">Pota</button></div>`;
+    } else {
+      const type = DECORATION_TYPES[p.kind];
+      html += `<div class="row"><div><div class="name">${type.name}</div><div class="sub">Decorazione, nessuna manutenzione</div></div><span class="badge-mini">ok</span></div>`;
+    }
+  });
+  html += `<h2 style="margin-top:16px;">Piante vive</h2>`;
+  Object.values(PLANT_TYPES).forEach(t=>{
+    html += `<div class="row"><div><div class="name">${t.name}</div><div class="sub">${t.cost}€ · richiede fertilizzante</div></div><button data-buyplant="${t.id}" ${state.money<t.cost?'disabled':''}>Compra</button></div>`;
+  });
+  html += `<h2 style="margin-top:16px;">Decorazioni</h2>`;
+  Object.values(DECORATION_TYPES).forEach(t=>{
+    html += `<div class="row"><div><div class="name">${t.name}</div><div class="sub">${t.cost}€ · nessuna manutenzione</div></div><button data-buydeco="${t.id}" ${state.money<t.cost?'disabled':''}>Compra</button></div>`;
+  });
+  html += `<h2 style="margin-top:16px;">Upgrade ambiente</h2>`;
+  html += `<div class="row"><div><div class="name">Illuminazione avanzata</div><div class="sub">${state.light.upgraded?'Attiva':'40€ · crescita e ossigeno migliori'}</div></div>${state.light.upgraded?'<span class="badge-mini">ok</span>':'<button id="buyLight">Compra</button>'}</div>`;
+  html += `<div class="row"><div><div class="name">Fondale fine</div><div class="sub">${state.substrate==='fine'?'Attivo':'15€ · aiuta batteri e Loach'}</div></div>${state.substrate==='fine'?'<span class="badge-mini">ok</span>':'<button id="buySubstrate">Compra</button>'}</div>`;
+  return html;
 }
 function pharmacyHTML(){
   let rows = `<h2>💊 Farmacia</h2>`;
@@ -1123,6 +1264,13 @@ function attachPanelHandlers(){
   const c = document.getElementById('panelContent');
   c.querySelectorAll('[data-buy]').forEach(b=> b.addEventListener('click', ()=> buyFish(b.dataset.buy)));
   c.querySelectorAll('[data-buyc]').forEach(b=> b.addEventListener('click', ()=> buyConsumable(b.dataset.buyc)));
+  c.querySelectorAll('[data-prune]').forEach(b=> b.addEventListener('click', ()=>{ prunePlant(parseInt(b.dataset.prune)); renderPanel(); }));
+  c.querySelectorAll('[data-buyplant]').forEach(b=> b.addEventListener('click', ()=>{ buyPlant(b.dataset.buyplant); renderPanel(); }));
+  c.querySelectorAll('[data-buydeco]').forEach(b=> b.addEventListener('click', ()=>{ buyDecoration(b.dataset.buydeco); renderPanel(); }));
+  const lightBtn = document.getElementById('buyLight');
+  if (lightBtn) lightBtn.addEventListener('click', ()=>{ buyLightUpgrade(); renderPanel(); });
+  const substrateBtn = document.getElementById('buySubstrate');
+  if (substrateBtn) substrateBtn.addEventListener('click', ()=>{ buySubstrateUpgrade(); renderPanel(); });
   c.querySelectorAll('[data-med]').forEach(b=> b.addEventListener('click', ()=>{ buyMedicine(b.dataset.med, parseInt(b.dataset.fish)); renderPanel(); }));
   c.querySelectorAll('[data-enctab]').forEach(b=> b.addEventListener('click', ()=>{ state._encTab = b.dataset.enctab; renderPanel(); }));
   const zenBtn = document.getElementById('toggleZen');
