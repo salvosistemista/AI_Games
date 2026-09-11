@@ -209,6 +209,16 @@
 
   <div id="dailySummary" class="hidden"></div>
 
+  <!-- RIEPILOGO GIORNALIERO -->
+  <div class="overlay hidden" id="dailySummaryOverlay">
+    <div class="sheet" style="max-width:380px;">
+      <div class="sheet-scroll">
+        <div class="sheet-handle"></div>
+        <div id="dailySummaryContent"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 <script>
 "use strict";
@@ -280,6 +290,7 @@ function newGameState(){
     reputation: 0,
     day: 1,
     lastSaveTime: Date.now(),
+    lastDayAdvanceTime: Date.now(),
     lastDayProcessed: 1,
     fish: [],          // {id, speciesId, birthDay, age, size, hunger, happiness, health, stage, diseaseId, diseaseDay, medicineId, medicineDaysLeft, pairId, selected}
     nextFishId: 1,
@@ -296,6 +307,9 @@ function newGameState(){
     zen: false,
     missions: [],           // {id, key, label, done, rewardMoney, rewardRep}
     missionsDay: 0,
+    weeklyMission: null,    // {key, label, target, progressKey, reward, done}
+    weeklyMissionDay: 0,
+    weeklyProgress: { sold:0, cleanStreak:0, reproducedCount:0, adultNoDiseaseCount:0 },
     encyclopediaSeen: {},   // speciesId -> true once owned
     started: false,
   };
@@ -336,6 +350,7 @@ function createFish(speciesId, opts){
     curiosity: opts.curiosity ?? rand(0.25,0.9),   // quanto è attratto da uno stimolo nuovo
     wariness: opts.wariness ?? rand(0.2,0.85),     // quanto è diffidente/pauroso
     experience: opts.experience ?? 0,              // cresce col tempo, riduce l'effetto della diffidenza
+    neverSick: opts.neverSick ?? true,             // per la missione settimanale "adulto senza mai ammalarsi"
     _reactionState: 'normal',      // normal | flee | watch | approach | rush
     _reactionUntil: 0,
   };
@@ -414,6 +429,7 @@ function processDailyTick(daysPassed){
     }
   }
   refreshDailyMissionsIfNeeded();
+  refreshWeeklyMissionIfNeeded();
 }
 
 function dailyHeaterUpdate(){
@@ -455,6 +471,12 @@ function dailyWaterDegrade(){
   const rottingPlant = state.plants.some(p=>p.isPlant && p.health<15);
   if (rottingPlant) tryOnsetDisease('fungus', 0.18);
 
+  // streak di acqua pulita per la missione settimanale
+  const dirtyNow = (w.ammonia + w.nitrite) / 2;
+  if (dirtyNow < 30) state.weeklyProgress.cleanStreak = (state.weeklyProgress.cleanStreak||0) + 1;
+  else state.weeklyProgress.cleanStreak = 0;
+  checkWeeklyMissionCompletion();
+
   dailyPlantGrowth();
 }
 
@@ -495,6 +517,8 @@ function tryOnsetDisease(diseaseId, baseChance){
     if (Math.random() < chance){
       f.diseaseId = diseaseId;
       f.diseaseDay = 0;
+      f.neverSick = false;
+      playSound('disease');
     }
   });
 }
@@ -506,6 +530,7 @@ function hasRiskMultiplier(f){
 function dailyGrowthAndFeed(){
   state.fish.forEach(f=>{
     const sp = speciesOf(f);
+    const wasAdult = f.stage === 'adulto';
     const wellFed = f.hunger < 70 && f.health > 40;
     if (wellFed){
       f.age += 1;
@@ -513,6 +538,10 @@ function dailyGrowthAndFeed(){
       f.age += 0.5; // crescita rallentata da denutrizione
     }
     f.stage = stageForAge(f);
+    if (f.stage==='adulto' && !wasAdult && f.neverSick){
+      state.weeklyProgress.adultNoDiseaseCount = (state.weeklyProgress.adultNoDiseaseCount||0) + 1;
+      checkWeeklyMissionCompletion();
+    }
     const targetSize = Math.min(1, f.age / sp.growthDays);
     f.size = sp.maxSize * clamp(targetSize, 0.15, 1);
 
@@ -527,7 +556,7 @@ function dailyGrowthAndFeed(){
 }
 function tryOnsetDisease2(f, diseaseId){
   if (f.diseaseId) return;
-  if (Math.random() < 0.25) { f.diseaseId = diseaseId; f.diseaseDay = 0; }
+  if (Math.random() < 0.25) { f.diseaseId = diseaseId; f.diseaseDay = 0; f.neverSick = false; playSound('disease'); }
 }
 
 function dailyDiseaseProgress(){
@@ -596,6 +625,9 @@ function dailyReproductionCheck(){
         const baby = createFish(sid, {age:0, size:0.1, stage:'avannotto'});
         state.fish.push(baby);
         pushToast(`🐣 Nuovo ${SPECIES[sid].name} nato!`);
+        playSound('birth');
+        state.weeklyProgress.reproducedCount = (state.weeklyProgress.reproducedCount||0) + 1;
+        checkWeeklyMissionCompletion();
       } else {
         // nascita fallita: forte calo di felicità sui genitori
         parents.forEach(p=>{ p.happiness = clamp(p.happiness - 35, 0, 100); });
@@ -622,6 +654,7 @@ function killFish(fishId, reason){
   const f = state.fish[idx];
   state.fish.splice(idx,1);
   pushToast(`⚰️ ${SPECIES[f.speciesId].name} è morto (${reason})`);
+  playSound('death');
 }
 
 /* ---- Puntatore/dito: curiosità, diffidenza, reazioni individuali ---- */
@@ -699,10 +732,22 @@ function applyOfflineProgression(){
   return null;
 }
 
+/* ---- Avanzamento dei giorni anche a gioco aperto (non solo al riavvio) ---- */
+function checkLiveDayAdvance(){
+  const now = Date.now();
+  const hoursSince = (now - state.lastDayAdvanceTime) / 3600000;
+  if (hoursSince < 24) return;
+  const daysToAdvance = Math.min(Math.floor(hoursSince / 24), 3); // tetto di sicurezza per un'unica chiamata
+  processDailyTick(daysToAdvance);
+  state.lastDayAdvanceTime += daysToAdvance * 24 * 3600000;
+  updateTopBarBadges();
+  saveGame();
+}
+
 /* ---- Azioni giocatore ---- */
 function feedAll(){
-  if (state.fish.length===0){ pushToast('Nessun pesce da nutrire.'); return; }
-  if (state.foodUnits<=0){ pushToast('Cibo esaurito! Vai al negozio.'); return; }
+  if (state.fish.length===0){ pushToast('Nessun pesce da nutrire.'); playSound('error'); return; }
+  if (state.foodUnits<=0){ pushToast('Cibo esaurito! Vai al negozio.'); playSound('error'); return; }
   state.foodUnits -= 1;
   spawnPellets(Math.min(8, 3 + state.fish.length));
   state.fish.forEach(f=>{
@@ -731,8 +776,8 @@ function cleanWater(){
 
 function buyFish(speciesId){
   const sp = SPECIES[speciesId];
-  if (state.fish.length>=MAX_FISH){ pushToast('Vasca piena!'); return; }
-  if (state.money < sp.cost){ pushToast('Fondi insufficienti'); return; }
+  if (state.fish.length>=MAX_FISH){ pushToast('Vasca piena!'); playSound('error'); return; }
+  if (state.money < sp.cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
   state.money -= sp.cost;
   const f = createFish(speciesId, {age:0, size:0.15, stage:'avannotto'});
   state.fish.push(f);
@@ -742,7 +787,7 @@ function buyFish(speciesId){
 }
 
 function sellFish(fishId){
-  if (state.fish.length <= 1){ pushToast('Non puoi vendere il tuo ultimo pesce!'); return; }
+  if (state.fish.length <= 1){ pushToast('Non puoi vendere il tuo ultimo pesce!'); playSound('error'); return; }
   const f = state.fish.find(x=>x.id===fishId);
   if (!f) return;
   const price = computeSellPrice(f);
@@ -751,6 +796,8 @@ function sellFish(fishId){
   pushToast(`Venduto per ${price}€`);
   playSound('coin');
   markMissionProgress('sell');
+  state.weeklyProgress.sold = (state.weeklyProgress.sold||0) + 1;
+  checkWeeklyMissionCompletion();
   closeFishPanel();
 }
 
@@ -770,8 +817,8 @@ function buyMedicine(medId, fishId){
   const med = MEDICINES[medId];
   const f = state.fish.find(x=>x.id===fishId);
   if (!f) return;
-  if (state.money < med.cost){ pushToast('Fondi insufficienti'); return; }
-  if (f.diseaseId !== med.cures){ pushToast('Medicina sbagliata: dose sprecata!'); state.money -= med.cost; return; }
+  if (state.money < med.cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
+  if (f.diseaseId !== med.cures){ pushToast('Medicina sbagliata: dose sprecata!'); playSound('error'); state.money -= med.cost; return; }
   state.money -= med.cost;
   f.medicineId = medId;
   f.medicineDaysLeft = med.days;
@@ -781,7 +828,7 @@ function buyMedicine(medId, fishId){
 
 function buyConsumable(id){
   const c = CONSUMABLES[id];
-  if (state.money < c.cost){ pushToast('Fondi insufficienti'); return; }
+  if (state.money < c.cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
   state.money -= c.cost;
   if (id==='cibo') state.foodUnits += c.unitsPerPack;
   if (id==='filtro') { state.filter.life = state.filter.maxLife; }
@@ -793,16 +840,16 @@ function buyConsumable(id){
 
 function buyPlant(kind){
   const type = PLANT_TYPES[kind];
-  if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); return; }
-  if (state.money < type.cost){ pushToast('Fondi insufficienti'); return; }
+  if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); playSound('error'); return; }
+  if (state.money < type.cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
   state.money -= type.cost;
   state.plants.push({ id: state.nextPlantId++, kind, isPlant:true, health:80, growth:0.15, overgrownDays:0, sizeMod: rand(0.85,1.15) });
   playSound('coin');
 }
 function buyDecoration(kind){
   const type = DECORATION_TYPES[kind];
-  if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); return; }
-  if (state.money < type.cost){ pushToast('Fondi insufficienti'); return; }
+  if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); playSound('error'); return; }
+  if (state.money < type.cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
   state.money -= type.cost;
   state.plants.push({ id: state.nextPlantId++, kind, isPlant:false, health:100, sizeMod: rand(0.85,1.15) });
   playSound('coin');
@@ -818,7 +865,7 @@ function prunePlant(plantId){
 function buyLightUpgrade(){
   if (state.light.upgraded) return;
   const cost = 40;
-  if (state.money < cost){ pushToast('Fondi insufficienti'); return; }
+  if (state.money < cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
   state.money -= cost;
   state.light.upgraded = true;
   state.light.intensity = 1;
@@ -827,7 +874,7 @@ function buyLightUpgrade(){
 function buySubstrateUpgrade(){
   if (state.substrate==='fine') return;
   const cost = 15;
-  if (state.money < cost){ pushToast('Fondi insufficienti'); return; }
+  if (state.money < cost){ pushToast('Fondi insufficienti'); playSound('error'); return; }
   state.money -= cost;
   state.substrate = 'fine';
   playSound('coin');
@@ -866,6 +913,36 @@ function markMissionProgress(key){
     state.money += m.reward.money;
     state.reputation += m.reward.rep;
     pushToast(`✅ Missione completata: +${m.reward.money}€ +${m.reward.rep}⭐`);
+    playSound('mission');
+  }
+}
+
+/* =========================================================================
+   MISSIONE SETTIMANALE (una sola alla volta, più impegnativa)
+   ========================================================================= */
+const WEEKLY_MISSION_POOL = [
+  { key:'sell3',      label:'Vendi 3 pesci in una settimana',                    target:3, progressKey:'sold',                reward:{rep:15} },
+  { key:'clean5',     label:"Mantieni l'acqua pulita per 5 giorni di fila",       target:5, progressKey:'cleanStreak',         reward:{rep:15} },
+  { key:'reproduce',  label:'Fai nascere un nuovo pesce',                        target:1, progressKey:'reproducedCount',     reward:{rep:12} },
+  { key:'adultclean', label:"Porta un pesce all'età adulta senza mai ammalarlo", target:1, progressKey:'adultNoDiseaseCount', reward:{rep:12} },
+];
+
+function refreshWeeklyMissionIfNeeded(){
+  if (state.weeklyMission && (state.day - state.weeklyMissionDay) < 7) return;
+  state.weeklyMissionDay = state.day;
+  state.weeklyProgress = { sold:0, cleanStreak:0, reproducedCount:0, adultNoDiseaseCount:0 };
+  const pick = choice(WEEKLY_MISSION_POOL);
+  state.weeklyMission = { key:pick.key, label:pick.label, target:pick.target, progressKey:pick.progressKey, reward:pick.reward, done:false };
+  pushToast(`📅 Nuova missione settimanale: ${pick.label}`);
+}
+function checkWeeklyMissionCompletion(){
+  const m = state.weeklyMission;
+  if (!m || m.done) return;
+  if ((state.weeklyProgress[m.progressKey]||0) >= m.target){
+    m.done = true;
+    state.reputation += m.reward.rep;
+    pushToast(`🏆 Missione settimanale completata: +${m.reward.rep}⭐`);
+    playSound('missionBig');
   }
 }
 
@@ -1307,6 +1384,7 @@ function loop(){
 let audioCtx;
 function ensureAudio(){ if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
 function playSound(kind){
+  if (summaryCollecting) return; // evita raffiche di suoni durante il recupero offline
   try{
     ensureAudio();
     const t = audioCtx.currentTime;
@@ -1316,8 +1394,14 @@ function playSound(kind){
     if (kind==='feed'){ osc.type='sine'; osc.frequency.setValueAtTime(440,t); gain.gain.setValueAtTime(0.08,t); }
     if (kind==='clean'){ osc.type='sine'; osc.frequency.setValueAtTime(300,t); osc.frequency.linearRampToValueAtTime(500,t+0.2); gain.gain.setValueAtTime(0.06,t); }
     if (kind==='coin'){ osc.type='triangle'; osc.frequency.setValueAtTime(660,t); osc.frequency.setValueAtTime(880,t+0.08); gain.gain.setValueAtTime(0.08,t); }
-    gain.gain.exponentialRampToValueAtTime(0.001, t+0.3);
-    osc.start(t); osc.stop(t+0.32);
+    if (kind==='birth'){ osc.type='sine'; osc.frequency.setValueAtTime(520,t); osc.frequency.setValueAtTime(700,t+0.1); osc.frequency.setValueAtTime(880,t+0.2); gain.gain.setValueAtTime(0.07,t); }
+    if (kind==='death'){ osc.type='sine'; osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(120,t+0.5); gain.gain.setValueAtTime(0.06,t); }
+    if (kind==='disease'){ osc.type='sine'; osc.frequency.setValueAtTime(380,t); osc.frequency.setValueAtTime(340,t+0.15); gain.gain.setValueAtTime(0.05,t); }
+    if (kind==='mission'){ osc.type='triangle'; osc.frequency.setValueAtTime(520,t); osc.frequency.setValueAtTime(660,t+0.09); osc.frequency.setValueAtTime(780,t+0.18); gain.gain.setValueAtTime(0.08,t); }
+    if (kind==='missionBig'){ osc.type='triangle'; osc.frequency.setValueAtTime(520,t); osc.frequency.setValueAtTime(660,t+0.08); osc.frequency.setValueAtTime(780,t+0.16); osc.frequency.setValueAtTime(980,t+0.26); gain.gain.setValueAtTime(0.09,t); }
+    if (kind==='error'){ osc.type='square'; osc.frequency.setValueAtTime(180,t); gain.gain.setValueAtTime(0.05,t); }
+    gain.gain.exponentialRampToValueAtTime(0.001, t + (kind==='death'?0.55:(kind==='missionBig'?0.4:0.32)));
+    osc.start(t); osc.stop(t + (kind==='death'?0.6:(kind==='missionBig'?0.42:0.34)));
   }catch(e){}
 }
 
@@ -1337,11 +1421,61 @@ function updateTopBarBadges(){
 }
 
 function pushToast(msg){
+  if (summaryCollecting){ pendingSummaryEvents.push(msg); return; }
   const el = document.getElementById('dailySummary');
   el.innerHTML = `<span>${msg}</span>`;
   el.classList.remove('hidden');
   clearTimeout(el._t);
   el._t = setTimeout(()=> el.classList.add('hidden'), 3200);
+}
+let summaryCollecting = false;
+let pendingSummaryEvents = [];
+
+function showDailySummary(offline, newMissions){
+  const diseased = state.fish.filter(f=>f.diseaseId).length;
+  const dirty = clamp((state.water.ammonia + state.water.nitrite)/2, 0, 100);
+  const alerts = [];
+  if (diseased>0) alerts.push(`🩺 ${diseased} pesce${diseased>1?'i':''} malat${diseased>1?'i':'o'}`);
+  if (dirty>60) alerts.push('💧 acqua molto sporca');
+  if (state.foodUnits<=2) alerts.push('🍚 cibo quasi esaurito');
+  if (state.heater.life<=0) alerts.push('🌡️ riscaldatore spento');
+  if (state.filter.life<=0) alerts.push('🧽 filtro esaurito');
+
+  const hasSomethingToShow = offline || alerts.length>0 || newMissions || pendingSummaryEvents.length>0;
+  if (!hasSomethingToShow){ pendingSummaryEvents = []; return; }
+
+  let html = '';
+  if (offline){
+    html += `<div class="sub" style="margin-bottom:8px;">Sei stato via ${offline.hours}h (${offline.days} giorni passati)</div>`;
+  }
+  if (alerts.length){
+    html += `<h2 style="font-size:15px;">⚠️ Da controllare</h2>`;
+    alerts.forEach(a=> html += `<div class="row"><div class="name">${a}</div></div>`);
+  }
+  if (newMissions && state.missions.length){
+    html += `<h2 style="font-size:15px; margin-top:${alerts.length?'12px':'2px'};">🎯 Missioni di oggi</h2>`;
+    state.missions.forEach(m=> html += `<div class="row"><div class="name">${m.label}</div></div>`);
+  }
+  if (pendingSummaryEvents.length){
+    html += `<div id="summaryToggle" class="row" style="cursor:pointer;"><div class="name">📋 ${pendingSummaryEvents.length} eventi mentre eri via</div><span class="badge-mini">dettagli</span></div>`;
+    html += `<div id="summaryDetails" style="display:none;">`;
+    pendingSummaryEvents.slice(0,12).forEach(e=> html += `<div class="sub" style="margin:4px 0;">${e}</div>`);
+    if (pendingSummaryEvents.length>12) html += `<div class="sub">+${pendingSummaryEvents.length-12} altri</div>`;
+    html += `</div>`;
+  }
+  html += `<button id="summaryContinue" style="width:100%; margin-top:14px; background:var(--ui-accent); color:#04222b; border:none; padding:12px; border-radius:12px; font-weight:600;">Entra in vasca</button>`;
+
+  document.getElementById('dailySummaryContent').innerHTML = html;
+  document.getElementById('dailySummaryOverlay').classList.remove('hidden');
+  const toggle = document.getElementById('summaryToggle');
+  if (toggle) toggle.addEventListener('click', ()=>{
+    const det = document.getElementById('summaryDetails');
+    det.style.display = det.style.display==='none' ? 'block' : 'none';
+  });
+  document.getElementById('summaryContinue').addEventListener('click', ()=>{
+    document.getElementById('dailySummaryOverlay').classList.add('hidden');
+    pendingSummaryEvents = [];
+  });
 }
 
 document.getElementById('statusOpener').addEventListener('click', ()=> openPanel('status'));
@@ -1471,6 +1605,13 @@ function missionsHTML(){
     html += `<div class="row"><div><div class="name">${m.label}</div><div class="sub">${m.done?'Completata ✓':'In corso'}</div></div>
       <span class="badge-mini money">+${m.reward.money}€ <span class="rep">+${m.reward.rep}⭐</span></span></div>`;
   });
+  if (state.weeklyMission){
+    const wm = state.weeklyMission;
+    const progress = state.weeklyProgress[wm.progressKey] || 0;
+    html += `<h2 style="margin-top:16px;">📅 Missione della settimana</h2>`;
+    html += `<div class="row"><div><div class="name">${wm.label}</div><div class="sub">${wm.done?'Completata ✓':`Progresso: ${Math.min(progress,wm.target)}/${wm.target}`}</div></div>
+      <span class="badge-mini rep">+${wm.reward.rep}⭐</span></div>`;
+  }
   return html;
 }
 function toggleFullscreen(){
@@ -1679,15 +1820,24 @@ function init(){
   if (!loaded){
     state = newGameState();
     showStarterChoice();
+    refreshDailyMissionsIfNeeded();
+    refreshWeeklyMissionIfNeeded();
   } else {
+    summaryCollecting = true;
+    const missionsDayBefore = state.missionsDay;
     const offline = applyOfflineProgression();
-    if (offline){ pushToast(`Sei stato via ${offline.hours}h · ${offline.days} giorni passati`); }
+    refreshDailyMissionsIfNeeded();
+    refreshWeeklyMissionIfNeeded();
+    summaryCollecting = false;
+    state.lastDayAdvanceTime = Date.now(); // riparte da qui il controllo per l'avanzamento a gioco aperto
+    showDailySummary(offline, missionsDayBefore !== state.missionsDay);
   }
-  refreshDailyMissionsIfNeeded();
   updateTopBarBadges();
   loop();
   setInterval(tickLogic, 2000);
   setInterval(saveGame, 15000);
+  setInterval(checkLiveDayAdvance, 60000);
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) checkLiveDayAdvance(); });
   window.addEventListener('beforeunload', saveGame);
 }
 init();
