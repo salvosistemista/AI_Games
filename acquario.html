@@ -82,9 +82,10 @@
   }
   .overlay.hidden{ display:none; }
   .sheet{
+    position:relative;
     width:100%; max-width:520px; max-height:82vh; overflow-y:auto;
     background: var(--ui-bg); border-radius: 22px 22px 0 0;
-    padding: 18px 18px calc(18px + env(safe-area-inset-bottom)) 18px;
+    padding: 18px 18px calc(56px + env(safe-area-inset-bottom)) 18px;
     box-shadow: 0 -8px 30px rgba(0,0,0,.4);
   }
   .sheet h2{ margin:2px 0 14px 0; font-size:18px; font-weight:600; }
@@ -92,7 +93,12 @@
   .tabrow{ display:flex; gap:8px; margin-bottom:14px; }
   .tab{ flex:1; text-align:center; padding:8px; border-radius:10px; background:var(--ui-bg-light); font-size:13px; color:var(--ui-text-dim); }
   .tab.active{ background:var(--ui-accent); color:#04222b; font-weight:600; }
-  .close-x{ position:absolute; top:14px; right:16px; background:none; border:none; color:var(--ui-text-dim); font-size:20px; }
+  .close-x{
+    position:absolute; bottom:14px; right:16px; z-index:5;
+    width:36px; height:36px; border-radius:50%;
+    background: var(--ui-bg-light); border:1px solid rgba(255,255,255,.1);
+    color:var(--ui-text); font-size:16px; display:flex; align-items:center; justify-content:center;
+  }
 
   .row{ display:flex; align-items:center; justify-content:space-between; padding:12px 10px; border-radius:14px; background:var(--ui-bg-light); margin-bottom:8px; }
   .row .name{ font-size:14px; font-weight:600; }
@@ -1074,8 +1080,13 @@ function missionsHTML(){
   });
   return html;
 }
+function toggleFullscreen(){
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
 function settingsHTML(){
   return `<h2>⚙️ Impostazioni</h2>
+    <div class="row"><div><div class="name">Schermo intero</div><div class="sub">Nasconde le barre del browser</div></div><button id="toggleFullscreenSettings">${document.fullscreenElement?'Esci':'Attiva'}</button></div>
     <div class="row"><div><div class="name">Modalità Zen</div><div class="sub">Nasconde UI/comandi</div></div><button id="toggleZen">${state.zen?'Disattiva':'Attiva'}</button></div>
     <div class="row"><div><div class="name">Esporta salvataggio</div><div class="sub">Scarica file JSON</div></div><button id="exportSave">Esporta</button></div>
     <div class="row"><div><div class="name">Importa salvataggio</div><div class="sub">Carica file JSON</div></div><button id="importSaveBtn">Importa</button></div>
@@ -1090,6 +1101,8 @@ function attachPanelHandlers(){
   c.querySelectorAll('[data-enctab]').forEach(b=> b.addEventListener('click', ()=>{ state._encTab = b.dataset.enctab; renderPanel(); }));
   const zenBtn = document.getElementById('toggleZen');
   if (zenBtn) zenBtn.addEventListener('click', ()=>{ setZen(!state.zen); renderPanel(); });
+  const fsBtn = document.getElementById('toggleFullscreenSettings');
+  if (fsBtn) fsBtn.addEventListener('click', ()=>{ toggleFullscreen(); setTimeout(renderPanel, 150); });
   const exp = document.getElementById('exportSave');
   if (exp) exp.addEventListener('click', exportSave);
   const imp = document.getElementById('importSaveBtn');
@@ -1164,10 +1177,7 @@ document.getElementById('btnClean').addEventListener('click', cleanWater);
 /* --- Zen & fullscreen --- */
 function setZen(v){ state.zen = v; document.body.classList.toggle('zen', v); }
 document.getElementById('exitZenBtn').addEventListener('click', ()=> setZen(false));
-document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-  else document.exitFullscreen?.();
-});
+document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
 
 /* =========================================================================
    7. SALVATAGGIO
