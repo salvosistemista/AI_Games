@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>La Mia Biblioteca</title>
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0d0906; font-family: Georgia, 'Times New Roman', serif; }
+  #canvas-container { position:fixed; inset:0; }
+  canvas { display:block; }
+
+  #hud { position:fixed; inset:0; pointer-events:none; color:#f1e6d2; }
+
+  #room-label {
+    position:absolute; top:18px; left:50%; transform:translateX(-50%);
+    font-size:22px; letter-spacing:0.04em; text-shadow:0 2px 8px rgba(0,0,0,0.8);
+    background:rgba(20,14,8,0.35); padding:6px 22px; border-radius:2px;
+    border-bottom:1px solid rgba(241,230,210,0.35);
+  }
+
+  #crosshair {
+    position:absolute; top:50%; left:50%; width:6px; height:6px;
+    margin:-3px 0 0 -3px; border-radius:50%; background:rgba(241,230,210,0.85);
+    box-shadow:0 0 4px rgba(0,0,0,0.6);
+  }
+
+  #hint {
+    position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
+    font-size:14px; opacity:0.75; text-align:center; text-shadow:0 1px 4px rgba(0,0,0,0.8);
+  }
+
+  #loading {
+    position:fixed; inset:0; background:#0d0906; color:#f1e6d2;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:18px; letter-spacing:0.03em; z-index:20; text-align:center; padding:20px; box-sizing:border-box;
+  }
+  #loading .sub { font-size:13px; opacity:0.6; margin-top:10px; max-width:480px; }
+
+  #start-overlay {
+    position:fixed; inset:0; background:rgba(13,9,6,0.72); color:#f1e6d2;
+    display:none; align-items:center; justify-content:center; flex-direction:column;
+    font-size:20px; z-index:15; cursor:pointer; text-align:center; padding:20px; box-sizing:border-box;
+  }
+  #start-overlay .sub { font-size:14px; opacity:0.7; margin-top:12px; max-width:420px; }
+
+  /* Controlli touch */
+  #touch-controls { position:fixed; inset:0; z-index:10; display:none; }
+  #joystick-zone { position:absolute; left:0; bottom:0; width:45%; height:60%; pointer-events:auto; }
+  #look-zone { position:absolute; right:0; bottom:0; width:55%; height:60%; pointer-events:auto; }
+  #joystick-base {
+    position:absolute; width:110px; height:110px; border-radius:50%;
+    border:2px solid rgba(241,230,210,0.4); background:rgba(241,230,210,0.06);
+    display:none;
+  }
+  #joystick-nub {
+    position:absolute; width:48px; height:48px; border-radius:50%;
+    background:rgba(241,230,210,0.35); border:1px solid rgba(241,230,210,0.6);
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div id="loading-text">Apertura della biblioteca…</div>
+  <div class="sub">Se il caricamento resta bloccato, questa pagina va servita da un server web (es. GitHub Pages o un server locale), non aperta direttamente come file.</div>
+</div>
+
+<div id="start-overlay">
+  <div id="start-text">Tocca per entrare</div>
+  <div class="sub">Desktop: clic per bloccare il mouse, WASD per muoversi, mouse per guardarti attorno, ESC per uscire dal controllo.<br>Mobile: joystick a sinistra per muoverti, trascina a destra per guardarti attorno.</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="hud">
+  <div id="room-label"></div>
+  <div id="crosshair"></div>
+  <div id="hint"></div>
+</div>
+
+<div id="touch-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base"><div id="joystick-nub"></div></div>
+  </div>
+  <div id="look-zone"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // Costanti fisiche (devono restare coerenti con generate_layout.py)
+  // ------------------------------------------------------------------
+  const UNIT_WIDTH = 1.0;
+  const UNIT_DEPTH = 0.35;
+  const UNIT_GAP = 0.15;
+  const UNIT_STEP = UNIT_WIDTH + UNIT_GAP;
+  const CORRIDOR_WALK_WIDTH = 2.0;
+  const CORRIDOR_SPACING = CORRIDOR_WALK_WIDTH + UNIT_DEPTH + 0.5;
+  const ROOM_MARGIN = 2.0;
+  const UNIT_HEIGHT = 2.1; // 6 ripiani
+
+  const HUB_HALF_SIZE = 5.0;   // atrio centrale 10x10
+  const HALLWAY_LENGTH = 3.0;  // corridoio di collegamento hub -> sala
+  const WALL_HEIGHT = 3.2;
+  const DOORWAY_WIDTH = 2.4;
+
+  const EYE_HEIGHT = 1.7;
+  const PLAYER_RADIUS = 0.35;
+  const MOVE_SPEED = 3.2; // m/s
+
+  // Disposizione delle sale attorno all'atrio centrale
+  const ROOM_SIDES = {
+    "sala-narrativa": "N",
+    "sala-saggistica": "S",
+    "alcova-poesia-teatro": "E",
+    "alcova-fumetti": "W",
+  };
+
+  // Palette per corridoio (colore del dorso segnaposto, per genere/sottogenere)
+  const PALETTE = [
+    0x8c3b3b, 0x3b5c8c, 0x3b8c5e, 0x8c7a3b, 0x6a3b8c,
+    0x8c3b6e, 0x3b8c86, 0x8c5a3b, 0x4f6b3b, 0x3b4a8c,
+    0x8c3b3b, 0x5c3b8c, 0x3b8c3b, 0x8c6b3b, 0x3b7a8c,
+  ];
+
+  // ------------------------------------------------------------------
+  // Stato globale
+  // ------------------------------------------------------------------
+  let scene, camera, renderer;
+  let yaw = 0, pitch = 0;
+  const playerPos = new THREE.Vector3(0, EYE_HEIGHT, -HUB_HALF_SIZE + 1.5); // parte nell'atrio
+  const colliders = []; // { minX, maxX, minZ, maxZ }
+  const roomZones = []; // { name, minX, maxX, minZ, maxZ } per aggiornare l'etichetta sala
+  let currentRoomLabel = "Atrio";
+
+  const keys = { forward: false, back: false, left: false, right: false };
+  let pointerLocked = false;
+
+  // input touch
+  let isTouchDevice = false;
+  let joystickActive = false;
+  let joystickVec = { x: 0, y: 0 };
+  let joystickTouchId = null;
+  let lookTouchId = null;
+  let lastLookPos = { x: 0, y: 0 };
+
+  // ------------------------------------------------------------------
+  // Avvio
+  // ------------------------------------------------------------------
+  init();
+
+  function init() {
+    isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0d0906);
+    scene.fog = new THREE.Fog(0x0d0906, 12, 42);
+
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    window.addEventListener('resize', onResize);
+
+    setupLighting();
+    setupInput();
+
+    fetch('./data/layout.json')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (layout) {
+        buildWorld(layout);
+        document.getElementById('loading').style.display = 'none';
+        showStartOverlay();
+        animate();
+      })
+      .catch(function (err) {
+        document.getElementById('loading-text').textContent =
+          'Impossibile caricare data/layout.json (' + err.message + ')';
+      });
+  }
+
+  function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  // ------------------------------------------------------------------
+  // Illuminazione
+  // ------------------------------------------------------------------
+  function setupLighting() {
+    const hemi = new THREE.HemisphereLight(0x9a8a6e, 0x2a2016, 0.55);
+    scene.add(hemi);
+
+    const ambient = new THREE.AmbientLight(0x6b5a42, 0.35);
+    scene.add(ambient);
+  }
+
+  function addWarmLamp(x, y, z, intensity, distance) {
+    const light = new THREE.PointLight(0xffcf8a, intensity || 0.9, distance || 9, 2);
+    light.position.set(x, y, z);
+    scene.add(light);
+  }
+
+  // ------------------------------------------------------------------
+  // Costruzione del mondo
+  // ------------------------------------------------------------------
+  function buildWorld(layout) {
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x3b2e22, roughness: 0.95 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.9 });
+    const hallwayMat = new THREE.MeshStandardMaterial({ color: 0x2e2519, roughness: 0.95 });
+
+    buildHub(floorMat, wallMat);
+
+    layout.rooms.forEach(function (room) {
+      const side = ROOM_SIDES[room.id] || "N";
+      buildHallway(side, hallwayMat);
+      buildRoom(room, side, floorMat, wallMat);
+    });
+
+    updateRoomLabel(currentRoomLabel);
+  }
+
+  function buildHub(floorMat, wallMat) {
+    const size = HUB_HALF_SIZE * 2;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(size, size), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // Quattro pareti con varco centrale (una per lato, verso ciascuna sala)
+    ["N", "S", "E", "W"].forEach(function (side) {
+      buildWallWithDoorway(side, -HUB_HALF_SIZE, HUB_HALF_SIZE, -HUB_HALF_SIZE, HUB_HALF_SIZE, wallMat);
+    });
+
+    addWarmLamp(0, 2.6, 0, 1.1, 12);
+    roomZones.push({ name: "Atrio", minX: -HUB_HALF_SIZE, maxX: HUB_HALF_SIZE, minZ: -HUB_HALF_SIZE, maxZ: HUB_HALF_SIZE });
+  }
+
+  // Costruisce il segmento di parete perimetrale su un lato del rettangolo [minX,maxX]x[minZ,maxZ],
+  // lasciando un varco largo DOORWAY_WIDTH al centro.
+  function buildWallWithDoorway(side, minX, maxX, minZ, maxZ, wallMat) {
+    const isNS = (side === "N" || side === "S");
+    const wallZ = side === "N" ? maxZ : (side === "S" ? minZ : null);
+    const wallX = side === "E" ? maxX : (side === "W" ? minX : null);
+
+    const fullLength = isNS ? (maxX - minX) : (maxZ - minZ);
+    const segmentLength = (fullLength - DOORWAY_WIDTH) / 2;
+    if (segmentLength <= 0) return;
+
+    for (let i = -1; i <= 1; i += 2) {
+      const geo = isNS
+        ? new THREE.BoxGeometry(segmentLength, WALL_HEIGHT, 0.2)
+        : new THREE.BoxGeometry(0.2, WALL_HEIGHT, segmentLength);
+      const mesh = new THREE.Mesh(geo, wallMat);
+
+      const center = isNS ? (minX + maxX) / 2 : (minZ + maxZ) / 2;
+      const offset = (fullLength / 2 - segmentLength / 2) * i;
+
+      if (isNS) {
+        mesh.position.set(center + offset, WALL_HEIGHT / 2, wallZ);
+      } else {
+        mesh.position.set(wallX, WALL_HEIGHT / 2, center + offset);
+      }
+      scene.add(mesh);
+
+      const half = { x: geo.parameters.width / 2, z: geo.parameters.depth / 2 };
+      colliders.push({
+        minX: mesh.position.x - half.x, maxX: mesh.position.x + half.x,
+        minZ: mesh.position.z - half.z, maxZ: mesh.position.z + half.z,
+      });
+    }
+  }
+
+  function buildHallway(side, hallwayMat) {
+    const length = HALLWAY_LENGTH;
+    const width = DOORWAY_WIDTH;
+    const geo = new THREE.PlaneGeometry(
+      (side === "N" || side === "S") ? width : length,
+      (side === "N" || side === "S") ? length : width
+    );
+    const floor = new THREE.Mesh(geo, hallwayMat);
+    floor.rotation.x = -Math.PI / 2;
+
+    let cx = 0, cz = 0;
+    if (side === "N") { cz = HUB_HALF_SIZE + length / 2; }
+    if (side === "S") { cz = -HUB_HALF_SIZE - length / 2; }
+    if (side === "E") { cx = HUB_HALF_SIZE + length / 2; }
+    if (side === "W") { cx = -HUB_HALF_SIZE - length / 2; }
+
+    floor.position.set(cx, 0.001, cz);
+    scene.add(floor);
+  }
+
+  // Trasforma le coordinate locali di un corridoio (x = lungo il corridoio, z = offset tra corridoi)
+  // nelle coordinate del mondo, in base al lato dell'atrio a cui la sala è agganciata.
+  function makeLocalToWorld(room, side) {
+    const width = room.dimensionsM.width;   // asse "lunghezza corridoio"
+    const depth = room.dimensionsM.depth;   // asse "tra i corridoi"
+    const centerOffset = ROOM_MARGIN - width / 2;
+    const nearWall = HUB_HALF_SIZE + HALLWAY_LENGTH;
+
+    if (side === "N") {
+      return function (lx, lz) {
+        return { x: lx + centerOffset, z: nearWall + ROOM_MARGIN + lz };
+      };
+    }
+    if (side === "S") {
+      return function (lx, lz) {
+        return { x: lx + centerOffset, z: -(nearWall + ROOM_MARGIN) - lz };
+      };
+    }
+    if (side === "E") {
+      return function (lx, lz) {
+        return { x: nearWall + ROOM_MARGIN + lz, z: lx + centerOffset };
+      };
+    }
+    // "W"
+    return function (lx, lz) {
+      return { x: -(nearWall + ROOM_MARGIN) - lz, z: lx + centerOffset };
+    };
+  }
+
+  function buildRoom(room, side, floorMat, wallMat) {
+    const toWorld = makeLocalToWorld(room, side);
+    const width = room.dimensionsM.width;
+    const depth = room.dimensionsM.depth;
+
+    // Bounding box mondo della sala (calcolato dai 4 angoli locali)
+    const corners = [
+      toWorld(-ROOM_MARGIN, -ROOM_MARGIN),
+      toWorld(width - ROOM_MARGIN, -ROOM_MARGIN),
+      toWorld(-ROOM_MARGIN, depth - ROOM_MARGIN),
+      toWorld(width - ROOM_MARGIN, depth - ROOM_MARGIN),
+    ];
+    const minX = Math.min.apply(null, corners.map(function (c) { return c.x; }));
+    const maxX = Math.max.apply(null, corners.map(function (c) { return c.x; }));
+    const minZ = Math.min.apply(null, corners.map(function (c) { return c.z; }));
+    const maxZ = Math.max.apply(null, corners.map(function (c) { return c.z; }));
+
+    roomZones.push({ name: room.name, minX: minX, maxX: maxX, minZ: minZ, maxZ: maxZ });
+
+    // Pavimento
+    const floorGeo = new THREE.PlaneGeometry(maxX - minX, maxZ - minZ);
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+    scene.add(floor);
+
+    // Pareti perimetrali (con varco solo sul lato rivolto verso l'atrio, gestito dall'hallway)
+    buildRoomWalls(side, minX, maxX, minZ, maxZ, wallMat);
+
+    // Corridoi e scaffalature
+    room.corridors.forEach(function (corridor, ci) {
+      const color = PALETTE[ci % PALETTE.length];
+      buildCorridorPlaceholder(corridor, toWorld, color);
+    });
+
+    // Un lume caldo ogni ~10 metri lungo la sala
+    const lampSpacingM = 10;
+    const lampCount = Math.max(1, Math.round(Math.max(width, depth) / lampSpacingM));
+    for (let i = 0; i < lampCount; i++) {
+      const t = (i + 0.5) / lampCount;
+      addWarmLamp(minX + (maxX - minX) * t, 2.8, minZ + (maxZ - minZ) * 0.5, 0.85, 8);
+    }
+  }
+
+  function buildRoomWalls(side, minX, maxX, minZ, maxZ, wallMat) {
+    // Parete opposta all'ingresso: piena
+    // Pareti laterali: piene
+    // Parete lato ingresso: gestita come apertura totale verso l'hallway (nessun muro qui,
+    // il collegamento è coperto dal pavimento dell'hallway)
+    const openSide = { N: "S", S: "N", E: "W", W: "E" }[side]; // il lato della SALA rivolto verso l'hub
+
+    const sides = ["N", "S", "E", "W"].filter(function (s) { return s !== openSide; });
+    sides.forEach(function (s) {
+      const geo = (s === "N" || s === "S")
+        ? new THREE.BoxGeometry(maxX - minX, WALL_HEIGHT, 0.2)
+        : new THREE.BoxGeometry(0.2, WALL_HEIGHT, maxZ - minZ);
+      const mesh = new THREE.Mesh(geo, wallMat);
+      const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+      if (s === "N") mesh.position.set(cx, WALL_HEIGHT / 2, maxZ);
+      if (s === "S") mesh.position.set(cx, WALL_HEIGHT / 2, minZ);
+      if (s === "E") mesh.position.set(maxX, WALL_HEIGHT / 2, cz);
+      if (s === "W") mesh.position.set(minX, WALL_HEIGHT / 2, cz);
+      scene.add(mesh);
+
+      const half = { x: geo.parameters.width / 2, z: geo.parameters.depth / 2 };
+      colliders.push({
+        minX: mesh.position.x - half.x, maxX: mesh.position.x + half.x,
+        minZ: mesh.position.z - half.z, maxZ: mesh.position.z + half.z,
+      });
+    });
+  }
+
+  // Segnaposto per una scaffalatura: un box per ogni "unit" del corridoio, colorato per genere.
+  // La copertina reale e il libro-per-libro arrivano nella Fase 4.
+  function buildCorridorPlaceholder(corridor, toWorld, color) {
+    const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 });
+    const geo = new THREE.BoxGeometry(UNIT_WIDTH * 0.94, UNIT_HEIGHT, UNIT_DEPTH);
+
+    const count = corridor.units.length;
+    const mesh = new THREE.InstancedMesh(geo, mat, count);
+    const dummy = new THREE.Object3D();
+
+    corridor.units.forEach(function (unit, i) {
+      const w = toWorld(unit.position.x, unit.position.z);
+      dummy.position.set(w.x, UNIT_HEIGHT / 2, w.z);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+
+      const half = { x: (UNIT_WIDTH * 0.94) / 2, z: UNIT_DEPTH / 2 };
+      colliders.push({
+        minX: w.x - half.x, maxX: w.x + half.x,
+        minZ: w.z - half.z, maxZ: w.z + half.z,
+      });
+    });
+
+    scene.add(mesh);
+
+    // Etichetta testuale del corridoio (sprite) all'inizio della fila
+    const startW = toWorld(-0.6, corridor.units[0] ? 0 : 0);
+    addCorridorLabel(corridor.label, corridor.bookCount, toWorld(-0.9, 0));
+  }
+
+  function addCorridorLabel(label, bookCount, worldPos) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(20,14,8,0.0)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f1e6d2';
+    ctx.font = 'bold 44px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, canvas.width / 2, 54);
+    ctx.font = '28px Georgia';
+    ctx.fillStyle = '#c9b896';
+    ctx.fillText(bookCount + ' volumi', canvas.width / 2, 96);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(2.4, 0.6, 1);
+    sprite.position.set(worldPos.x, UNIT_HEIGHT + 0.5, worldPos.z);
+    scene.add(sprite);
+  }
+
+  // ------------------------------------------------------------------
+  // Input: tastiera/mouse (desktop) e touch (mobile)
+  // ------------------------------------------------------------------
+  function setupInput() {
+    window.addEventListener('keydown', function (e) { setKey(e.code, true); });
+    window.addEventListener('keyup', function (e) { setKey(e.code, false); });
+
+    const overlay = document.getElementById('start-overlay');
+    overlay.addEventListener('click', function () {
+      overlay.style.display = 'none';
+      if (isTouchDevice) {
+        document.getElementById('touch-controls').style.display = 'block';
+      } else {
+        renderer.domElement.requestPointerLock();
+      }
+    });
+
+    document.addEventListener('pointerlockchange', function () {
+      pointerLocked = (document.pointerLockElement === renderer.domElement);
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (!pointerLocked) return;
+      yaw -= e.movementX * 0.0022;
+      pitch -= e.movementY * 0.0022;
+      pitch = Math.max(-1.4, Math.min(1.4, pitch));
+    });
+
+    setupTouchControls();
+  }
+
+  function setKey(code, down) {
+    if (code === 'KeyW' || code === 'ArrowUp') keys.forward = down;
+    if (code === 'KeyS' || code === 'ArrowDown') keys.back = down;
+    if (code === 'KeyA' || code === 'ArrowLeft') keys.left = down;
+    if (code === 'KeyD' || code === 'ArrowRight') keys.right = down;
+  }
+
+  function setupTouchControls() {
+    const joyZone = document.getElementById('joystick-zone');
+    const joyBase = document.getElementById('joystick-base');
+    const joyNub = document.getElementById('joystick-nub');
+    const lookZone = document.getElementById('look-zone');
+    let joyOrigin = { x: 0, y: 0 };
+
+    joyZone.addEventListener('touchstart', function (e) {
+      const t = e.changedTouches[0];
+      joystickTouchId = t.identifier;
+      joyOrigin = { x: t.clientX, y: t.clientY };
+      joyBase.style.left = (t.clientX - 55) + 'px';
+      joyBase.style.top = (t.clientY - 55) + 'px';
+      joyBase.style.display = 'block';
+      joyNub.style.left = '31px';
+      joyNub.style.top = '31px';
+      joystickActive = true;
+      e.preventDefault();
+    }, { passive: false });
+
+    joyZone.addEventListener('touchmove', function (e) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier !== joystickTouchId) continue;
+        let dx = t.clientX - joyOrigin.x;
+        let dy = t.clientY - joyOrigin.y;
+        const maxR = 45;
+        const len = Math.hypot(dx, dy);
+        if (len > maxR) { dx = dx / len * maxR; dy = dy / len * maxR; }
+        joyNub.style.left = (31 + dx) + 'px';
+        joyNub.style.top = (31 + dy) + 'px';
+        joystickVec = { x: dx / maxR, y: dy / maxR };
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    function endJoystick(e) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === joystickTouchId) {
+          joystickTouchId = null;
+          joystickActive = false;
+          joystickVec = { x: 0, y: 0 };
+          joyBase.style.display = 'none';
+        }
+      }
+    }
+    joyZone.addEventListener('touchend', endJoystick);
+    joyZone.addEventListener('touchcancel', endJoystick);
+
+    lookZone.addEventListener('touchstart', function (e) {
+      const t = e.changedTouches[0];
+      lookTouchId = t.identifier;
+      lastLookPos = { x: t.clientX, y: t.clientY };
+      e.preventDefault();
+    }, { passive: false });
+
+    lookZone.addEventListener('touchmove', function (e) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier !== lookTouchId) continue;
+        const dx = t.clientX - lastLookPos.x;
+        const dy = t.clientY - lastLookPos.y;
+        yaw -= dx * 0.0032;
+        pitch -= dy * 0.0032;
+        pitch = Math.max(-1.4, Math.min(1.4, pitch));
+        lastLookPos = { x: t.clientX, y: t.clientY };
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    lookZone.addEventListener('touchend', function (e) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
+      }
+    });
+  }
+
+  function showStartOverlay() {
+    document.getElementById('start-overlay').style.display = 'flex';
+  }
+
+  // ------------------------------------------------------------------
+  // Movimento e collisioni
+  // ------------------------------------------------------------------
+  function resolveAxisCollision(pos, axis) {
+    for (let i = 0; i < colliders.length; i++) {
+      const c = colliders[i];
+      const nearX = Math.max(c.minX, Math.min(pos.x, c.maxX));
+      const nearZ = Math.max(c.minZ, Math.min(pos.z, c.maxZ));
+      const dx = pos.x - nearX, dz = pos.z - nearZ;
+      if (dx * dx + dz * dz < PLAYER_RADIUS * PLAYER_RADIUS) {
+        if (axis === 'x') {
+          pos.x = (pos.x < (c.minX + c.maxX) / 2) ? c.minX - PLAYER_RADIUS : c.maxX + PLAYER_RADIUS;
+        } else {
+          pos.z = (pos.z < (c.minZ + c.maxZ) / 2) ? c.minZ - PLAYER_RADIUS : c.maxZ + PLAYER_RADIUS;
+        }
+      }
+    }
+  }
+
+  function updateMovement(dt) {
+    let moveX = 0, moveY = 0;
+    if (isTouchDevice) {
+      moveX = joystickVec.x;
+      moveY = joystickVec.y;
+    } else {
+      if (keys.forward) moveY -= 1;
+      if (keys.back) moveY += 1;
+      if (keys.left) moveX -= 1;
+      if (keys.right) moveX += 1;
+    }
+
+    const len = Math.hypot(moveX, moveY);
+    if (len > 0.001) {
+      moveX /= len; moveY /= len;
+
+      const forwardX = Math.sin(yaw), forwardZ = -Math.cos(yaw);
+      const rightX = Math.cos(yaw), rightZ = Math.sin(yaw);
+
+      const dx = (forwardX * -moveY + rightX * moveX) * MOVE_SPEED * dt;
+      const dz = (forwardZ * -moveY + rightZ * moveX) * MOVE_SPEED * dt;
+
+      playerPos.x += dx;
+      resolveAxisCollision(playerPos, 'x');
+      playerPos.z += dz;
+      resolveAxisCollision(playerPos, 'z');
+    }
+
+    camera.position.set(playerPos.x, EYE_HEIGHT, playerPos.z);
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
+
+    updateCurrentRoom();
+  }
+
+  function updateCurrentRoom() {
+    for (let i = 0; i < roomZones.length; i++) {
+      const z = roomZones[i];
+      if (playerPos.x >= z.minX && playerPos.x <= z.maxX && playerPos.z >= z.minZ && playerPos.z <= z.maxZ) {
+        if (z.name !== currentRoomLabel) {
+          currentRoomLabel = z.name;
+          updateRoomLabel(currentRoomLabel);
+        }
+        return;
+      }
+    }
+  }
+
+  function updateRoomLabel(name) {
+    document.getElementById('room-label').textContent = name;
+  }
+
+  // ------------------------------------------------------------------
+  // Loop principale
+  // ------------------------------------------------------------------
+  let lastTime = performance.now();
+  function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    updateMovement(dt);
+    renderer.render(scene, camera);
+  }
+
+})();
+</script>
+</body>
+</html>
