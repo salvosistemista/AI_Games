@@ -898,11 +898,43 @@ function render(){
 
 function drawBackground(w,h){
   const grad = ctx.createLinearGradient(0,0,0,h);
-  grad.addColorStop(0,'#1c5b6e');
-  grad.addColorStop(1,'#04222b');
+  grad.addColorStop(0,'#2a7a8c');
+  grad.addColorStop(0.5,'#1c5b6e');
+  grad.addColorStop(1,'#0a2e38');
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,w,h);
+
+  // raggi di luce soffusi dall'alto, per un'atmosfera più morbida
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  for (let i=0;i<3;i++){
+    const rx = w*(0.2 + i*0.3);
+    ctx.beginPath();
+    ctx.moveTo(rx-40, 0);
+    ctx.lineTo(rx+40, 0);
+    ctx.lineTo(rx+90, h);
+    ctx.lineTo(rx-90, h);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // bollicine ambientali continue (puramente decorative)
+  ambientTime += 0.006;
+  for (let i=0;i<7;i++){
+    const seed = i*13.7;
+    const bx = (Math.sin(seed)*0.5+0.5)*w;
+    const by = h - ((ambientTime*40 + seed*60) % (h+40));
+    const r = 2 + (i%3);
+    ctx.strokeStyle = 'rgba(220,245,255,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI*2);
+    ctx.stroke();
+  }
 }
+let ambientTime = 0;
 
 function drawPlant(p, w, h, idx){
   const count = Math.max(state.plants.length, 1);
@@ -911,32 +943,53 @@ function drawPlant(p, w, h, idx){
 
   if (p.isPlant){
     const type = PLANT_TYPES[p.kind];
-    const height = h*0.14*(0.6+Math.min(p.growth,1));
-    const alpha = clamp(p.health/100,0.2,1);
-    ctx.strokeStyle = `rgba(90,209,154,${alpha})`;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(baseX, baseY);
-    ctx.quadraticCurveTo(baseX+14, baseY-height*0.6, baseX + (p.growth>1?10:2), baseY-height);
-    ctx.stroke();
-    if (p.growth > 1){
-      // seconda fronda per dare il senso di crescita eccessiva da potare
+    const height = h*0.16*(0.6+Math.min(p.growth,1));
+    const alpha = clamp(p.health/100,0.25,1);
+    const leafCount = 3 + Math.round(Math.min(p.growth,1)*2);
+    for (let i=0;i<leafCount;i++){
+      const sway = Math.sin(ambientTime*1.5 + i*1.3 + idx)*8;
+      const dir = (i%2===0) ? 1 : -1;
+      const leafH = height*(0.65+0.35*(i/leafCount));
+      const tipX = baseX + dir*leafH*0.35 + sway*0.4;
+      const tipY = baseY - leafH;
+      const grad = ctx.createLinearGradient(baseX,baseY,tipX,tipY);
+      grad.addColorStop(0, `rgba(60,150,110,${alpha})`);
+      grad.addColorStop(1, `rgba(120,220,160,${alpha})`);
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.quadraticCurveTo(baseX-14, baseY-height*0.5, baseX-8, baseY-height*0.9);
-      ctx.stroke();
+      ctx.moveTo(baseX-3, baseY);
+      ctx.quadraticCurveTo(baseX + dir*leafH*0.5 + sway, baseY-leafH*0.55, tipX, tipY);
+      ctx.quadraticCurveTo(baseX + dir*leafH*0.15 + sway, baseY-leafH*0.5, baseX+3, baseY);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (p.growth > 1){
+      ctx.fillStyle = `rgba(255,220,120,${alpha*0.8})`;
+      ctx.beginPath();
+      ctx.arc(baseX, baseY-height*0.9, 3, 0, Math.PI*2);
+      ctx.fill();
     }
   } else {
-    ctx.fillStyle = 'rgba(130,120,150,0.9)';
+    ctx.fillStyle = 'rgba(140,128,158,0.95)';
+    ctx.strokeStyle = 'rgba(90,80,110,0.9)';
+    ctx.lineWidth = 1.5;
     if (p.kind==='grotta'){
       ctx.beginPath();
       ctx.arc(baseX, baseY-2, 18, Math.PI, 0);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(10,20,25,0.6)';
+      ctx.beginPath();
+      ctx.arc(baseX, baseY-8, 8, Math.PI, 0);
       ctx.fill();
     } else {
-      ctx.fillRect(baseX-11, baseY-34, 22, 34);
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(baseX-11, baseY-34, 22, 34, 3) : ctx.rect(baseX-11, baseY-34, 22, 34);
+      ctx.fill(); ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(baseX-11, baseY-34); ctx.lineTo(baseX, baseY-46); ctx.lineTo(baseX+11, baseY-34);
-      ctx.closePath(); ctx.fill();
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(30,25,40,0.7)';
+      ctx.fillRect(baseX-4, baseY-16, 8, 16);
     }
   }
 }
@@ -990,28 +1043,128 @@ function drawFish(f,w,h){
 
   let bodyW = size, bodyH = size*0.55;
   if (sp.canPuff && f.puffed){ bodyW = size*(1+f.puffed*0.5); bodyH = size*(0.55+f.puffed*0.4); }
-
-  const grad = ctx.createRadialGradient(-bodyW*0.2,-bodyH*0.2,2, 0,0, bodyW);
-  grad.addColorStop(0, lighten(sp.color, 0.25));
-  grad.addColorStop(1, sp.color);
-  ctx.fillStyle = grad;
-  ctx.globalAlpha = f.diseaseId ? 0.7 : 1;
-
-  ctx.beginPath();
-  ctx.ellipse(0,0, bodyW*0.5, bodyH*0.5, 0, 0, Math.PI*2);
-  ctx.fill();
-
-  // coda: si agita più veloce se in fuga o rush, quasi ferma se "watch"
   const tailWag = state_==='watch' ? 0.4 : (state_==='flee'||state_==='rush' ? 1.6 : 1);
-  ctx.fillStyle = sp.accent;
+  const finFlutter = Math.sin(f.swimPhase*1.6)*0.15 + 1;
+
+  ctx.globalAlpha = f.diseaseId ? 0.72 : 1;
+
+  /* --- coda: forma morbida a ventaglio, sventola con la nuotata --- */
+  ctx.fillStyle = lighten(sp.accent, -0.05);
   ctx.beginPath();
-  ctx.moveTo(-bodyW*0.45, 0);
-  ctx.lineTo(-bodyW*0.8, -bodyH*0.4*tailWag);
-  ctx.lineTo(-bodyW*0.8, bodyH*0.4*tailWag);
+  ctx.moveTo(-bodyW*0.42, 0);
+  ctx.quadraticCurveTo(-bodyW*0.75, -bodyH*0.55*tailWag*finFlutter, -bodyW*0.95, -bodyH*0.32*tailWag);
+  ctx.quadraticCurveTo(-bodyW*0.72, 0, -bodyW*0.95, bodyH*0.32*tailWag);
+  ctx.quadraticCurveTo(-bodyW*0.75, bodyH*0.55*tailWag*finFlutter, -bodyW*0.42, 0);
   ctx.closePath();
   ctx.fill();
 
+  /* --- pinna dorsale morbida --- */
+  ctx.beginPath();
+  ctx.moveTo(-bodyW*0.05, -bodyH*0.42);
+  ctx.quadraticCurveTo(bodyW*0.05, -bodyH*0.95*finFlutter, bodyW*0.28, -bodyH*0.4);
+  ctx.quadraticCurveTo(bodyW*0.1, -bodyH*0.5, -bodyW*0.05, -bodyH*0.42);
+  ctx.fill();
+
+  /* --- pinna pettorale --- */
+  ctx.save();
+  ctx.globalAlpha *= 0.85;
+  ctx.beginPath();
+  ctx.ellipse(bodyW*0.05, bodyH*0.35, bodyW*0.16, bodyH*0.22*finFlutter, -0.5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  /* --- corpo: forma organica a goccia (più pieno davanti, affusolato dietro) --- */
+  const grad = ctx.createRadialGradient(-bodyW*0.15,-bodyH*0.25,2, bodyW*0.05,0, bodyW*0.75);
+  grad.addColorStop(0, lighten(sp.color, 0.3));
+  grad.addColorStop(0.6, sp.color);
+  grad.addColorStop(1, lighten(sp.color, -0.15));
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(bodyW*0.5, 0);
+  ctx.quadraticCurveTo(bodyW*0.45, -bodyH*0.55, bodyW*0.05, -bodyH*0.5);
+  ctx.quadraticCurveTo(-bodyW*0.35, -bodyH*0.48, -bodyW*0.42, 0);
+  ctx.quadraticCurveTo(-bodyW*0.35, bodyH*0.48, bodyW*0.05, bodyH*0.5);
+  ctx.quadraticCurveTo(bodyW*0.45, bodyH*0.55, bodyW*0.5, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  /* --- decoro specie-specifico --- */
+  drawSpeciesAccent(sp, f, bodyW, bodyH);
+
+  /* --- occhio --- */
+  const eyeX = bodyW*0.28, eyeY = -bodyH*0.08;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(eyeX, eyeY, bodyH*0.16, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.arc(eyeX+bodyH*0.03, eyeY, bodyH*0.09, 0, Math.PI*2); ctx.fill();
+
   ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawSpeciesAccent(sp, f, bodyW, bodyH){
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  if (sp.id==='pagliaccio'){
+    // strisce bianche verticali, come un pesce pagliaccio
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    [-0.1, 0.2].forEach(off=>{
+      ctx.beginPath();
+      ctx.ellipse(bodyW*off, 0, bodyW*0.06, bodyH*0.5, 0, 0, Math.PI*2);
+      ctx.fill();
+    });
+  } else if (sp.id==='neon'){
+    // linea orizzontale luminosa
+    ctx.strokeStyle = sp.accent;
+    ctx.lineWidth = bodyH*0.12;
+    ctx.beginPath();
+    ctx.moveTo(-bodyW*0.3,0); ctx.lineTo(bodyW*0.35,0);
+    ctx.stroke();
+  } else if (sp.id==='chirurgo'){
+    // macchia scura vicino alla coda ("bisturi")
+    ctx.fillStyle = 'rgba(20,20,30,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(-bodyW*0.3, 0, bodyW*0.07, bodyH*0.3, 0, 0, Math.PI*2);
+    ctx.fill();
+  } else if (sp.id==='angelo' || sp.id==='farfalla'){
+    // pinne allungate "a vela"
+    ctx.fillStyle = sp.color;
+    ctx.beginPath();
+    ctx.moveTo(bodyW*0.05,-bodyH*0.4);
+    ctx.quadraticCurveTo(bodyW*0.15,-bodyH*1.3, bodyW*0.02,-bodyH*0.55);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bodyW*0.05,bodyH*0.4);
+    ctx.quadraticCurveTo(bodyW*0.15,bodyH*1.3, bodyW*0.02,bodyH*0.55);
+    ctx.fill();
+  } else if (sp.id==='gatto'){
+    // baffi
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1;
+    [-1,1].forEach(dir=>{
+      ctx.beginPath();
+      ctx.moveTo(bodyW*0.4, dir*bodyH*0.15);
+      ctx.lineTo(bodyW*0.65, dir*bodyH*0.3);
+      ctx.stroke();
+    });
+  } else if (sp.id==='palla' && f.puffed){
+    // piccole spine quando gonfio
+    ctx.fillStyle = sp.accent;
+    for (let a=0;a<10;a++){
+      const ang = (a/10)*Math.PI*2;
+      const rx = Math.cos(ang)*bodyW*0.5, ry = Math.sin(ang)*bodyH*0.5;
+      ctx.beginPath();
+      ctx.arc(rx,ry, 1.5+f.puffed*1.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if (sp.id==='discus'){
+    // corpo tondo: sottile bordo colorato
+    ctx.strokeStyle = sp.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0,0, bodyW*0.4, bodyH*0.4, 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
