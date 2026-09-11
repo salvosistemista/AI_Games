@@ -28,6 +28,8 @@
     position:absolute; top:0; left:0; right:0;
   }
   .stat{display:flex; align-items:center; gap:5px; opacity:.95;}
+  #statusOpener{ padding:4px 6px; margin:-4px -6px; border-radius:8px; }
+  #statusOpener:active{ background: rgba(255,255,255,.08); }
   .stat .icon{font-size:15px;}
   #waterBadge{width:10px; height:10px; border-radius:50%; background:var(--ui-ok); box-shadow:0 0 6px currentColor;}
   #waterBadge.warn{background:var(--ui-warn);}
@@ -135,7 +137,7 @@
   <div id="topbar">
     <div class="stat"><span class="icon">💰</span><span id="moneyVal">0€</span></div>
     <div class="stat"><span class="icon">⭐</span><span id="repVal">0</span></div>
-    <div class="stat"><span id="waterBadge"></span><span id="alertDot"></span></div>
+    <div class="stat" id="statusOpener"><span id="waterBadge"></span><span id="alertDot"></span></div>
   </div>
 
   <div id="tankWrap">
@@ -985,6 +987,8 @@ function pushToast(msg){
   el._t = setTimeout(()=> el.classList.add('hidden'), 3200);
 }
 
+document.getElementById('statusOpener').addEventListener('click', ()=> openPanel('status'));
+
 /* --- Menu --- */
 document.getElementById('menuBtn').addEventListener('click', ()=>{
   document.getElementById('menuOverlay').classList.remove('hidden');
@@ -1015,6 +1019,7 @@ function renderPanel(){
   else if (currentPanel==='encyclopedia') c.innerHTML = encyclopediaHTML();
   else if (currentPanel==='missions') c.innerHTML = missionsHTML();
   else if (currentPanel==='settings') c.innerHTML = settingsHTML();
+  else if (currentPanel==='status') c.innerHTML = statusHTML();
   attachPanelHandlers();
 }
 function renderShopIfOpen(){ if (currentPanel==='shop') renderPanel(); updateTopBarBadges(); }
@@ -1084,6 +1089,20 @@ function toggleFullscreen(){
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
   else document.exitFullscreen?.();
 }
+function statusHTML(){
+  const w = state.water;
+  const dirty = Math.round((w.ammonia + w.nitrite)/2);
+  const filterPct = Math.round((state.filter.life/state.filter.maxLife)*100);
+  const foodMeals = state.foodUnits; // ogni unità = 1 poppata per tutta la vasca
+  return `<h2>📋 Stato acquario</h2>
+    <div class="row"><div><div class="name">Cibo disponibile</div><div class="sub">Basta per ${foodMeals} pasti</div></div><span class="badge-mini">${foodMeals<=2?'⚠️ scarso':'ok'}</span></div>
+    <div class="row"><div><div class="name">Ammoniaca</div><div class="sub">${Math.round(w.ammonia)}%</div></div><span class="badge-mini">${w.ammonia>55?'⚠️ alta':'ok'}</span></div>
+    <div class="row"><div><div class="name">Nitriti</div><div class="sub">${Math.round(w.nitrite)}%</div></div><span class="badge-mini">${w.nitrite>50?'⚠️ alti':'ok'}</span></div>
+    <div class="row"><div><div class="name">Nitrati</div><div class="sub">${Math.round(w.nitrate)}%</div></div><span class="badge-mini">${w.nitrate>60?'⚠️ alti':'ok'}</span></div>
+    <div class="row"><div><div class="name">Ossigeno</div><div class="sub">${Math.round(w.oxygen)}%</div></div></div>
+    <div class="row"><div><div class="name">Temperatura</div><div class="sub">${w.temperature.toFixed(1)}°C</div></div></div>
+    <div class="row"><div><div class="name">Stato filtro</div><div class="sub">${state.filter.life} giorni residui</div></div><span class="badge-mini">${filterPct<=20?'⚠️ da sostituire':'ok'}</span></div>`;
+}
 function settingsHTML(){
   return `<h2>⚙️ Impostazioni</h2>
     <div class="row"><div><div class="name">Schermo intero</div><div class="sub">Nasconde le barre del browser</div></div><button id="toggleFullscreenSettings">${document.fullscreenElement?'Esci':'Attiva'}</button></div>
@@ -1150,7 +1169,7 @@ function openFishPanel(fishId){
   const dis = f.diseaseId ? DISEASES[f.diseaseId] : null;
   document.getElementById('fishContent').innerHTML = `
     <h2>${sp.name}</h2>
-    <div class="sub">Stadio: ${f.stage} · Taglia: ${Math.round((f.size/sp.maxSize)*100)}%</div>
+    <div class="sub">Stadio: ${f.stage} · Taglia: ${Math.round((f.size/sp.maxSize)*100)}% · In vasca da ${Math.floor(f.age)} giorni</div>
     <div class="row"><div class="name">Salute</div><div class="sub">${Math.round(f.health)}%</div></div>
     <div class="row"><div class="name">Umore</div><div class="sub">${Math.round(f.happiness)}%</div></div>
     ${dis ? `<div class="row"><div class="name">⚠️ ${dis.name}</div><div class="sub">${dis.symptom}</div></div>` : ''}
