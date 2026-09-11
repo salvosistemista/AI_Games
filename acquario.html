@@ -238,7 +238,9 @@ const CONSUMABLES = {
   cibo:   { id:'cibo', name:'Cibo', cost:4, unitsPerPack:10 },
   filtro: { id:'filtro', name:'Ricambio filtro', cost:20, life:6 },
   fertilizzante: { id:'fertilizzante', name:'Fertilizzante', cost:8, unitsPerPack:6 },
+  riscaldatore: { id:'riscaldatore', name:'Ricarica riscaldatore', cost:16, life:6 },
 };
+const ROOM_TEMP = 20;
 
 const PLANT_TYPES = {
   muschio:    { id:'muschio',    name:'Muschio di Giava', cost:6,  oxygen:0.35, filter:0.30, growthRate:0.05 },
@@ -276,6 +278,7 @@ function newGameState(){
     substrate: 'standard', // 'standard' | 'fine'
     water: { ammonia:0, nitrite:0, nitrate:0, bacteria:0, temperature:25, oxygen:80 },
     filter: { life: 6, maxLife: 6 },
+    heater: { life: 6, maxLife: 6, targetTemp: 25 },
     foodUnits: 20,
     background: 'oceano',
     zen: false,
@@ -385,9 +388,11 @@ function isBored(f){
 function processDailyTick(daysPassed){
   for (let i=0;i<daysPassed;i++){
     state.day++;
+    dailyHeaterUpdate();
     dailyWaterDegrade();
     dailyGrowthAndFeed();
     dailyDiseaseProgress();
+    dailyPassiveIncome();
     dailyReproductionCheck();
     dailyMarketFluctuation();
     if (state.filter.life>0){
@@ -397,6 +402,22 @@ function processDailyTick(daysPassed){
     }
   }
   refreshDailyMissionsIfNeeded();
+}
+
+function dailyHeaterUpdate(){
+  const w = state.water;
+  const h = state.heater;
+  if (h.life > 0){
+    // il riscaldatore mantiene la temperatura vicina al target
+    const diff = h.targetTemp - w.temperature;
+    w.temperature += clamp(diff, -1.5, 1.5);
+    h.life = Math.max(0, h.life - 1);
+  } else {
+    // nessun riscaldatore attivo: deriva naturale verso la temperatura ambiente
+    const diff = ROOM_TEMP - w.temperature;
+    w.temperature += clamp(diff*0.3, -1, 1);
+  }
+  w.temperature = clamp(w.temperature, 10, 35);
 }
 
 function dailyWaterDegrade(){
@@ -539,6 +560,19 @@ function conditionsImprovedFor(f){
   return false;
 }
 
+function dailyPassiveIncome(){
+  let total = 0;
+  state.fish.forEach(f=>{
+    if (f.health < 50 || f.happiness < 50) return; // stato sotto il 50%: nessun regalo
+    if (f.health < 75 || f.happiness < 75) { total += 0.50; return; } // uno dei due tra 50 e 75%
+    total += 1.00; // entrambi almeno al 75%
+  });
+  if (total > 0){
+    state.money += total;
+    pushToast(`🎁 +${total.toFixed(2)}€ per la buona cura dei tuoi pesci`);
+  }
+}
+
 function dailyReproductionCheck(){
   const bySpecies = {};
   state.fish.forEach(f=>{ (bySpecies[f.speciesId] = bySpecies[f.speciesId]||[]).push(f); });
@@ -655,6 +689,7 @@ function applyOfflineProgression(){
 
 /* ---- Azioni giocatore ---- */
 function feedAll(){
+  if (state.fish.length===0){ pushToast('Nessun pesce da nutrire.'); return; }
   if (state.foodUnits<=0){ pushToast('Cibo esaurito! Vai al negozio.'); return; }
   state.foodUnits -= 1;
   spawnPellets(Math.min(8, 3 + state.fish.length));
@@ -695,6 +730,7 @@ function buyFish(speciesId){
 }
 
 function sellFish(fishId){
+  if (state.fish.length <= 1){ pushToast('Non puoi vendere il tuo ultimo pesce!'); return; }
   const f = state.fish.find(x=>x.id===fishId);
   if (!f) return;
   const price = computeSellPrice(f);
@@ -738,6 +774,7 @@ function buyConsumable(id){
   if (id==='cibo') state.foodUnits += c.unitsPerPack;
   if (id==='filtro') { state.filter.life = state.filter.maxLife; }
   if (id==='fertilizzante') { state.fertilizerUnits += c.unitsPerPack; }
+  if (id==='riscaldatore') { state.heater.life = state.heater.maxLife; }
   playSound('coin');
   renderShopIfOpen();
 }
@@ -1091,7 +1128,7 @@ function updateTopBarBadges(){
   const dirty = clamp((state.water.ammonia + state.water.nitrite)/2,0,100);
   const badge = document.getElementById('waterBadge');
   badge.className = dirty>60 ? 'danger' : (dirty>30 ? 'warn' : '');
-  const urgent = state.fish.some(f=>f.diseaseId) || dirty>60 || state.foodUnits<=2;
+  const urgent = state.fish.some(f=>f.diseaseId) || dirty>60 || state.foodUnits<=2 || state.heater.life<=0;
   document.getElementById('alertDot').className = urgent ? 'show' : '';
   const hasDisease = state.fish.some(f=>f.diseaseId) || Object.keys(state.encyclopediaSeen).length>0;
   document.getElementById('pharmacyRow').style.display = hasDisease ? 'flex' : 'none';
@@ -1155,6 +1192,7 @@ function shopHTML(){
   rows += `<div class="row"><div><div class="name">Cibo (x10)</div><div class="sub">${CONSUMABLES.cibo.cost}€</div></div><button data-buyc="cibo">Compra</button></div>`;
   rows += `<div class="row"><div><div class="name">Ricambio filtro</div><div class="sub">${CONSUMABLES.filtro.cost}€</div></div><button data-buyc="filtro">Compra</button></div>`;
   rows += `<div class="row"><div><div class="name">Fertilizzante (x6)</div><div class="sub">${CONSUMABLES.fertilizzante.cost}€ · per le piante vive</div></div><button data-buyc="fertilizzante">Compra</button></div>`;
+  rows += `<div class="row"><div><div class="name">Ricarica riscaldatore</div><div class="sub">${CONSUMABLES.riscaldatore.cost}€</div></div><button data-buyc="riscaldatore">Compra</button></div>`;
   return rows;
 }
 function gardenHTML(){
@@ -1249,6 +1287,7 @@ function statusHTML(){
     <div class="row"><div><div class="name">Nitrati</div><div class="sub">${Math.round(w.nitrate)}%</div></div><span class="badge-mini">${w.nitrate>60?'⚠️ alti':'ok'}</span></div>
     <div class="row"><div><div class="name">Ossigeno</div><div class="sub">${Math.round(w.oxygen)}%</div></div></div>
     <div class="row"><div><div class="name">Temperatura</div><div class="sub">${w.temperature.toFixed(1)}°C</div></div></div>
+    <div class="row"><div><div class="name">Riscaldatore</div><div class="sub">${state.heater.life>0? state.heater.life+' giorni residui' : 'spento — deriva verso temp. ambiente'}</div></div><span class="badge-mini">${state.heater.life<=0?'⚠️ spento':'ok'}</span></div>
     <div class="row"><div><div class="name">Stato filtro</div><div class="sub">${Math.max(0,Math.round(state.filter.life))} giorni residui</div></div><span class="badge-mini">${filterPct<=20?'⚠️ da sostituire':'ok'}</span></div>`;
 }
 function settingsHTML(){
@@ -1258,7 +1297,8 @@ function settingsHTML(){
     <div class="row"><div><div class="name">Esporta salvataggio</div><div class="sub">Scarica file JSON</div></div><button id="exportSave">Esporta</button></div>
     <div class="row"><div><div class="name">Importa salvataggio</div><div class="sub">Carica file JSON</div></div><button id="importSaveBtn">Importa</button></div>
     <input type="file" id="importFile" accept="application/json" style="display:none;">
-    <div class="row"><div><div class="name">Reset di gioco</div><div class="sub">Cancella tutto e ricomincia da zero</div></div><button id="resetGameBtn" style="background:var(--ui-danger); color:#fff;">Reset</button></div>`;
+    <div class="row"><div><div class="name">Reset di gioco</div><div class="sub">Cancella tutto e ricomincia da zero</div></div><button id="resetGameBtn" style="background:var(--ui-danger); color:#fff;">Reset</button></div>
+    <div class="row"><div><div class="name">🧪 Debug: +100€</div><div class="sub">Solo per test, da rimuovere poi</div></div><button id="debugAddMoney">+100€</button></div>`;
 }
 function attachPanelHandlers(){
   const c = document.getElementById('panelContent');
@@ -1288,6 +1328,12 @@ function attachPanelHandlers(){
     if (confirm('Vuoi davvero cancellare tutto il salvataggio e ricominciare da capo? L\'azione non è reversibile.')){
       resetGame();
     }
+  });
+  const debugBtn = document.getElementById('debugAddMoney');
+  if (debugBtn) debugBtn.addEventListener('click', ()=>{
+    state.money += 100;
+    updateTopBarBadges();
+    renderPanel();
   });
 }
 
@@ -1330,7 +1376,7 @@ function openFishPanel(fishId){
     <div class="row"><div class="name">Umore</div><div class="sub">${Math.round(f.happiness)}%</div></div>
     ${dis ? `<div class="row"><div class="name">⚠️ ${dis.name}</div><div class="sub">${dis.symptom}</div></div>` : ''}
     <div class="row"><div><div class="name">Interagisci</div><div class="sub">Aumenta felicità</div></div><button id="interactBtn">Gioca</button></div>
-    <div class="row"><div><div class="name">Vendi</div><div class="sub">~${computeSellPrice(f)}€ stimati</div></div><button id="sellBtn">Vendi</button></div>
+    <div class="row"><div><div class="name">Vendi</div><div class="sub">~${computeSellPrice(f)}€ stimati</div></div><button id="sellBtn" ${state.fish.length<=1?'disabled':''}>Vendi</button></div>
   `;
   document.getElementById('fishPanel').classList.remove('hidden');
   document.getElementById('interactBtn').onclick = ()=>{
