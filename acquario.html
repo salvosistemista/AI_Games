@@ -796,7 +796,7 @@ function buyPlant(kind){
   if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); return; }
   if (state.money < type.cost){ pushToast('Fondi insufficienti'); return; }
   state.money -= type.cost;
-  state.plants.push({ id: state.nextPlantId++, kind, isPlant:true, health:80, growth:0.15, overgrownDays:0 });
+  state.plants.push({ id: state.nextPlantId++, kind, isPlant:true, health:80, growth:0.15, overgrownDays:0, sizeMod: rand(0.85,1.15) });
   playSound('coin');
 }
 function buyDecoration(kind){
@@ -804,7 +804,7 @@ function buyDecoration(kind){
   if (state.plants.length >= MAX_TANK_ITEMS){ pushToast('Vasca già arredata al massimo'); return; }
   if (state.money < type.cost){ pushToast('Fondi insufficienti'); return; }
   state.money -= type.cost;
-  state.plants.push({ id: state.nextPlantId++, kind, isPlant:false, health:100 });
+  state.plants.push({ id: state.nextPlantId++, kind, isPlant:false, health:100, sizeMod: rand(0.85,1.15) });
   playSound('coin');
 }
 function prunePlant(plantId){
@@ -940,30 +940,66 @@ function drawPlant(p, w, h, idx){
   const count = Math.max(state.plants.length, 1);
   const baseX = w*(0.12 + (idx/count)*0.76) + Math.sin(idx*2)*6;
   const baseY = h;
+  const sizeMod = p.sizeMod || 1;
 
   if (p.isPlant){
-    const type = PLANT_TYPES[p.kind];
-    const height = h*0.16*(0.6+Math.min(p.growth,1));
     const alpha = clamp(p.health/100,0.25,1);
-    const leafCount = 3 + Math.round(Math.min(p.growth,1)*2);
-    for (let i=0;i<leafCount;i++){
-      const sway = Math.sin(ambientTime*1.5 + i*1.3 + idx)*8;
-      const dir = (i%2===0) ? 1 : -1;
-      const leafH = height*(0.65+0.35*(i/leafCount));
-      const tipX = baseX + dir*leafH*0.35 + sway*0.4;
-      const tipY = baseY - leafH;
-      const grad = ctx.createLinearGradient(baseX,baseY,tipX,tipY);
-      grad.addColorStop(0, `rgba(60,150,110,${alpha})`);
-      grad.addColorStop(1, `rgba(120,220,160,${alpha})`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(baseX-3, baseY);
-      ctx.quadraticCurveTo(baseX + dir*leafH*0.5 + sway, baseY-leafH*0.55, tipX, tipY);
-      ctx.quadraticCurveTo(baseX + dir*leafH*0.15 + sway, baseY-leafH*0.5, baseX+3, baseY);
-      ctx.closePath();
-      ctx.fill();
+    if (p.kind==='muschio'){
+      // cespuglio basso e folto di ciuffetti tondeggianti
+      const height = h*0.07*sizeMod*(0.6+Math.min(p.growth,1));
+      const tufts = 5;
+      for (let i=0;i<tufts;i++){
+        const off = (i-tufts/2)*7*sizeMod;
+        const sway = Math.sin(ambientTime*2 + i)*2;
+        const tuftH = height*(0.7+0.3*Math.sin(i*1.7));
+        const grad = ctx.createLinearGradient(baseX+off,baseY,baseX+off+sway,baseY-tuftH);
+        grad.addColorStop(0, `rgba(70,140,90,${alpha})`);
+        grad.addColorStop(1, `rgba(140,210,130,${alpha})`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(baseX+off+sway*0.5, baseY-tuftH*0.55, 6*sizeMod, tuftH*0.55, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+    } else if (p.kind==='vallisneria'){
+      // lame lunghe e sottili a nastro
+      const height = h*0.22*sizeMod*(0.6+Math.min(p.growth,1));
+      const blades = 4;
+      for (let i=0;i<blades;i++){
+        const dir = (i%2===0)?1:-1;
+        const off = (i-blades/2)*4;
+        const sway = Math.sin(ambientTime*1.2 + i*1.1 + idx)*10;
+        const bladeH = height*(0.75+0.25*(i/blades));
+        ctx.strokeStyle = `rgba(100,200,140,${alpha})`;
+        ctx.lineWidth = 3*sizeMod;
+        ctx.beginPath();
+        ctx.moveTo(baseX+off, baseY);
+        ctx.quadraticCurveTo(baseX+off+dir*bladeH*0.2+sway*0.5, baseY-bladeH*0.6, baseX+off+dir*bladeH*0.1+sway, baseY-bladeH);
+        ctx.stroke();
+      }
+    } else { // anubias
+      // poche foglie larghe e scure, robuste
+      const height = h*0.13*sizeMod*(0.6+Math.min(p.growth,1));
+      const leaves = 3;
+      for (let i=0;i<leaves;i++){
+        const dir = (i%2===0)?1:-1;
+        const sway = Math.sin(ambientTime*0.8 + i + idx)*3;
+        const leafH = height*(0.8+0.2*i);
+        const tipX = baseX + dir*leafH*0.4 + sway;
+        const tipY = baseY - leafH;
+        const grad = ctx.createLinearGradient(baseX,baseY,tipX,tipY);
+        grad.addColorStop(0, `rgba(35,95,70,${alpha})`);
+        grad.addColorStop(1, `rgba(80,150,110,${alpha})`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(baseX-5*sizeMod, baseY);
+        ctx.quadraticCurveTo(baseX + dir*leafH*0.55 + sway, baseY-leafH*0.5, tipX, tipY);
+        ctx.quadraticCurveTo(baseX + dir*leafH*0.25 + sway, baseY-leafH*0.45, baseX+5*sizeMod, baseY);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
     if (p.growth > 1){
+      const height = h*0.16*sizeMod;
       ctx.fillStyle = `rgba(255,220,120,${alpha*0.8})`;
       ctx.beginPath();
       ctx.arc(baseX, baseY-height*0.9, 3, 0, Math.PI*2);
@@ -975,21 +1011,22 @@ function drawPlant(p, w, h, idx){
     ctx.lineWidth = 1.5;
     if (p.kind==='grotta'){
       ctx.beginPath();
-      ctx.arc(baseX, baseY-2, 18, Math.PI, 0);
+      ctx.arc(baseX, baseY-2, 18*sizeMod, Math.PI, 0);
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'rgba(10,20,25,0.6)';
       ctx.beginPath();
-      ctx.arc(baseX, baseY-8, 8, Math.PI, 0);
+      ctx.arc(baseX, baseY-8*sizeMod, 8*sizeMod, Math.PI, 0);
       ctx.fill();
     } else {
+      const w2 = 22*sizeMod, h2 = 34*sizeMod;
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(baseX-11, baseY-34, 22, 34, 3) : ctx.rect(baseX-11, baseY-34, 22, 34);
+      ctx.roundRect ? ctx.roundRect(baseX-w2/2, baseY-h2, w2, h2, 3) : ctx.rect(baseX-w2/2, baseY-h2, w2, h2);
       ctx.fill(); ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(baseX-11, baseY-34); ctx.lineTo(baseX, baseY-46); ctx.lineTo(baseX+11, baseY-34);
+      ctx.moveTo(baseX-w2/2, baseY-h2); ctx.lineTo(baseX, baseY-h2-12*sizeMod); ctx.lineTo(baseX+w2/2, baseY-h2);
       ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'rgba(30,25,40,0.7)';
-      ctx.fillRect(baseX-4, baseY-16, 8, 16);
+      ctx.fillRect(baseX-4*sizeMod, baseY-h2*0.5, 8*sizeMod, h2*0.5);
     }
   }
 }
@@ -1465,18 +1502,24 @@ function settingsHTML(){
     <div class="row"><div><div class="name">Reset di gioco</div><div class="sub">Cancella tutto e ricomincia da zero</div></div><button id="resetGameBtn" style="background:var(--ui-danger); color:#fff;">Reset</button></div>
     <div class="row"><div><div class="name">🧪 Debug: +100€</div><div class="sub">Solo per test, da rimuovere poi</div></div><button id="debugAddMoney">+100€</button></div>`;
 }
+function closeAllOverlays(){
+  document.getElementById('menuOverlay').classList.add('hidden');
+  document.getElementById('panelOverlay').classList.add('hidden');
+  document.getElementById('fishPanel').classList.add('hidden');
+}
+
 function attachPanelHandlers(){
   const c = document.getElementById('panelContent');
-  c.querySelectorAll('[data-buy]').forEach(b=> b.addEventListener('click', ()=> buyFish(b.dataset.buy)));
-  c.querySelectorAll('[data-buyc]').forEach(b=> b.addEventListener('click', ()=> buyConsumable(b.dataset.buyc)));
+  c.querySelectorAll('[data-buy]').forEach(b=> b.addEventListener('click', ()=>{ buyFish(b.dataset.buy); closeAllOverlays(); }));
+  c.querySelectorAll('[data-buyc]').forEach(b=> b.addEventListener('click', ()=>{ buyConsumable(b.dataset.buyc); closeAllOverlays(); }));
   c.querySelectorAll('[data-prune]').forEach(b=> b.addEventListener('click', ()=>{ prunePlant(parseInt(b.dataset.prune)); renderPanel(); }));
-  c.querySelectorAll('[data-buyplant]').forEach(b=> b.addEventListener('click', ()=>{ buyPlant(b.dataset.buyplant); renderPanel(); }));
-  c.querySelectorAll('[data-buydeco]').forEach(b=> b.addEventListener('click', ()=>{ buyDecoration(b.dataset.buydeco); renderPanel(); }));
+  c.querySelectorAll('[data-buyplant]').forEach(b=> b.addEventListener('click', ()=>{ buyPlant(b.dataset.buyplant); closeAllOverlays(); }));
+  c.querySelectorAll('[data-buydeco]').forEach(b=> b.addEventListener('click', ()=>{ buyDecoration(b.dataset.buydeco); closeAllOverlays(); }));
   const lightBtn = document.getElementById('buyLight');
-  if (lightBtn) lightBtn.addEventListener('click', ()=>{ buyLightUpgrade(); renderPanel(); });
+  if (lightBtn) lightBtn.addEventListener('click', ()=>{ buyLightUpgrade(); closeAllOverlays(); });
   const substrateBtn = document.getElementById('buySubstrate');
-  if (substrateBtn) substrateBtn.addEventListener('click', ()=>{ buySubstrateUpgrade(); renderPanel(); });
-  c.querySelectorAll('[data-med]').forEach(b=> b.addEventListener('click', ()=>{ buyMedicine(b.dataset.med, parseInt(b.dataset.fish)); renderPanel(); }));
+  if (substrateBtn) substrateBtn.addEventListener('click', ()=>{ buySubstrateUpgrade(); closeAllOverlays(); });
+  c.querySelectorAll('[data-med]').forEach(b=> b.addEventListener('click', ()=>{ buyMedicine(b.dataset.med, parseInt(b.dataset.fish)); closeAllOverlays(); }));
   c.querySelectorAll('[data-enctab]').forEach(b=> b.addEventListener('click', ()=>{ state._encTab = b.dataset.enctab; renderPanel(); }));
   const zenBtn = document.getElementById('toggleZen');
   if (zenBtn) zenBtn.addEventListener('click', ()=>{ setZen(!state.zen); renderPanel(); });
