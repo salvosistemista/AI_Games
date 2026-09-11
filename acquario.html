@@ -85,10 +85,14 @@
   .overlay.hidden{ display:none; }
   .sheet{
     position:relative;
-    width:100%; max-width:520px; max-height:82vh; overflow-y:auto;
+    width:100%; max-width:520px; max-height:82vh;
     background: var(--ui-bg); border-radius: 22px 22px 0 0;
-    padding: 18px 18px calc(56px + env(safe-area-inset-bottom)) 18px;
     box-shadow: 0 -8px 30px rgba(0,0,0,.4);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .sheet-scroll{
+    overflow-y:auto;
+    padding: 18px 18px calc(56px + env(safe-area-inset-bottom)) 18px;
   }
   .sheet h2{ margin:2px 0 14px 0; font-size:18px; font-weight:600; }
   .sheet-handle{ width:36px; height:4px; background:rgba(255,255,255,.2); border-radius:2px; margin:0 auto 12px auto;}
@@ -156,42 +160,50 @@
   <!-- MENU PANEL -->
   <div class="overlay hidden" id="menuOverlay">
     <div class="sheet">
-      <div class="sheet-handle"></div>
       <button class="close-x" id="menuClose">✕</button>
-      <h2>Menu</h2>
-      <div class="row" data-open="shop"><div><div class="name">🛒 Negozio</div><div class="sub">Pesci, cibo, filtro</div></div><button>Apri</button></div>
-      <div class="row" data-open="garden"><div><div class="name">🌿 Giardino</div><div class="sub">Piante e decorazioni</div></div><button>Apri</button></div>
-      <div class="row" data-open="pharmacy" id="pharmacyRow" style="display:none;"><div><div class="name">💊 Farmacia</div><div class="sub">Medicine</div></div><button>Apri</button></div>
-      <div class="row" data-open="encyclopedia"><div><div class="name">📖 Enciclopedia</div><div class="sub">Specie e malattie</div></div><button>Apri</button></div>
-      <div class="row" data-open="missions"><div><div class="name">🎯 Missioni</div><div class="sub">Obiettivi del giorno</div></div><button>Apri</button></div>
-      <div class="row" data-open="settings"><div><div class="name">⚙️ Impostazioni</div><div class="sub">Zen, salvataggio</div></div><button>Apri</button></div>
+      <div class="sheet-scroll">
+        <div class="sheet-handle"></div>
+        <h2>Menu</h2>
+        <div class="row" data-open="shop"><div><div class="name">🛒 Negozio</div><div class="sub">Pesci, cibo, filtro</div></div><button>Apri</button></div>
+        <div class="row" data-open="garden"><div><div class="name">🌿 Giardino</div><div class="sub">Piante e decorazioni</div></div><button>Apri</button></div>
+        <div class="row" data-open="pharmacy" id="pharmacyRow" style="display:none;"><div><div class="name">💊 Farmacia</div><div class="sub">Medicine</div></div><button>Apri</button></div>
+        <div class="row" data-open="encyclopedia"><div><div class="name">📖 Enciclopedia</div><div class="sub">Specie e malattie</div></div><button>Apri</button></div>
+        <div class="row" data-open="missions"><div><div class="name">🎯 Missioni</div><div class="sub">Obiettivi del giorno</div></div><button>Apri</button></div>
+        <div class="row" data-open="settings"><div><div class="name">⚙️ Impostazioni</div><div class="sub">Zen, salvataggio</div></div><button>Apri</button></div>
+      </div>
     </div>
   </div>
 
   <!-- GENERIC PANEL (shop/pharmacy/encyclopedia/missions/settings) -->
   <div class="overlay hidden" id="panelOverlay">
-    <div class="sheet" id="panelSheet">
-      <div class="sheet-handle"></div>
+    <div class="sheet">
       <button class="close-x" id="panelClose">✕</button>
-      <div id="panelContent"></div>
+      <div class="sheet-scroll">
+        <div class="sheet-handle"></div>
+        <div id="panelContent"></div>
+      </div>
     </div>
   </div>
 
   <!-- FISH PANEL -->
   <div class="overlay hidden" id="fishPanel">
     <div class="sheet">
-      <div class="sheet-handle"></div>
       <button class="close-x" id="fishClose">✕</button>
-      <div id="fishContent"></div>
+      <div class="sheet-scroll">
+        <div class="sheet-handle"></div>
+        <div id="fishContent"></div>
+      </div>
     </div>
   </div>
 
   <!-- START SCREEN -->
   <div class="overlay hidden" id="startOverlay">
     <div class="sheet">
-      <div class="sheet-handle"></div>
-      <h2>Scegli il tuo primo pesce</h2>
-      <div id="starterChoices"></div>
+      <div class="sheet-scroll">
+        <div class="sheet-handle"></div>
+        <h2>Scegli il tuo primo pesce</h2>
+        <div id="starterChoices"></div>
+      </div>
     </div>
   </div>
 
