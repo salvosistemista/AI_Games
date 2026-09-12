@@ -509,7 +509,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.23</span>
+  <span class="version-badge">v1.24</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -1547,15 +1547,17 @@
       if (e.button !== undefined && e.button !== 0) return; // only primary button drags
       if (piece.classList.contains('locked')) return;
       piece.setPointerCapture(e.pointerId);
-      const rect = piece.getBoundingClientRect();
       const pfRect = playfield.getBoundingClientRect();
-      // rect/pfRect are in screen pixels (already scaled by the zoom transform);
-      // style.left/top are in the playfield's local, pre-zoom pixel space, so every
-      // screen-pixel quantity must be divided by zoomLevel before being stored/used.
-      offX = (e.clientX - rect.left) / zoomLevel;
-      offY = (e.clientY - rect.top) / zoomLevel;
-      const leaderLeft0 = (rect.left - pfRect.left) / zoomLevel;
-      const leaderTop0 = (rect.top - pfRect.top) / zoomLevel;
+      // Always read the piece's true position from style.left/top (the CSS layout box,
+      // untouched by rotation) rather than getBoundingClientRect() — for a diagonal
+      // rotation (45/135/225/315°) the rendered bounding box is bigger and off-centre
+      // from the true layout box, which used to make the piece visibly jump on grab.
+      const cursorLocalX = (e.clientX - pfRect.left) / zoomLevel;
+      const cursorLocalY = (e.clientY - pfRect.top) / zoomLevel;
+      const leaderLeft0 = parseFloat(piece.style.left) || 0;
+      const leaderTop0 = parseFloat(piece.style.top) || 0;
+      offX = cursorLocalX - leaderLeft0;
+      offY = cursorLocalY - leaderTop0;
 
       const group = getGroup(piece);
       group.forEach(p => {
@@ -1569,8 +1571,6 @@
       });
       draggingPiece = piece;
       shakeCheck = group.length > 1 ? makeShakeDetector() : null;
-      piece.style.left = leaderLeft0 + 'px';
-      piece.style.top = leaderTop0 + 'px';
       e.preventDefault();
     });
 
