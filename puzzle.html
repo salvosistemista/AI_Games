@@ -26,16 +26,19 @@
     --wood-dark:#141414; --wood:#232323; --wood-light:#333333;
     --cream:#f2f0ec; --muted:#a8a8a8; --brass:#c9a227; --brass-light:#e4c357;
     --btn-text:#1c1600; --stripe: rgba(255,255,255,0.035); --success:#8fd19e;
+    --felt:#1f4a35; --felt-light:#2b5c43;
   }
   body[data-theme="blu-notte"]{
     --wood-dark:#0d1a2b; --wood:#152840; --wood-light:#1f3a5c;
     --cream:#eef3fa; --muted:#9fb3c9; --brass:#d4af37; --brass-light:#e9cd6b;
     --btn-text:#1c1400; --stripe: rgba(255,255,255,0.035); --success:#8fd19e;
+    --felt:#3d1f2a; --felt-light:#552a3a;
   }
   body[data-theme="verde-muschio"]{
     --wood-dark:#1a2415; --wood:#2a361f; --wood-light:#3c4a2c;
     --cream:#f1efe2; --muted:#adb79a; --brass:#c8963e; --brass-light:#e0b568;
     --btn-text:#241a0c; --stripe: rgba(255,255,255,0.03); --success:#c8e29a;
+    --felt:#173042; --felt-light:#1f4459;
   }
   body[data-theme="legno-chiaro"]{
     --wood-dark:#b9895a; --wood:#dcb98a; --wood-light:#efd7ae;
@@ -92,6 +95,23 @@
     padding:5px 12px;
     border-radius:20px;
     box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+  }
+  .help-btn{
+    position:absolute;
+    top:0; right:76px;
+    width:26px; height:26px;
+    border-radius:50%;
+    background: var(--wood-light);
+    border:1px solid var(--line);
+    color: var(--cream);
+    font-weight:700;
+    font-size:0.85rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   }
 
   /* ---------- slot bar ---------- */
@@ -164,11 +184,26 @@
     border-radius: 10px;
     box-shadow: 0 8px 22px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
     padding: 16px 18px;
+    margin-bottom: 22px;
+  }
+  .tool-section{
+    padding-bottom:14px;
+    margin-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .tool-section:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .tool-section-title{
+    font-size:0.7rem;
+    color: var(--brass-light);
+    font-weight:700;
+    letter-spacing:0.4px;
+    margin-bottom:10px;
+  }
+  .tool-section-row{
     display:flex;
     flex-wrap:wrap;
     gap:18px 26px;
     align-items:center;
-    margin-bottom: 22px;
   }
   .field{ display:flex; flex-direction:column; gap:6px; }
   .field label{ font-size:0.78rem; color:var(--muted); }
@@ -233,6 +268,8 @@
 
   .playfield{
     position:relative;
+    transform-origin: top left;
+    transition: transform .08s ease-out;
   }
 
   .board{
@@ -307,6 +344,62 @@
     100%{ filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); transform: rotate(0deg) scale(1); }
   }
   .piece.bump{ animation: bumpGlow 0.55s ease; }
+  .piece.edge-hl:not(.dragging){
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 7px rgba(255,210,120,0.85));
+  }
+
+  .slot.hover-target{
+    outline: 2px dashed var(--brass-light);
+    outline-offset: -2px;
+    animation: hoverPulse 1s ease-in-out infinite;
+  }
+  @keyframes hoverPulse{
+    0%,100%{ outline-color: var(--brass-light); }
+    50%{ outline-color: rgba(224,181,104,0.25); }
+  }
+
+  .gen-overlay{
+    position:absolute;
+    top:0; left:0;
+    background: rgba(10,7,4,0.6);
+    border-radius:6px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    z-index:6;
+    color: var(--cream);
+  }
+  .gen-overlay.show{ display:flex; }
+  .gen-bar{
+    width:min(60%, 360px);
+    height:10px;
+    background: rgba(255,255,255,0.15);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .gen-bar-fill{
+    height:100%;
+    width:0%;
+    background: linear-gradient(90deg, var(--brass-light), var(--brass));
+    transition: width .1s linear;
+  }
+  .gen-overlay-text{ font-size:0.85rem; color:var(--muted); }
+
+  .zoom-indicator{
+    position:absolute;
+    top:8px; right:8px;
+    background: rgba(10,7,4,0.6);
+    color: var(--cream);
+    font-size:0.75rem;
+    padding:3px 9px;
+    border-radius:12px;
+    z-index:4;
+    display:none;
+    pointer-events:none;
+  }
+  .zoom-indicator.show{ display:block; }
 
   .diff-row{ display:flex; gap:8px; }
   .diff-btn{
@@ -359,6 +452,29 @@
   }
   .modal p{ color: var(--cream); margin: 4px 0 20px; line-height:1.5; }
   .modal .row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .modal.help-modal{ max-width:460px; text-align:left; }
+  .modal.help-modal h2{ text-align:center; }
+  .help-list{ list-style:none; padding:0; margin:0 0 16px; }
+  .help-list li{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    font-size:0.88rem;
+    color:var(--cream);
+  }
+  .help-list li:last-child{ border-bottom:none; }
+  .help-list kbd{
+    background: var(--wood-dark);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:2px 7px;
+    font-family:inherit;
+    font-size:0.8rem;
+    color: var(--brass-light);
+    white-space:nowrap;
+  }
 
   @media (prefers-reduced-motion: reduce){
     .piece{ transition:none; }
@@ -367,7 +483,8 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.02</span>
+  <span class="version-badge">v1.10</span>
+  <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
 
@@ -375,51 +492,76 @@
   <div class="storage-meter" id="storageMeter"></div>
 
   <div class="toolbox">
-    <div class="field">
-      <label for="fileInput">Immagine dello slot attivo</label>
-      <input type="file" id="fileInput" accept="image/*">
-    </div>
-    <div class="field">
-      <label for="pieceCount">Numero di pezzi</label>
-      <select id="pieceCount">
-        <option value="500">500</option>
-        <option value="750">750</option>
-        <option value="1000" selected>1000</option>
-        <option value="1250">1250</option>
-        <option value="1500">1500</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>&nbsp;</label>
-      <button id="genBtn" disabled>Genera puzzle</button>
-    </div>
-    <div class="field">
-      <label>&nbsp;</label>
-      <button id="restartBtn" class="secondary" style="display:none;">Resetta questo puzzle</button>
-    </div>
-    <label class="check" style="align-self:flex-end;">
-      <input type="checkbox" id="ghostToggle" checked> Mostra immagine di riferimento
-    </label>
-    <div class="field">
-      <label>Difficoltà</label>
-      <div class="diff-row" id="diffRow">
-        <button type="button" class="diff-btn" data-level="semplice" title="Pezzi sempre dritti, nessuna rotazione.">Semplice</button>
-        <button type="button" class="diff-btn" data-level="normale" title="Pezzi ruotati a caso: tasto destro per ruotare. Si aggancia comunque, l'orientamento viene corretto in automatico.">Normale</button>
-        <button type="button" class="diff-btn" data-level="difficile" title="Pezzi ruotati a caso: tasto destro per ruotare. Deve essere dritto per potersi agganciare.">Difficile</button>
+    <div class="tool-section">
+      <div class="tool-section-title">PUZZLE ATTIVO</div>
+      <div class="tool-section-row">
+        <div class="field">
+          <label for="fileInput">Immagine dello slot attivo</label>
+          <input type="file" id="fileInput" accept="image/*">
+        </div>
+        <div class="field">
+          <label for="pieceCount">Numero di pezzi</label>
+          <select id="pieceCount">
+            <option value="500">500</option>
+            <option value="750">750</option>
+            <option value="1000" selected>1000</option>
+            <option value="1250">1250</option>
+            <option value="1500">1500</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="genBtn" disabled>Genera puzzle</button>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="restartBtn" class="secondary" style="display:none;">Resetta questo puzzle</button>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="edgeHlBtn" type="button" class="secondary">Evidenzia pezzi di bordo</button>
+        </div>
+        <div class="field">
+          <label>Difficoltà</label>
+          <div class="diff-row" id="diffRow">
+            <button type="button" class="diff-btn" data-level="semplice" title="Pezzi sempre dritti, nessuna rotazione.">Semplice</button>
+            <button type="button" class="diff-btn" data-level="normale" title="Pezzi ruotati a caso: tasto destro per ruotare. Si aggancia comunque, l'orientamento viene corretto in automatico.">Normale</button>
+            <button type="button" class="diff-btn" data-level="difficile" title="Pezzi ruotati a caso: tasto destro per ruotare. Deve essere dritto per potersi agganciare.">Difficile</button>
+          </div>
+        </div>
+        <span class="rangeval" id="genStatus" style="display:none;"></span>
       </div>
     </div>
-    <div class="field">
-      <label for="ghostOpacity">Trasparenza riferimento: <span class="rangeval" id="ghostOpacityVal">20%</span></label>
-      <input type="range" id="ghostOpacity" min="4" max="80" step="1" value="20">
+
+    <div class="tool-section">
+      <div class="tool-section-title">IMMAGINE DI RIFERIMENTO</div>
+      <div class="tool-section-row">
+        <label class="check">
+          <input type="checkbox" id="ghostToggle" checked> Mostra immagine di riferimento
+        </label>
+        <div class="field">
+          <label for="ghostOpacity">Trasparenza riferimento: <span class="rangeval" id="ghostOpacityVal">20%</span></label>
+          <input type="range" id="ghostOpacity" min="4" max="80" step="1" value="20">
+        </div>
+      </div>
     </div>
-    <div class="field">
-      <label>Sfondo</label>
-      <div class="theme-row" id="themeRow"></div>
+
+    <div class="tool-section">
+      <div class="tool-section-title">PREFERENZE APP</div>
+      <div class="tool-section-row">
+        <div class="field">
+          <label>Sfondo</label>
+          <div class="theme-row" id="themeRow"></div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="soundToggle" checked> Effetti sonori
+        </label>
+      </div>
     </div>
-    <span class="rangeval" id="genStatus" style="display:none;"></span>
-    <div class="field" style="margin-left:auto;">
-      <label>&nbsp;</label>
-      <div style="display:flex; gap:10px;">
+
+    <div class="tool-section">
+      <div class="tool-section-title">DATI SALVATI</div>
+      <div class="tool-section-row">
         <button id="exportBtn" class="secondary">Esporta tutti i puzzle</button>
         <button id="importBtn" class="secondary">Importa puzzle</button>
         <input type="file" id="importInput" accept="application/json" style="display:none;">
@@ -440,6 +582,11 @@
   <div class="stage" id="stage">
     <div class="playfield" id="playfield">
       <div class="board" id="board"></div>
+      <div class="gen-overlay" id="genOverlay">
+        <div class="gen-bar"><div class="gen-bar-fill" id="genBarFill"></div></div>
+        <div class="gen-overlay-text" id="genOverlayText">Creazione pezzi… 0/0</div>
+      </div>
+      <div class="zoom-indicator" id="zoomIndicator">100%</div>
       <div class="tray" id="tray">
         <span class="tray-label">TAVOLO — trascina i pezzi da qui</span>
       </div>
@@ -454,6 +601,23 @@
     <div class="row">
       <button id="playAgainBtn">Rigioca lo stesso</button>
       <button id="newImgBtn" class="secondary">Carica un'altra foto</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="helpModal">
+  <div class="modal help-modal">
+    <h2>Comandi e scorciatoie</h2>
+    <ul class="help-list">
+      <li><span>Trascina un pezzo</span><kbd>Tasto sinistro</kbd></li>
+      <li><span>Ruota di 45° in senso orario</span><kbd>Tasto destro / X</kbd></li>
+      <li><span>Ruota di 45° in senso antiorario</span><kbd>Z</kbd></li>
+      <li><span>Vedi l'immagine reale, senza trasparenza</span><kbd>Maiusc (tenuto premuto)</kbd></li>
+      <li><span>Zoom sulla vista</span><kbd>Ctrl + rotellina</kbd></li>
+      <li><span>Torna al tabellone mentre trascini</span><kbd>Barra spaziatrice</kbd></li>
+    </ul>
+    <div class="row">
+      <button id="helpCloseBtn">Chiudi</button>
     </div>
   </div>
 </div>
@@ -492,6 +656,15 @@
   const wipeBtn = document.getElementById('wipeBtn');
   const storageMeter = document.getElementById('storageMeter');
   const themeRow = document.getElementById('themeRow');
+  const edgeHlBtn = document.getElementById('edgeHlBtn');
+  const soundToggle = document.getElementById('soundToggle');
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const helpCloseBtn = document.getElementById('helpCloseBtn');
+  const genOverlay = document.getElementById('genOverlay');
+  const genBarFill = document.getElementById('genBarFill');
+  const genOverlayText = document.getElementById('genOverlayText');
+  const zoomIndicator = document.getElementById('zoomIndicator');
 
   const THEMES = [
     { id: 'noce',          label: 'Legno di noce', swatch: '#543924' },
@@ -526,6 +699,10 @@
     });
   }
 
+  helpBtn.addEventListener('click', () => helpModal.classList.add('show'));
+  helpCloseBtn.addEventListener('click', () => helpModal.classList.remove('show'));
+  helpModal.addEventListener('click', (e) => { if (e.target === helpModal) helpModal.classList.remove('show'); });
+
   const SLOT_COUNT = 5;
   const STORAGE_PREFIX = 'puzzleSlot_';
   const STORAGE_ACTIVE = 'puzzleActiveSlot';
@@ -544,7 +721,13 @@
   let currentDifficulty = 'semplice';
   let hoveredPiece = null;
   let draggingPiece = null;
+  let currentHoverSlot = null;
+  let edgeHighlightOn = false;
+  let zoomLevel = 1;
+  let soundsEnabled = true;
+  let baseImageDataURL = null; // cached JPEG dataURL for the current baseCanvas, computed once and reused
   const DIFFICULTY_STORAGE = 'puzzleDifficulty';
+  const SOUND_STORAGE = 'puzzleSoundsEnabled';
   const ROTATION_STEPS = [0, 45, 90, 135, 180, 225, 270, 315];
 
   // ---------- storage helpers ----------
@@ -609,6 +792,88 @@
     const ss = String(sec%60).padStart(2,'0');
     return mm + ':' + ss;
   }
+
+  // ---------- sound effects (Web Audio API, no external files) ----------
+  let audioCtx = null;
+  function ensureAudioCtx(){
+    if (!audioCtx){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx = null; }
+    }
+    return audioCtx;
+  }
+  function playTone(freq, startOffset, duration, type, gainPeak){
+    if (!soundsEnabled) return;
+    const ctx = ensureAudioCtx();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + startOffset;
+    const osc = ctx.createOscillator();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak || 0.15, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.03);
+  }
+  function playLockSound(){
+    playTone(720, 0, 0.09, 'sine', 0.16);
+    playTone(1040, 0.05, 0.09, 'sine', 0.10);
+  }
+  function playWinSound(){
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone(f, i*0.14, 0.24, 'triangle', 0.15));
+  }
+
+  soundToggle.addEventListener('change', () => {
+    soundsEnabled = soundToggle.checked;
+    try{ localStorage.setItem(SOUND_STORAGE, soundsEnabled ? '1' : '0'); }catch(e){}
+  });
+
+  // ---------- edge-piece highlight ----------
+  function isBorderPiece(r, c){
+    return r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
+  }
+  function applyEdgeHighlightToExistingPieces(){
+    document.querySelectorAll('.piece:not(.locked)').forEach(p => {
+      const r = parseInt(p.dataset.row, 10), c = parseInt(p.dataset.col, 10);
+      p.classList.toggle('edge-hl', edgeHighlightOn && isBorderPiece(r, c));
+    });
+  }
+  edgeHlBtn.addEventListener('click', () => {
+    edgeHighlightOn = !edgeHighlightOn;
+    edgeHlBtn.classList.toggle('active', edgeHighlightOn);
+    if (edgeHighlightOn){
+      edgeHlBtn.style.background = 'linear-gradient(180deg, var(--brass-light), var(--brass))';
+      edgeHlBtn.style.color = 'var(--btn-text)';
+      edgeHlBtn.style.borderColor = 'transparent';
+    } else {
+      edgeHlBtn.style.background = '';
+      edgeHlBtn.style.color = '';
+      edgeHlBtn.style.borderColor = '';
+    }
+    applyEdgeHighlightToExistingPieces();
+  });
+
+  // ---------- zoom (Ctrl + wheel) ----------
+  function applyZoom(){
+    playfield.style.transform = 'scale(' + zoomLevel + ')';
+    zoomIndicator.textContent = Math.round(zoomLevel * 100) + '%';
+    zoomIndicator.classList.toggle('show', Math.abs(zoomLevel - 1) > 0.001);
+  }
+  function resetZoom(){
+    zoomLevel = 1;
+    applyZoom();
+  }
+  window.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    if (!stage.classList.contains('show')) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    zoomLevel = Math.min(2.2, Math.max(0.3, +(zoomLevel + delta).toFixed(2)));
+    applyZoom();
+  }, { passive: false });
 
   // ---------- slot bar UI ----------
   function renderSlotsBar(){
@@ -685,6 +950,7 @@
     baseCanvas.height = baseH;
     const bctx = baseCanvas.getContext('2d');
     bctx.drawImage(img, 0, 0, baseW, baseH);
+    baseImageDataURL = baseCanvas.toDataURL('image/jpeg', 0.85); // encoded once, reused for ghost + saved slot
     genBtn.disabled = false;
   }
 
@@ -855,7 +1121,10 @@
     piece.style.left = (-pad) + 'px';
     piece.style.top = (-pad) + 'px';
     applyRotation(piece, 0);
+    piece.classList.remove('edge-hl');
     piece.classList.add('locked');
+    triggerBump(piece);
+    playLockSound();
     locked++;
     lockedVal.textContent = locked;
     checkWin();
@@ -877,6 +1146,23 @@
       lockPieceIntoSlot(piece, slot);
       autosaveActive();
     }
+  }
+
+  // finds the empty slot currently under the dragged piece's CENTER (not the cursor
+  // point) and gives it a pulsing highlight, so drop precision is forgiving and visible
+  function updateHoverSlotHighlight(piece){
+    const rect = piece.getBoundingClientRect();
+    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+    piece.style.visibility = 'hidden';
+    const el = document.elementFromPoint(cx, cy);
+    piece.style.visibility = 'visible';
+    const slot = el ? el.closest('.slot') : null;
+    const validSlot = (slot && slot.childElementCount === 0) ? slot : null;
+    if (currentHoverSlot && currentHoverSlot !== validSlot){
+      currentHoverSlot.classList.remove('hover-target');
+    }
+    if (validSlot) validSlot.classList.add('hover-target');
+    currentHoverSlot = validSlot;
   }
 
   function rescatterUnlockedPieces(){
@@ -959,6 +1245,7 @@
       const top = e.clientY - pfRect.top - offY;
       piece.style.left = left + 'px';
       piece.style.top = top + 'px';
+      updateHoverSlotHighlight(piece);
     });
 
     piece.addEventListener('pointerup', (e) => {
@@ -967,11 +1254,13 @@
       piece.releasePointerCapture(e.pointerId);
       if (draggingPiece === piece) draggingPiece = null;
 
-      piece.style.visibility = 'hidden';
-      const dropEl = document.elementFromPoint(e.clientX, e.clientY);
-      piece.style.visibility = 'visible';
+      updateHoverSlotHighlight(piece);
+      const slot = currentHoverSlot;
+      if (currentHoverSlot){
+        currentHoverSlot.classList.remove('hover-target');
+        currentHoverSlot = null;
+      }
 
-      const slot = dropEl ? dropEl.closest('.slot') : null;
       if (slot && slot.childElementCount === 0 &&
           slot.dataset.row === piece.dataset.row &&
           slot.dataset.col === piece.dataset.col){
@@ -1010,6 +1299,7 @@
       timeVal.textContent = fmtTime(elapsed);
       winText.textContent = 'Hai ricomposto tutti i ' + total + ' pezzi in ' + fmtTime(elapsed) + ', con ' + moves + ' mosse.';
       winModal.classList.add('show');
+      playWinSound();
     }
   }
 
@@ -1053,10 +1343,13 @@
     board.style.gridTemplateColumns = 'repeat(' + cols + ', ' + pieceW + 'px)';
     board.style.gridTemplateRows = 'repeat(' + rows + ', ' + pieceH + 'px)';
 
+    genOverlay.style.width = boardW + 'px';
+    genOverlay.style.height = boardH + 'px';
+
     const ghost = document.createElement('img');
     ghost.className = 'ghost' + (ghostVisible ? ' show' : '');
     ghost.alt = '';
-    ghost.src = baseCanvas.toDataURL('image/jpeg', 0.85);
+    ghost.src = baseImageDataURL;
     board.appendChild(ghost);
 
     for (let r = 0; r < rows; r++){
@@ -1067,6 +1360,7 @@
         board.appendChild(s);
       }
     }
+    resetZoom();
   }
 
   ghostToggle.addEventListener('change', () => {
@@ -1114,7 +1408,9 @@
 
     genBtn.disabled = true;
     restartBtn.disabled = true;
-    genStatus.style.display = 'inline';
+    genOverlay.classList.add('show');
+    genBarFill.style.width = '0%';
+    genOverlayText.textContent = 'Creazione pezzi… 0/' + cells.length;
 
     function buildChunk(){
       const end = Math.min(idx + CHUNK, cells.length);
@@ -1145,15 +1441,17 @@
             ? 0
             : (info && typeof info.rotation === 'number' ? info.rotation : pickRotation(currentDifficulty));
           applyRotation(piece, rotation);
+          if (edgeHighlightOn && isBorderPiece(r, c)) piece.classList.add('edge-hl');
           playfield.appendChild(piece);
           attachDrag(piece);
         }
       }
-      genStatus.textContent = 'Creazione pezzi… ' + idx + '/' + cells.length;
+      genBarFill.style.width = Math.round((idx / cells.length) * 100) + '%';
+      genOverlayText.textContent = 'Creazione pezzi… ' + idx + '/' + cells.length;
       if (idx < cells.length){
         requestAnimationFrame(buildChunk);
       } else {
-        genStatus.style.display = 'none';
+        genOverlay.classList.remove('show');
         genBtn.disabled = false;
         restartBtn.disabled = false;
         restartBtn.style.display = 'inline-block';
@@ -1191,7 +1489,7 @@
     lockedVal.textContent = 0; totalVal.textContent = total; pieceCountDisplay.textContent = total; movesVal.textContent = 0; timeVal.textContent = '00:00';
 
     const data = {
-      imageData: baseCanvas.toDataURL('image/jpeg', 0.82),
+      imageData: baseImageDataURL,
       baseW: baseW, baseH: baseH,
       rows: rows, cols: cols,
       pieceTarget: target,
@@ -1237,6 +1535,7 @@
       baseCanvas = document.createElement('canvas');
       baseCanvas.width = baseW; baseCanvas.height = baseH;
       baseCanvas.getContext('2d').drawImage(img, 0, 0, baseW, baseH);
+      baseImageDataURL = data.imageData; // already an encoded dataURL, no need to re-encode
       renderBoardAndTraySkeleton(pieceW*cols, pieceH*rows, ghostToggle.checked);
       buildPiecesIntoDOM(edgesH, edgesV, null, () => {
         startTimer();
@@ -1256,6 +1555,7 @@
     baseCanvas = null;
     genBtn.disabled = true;
     genStatus.style.display = 'none';
+    genOverlay.classList.remove('show');
 
     const data = slots[activeIndex];
     if (!data){
@@ -1278,6 +1578,7 @@
       baseCanvas = document.createElement('canvas');
       baseCanvas.width = baseW; baseCanvas.height = baseH;
       baseCanvas.getContext('2d').drawImage(img, 0, 0, baseW, baseH);
+      baseImageDataURL = data.imageData; // already an encoded dataURL, no need to re-encode
 
       total = data.total; locked = data.locked; moves = data.moves; elapsed = data.elapsed;
       lockedVal.textContent = locked; totalVal.textContent = total; pieceCountDisplay.textContent = total; movesVal.textContent = moves;
@@ -1396,7 +1697,7 @@
   }
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Control'){
+    if (e.key === 'Shift'){
       document.documentElement.style.setProperty('--ghost-opacity', '1');
       return;
     }
@@ -1414,7 +1715,7 @@
   });
 
   window.addEventListener('keyup', (e) => {
-    if (e.key === 'Control'){
+    if (e.key === 'Shift'){
       document.documentElement.style.setProperty('--ghost-opacity', (parseInt(ghostOpacity.value, 10) / 100).toFixed(2));
     }
   });
@@ -1446,6 +1747,12 @@
     }catch(e){}
     currentDifficulty = savedDifficulty;
     updateDifficultyButtons();
+
+    try{
+      const s = localStorage.getItem(SOUND_STORAGE);
+      soundsEnabled = (s === null) ? true : (s === '1');
+    }catch(e){ soundsEnabled = true; }
+    soundToggle.checked = soundsEnabled;
 
     for (let i = 0; i < SLOT_COUNT; i++) slots[i] = loadSlotRaw(i);
     let a = parseInt(localStorage.getItem(STORAGE_ACTIVE), 10);
