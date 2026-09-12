@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Jigsaw Puzzle</title>
+<link rel="icon" href="data:,">
 <style>
   :root{
     --wood-dark:#241811;
@@ -509,7 +510,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.25</span>
+  <span class="version-badge">v1.26</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -551,6 +552,14 @@
         <div class="field">
           <label>&nbsp;</label>
           <button id="edgeHlBtn" type="button" class="secondary">Evidenzia pezzi di bordo</button>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div style="display:flex; gap:10px;">
+            <button id="exportSlotBtn" type="button" class="secondary">Esporta questo puzzle</button>
+            <button id="importSlotBtn" type="button" class="secondary">Importa in questo slot</button>
+            <input type="file" id="importSlotInput" accept="application/json" style="display:none;">
+          </div>
         </div>
         <div class="field">
           <label>Difficoltà</label>
@@ -697,6 +706,9 @@
   const storageMeter = document.getElementById('storageMeter');
   const themeRow = document.getElementById('themeRow');
   const edgeHlBtn = document.getElementById('edgeHlBtn');
+  const exportSlotBtn = document.getElementById('exportSlotBtn');
+  const importSlotBtn = document.getElementById('importSlotBtn');
+  const importSlotInput = document.getElementById('importSlotInput');
   const soundToggle = document.getElementById('soundToggle');
   const helpBtn = document.getElementById('helpBtn');
   const helpModal = document.getElementById('helpModal');
@@ -2080,6 +2092,62 @@
         alert('Il file scelto non è un salvataggio valido di questo puzzle.');
       }
       importInput.value = '';
+    };
+    reader.readAsText(f);
+  });
+
+  exportSlotBtn.addEventListener('click', () => {
+    autosaveActive();
+    const data = slots[activeIndex];
+    if (!data){
+      alert('Questo slot è vuoto: non c\'è nessun puzzle da esportare.');
+      return;
+    }
+    const payload = { version: 1, type: 'single-slot', exportedAt: Date.now(), slot: data };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'puzzle-slot-' + (activeIndex + 1) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  importSlotBtn.addEventListener('click', () => importSlotInput.click());
+  importSlotInput.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (!confirm('Importare sostituirà il puzzle presente nello Slot ' + (activeIndex + 1) + ' e cancellerà il progresso attuale. Continuare?')){
+      importSlotInput.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(reader.result);
+        let slotData = null;
+        if (obj && obj.type === 'single-slot' && obj.slot){
+          slotData = obj.slot;
+        } else if (obj && Array.isArray(obj.slots)){
+          throw new Error('multi-slot file, not supported here');
+        } else {
+          throw new Error('formato non valido');
+        }
+        if (!slotData.imageData || !slotData.rows || !slotData.cols || !slotData.edgesH || !slotData.edgesV){
+          throw new Error('dati mancanti');
+        }
+        stopTimer();
+        slots[activeIndex] = slotData;
+        saveSlotRaw(activeIndex, slotData);
+        renderSlotsBar();
+        refreshStorageMeter();
+        loadActiveSlotIntoView();
+      }catch(err){
+        alert('Il file scelto non è un salvataggio valido di un singolo puzzle. Se è un file con tutti gli slot esportati insieme, usa "Importa puzzle" invece.');
+      }
+      importSlotInput.value = '';
     };
     reader.readAsText(f);
   });
