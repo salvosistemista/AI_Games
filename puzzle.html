@@ -362,6 +362,9 @@
     100%{ filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); transform: rotate(0deg) scale(1); }
   }
   .piece.bump{ animation: bumpGlow 0.55s ease; }
+  .piece.held:not(.dragging){
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 8px rgba(120,200,255,0.95));
+  }
   .piece.edge-hl:not(.dragging){
     filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 7px rgba(255,210,120,0.85));
   }
@@ -501,7 +504,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.16</span>
+  <span class="version-badge">v1.17</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -600,6 +603,7 @@
     <div>Mosse: <b id="movesVal">0</b></div>
     <div>Pezzi posizionati: <b id="lockedVal">0</b>/<b id="totalVal">0</b></div>
     <div>Zoom: <b id="hudZoomVal">100%</b></div>
+    <div>In mano: <b id="handCountVal">0</b>/10</div>
   </div>
 
   <div id="emptyMsg" class="empty-msg">Questo slot è vuoto. Carica una foto qui sopra per iniziare a creare il puzzle in questo slot.</div>
@@ -640,6 +644,8 @@
       <li><span>Vedi l'immagine reale, senza trasparenza</span><kbd>Maiusc (tenuto premuto)</kbd></li>
       <li><span>Zoom sulla vista</span><kbd>Ctrl + rotellina</kbd></li>
       <li><span>Torna al tabellone mentre trascini</span><kbd>Barra spaziatrice</kbd></li>
+      <li><span>Prendi/rilascia un pezzo in mano (fino a 10)</span><kbd>Doppio click sul pezzo</kbd></li>
+      <li><span>Sparpaglia i pezzi che hai in mano intorno al punto</span><kbd>Doppio click su spazio vuoto</kbd></li>
       <li><span>Implodi le opzioni per avviare/riprendere il tempo, esplodile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
     <div class="row">
@@ -692,6 +698,7 @@
   const genOverlayText = document.getElementById('genOverlayText');
   const zoomIndicator = document.getElementById('zoomIndicator');
   const hudZoomVal = document.getElementById('hudZoomVal');
+  const handCountVal = document.getElementById('handCountVal');
   const optionsToggleBtn = document.getElementById('optionsToggleBtn');
   const toolboxBody = document.getElementById('toolboxBody');
 
@@ -755,6 +762,8 @@
   let zoomLevel = 1;
   let soundsEnabled = true;
   let optionsOpen = true; // options panel starts open: the game is paused until the player collapses it
+  let handPieces = []; // pieces currently "picked up" via double-click, waiting to be scattered
+  const MAX_HAND = 10;
   let baseImageDataURL = null; // cached JPEG dataURL for the current baseCanvas, computed once and reused
   let buildToken = 0; // increments on every buildPiecesIntoDOM call to cancel stale in-flight builds
   let viewToken = 0; // increments on every slot-view load/reset to cancel stale async image loads
@@ -1151,7 +1160,78 @@
     autosaveActive();
   }
 
+  // ---------- pick up / scatter pieces "in hand" (double-click) ----------
+  function updateHandIndicator(){
+    if (handCountVal) handCountVal.textContent = handPieces.length;
+  }
+
+  function togglePieceInHand(piece){
+    const idx = handPieces.indexOf(piece);
+    if (idx !== -1){
+      handPieces.splice(idx, 1);
+      piece.classList.remove('held');
+    } else {
+      if (handPieces.length >= MAX_HAND) return; // hand already full
+      handPieces.push(piece);
+      piece.classList.add('held');
+      piece.style.zIndex = ++zTop;
+    }
+    updateHandIndicator();
+  }
+
+  // lays the held pieces out around (clientX, clientY) in a small jittered grid so
+  // they never land exactly on top of one another
+  function scatterHandAt(clientX, clientY){
+    if (handPieces.length === 0) return;
+    const pfRect = playfield.getBoundingClientRect();
+    const cx = (clientX - pfRect.left) / zoomLevel;
+    const cy = (clientY - pfRect.top) / zoomLevel;
+    const pieces = handPieces.slice();
+    const n = pieces.length;
+    const gridCols = Math.ceil(Math.sqrt(n));
+    const gridRows = Math.ceil(n / gridCols);
+    const spacingX = pieceW + 2*pad + 14;
+    const spacingY = pieceH + 2*pad + 14;
+
+    pieces.forEach((piece, i) => {
+      const col = i % gridCols;
+      const row = Math.floor(i / gridCols);
+      const offX = (col - (gridCols - 1) / 2) * spacingX;
+      const offY = (row - (gridRows - 1) / 2) * spacingY;
+      const jitterX = (Math.random() - 0.5) * spacingX * 0.3;
+      const jitterY = (Math.random() - 0.5) * spacingY * 0.3;
+      const x = cx + offX + jitterX - (pieceW + 2*pad) / 2;
+      const y = cy + offY + jitterY - (pieceH + 2*pad) / 2;
+
+      if (piece.parentElement !== playfield) playfield.appendChild(piece);
+      piece.style.position = 'absolute';
+      piece.style.left = x + 'px';
+      piece.style.top = y + 'px';
+      piece.style.zIndex = ++zTop;
+      piece.classList.remove('held');
+    });
+
+    handPieces.length = 0;
+    updateHandIndicator();
+    autosaveActive();
+  }
+
+  playfield.addEventListener('dblclick', (e) => {
+    if (optionsOpen) return;
+    const pieceEl = e.target.closest('.piece');
+    if (pieceEl){
+      if (pieceEl.classList.contains('locked')) return;
+      togglePieceInHand(pieceEl);
+      return;
+    }
+    const slotEl = e.target.closest('.slot');
+    if (slotEl && slotEl.childElementCount > 0) return; // don't scatter on top of a solved cell
+    scatterHandAt(e.clientX, e.clientY);
+  });
+
   function lockPieceIntoSlot(piece, slot){
+    const hi = handPieces.indexOf(piece);
+    if (hi !== -1){ handPieces.splice(hi, 1); piece.classList.remove('held'); updateHandIndicator(); }
     slot.appendChild(piece);
     piece.style.left = (-pad) + 'px';
     piece.style.top = (-pad) + 'px';
@@ -1453,6 +1533,7 @@
 
     playfield.querySelectorAll('.piece').forEach(p => p.remove());
     hoveredPiece = null; draggingPiece = null;
+    handPieces.length = 0; updateHandIndicator();
     currentHoverSlot = null;
 
     const perRow = Math.max(3, Math.floor((pieceW*cols) / (Math.max(pieceW,pieceH) + 2*pad + 14)));
@@ -1629,6 +1710,7 @@
     winModal.classList.remove('show');
     playfield.querySelectorAll('.piece').forEach(p => p.remove());
     hoveredPiece = null; draggingPiece = null;
+    handPieces.length = 0; updateHandIndicator();
     board.innerHTML = '';
     baseCanvas = null;
     genBtn.disabled = true;
