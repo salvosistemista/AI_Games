@@ -186,6 +186,19 @@
     padding: 16px 18px;
     margin-bottom: 22px;
   }
+  .toolbox-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:14px;
+  }
+  .toolbox-header-title{
+    font-family: Georgia, serif;
+    color: var(--brass-light);
+    font-size:1rem;
+    font-weight:700;
+  }
   .tool-section{
     padding-bottom:14px;
     margin-bottom:14px;
@@ -270,6 +283,10 @@
     position:relative;
     transform-origin: top left;
     transition: transform .08s ease-out;
+  }
+  .playfield.paused{
+    pointer-events:none;
+    filter: saturate(0.55) brightness(0.82);
   }
 
   .board{
@@ -483,7 +500,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.10</span>
+  <span class="version-badge">v1.13</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -492,6 +509,11 @@
   <div class="storage-meter" id="storageMeter"></div>
 
   <div class="toolbox">
+    <div class="toolbox-header">
+      <span class="toolbox-header-title">Opzioni</span>
+      <button type="button" id="optionsToggleBtn" class="secondary">Implodi opzioni</button>
+    </div>
+    <div class="toolbox-body" id="toolboxBody">
     <div class="tool-section">
       <div class="tool-section-title">PUZZLE ATTIVO</div>
       <div class="tool-section-row">
@@ -568,6 +590,7 @@
         <button id="wipeBtn" class="secondary" style="border-color:#8a3b3b; color:#e8b3b3;">Reset completo memoria</button>
       </div>
     </div>
+    </div>
   </div>
 
   <div class="hud" id="hud" style="display:none;">
@@ -575,6 +598,7 @@
     <div>Tempo: <b id="timeVal">00:00</b></div>
     <div>Mosse: <b id="movesVal">0</b></div>
     <div>Pezzi posizionati: <b id="lockedVal">0</b>/<b id="totalVal">0</b></div>
+    <div>Zoom: <b id="hudZoomVal">100%</b></div>
   </div>
 
   <div id="emptyMsg" class="empty-msg">Questo slot è vuoto. Carica una foto qui sopra per iniziare a creare il puzzle in questo slot.</div>
@@ -611,10 +635,11 @@
     <ul class="help-list">
       <li><span>Trascina un pezzo</span><kbd>Tasto sinistro</kbd></li>
       <li><span>Ruota di 45° in senso orario</span><kbd>Tasto destro / X</kbd></li>
-      <li><span>Ruota di 45° in senso antiorario</span><kbd>Z</kbd></li>
+      <li><span>Ruota di 45° in senso antiorario</span><kbd>Ctrl + tasto destro / Z</kbd></li>
       <li><span>Vedi l'immagine reale, senza trasparenza</span><kbd>Maiusc (tenuto premuto)</kbd></li>
       <li><span>Zoom sulla vista</span><kbd>Ctrl + rotellina</kbd></li>
       <li><span>Torna al tabellone mentre trascini</span><kbd>Barra spaziatrice</kbd></li>
+      <li><span>Implodi le opzioni per avviare/riprendere il tempo, esplodile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
     <div class="row">
       <button id="helpCloseBtn">Chiudi</button>
@@ -665,6 +690,9 @@
   const genBarFill = document.getElementById('genBarFill');
   const genOverlayText = document.getElementById('genOverlayText');
   const zoomIndicator = document.getElementById('zoomIndicator');
+  const hudZoomVal = document.getElementById('hudZoomVal');
+  const optionsToggleBtn = document.getElementById('optionsToggleBtn');
+  const toolboxBody = document.getElementById('toolboxBody');
 
   const THEMES = [
     { id: 'noce',          label: 'Legno di noce', swatch: '#543924' },
@@ -725,6 +753,7 @@
   let edgeHighlightOn = false;
   let zoomLevel = 1;
   let soundsEnabled = true;
+  let optionsOpen = true; // options panel starts open: the game is paused until the player collapses it
   let baseImageDataURL = null; // cached JPEG dataURL for the current baseCanvas, computed once and reused
   const DIFFICULTY_STORAGE = 'puzzleDifficulty';
   const SOUND_STORAGE = 'puzzleSoundsEnabled';
@@ -859,8 +888,10 @@
   // ---------- zoom (Ctrl + wheel) ----------
   function applyZoom(){
     playfield.style.transform = 'scale(' + zoomLevel + ')';
-    zoomIndicator.textContent = Math.round(zoomLevel * 100) + '%';
+    const pct = Math.round(zoomLevel * 100) + '%';
+    zoomIndicator.textContent = pct;
     zoomIndicator.classList.toggle('show', Math.abs(zoomLevel - 1) > 0.001);
+    if (hudZoomVal) hudZoomVal.textContent = pct;
   }
   function resetZoom(){
     zoomLevel = 1;
@@ -1105,6 +1136,7 @@
   }
 
   function rotatePieceBy(piece, deltaDeg){
+    if (optionsOpen) return;
     if (currentDifficulty === 'semplice') return;
     if (!piece || piece.classList.contains('locked') || piece.classList.contains('dragging')) return;
     const deg = ((parseInt(piece.dataset.rotation || '0', 10) + deltaDeg) % 360 + 360) % 360;
@@ -1214,7 +1246,7 @@
 
     piece.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      rotatePieceBy(piece, 45);
+      rotatePieceBy(piece, e.ctrlKey ? -45 : 45);
     });
 
     piece.addEventListener('pointerdown', (e) => {
@@ -1294,6 +1326,34 @@
     if (timerId){ clearInterval(timerId); timerId = null; }
     running = false;
   }
+
+  // pauses the timer without losing the accumulated time (bakes the live delta into `elapsed` first)
+  function pauseGameTimer(){
+    if (running){ elapsed = currentElapsedSeconds(); }
+    stopTimer();
+  }
+
+  // call after anything that could change whether the game should be running:
+  // toggling the options panel, generating/loading/resetting a puzzle
+  function refreshGameRunningState(){
+    if (optionsOpen){
+      pauseGameTimer();
+    } else if (stage.classList.contains('show') && total > 0 && locked < total){
+      startTimer();
+    }
+  }
+
+  function applyOptionsOpenState(){
+    toolboxBody.style.display = optionsOpen ? '' : 'none';
+    optionsToggleBtn.textContent = optionsOpen ? 'Implodi opzioni' : 'Esplodi opzioni';
+    playfield.classList.toggle('paused', optionsOpen);
+    refreshGameRunningState();
+  }
+
+  optionsToggleBtn.addEventListener('click', () => {
+    optionsOpen = !optionsOpen;
+    applyOptionsOpenState();
+  });
 
   function checkWin(){
     if (locked === total){
@@ -1511,7 +1571,7 @@
     renderBoardAndTraySkeleton(pieceW*cols, pieceH*rows, ghostToggle.checked);
 
     buildPiecesIntoDOM(eH, eV, null, () => {
-      startTimer();
+      refreshGameRunningState();
       autosaveActive();
     });
   }
@@ -1541,7 +1601,7 @@
       baseImageDataURL = data.imageData; // already an encoded dataURL, no need to re-encode
       renderBoardAndTraySkeleton(pieceW*cols, pieceH*rows, ghostToggle.checked);
       buildPiecesIntoDOM(edgesH, edgesV, null, () => {
-        startTimer();
+        refreshGameRunningState();
         autosaveActive();
       });
     };
@@ -1601,7 +1661,7 @@
       buildPiecesIntoDOM(edgesH, edgesV, placementMap, () => {
         viewLoading = false;
         if (locked < total){
-          startTimer();
+          refreshGameRunningState();
         } else {
           timeVal.textContent = fmtTime(elapsed);
         }
@@ -1756,6 +1816,9 @@
       soundsEnabled = (s === null) ? true : (s === '1');
     }catch(e){ soundsEnabled = true; }
     soundToggle.checked = soundsEnabled;
+
+    optionsOpen = true;
+    applyOptionsOpenState();
 
     for (let i = 0; i < SLOT_COUNT; i++) slots[i] = loadSlotRaw(i);
     let a = parseInt(localStorage.getItem(STORAGE_ACTIVE), 10);
