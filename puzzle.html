@@ -504,7 +504,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.19</span>
+  <span class="version-badge">v1.20</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -646,7 +646,7 @@
       <li><span>Torna al tabellone mentre trascini</span><kbd>Barra spaziatrice</kbd></li>
       <li><span>Prendi/rilascia un pezzo in mano (fino a 10)</span><kbd>Doppio click sul pezzo</kbd></li>
       <li><span>Sparpaglia i pezzi che hai in mano intorno al punto</span><kbd>Doppio click su spazio vuoto</kbd></li>
-      <li><span>Avvicina due pezzi vicini sul tavolo: si uniscono da soli</span><kbd>Trascina vicino</kbd></li>
+      <li><span>Avvicina due pezzi vicini sul tavolo: si uniscono da soli (in Normale anche se ruotati, purché uguali)</span><kbd>Trascina vicino</kbd></li>
       <li><span>Trascina un intero blocco unito sul tabellone: se ogni pezzo cade nella casella giusta si agganciano tutti insieme</span><kbd>Trascina il blocco</kbd></li>
       <li><span>Implodi le opzioni per avviare/riprendere il tempo, esplodile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
@@ -1161,10 +1161,24 @@
     return merged;
   }
 
+  // rotates an unrotated (dc*pieceW, dr*pieceH) neighbour offset by a shared 90°-multiple
+  // rotation, so two pieces turned together the same way can still be judged as neighbours
+  function rotateOffset90(dx0, dy0, deg){
+    switch (((deg % 360) + 360) % 360){
+      case 90:  return [-dy0, dx0];
+      case 180: return [-dx0, -dy0];
+      case 270: return [dy0, -dx0];
+      default:  return [dx0, dy0];
+    }
+  }
+
   // after dropping a piece (or a group) on the table, check whether any of its members
   // now sit close enough to another loose piece that actually belongs next to it in the
   // solved image; if so, snap them together exactly and fuse the groups. Repeats until
   // nothing new joins, so dropping one piece into a gap can chain-join a whole cluster.
+  // In "normale" two pieces can join sharing any 90°-multiple rotation (locking later
+  // auto-straightens them); "difficile" still requires both to already be upright, in
+  // line with that mode never auto-correcting anything.
   function tryMergeAfterDrop(startingGroup){
     let group = startingGroup;
     let changed = true;
@@ -1174,17 +1188,18 @@
       outer:
       for (const gp of group){
         const gpDeg = parseInt(gp.dataset.rotation || '0', 10) % 360;
-        if (gpDeg !== 0) continue; // only cleanly-upright pieces can be judged for adjacency
+        if (gpDeg % 90 !== 0) continue; // a diagonal rotation can never line up with a grid
+        if (currentDifficulty === 'difficile' && gpDeg !== 0) continue;
         const r1 = parseInt(gp.dataset.row, 10), c1 = parseInt(gp.dataset.col, 10);
         const left1 = parseFloat(gp.style.left) || 0, top1 = parseFloat(gp.style.top) || 0;
         for (const other of loosePieces){
           if (other === gp || getGroup(other) === getGroup(gp)) continue;
           const oDeg = parseInt(other.dataset.rotation || '0', 10) % 360;
-          if (oDeg !== 0) continue;
+          if (oDeg !== gpDeg) continue; // must share the exact same orientation
           const r2 = parseInt(other.dataset.row, 10), c2 = parseInt(other.dataset.col, 10);
           const dr = r2 - r1, dc = c2 - c1;
           if (Math.abs(dr) + Math.abs(dc) !== 1) continue; // must be true grid neighbours
-          const expectedDX = dc * pieceW, expectedDY = dr * pieceH;
+          const [expectedDX, expectedDY] = rotateOffset90(dc * pieceW, dr * pieceH, gpDeg);
           const left2 = parseFloat(other.style.left) || 0, top2 = parseFloat(other.style.top) || 0;
           const tol = Math.max(10, Math.round(Math.min(pieceW, pieceH) * 0.22));
           if (Math.abs((left2 - left1) - expectedDX) <= tol && Math.abs((top2 - top1) - expectedDY) <= tol){
@@ -1230,6 +1245,10 @@
   // if a whole fused block is dropped with every member over its correct empty slot,
   // lock them all in one go instead of requiring them to be placed one at a time
   function tryLockGroupOntoBoard(group){
+    if (currentDifficulty === 'difficile' &&
+        group.some(p => (parseInt(p.dataset.rotation || '0', 10) % 360) !== 0)){
+      return false; // difficile never auto-straightens on lock, not even for a whole block
+    }
     const matches = checkGroupAlignment(group);
     if (!matches) return false;
     group.forEach((p, i) => lockPieceIntoSlot(p, matches[i]));
