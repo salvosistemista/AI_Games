@@ -362,6 +362,11 @@
     100%{ filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); transform: rotate(0deg) scale(1); }
   }
   .piece.bump{ animation: bumpGlow 0.55s ease; }
+  @keyframes shatterFlash{
+    0%,100%{ filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); }
+    40%{ filter: drop-shadow(0 0 10px rgba(255,120,120,0.95)) brightness(1.3); }
+  }
+  .piece.shatter{ animation: shatterFlash 0.45s ease; }
   .piece.held:not(.dragging){
     filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 8px rgba(120,200,255,0.95));
   }
@@ -504,7 +509,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.21</span>
+  <span class="version-badge">v1.22</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -648,6 +653,7 @@
       <li><span>Sparpaglia i pezzi che hai in mano intorno al punto</span><kbd>Doppio click su spazio vuoto</kbd></li>
       <li><span>Avvicina due pezzi vicini sul tavolo: si uniscono da soli (in Normale anche se ruotati, purché uguali)</span><kbd>Trascina vicino</kbd></li>
       <li><span>Trascina un intero blocco unito sul tabellone: se ogni pezzo cade nella casella giusta si agganciano tutti insieme</span><kbd>Trascina il blocco</kbd></li>
+      <li><span>Scuoti rapidamente avanti e indietro un blocco mentre lo trascini: si stacca in pezzi singoli</span><kbd>Shake col mouse</kbd></li>
       <li><span>Implodi le opzioni per avviare/riprendere il tempo, esplodile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
     <div class="row">
@@ -868,6 +874,10 @@
   }
   function playWinSound(){
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone(f, i*0.14, 0.24, 'triangle', 0.15));
+  }
+  function playShatterSound(){
+    playTone(500, 0, 0.08, 'sawtooth', 0.12);
+    playTone(320, 0.05, 0.10, 'sawtooth', 0.10);
   }
 
   soundToggle.addEventListener('change', () => {
@@ -1159,6 +1169,43 @@
     const merged = gA.concat(gB.filter(p => gA.indexOf(p) === -1));
     setGroup(merged);
     return merged;
+  }
+
+  // builds a little detector that watches a stream of (x,y) points and flags a fast
+  // back-and-forth "shake" gesture: a lot of path length covered in a short time while
+  // barely making net progress in any one direction
+  function makeShakeDetector(){
+    let history = [];
+    return function(x, y){
+      const now = performance.now();
+      history.push({ x, y, t: now });
+      while (history.length > 1 && now - history[0].t > 500) history.shift();
+      if (history.length < 6) return false;
+      let pathLen = 0;
+      for (let i = 1; i < history.length; i++){
+        pathLen += Math.hypot(history[i].x - history[i-1].x, history[i].y - history[i-1].y);
+      }
+      const netDist = Math.hypot(
+        history[history.length-1].x - history[0].x,
+        history[history.length-1].y - history[0].y
+      );
+      return pathLen > 220 && pathLen > netDist * 3.5;
+    };
+  }
+
+  // shakes a fused block apart: every piece except the one still under the cursor
+  // becomes independent again, frozen exactly where it currently is
+  function breakGroupApart(group, stillDragging){
+    group.forEach(p => {
+      if (p !== stillDragging) p.classList.remove('dragging');
+      p.groupMembers = undefined;
+      p.classList.remove('shatter');
+      void p.offsetWidth;
+      p.classList.add('shatter');
+      setTimeout(() => p.classList.remove('shatter'), 450);
+    });
+    playShatterSound();
+    autosaveActive();
   }
 
   // rotates an unrotated (dc*pieceW, dr*pieceH) neighbour offset by a shared 90°-multiple
@@ -1482,6 +1529,7 @@
   // ---------- drag & drop ----------
   function attachDrag(piece){
     let offX = 0, offY = 0;
+    let shakeCheck = null;
 
     piece.addEventListener('pointerenter', () => {
       if (!piece.classList.contains('locked')) hoveredPiece = piece;
@@ -1520,6 +1568,7 @@
         }
       });
       draggingPiece = piece;
+      shakeCheck = group.length > 1 ? makeShakeDetector() : null;
       piece.style.left = leaderLeft0 + 'px';
       piece.style.top = leaderTop0 + 'px';
       e.preventDefault();
@@ -1532,7 +1581,12 @@
       const top = (e.clientY - pfRect.top) / zoomLevel - offY;
       piece.style.left = left + 'px';
       piece.style.top = top + 'px';
-      const group = getGroup(piece);
+      let group = getGroup(piece);
+      if (group.length > 1 && shakeCheck && shakeCheck(e.clientX, e.clientY)){
+        breakGroupApart(group, piece);
+        shakeCheck = null;
+        group = getGroup(piece); // now just [piece]
+      }
       if (group.length > 1){
         group.forEach(p => {
           if (p === piece) return;
