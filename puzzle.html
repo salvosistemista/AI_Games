@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Jigsaw Puzzle</title>
+<style>
+  :root{
+    --wood-dark:#241811;
+    --wood:#3d2b1e;
+    --wood-light:#543924;
+    --felt:#1f3d2e;
+    --felt-light:#2a4d3a;
+    --brass:#c8963e;
+    --brass-light:#e0b568;
+    --cream:#f2e9dc;
+    --muted:#b9a88f;
+    --line:rgba(242,233,220,0.14);
+    --btn-text:#2a1c0c;
+    --stripe: rgba(0,0,0,0.10);
+    --success:#8fd19e;
+  }
+
+  /* ---------- background themes ---------- */
+  body[data-theme="grafite"]{
+    --wood-dark:#141414; --wood:#232323; --wood-light:#333333;
+    --cream:#f2f0ec; --muted:#a8a8a8; --brass:#c9a227; --brass-light:#e4c357;
+    --btn-text:#1c1600; --stripe: rgba(255,255,255,0.035); --success:#8fd19e;
+  }
+  body[data-theme="blu-notte"]{
+    --wood-dark:#0d1a2b; --wood:#152840; --wood-light:#1f3a5c;
+    --cream:#eef3fa; --muted:#9fb3c9; --brass:#d4af37; --brass-light:#e9cd6b;
+    --btn-text:#1c1400; --stripe: rgba(255,255,255,0.035); --success:#8fd19e;
+  }
+  body[data-theme="verde-muschio"]{
+    --wood-dark:#1a2415; --wood:#2a361f; --wood-light:#3c4a2c;
+    --cream:#f1efe2; --muted:#adb79a; --brass:#c8963e; --brass-light:#e0b568;
+    --btn-text:#241a0c; --stripe: rgba(255,255,255,0.03); --success:#c8e29a;
+  }
+  body[data-theme="legno-chiaro"]{
+    --wood-dark:#b9895a; --wood:#dcb98a; --wood-light:#efd7ae;
+    --cream:#3a2a19; --muted:#7a5c3e; --brass:#6b3f22; --brass-light:#83502d;
+    --btn-text:#fbf3e6; --stripe: rgba(0,0,0,0.05); --success:#2f7a45;
+  }
+  body[data-theme="crema"]{
+    --wood-dark:#cdb28a; --wood:#e7d4b0; --wood-light:#f5e9cf;
+    --cream:#3a2c1c; --muted:#7c6a52; --brass:#2f5233; --brass-light:#3f6b44;
+    --btn-text:#f5efe0; --stripe: rgba(0,0,0,0.045); --success:#2f7a45;
+  }
+  body[data-theme="nero"]{
+    --wood-dark:#050505; --wood:#101010; --wood-light:#1b1b1b;
+    --cream:#f5f5f0; --muted:#99998f; --brass:#d99a3d; --brass-light:#f0b968;
+    --btn-text:#1a1000; --stripe: rgba(255,255,255,0.03); --success:#8fd19e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      repeating-linear-gradient(90deg, var(--stripe) 0 2px, transparent 2px 6px),
+      linear-gradient(160deg, var(--wood-dark), var(--wood) 55%, var(--wood-light));
+    color:var(--cream);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    padding: 28px 16px 80px;
+    transition: background .25s ease, color .25s ease;
+  }
+  h1{
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight:700;
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    letter-spacing:0.2px;
+    margin: 0 0 4px;
+    color: var(--brass-light);
+  }
+  .sub{
+    color: var(--muted);
+    margin:0 0 22px;
+    font-size:0.95rem;
+    max-width:62ch;
+    line-height:1.5;
+  }
+  .wrap{ width: 100%; margin: 0 auto; position:relative; }
+
+  .version-badge{
+    position:absolute;
+    top:0; right:0;
+    background: linear-gradient(180deg, var(--brass-light), var(--brass));
+    color: var(--btn-text);
+    font-weight:700;
+    font-size:0.8rem;
+    letter-spacing:0.3px;
+    padding:5px 12px;
+    border-radius:20px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+  }
+
+  /* ---------- slot bar ---------- */
+  .slots-bar{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom: 16px;
+  }
+  .slot-card{
+    width: 128px;
+    border-radius: 8px;
+    border: 2px solid rgba(0,0,0,0.35);
+    background: linear-gradient(180deg, var(--wood-light), var(--wood));
+    padding: 6px;
+    cursor:pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: border-color .15s ease, transform .1s ease;
+  }
+  .slot-card:hover{ transform: translateY(-2px); }
+  .slot-card.active{
+    border-color: var(--brass-light);
+    box-shadow: 0 0 0 2px rgba(200,150,62,0.35), 0 4px 10px rgba(0,0,0,0.4);
+  }
+  .slot-thumb{
+    width:100%;
+    height:76px;
+    border-radius:5px;
+    object-fit:cover;
+    display:block;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0 6px, transparent 6px 12px);
+  }
+  .slot-thumb.empty{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--muted);
+    font-size:1.6rem;
+    border: 1px dashed rgba(242,233,220,0.25);
+  }
+  .slot-title{ font-size:0.75rem; color:var(--brass-light); margin-top:5px; font-weight:600; }
+  .slot-stats{ font-size:0.68rem; color:var(--muted); margin-top:2px; line-height:1.3; min-height: 2.4em; }
+  .slot-done{ color:var(--success); }
+
+  .storage-meter{
+    font-size:0.78rem;
+    color: var(--muted);
+    margin: -6px 0 16px;
+  }
+  .storage-meter b{ color: var(--brass-light); font-variant-numeric: tabular-nums; }
+  .storage-meter.warn b{ color:#e08a6a; }
+
+  .theme-row{ display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
+  .theme-swatch{
+    width:26px; height:26px;
+    border-radius:50%;
+    border:2px solid rgba(0,0,0,0.4);
+    cursor:pointer;
+    padding:0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+  }
+  .theme-swatch.active{
+    border-color: var(--brass-light);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.18), 0 2px 4px rgba(0,0,0,0.35);
+  }
+
+  .toolbox{
+    background: linear-gradient(180deg, var(--wood-light), var(--wood));
+    border: 1px solid rgba(0,0,0,0.35);
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
+    padding: 16px 18px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:18px 26px;
+    align-items:center;
+    margin-bottom: 22px;
+  }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:0.78rem; color:var(--muted); }
+  input[type=file]{
+    color: var(--cream);
+    font-size:0.85rem;
+    max-width: 220px;
+  }
+  input[type=range]{
+    width:180px;
+    accent-color: var(--brass);
+  }
+  select{
+    font-family:inherit;
+    font-size:0.9rem;
+    padding:8px 10px;
+    border-radius:6px;
+    border:1px solid rgba(0,0,0,0.4);
+    background: var(--wood);
+    color: var(--cream);
+  }
+  .rangeval{ color:var(--brass-light); font-weight:600; font-size:0.85rem; }
+  button{
+    font-family:inherit;
+    font-size:0.9rem;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:7px;
+    border:1px solid rgba(0,0,0,0.4);
+    background: linear-gradient(180deg, var(--brass-light), var(--brass));
+    color: var(--btn-text);
+    cursor:pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.35);
+  }
+  button:disabled{
+    background: #5a5044;
+    color: #928a7c;
+    cursor:not-allowed;
+    box-shadow:none;
+  }
+  button.secondary{
+    background: transparent;
+    color: var(--cream);
+    border:1px solid var(--line);
+    box-shadow:none;
+  }
+  .check{ display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--muted); }
+  .check input{ accent-color: var(--brass); }
+
+  .hud{
+    display:flex;
+    gap:22px;
+    flex-wrap:wrap;
+    margin: 4px 0 16px;
+    font-size:0.88rem;
+    color: var(--muted);
+  }
+  .hud b{ color: var(--cream); font-variant-numeric: tabular-nums; }
+
+  .stage{ display:none; }
+  .stage.show{ display:block; }
+
+  .playfield{
+    position:relative;
+  }
+
+  .board{
+    position:relative;
+    display:grid;
+    background: var(--felt);
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 6px var(--wood-dark), inset 0 0 22px rgba(0,0,0,0.55), 0 10px 26px rgba(0,0,0,0.4);
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 22px);
+  }
+  .slot{
+    position:relative;
+  }
+  .slot:empty{
+    outline: 1px dashed rgba(242,233,220,0.16);
+    outline-offset: -1px;
+  }
+
+  .ghost{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:var(--ghost-opacity, 0.16);
+    pointer-events:none;
+    z-index:1;
+    display:none;
+    object-fit:fill;
+    border-radius:4px;
+  }
+  .ghost.show{ display:block; }
+
+  .tray{
+    position:relative;
+    margin-top: 14px;
+    border: 1px dashed rgba(242,233,220,0.18);
+    border-radius: 8px;
+    background: repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0 2px, transparent 2px 7px);
+  }
+  .tray-label{
+    position:absolute;
+    top:8px; left:12px;
+    font-size:0.75rem;
+    color: var(--muted);
+    letter-spacing:0.3px;
+    pointer-events:none;
+  }
+
+  .piece{
+    position:absolute;
+    touch-action:none;
+    cursor:grab;
+    z-index:2;
+    transform-origin:center center;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45));
+    transition: filter .15s ease;
+  }
+  .piece.dragging{
+    cursor:grabbing;
+    filter: drop-shadow(0 10px 16px rgba(0,0,0,0.55));
+  }
+  .piece.locked{
+    cursor:default;
+    pointer-events:none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  }
+  @keyframes bumpGlow{
+    0%{ filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); }
+    35%{ filter: drop-shadow(0 0 16px rgba(255,224,150,0.95)) brightness(1.25); transform: rotate(0deg) scale(1.15); }
+    100%{ filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); transform: rotate(0deg) scale(1); }
+  }
+  .piece.bump{ animation: bumpGlow 0.55s ease; }
+
+  .diff-row{ display:flex; gap:8px; }
+  .diff-btn{
+    font-family:inherit;
+    padding:8px 14px;
+    border-radius:6px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--cream);
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  .diff-btn.active{
+    background: linear-gradient(180deg, var(--brass-light), var(--brass));
+    color: var(--btn-text);
+    border-color:transparent;
+    font-weight:600;
+  }
+
+  .empty-msg{
+    color:var(--muted);
+    font-size:0.95rem;
+    padding: 30px 4px;
+    max-width:52ch;
+    line-height:1.6;
+  }
+
+  .modal-back{
+    position:fixed; inset:0;
+    background:rgba(10,7,4,0.72);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .modal-back.show{ display:flex; }
+  .modal{
+    background: linear-gradient(180deg, var(--wood-light), var(--wood));
+    border:1px solid rgba(0,0,0,0.4);
+    border-radius:10px;
+    padding: 28px 30px;
+    max-width: 380px;
+    text-align:center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .modal h2{
+    font-family: Georgia, serif;
+    color: var(--brass-light);
+    margin:0 0 10px;
+  }
+  .modal p{ color: var(--cream); margin: 4px 0 20px; line-height:1.5; }
+  .modal .row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  @media (prefers-reduced-motion: reduce){
+    .piece{ transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="version-badge">v1.02</span>
+  <h1>My Jigsaw Puzzle</h1>
+  <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
+
+  <div class="slots-bar" id="slotsBar"></div>
+  <div class="storage-meter" id="storageMeter"></div>
+
+  <div class="toolbox">
+    <div class="field">
+      <label for="fileInput">Immagine dello slot attivo</label>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div class="field">
+      <label for="pieceCount">Numero di pezzi</label>
+      <select id="pieceCount">
+        <option value="500">500</option>
+        <option value="750">750</option>
+        <option value="1000" selected>1000</option>
+        <option value="1250">1250</option>
+        <option value="1500">1500</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="genBtn" disabled>Genera puzzle</button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="restartBtn" class="secondary" style="display:none;">Resetta questo puzzle</button>
+    </div>
+    <label class="check" style="align-self:flex-end;">
+      <input type="checkbox" id="ghostToggle" checked> Mostra immagine di riferimento
+    </label>
+    <div class="field">
+      <label>Difficoltà</label>
+      <div class="diff-row" id="diffRow">
+        <button type="button" class="diff-btn" data-level="semplice" title="Pezzi sempre dritti, nessuna rotazione.">Semplice</button>
+        <button type="button" class="diff-btn" data-level="normale" title="Pezzi ruotati a caso: tasto destro per ruotare. Si aggancia comunque, l'orientamento viene corretto in automatico.">Normale</button>
+        <button type="button" class="diff-btn" data-level="difficile" title="Pezzi ruotati a caso: tasto destro per ruotare. Deve essere dritto per potersi agganciare.">Difficile</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="ghostOpacity">Trasparenza riferimento: <span class="rangeval" id="ghostOpacityVal">20%</span></label>
+      <input type="range" id="ghostOpacity" min="4" max="80" step="1" value="20">
+    </div>
+    <div class="field">
+      <label>Sfondo</label>
+      <div class="theme-row" id="themeRow"></div>
+    </div>
+    <span class="rangeval" id="genStatus" style="display:none;"></span>
+    <div class="field" style="margin-left:auto;">
+      <label>&nbsp;</label>
+      <div style="display:flex; gap:10px;">
+        <button id="exportBtn" class="secondary">Esporta tutti i puzzle</button>
+        <button id="importBtn" class="secondary">Importa puzzle</button>
+        <input type="file" id="importInput" accept="application/json" style="display:none;">
+        <button id="wipeBtn" class="secondary" style="border-color:#8a3b3b; color:#e8b3b3;">Reset completo memoria</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hud" id="hud" style="display:none;">
+    <div>Pezzi: <b id="pieceCountDisplay">0</b></div>
+    <div>Tempo: <b id="timeVal">00:00</b></div>
+    <div>Mosse: <b id="movesVal">0</b></div>
+    <div>Pezzi posizionati: <b id="lockedVal">0</b>/<b id="totalVal">0</b></div>
+  </div>
+
+  <div id="emptyMsg" class="empty-msg">Questo slot è vuoto. Carica una foto qui sopra per iniziare a creare il puzzle in questo slot.</div>
+
+  <div class="stage" id="stage">
+    <div class="playfield" id="playfield">
+      <div class="board" id="board"></div>
+      <div class="tray" id="tray">
+        <span class="tray-label">TAVOLO — trascina i pezzi da qui</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="winModal">
+  <div class="modal">
+    <h2>Puzzle completato!</h2>
+    <p id="winText">Ottimo lavoro.</p>
+    <div class="row">
+      <button id="playAgainBtn">Rigioca lo stesso</button>
+      <button id="newImgBtn" class="secondary">Carica un'altra foto</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const fileInput = document.getElementById('fileInput');
+  const pieceCountInput = document.getElementById('pieceCount');
+  const genBtn = document.getElementById('genBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const ghostToggle = document.getElementById('ghostToggle');
+  const ghostOpacity = document.getElementById('ghostOpacity');
+  const ghostOpacityVal = document.getElementById('ghostOpacityVal');
+  const hud = document.getElementById('hud');
+  const timeVal = document.getElementById('timeVal');
+  const movesVal = document.getElementById('movesVal');
+  const lockedVal = document.getElementById('lockedVal');
+  const totalVal = document.getElementById('totalVal');
+  const pieceCountDisplay = document.getElementById('pieceCountDisplay');
+  const emptyMsg = document.getElementById('emptyMsg');
+  const stage = document.getElementById('stage');
+  const board = document.getElementById('board');
+  const tray = document.getElementById('tray');
+  const playfield = document.getElementById('playfield');
+  const winModal = document.getElementById('winModal');
+  const winText = document.getElementById('winText');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const newImgBtn = document.getElementById('newImgBtn');
+  const genStatus = document.getElementById('genStatus');
+  const slotsBar = document.getElementById('slotsBar');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importInput = document.getElementById('importInput');
+  const wipeBtn = document.getElementById('wipeBtn');
+  const storageMeter = document.getElementById('storageMeter');
+  const themeRow = document.getElementById('themeRow');
+
+  const THEMES = [
+    { id: 'noce',          label: 'Legno di noce', swatch: '#543924' },
+    { id: 'legno-chiaro',  label: 'Legno chiaro',  swatch: '#efd7ae' },
+    { id: 'grafite',       label: 'Grafite',       swatch: '#333333' },
+    { id: 'blu-notte',     label: 'Blu notte',     swatch: '#1f3a5c' },
+    { id: 'verde-muschio', label: 'Verde muschio', swatch: '#3c4a2c' },
+    { id: 'crema',         label: 'Crema chiaro',  swatch: '#f5e9cf' },
+    { id: 'nero',          label: 'Nero profondo', swatch: '#1b1b1b' }
+  ];
+  const THEME_STORAGE = 'puzzleTheme';
+
+  function setTheme(id){
+    document.body.setAttribute('data-theme', id === 'noce' ? '' : id);
+    try{ localStorage.setItem(THEME_STORAGE, id); }catch(e){}
+    themeRow.querySelectorAll('.theme-swatch').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === id);
+    });
+  }
+
+  function renderThemeRow(){
+    themeRow.innerHTML = '';
+    THEMES.forEach(t => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'theme-swatch';
+      btn.style.background = t.swatch;
+      btn.title = t.label;
+      btn.dataset.theme = t.id;
+      btn.addEventListener('click', () => setTheme(t.id));
+      themeRow.appendChild(btn);
+    });
+  }
+
+  const SLOT_COUNT = 5;
+  const STORAGE_PREFIX = 'puzzleSlot_';
+  const STORAGE_ACTIVE = 'puzzleActiveSlot';
+
+  let slots = new Array(SLOT_COUNT).fill(null);
+  let activeIndex = 0;
+  let viewLoading = false;
+
+  let baseCanvas = null;   // staged source image, ready to generate
+  let baseW = 0, baseH = 0;
+  let rows = 0, cols = 0, pieceW = 0, pieceH = 0, pad = 0, amp = 0;
+  let edgesH = null, edgesV = null;
+  let total = 0, locked = 0, moves = 0;
+  let zTop = 10;
+  let timerId = null, startTime = 0, elapsed = 0, running = false;
+  let currentDifficulty = 'semplice';
+  const DIFFICULTY_STORAGE = 'puzzleDifficulty';
+  const ROTATION_STEPS = [0, 45, 90, 135, 180, 225, 270, 315];
+
+  // ---------- storage helpers ----------
+  function loadSlotRaw(i){
+    try{
+      const s = localStorage.getItem(STORAGE_PREFIX + i);
+      return s ? JSON.parse(s) : null;
+    }catch(e){ return null; }
+  }
+  function saveSlotRaw(i, data){
+    try{
+      localStorage.setItem(STORAGE_PREFIX + i, JSON.stringify(data));
+      return true;
+    }catch(e){
+      alert('Impossibile salvare il puzzle nello slot ' + (i+1) + ': spazio del browser esaurito. Prova a ridurre il numero di pezzi o a liberare qualche slot.');
+      return false;
+    }
+  }
+  function clearSlotRaw(i){ localStorage.removeItem(STORAGE_PREFIX + i); }
+
+  // ---------- storage usage meter ----------
+  let estimatedQuotaBytes = 5 * 1024 * 1024; // conservative default (Safari-level); refined below if the browser tells us more
+  if (navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(est => {
+      if (est && est.quota){ estimatedQuotaBytes = est.quota; refreshStorageMeter(); }
+    }).catch(() => {});
+  }
+
+  function byteLength(str){
+    try{ return new TextEncoder().encode(str).length; }
+    catch(e){ return str.length * 2; }
+  }
+
+  function computeUsedBytes(){
+    let total = 0;
+    try{
+      for (let i = 0; i < SLOT_COUNT; i++){
+        const s = localStorage.getItem(STORAGE_PREFIX + i);
+        if (s) total += byteLength(s);
+      }
+      [STORAGE_ACTIVE, THEME_STORAGE, GHOST_OPACITY_STORAGE, DIFFICULTY_STORAGE].forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v) total += byteLength(v);
+      });
+    }catch(e){}
+    return total;
+  }
+
+  function refreshStorageMeter(){
+    const used = computeUsedBytes();
+    const kb = Math.round(used / 1024);
+    const pct = Math.min(999, Math.round((used / estimatedQuotaBytes) * 100));
+    const quotaMB = (estimatedQuotaBytes / (1024*1024));
+    const quotaLabel = quotaMB >= 10 ? quotaMB.toFixed(0) : quotaMB.toFixed(1);
+    storageMeter.innerHTML = 'Memoria usata da questo puzzle: <b>' + kb + ' KB</b> (~<b>' + pct + '%</b> di ~' + quotaLabel + ' MB stimati per questo browser)';
+    storageMeter.classList.toggle('warn', pct >= 75);
+  }
+
+  function fmtTime(sec){
+    sec = Math.max(0, Math.floor(sec));
+    const mm = String(Math.floor(sec/60)).padStart(2,'0');
+    const ss = String(sec%60).padStart(2,'0');
+    return mm + ':' + ss;
+  }
+
+  // ---------- slot bar UI ----------
+  function renderSlotsBar(){
+    slotsBar.innerHTML = '';
+    for (let i = 0; i < SLOT_COUNT; i++){
+      const data = slots[i];
+      const card = document.createElement('div');
+      card.className = 'slot-card' + (i === activeIndex ? ' active' : '');
+      card.addEventListener('click', () => selectSlot(i));
+
+      if (data){
+        const img = document.createElement('img');
+        img.className = 'slot-thumb';
+        img.src = data.imageData;
+        img.alt = '';
+        card.appendChild(img);
+        const title = document.createElement('div');
+        title.className = 'slot-title';
+        title.textContent = 'Slot ' + (i+1);
+        card.appendChild(title);
+        const stats = document.createElement('div');
+        stats.className = 'slot-stats';
+        const done = data.locked >= data.total;
+        stats.innerHTML = (done ? '<span class="slot-done">Completato ✓</span><br>' : '') +
+          fmtTime(data.elapsed) + ' · ' + data.locked + '/' + data.total + ' pezzi';
+        card.appendChild(stats);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'slot-thumb empty';
+        ph.textContent = '+';
+        card.appendChild(ph);
+        const title = document.createElement('div');
+        title.className = 'slot-title';
+        title.textContent = 'Slot ' + (i+1);
+        card.appendChild(title);
+        const stats = document.createElement('div');
+        stats.className = 'slot-stats';
+        stats.textContent = 'vuoto';
+        card.appendChild(stats);
+      }
+      slotsBar.appendChild(card);
+    }
+  }
+
+  // ---------- image staging ----------
+  fileInput.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const existing = slots[activeIndex];
+    if (existing && !confirm('Questo sostituirà il puzzle presente in questo slot e cancellerà i progressi. Continuare?')){
+      fileInput.value = '';
+      return;
+    }
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      prepareImage(img);
+      URL.revokeObjectURL(url);
+      genStatus.style.display = 'inline';
+      genStatus.textContent = 'Immagine caricata: scegli il numero di pezzi e premi "Genera puzzle".';
+    };
+    img.src = url;
+  });
+
+  function prepareImage(img){
+    const maxW = Math.max(320, window.innerWidth - 56);
+    let scale = maxW / img.width; // allow enlarging small images to fill the width
+    const maxH = 2600;
+    if (img.height * scale > maxH) scale = Math.min(scale, maxH / img.height);
+    baseW = Math.max(60, Math.round(img.width * scale));
+    baseH = Math.max(60, Math.round(img.height * scale));
+    baseCanvas = document.createElement('canvas');
+    baseCanvas.width = baseW;
+    baseCanvas.height = baseH;
+    const bctx = baseCanvas.getContext('2d');
+    bctx.drawImage(img, 0, 0, baseW, baseH);
+    genBtn.disabled = false;
+  }
+
+  // ---------- grid geometry ----------
+  function computeGrid(target, aspect){
+    let c = Math.round(Math.sqrt(target * aspect));
+    c = Math.max(2, Math.min(60, c));
+    let r = Math.round(target / c);
+    r = Math.max(2, Math.min(60, r));
+    return { rows: r, cols: c };
+  }
+
+  function computeGeom(r, c, w, h){
+    const pw = Math.floor(w / c);
+    const ph = Math.floor(h / r);
+    const a = Math.max(6, Math.round(0.20 * Math.min(pw, ph)));
+    const p = Math.ceil(a * 1.3) + 4;
+    return { pieceW: pw, pieceH: ph, amp: a, pad: p, boardW: pw*c, boardH: ph*r };
+  }
+
+  // maps local (u along edge, v perpendicular/inward) to global canvas coords
+  function mapPoint(edgeIdx, x0, y0, u, v){
+    switch(edgeIdx){
+      case 0: return { X: x0 + u, Y: y0 + v };       // top
+      case 1: return { X: x0 - v, Y: y0 + u };       // right
+      case 2: return { X: x0 - u, Y: y0 - v };       // bottom
+      default: return { X: x0 + v, Y: y0 - u };      // left
+    }
+  }
+
+  // three slightly different knob "personalities", picked at random per edge —
+  // real jigsaw puzzles never cut every tab with the exact same shape
+  const KNOB_STYLES = [
+    { neckHalf: 0.060, overshootHalf: 0.150, ampScale: 0.90 }, // slender
+    { neckHalf: 0.090, overshootHalf: 0.170, ampScale: 1.00 }, // classic
+    { neckHalf: 0.110, overshootHalf: 0.190, ampScale: 1.12 }  // chunky
+  ];
+
+  function randomEdge(){
+    return { sign: Math.random() < 0.5 ? 1 : -1, style: Math.floor(Math.random()*KNOB_STYLES.length) };
+  }
+
+  function edgeSegments(len, edge, ampVal){
+    if (!edge || edge.sign === 0){
+      return [ { line:true, u: len, v: 0 } ];
+    }
+    const st = KNOB_STYLES[edge.style];
+    const d = -edge.sign;
+    const H = ampVal * st.ampScale * d;
+    const innerHalf = st.neckHalf * 0.75;
+
+    const neckIn    = (0.5 - st.neckHalf) * len;
+    const neckOut   = (0.5 + st.neckHalf) * len;
+    const shoulderL = (0.5 - st.overshootHalf) * len;
+    const shoulderR = (0.5 + st.overshootHalf) * len;
+    const innerL    = (0.5 - innerHalf) * len;
+    const innerR    = (0.5 + innerHalf) * len;
+    const peak      = 0.5 * len;
+
+    return [
+      { line:true, u: neckIn, v: 0 },
+      { line:false, c1u: shoulderL, c1v: H*0.90, c2u: innerL, c2v: H*1.05, u: peak, v: H },
+      { line:false, c1u: innerR,    c1v: H*1.05, c2u: shoulderR, c2v: H*0.90, u: neckOut, v: 0 },
+      { line:true, u: len, v: 0 }
+    ];
+  }
+
+  function buildPiecePath(r, c, eH, eV){
+    const flat = { sign: 0 };
+    const top    = (r === 0)        ? flat : { sign: -eH[r-1][c].sign, style: eH[r-1][c].style };
+    const right  = (c === cols - 1) ? flat : eV[r][c];
+    const bottom = (r === rows - 1) ? flat : eH[r][c];
+    const left   = (c === 0)        ? flat : { sign: -eV[r][c-1].sign, style: eV[r][c-1].style };
+
+    const path = new Path2D();
+    path.moveTo(pad, pad);
+
+    const edges = [
+      { idx:0, x0: pad,          y0: pad,          len: pieceW, out: top },
+      { idx:1, x0: pad + pieceW, y0: pad,          len: pieceH, out: right },
+      { idx:2, x0: pad + pieceW, y0: pad + pieceH, len: pieceW, out: bottom },
+      { idx:3, x0: pad,          y0: pad + pieceH, len: pieceH, out: left }
+    ];
+
+    edges.forEach(e => {
+      const segs = edgeSegments(e.len, e.out, amp);
+      segs.forEach(seg => {
+        if (seg.line){
+          const P = mapPoint(e.idx, e.x0, e.y0, seg.u, seg.v);
+          path.lineTo(P.X, P.Y);
+        } else {
+          const C1 = mapPoint(e.idx, e.x0, e.y0, seg.c1u, seg.c1v);
+          const C2 = mapPoint(e.idx, e.x0, e.y0, seg.c2u, seg.c2v);
+          const P  = mapPoint(e.idx, e.x0, e.y0, seg.u, seg.v);
+          path.bezierCurveTo(C1.X, C1.Y, C2.X, C2.Y, P.X, P.Y);
+        }
+      });
+    });
+
+    path.closePath();
+    return path;
+  }
+
+  function buildPieceCanvas(r, c, eH, eV){
+    const cw = pieceW + 2*pad, ch = pieceH + 2*pad;
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    canvas.className = 'piece';
+    canvas.dataset.row = r; canvas.dataset.col = c;
+    const ctx = canvas.getContext('2d');
+    const path = buildPiecePath(r, c, eH, eV);
+
+    let sx = c*pieceW - pad, sy = r*pieceH - pad;
+    let dx = 0, dy = 0;
+    if (sx < 0){ dx = -sx; sx = 0; }
+    if (sy < 0){ dy = -sy; sy = 0; }
+    let sw = cw - dx, sh = ch - dy;
+    if (sx + sw > baseW) sw = baseW - sx;
+    if (sy + sh > baseH) sh = baseH - sy;
+
+    ctx.save();
+    ctx.clip(path);
+    ctx.drawImage(baseCanvas, sx, sy, sw, sh, dx, dy, sw, sh);
+    ctx.restore();
+
+    ctx.save();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = 'rgba(30,20,10,0.45)';
+    ctx.stroke(path);
+    ctx.restore();
+
+    return canvas;
+  }
+
+  // ---------- rotation & difficulty ----------
+  function pickRotation(level){
+    if (level === 'semplice') return 0;
+    return ROTATION_STEPS[Math.floor(Math.random() * ROTATION_STEPS.length)];
+  }
+
+  function applyRotation(piece, deg){
+    deg = ((deg % 360) + 360) % 360;
+    piece.dataset.rotation = deg;
+    piece.style.transform = deg ? ('rotate(' + deg + 'deg)') : '';
+  }
+
+  function triggerBump(piece){
+    piece.classList.remove('bump');
+    void piece.offsetWidth; // restart animation
+    piece.classList.add('bump');
+    setTimeout(() => piece.classList.remove('bump'), 600);
+  }
+
+  function lockPieceIntoSlot(piece, slot){
+    slot.appendChild(piece);
+    piece.style.left = (-pad) + 'px';
+    piece.style.top = (-pad) + 'px';
+    applyRotation(piece, 0);
+    piece.classList.add('locked');
+    locked++;
+    lockedVal.textContent = locked;
+    checkWin();
+  }
+
+  function tryAutoLockIfCorrectlyPositioned(piece){
+    if (piece.classList.contains('locked')) return;
+    const deg = parseInt(piece.dataset.rotation || '0', 10);
+    if (deg % 360 !== 0) return;
+    const rect = piece.getBoundingClientRect();
+    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+    piece.style.visibility = 'hidden';
+    const el = document.elementFromPoint(cx, cy);
+    piece.style.visibility = 'visible';
+    const slot = el ? el.closest('.slot') : null;
+    if (slot && slot.childElementCount === 0 &&
+        slot.dataset.row === piece.dataset.row &&
+        slot.dataset.col === piece.dataset.col){
+      lockPieceIntoSlot(piece, slot);
+      autosaveActive();
+    }
+  }
+
+  function rescatterUnlockedPieces(){
+    if (total === 0) return;
+    const boardW = pieceW*cols, boardH = pieceH*rows;
+    const cw = pieceW + 2*pad, ch = pieceH + 2*pad;
+    const trayH = parseInt(tray.style.height, 10) || 220;
+    const maxX = Math.max(0, boardW - cw);
+    const maxY = Math.max(0, trayH - ch);
+    document.querySelectorAll('.piece:not(.locked)').forEach(piece => {
+      const x = Math.random() * maxX;
+      const y = boardH + 14 + Math.random() * maxY;
+      piece.style.left = x + 'px';
+      piece.style.top = y + 'px';
+      applyRotation(piece, pickRotation(currentDifficulty));
+    });
+  }
+
+  function updateDifficultyButtons(){
+    document.querySelectorAll('#diffRow .diff-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.level === currentDifficulty);
+    });
+  }
+
+  function setDifficulty(level){
+    if (level === currentDifficulty) return;
+    currentDifficulty = level;
+    try{ localStorage.setItem(DIFFICULTY_STORAGE, level); }catch(e){}
+    updateDifficultyButtons();
+    if (stage.classList.contains('show') && total > 0){
+      rescatterUnlockedPieces();
+      autosaveActive();
+    }
+  }
+  document.querySelectorAll('#diffRow .diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => setDifficulty(btn.dataset.level));
+  });
+
+  // ---------- drag & drop ----------
+  function attachDrag(piece){
+    let offX = 0, offY = 0;
+
+    piece.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (currentDifficulty === 'semplice') return;
+      if (piece.classList.contains('locked') || piece.classList.contains('dragging')) return;
+      const deg = (parseInt(piece.dataset.rotation || '0', 10) + 45) % 360;
+      applyRotation(piece, deg);
+      if (currentDifficulty === 'normale' && deg === 0){
+        triggerBump(piece);
+      }
+      tryAutoLockIfCorrectlyPositioned(piece);
+      autosaveActive();
+    });
+
+    piece.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return; // only primary button drags
+      if (piece.classList.contains('locked')) return;
+      piece.setPointerCapture(e.pointerId);
+      const rect = piece.getBoundingClientRect();
+      const pfRect = playfield.getBoundingClientRect();
+      offX = e.clientX - rect.left;
+      offY = e.clientY - rect.top;
+      piece.classList.add('dragging');
+      piece.style.zIndex = ++zTop;
+      if (piece.parentElement !== playfield){
+        playfield.appendChild(piece);
+      }
+      const left = rect.left - pfRect.left;
+      const top = rect.top - pfRect.top;
+      piece.style.left = left + 'px';
+      piece.style.top = top + 'px';
+      e.preventDefault();
+    });
+
+    piece.addEventListener('pointermove', (e) => {
+      if (!piece.classList.contains('dragging')) return;
+      const pfRect = playfield.getBoundingClientRect();
+      const left = e.clientX - pfRect.left - offX;
+      const top = e.clientY - pfRect.top - offY;
+      piece.style.left = left + 'px';
+      piece.style.top = top + 'px';
+    });
+
+    piece.addEventListener('pointerup', (e) => {
+      if (!piece.classList.contains('dragging')) return;
+      piece.classList.remove('dragging');
+      piece.releasePointerCapture(e.pointerId);
+
+      piece.style.visibility = 'hidden';
+      const dropEl = document.elementFromPoint(e.clientX, e.clientY);
+      piece.style.visibility = 'visible';
+
+      const slot = dropEl ? dropEl.closest('.slot') : null;
+      if (slot && slot.childElementCount === 0 &&
+          slot.dataset.row === piece.dataset.row &&
+          slot.dataset.col === piece.dataset.col){
+        const deg = parseInt(piece.dataset.rotation || '0', 10) % 360;
+        if (currentDifficulty !== 'difficile' || deg === 0){
+          lockPieceIntoSlot(piece, slot);
+        }
+      }
+      moves++;
+      movesVal.textContent = moves;
+      autosaveActive();
+    });
+  }
+
+  // ---------- timer ----------
+  function currentElapsedSeconds(){
+    return elapsed + (running ? Math.floor((Date.now() - startTime) / 1000) : 0);
+  }
+  function startTimer(){
+    stopTimer();
+    startTime = Date.now();
+    running = true;
+    timerId = setInterval(() => {
+      timeVal.textContent = fmtTime(currentElapsedSeconds());
+    }, 500);
+  }
+  function stopTimer(){
+    if (timerId){ clearInterval(timerId); timerId = null; }
+    running = false;
+  }
+
+  function checkWin(){
+    if (locked === total){
+      elapsed = currentElapsedSeconds();
+      stopTimer();
+      timeVal.textContent = fmtTime(elapsed);
+      winText.textContent = 'Hai ricomposto tutti i ' + total + ' pezzi in ' + fmtTime(elapsed) + ', con ' + moves + ' mosse.';
+      winModal.classList.add('show');
+    }
+  }
+
+  // ---------- persistence of the active puzzle ----------
+  function collectPiecesArray(){
+    const arr = [];
+    const nodes = document.querySelectorAll('.piece');
+    nodes.forEach(p => {
+      const lockedFlag = p.classList.contains('locked');
+      const item = { row: parseInt(p.dataset.row,10), col: parseInt(p.dataset.col,10), locked: lockedFlag };
+      if (!lockedFlag){
+        item.x = parseFloat(p.style.left) || 0;
+        item.y = parseFloat(p.style.top) || 0;
+        item.rotation = parseInt(p.dataset.rotation || '0', 10);
+      }
+      arr.push(item);
+    });
+    return arr;
+  }
+
+  function autosaveActive(){
+    if (viewLoading) return;
+    const data = slots[activeIndex];
+    if (!data || total === 0) return;
+    data.pieces = collectPiecesArray();
+    data.moves = moves;
+    data.locked = locked;
+    data.total = total;
+    data.elapsed = currentElapsedSeconds();
+    data.updatedAt = Date.now();
+    saveSlotRaw(activeIndex, data);
+    renderSlotsBar();
+    refreshStorageMeter();
+  }
+
+  // ---------- board / tray DOM ----------
+  function renderBoardAndTraySkeleton(boardW, boardH, ghostVisible){
+    board.innerHTML = '';
+    board.style.width = boardW + 'px';
+    board.style.height = boardH + 'px';
+    board.style.gridTemplateColumns = 'repeat(' + cols + ', ' + pieceW + 'px)';
+    board.style.gridTemplateRows = 'repeat(' + rows + ', ' + pieceH + 'px)';
+
+    const ghost = document.createElement('img');
+    ghost.className = 'ghost' + (ghostVisible ? ' show' : '');
+    ghost.alt = '';
+    ghost.src = baseCanvas.toDataURL('image/jpeg', 0.85);
+    board.appendChild(ghost);
+
+    for (let r = 0; r < rows; r++){
+      for (let c = 0; c < cols; c++){
+        const s = document.createElement('div');
+        s.className = 'slot';
+        s.dataset.row = r; s.dataset.col = c;
+        board.appendChild(s);
+      }
+    }
+  }
+
+  ghostToggle.addEventListener('change', () => {
+    const g = board.querySelector('.ghost');
+    if (g) g.classList.toggle('show', ghostToggle.checked);
+  });
+
+  const GHOST_OPACITY_STORAGE = 'puzzleGhostOpacity';
+  function setGhostOpacity(pct){
+    document.documentElement.style.setProperty('--ghost-opacity', (pct/100).toFixed(2));
+    ghostOpacityVal.textContent = pct + '%';
+    try{ localStorage.setItem(GHOST_OPACITY_STORAGE, String(pct)); }catch(e){}
+  }
+  ghostOpacity.addEventListener('input', () => setGhostOpacity(parseInt(ghostOpacity.value, 10)));
+
+  // ---------- unified piece builder (used for fresh generation, loading, resetting) ----------
+  // placementMap: Map "r,c" -> {locked, x, y} | null => if null entirely, everything is scattered randomly
+  function buildPiecesIntoDOM(eH, eV, placementMap, onDone){
+    playfield.querySelectorAll('.piece').forEach(p => p.remove());
+
+    const perRow = Math.max(3, Math.floor((pieceW*cols) / (Math.max(pieceW,pieceH) + 2*pad + 14)));
+    const spacing = Math.max(pieceW, pieceH) + 2*pad + 14;
+    const trayRows = Math.ceil(total / perRow);
+    const trayHeight = Math.max(220, trayRows * spacing + 40);
+    const boardW = pieceW*cols, boardH = pieceH*rows;
+    tray.style.width = boardW + 'px';
+    tray.style.height = trayHeight + 'px';
+    playfield.style.height = (boardH + 14 + trayHeight) + 'px';
+
+    const cells = [];
+    for (let r = 0; r < rows; r++){
+      for (let c = 0; c < cols; c++) cells.push([r, c]);
+    }
+    for (let i = cells.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i+1));
+      [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+
+    const CHUNK = 40;
+    let idx = 0;
+    const cw = pieceW + 2*pad, ch = pieceH + 2*pad;
+    const maxX = Math.max(0, boardW - cw);
+    const maxY = Math.max(0, trayHeight - ch);
+
+    genBtn.disabled = true;
+    restartBtn.disabled = true;
+    genStatus.style.display = 'inline';
+
+    function buildChunk(){
+      const end = Math.min(idx + CHUNK, cells.length);
+      for (; idx < end; idx++){
+        const [r, c] = cells[idx];
+        const piece = buildPieceCanvas(r, c, eH, eV);
+        const info = placementMap ? placementMap.get(r + ',' + c) : null;
+
+        if (info && info.locked){
+          const slotEl = board.querySelector('.slot[data-row="'+r+'"][data-col="'+c+'"]');
+          slotEl.appendChild(piece);
+          piece.style.left = (-pad) + 'px';
+          piece.style.top = (-pad) + 'px';
+          applyRotation(piece, 0);
+          piece.classList.add('locked');
+        } else {
+          let x, y;
+          if (info && typeof info.x === 'number'){
+            x = info.x; y = info.y;
+          } else {
+            x = Math.random() * maxX;
+            y = boardH + 14 + Math.random() * maxY;
+          }
+          piece.style.position = 'absolute';
+          piece.style.left = x + 'px';
+          piece.style.top = y + 'px';
+          const rotation = (currentDifficulty === 'semplice')
+            ? 0
+            : (info && typeof info.rotation === 'number' ? info.rotation : pickRotation(currentDifficulty));
+          applyRotation(piece, rotation);
+          playfield.appendChild(piece);
+          attachDrag(piece);
+        }
+      }
+      genStatus.textContent = 'Creazione pezzi… ' + idx + '/' + cells.length;
+      if (idx < cells.length){
+        requestAnimationFrame(buildChunk);
+      } else {
+        genStatus.style.display = 'none';
+        genBtn.disabled = false;
+        restartBtn.disabled = false;
+        restartBtn.style.display = 'inline-block';
+        if (onDone) onDone();
+      }
+    }
+    requestAnimationFrame(buildChunk);
+  }
+
+  // ---------- create a brand-new puzzle for the active slot ----------
+  function createNewPuzzleForActiveSlot(){
+    if (!baseCanvas) return;
+    if (slots[activeIndex] && !confirm('Generare un nuovo puzzle in questo slot cancellerà il progresso attuale. Continuare?')){
+      return;
+    }
+    stopTimer();
+    const target = parseInt(pieceCountInput.value, 10);
+    const aspect = baseW / baseH;
+    const g = computeGrid(target, aspect);
+    rows = g.rows; cols = g.cols;
+    const geom = computeGeom(rows, cols, baseW, baseH);
+    pieceW = geom.pieceW; pieceH = geom.pieceH; amp = geom.amp; pad = geom.pad;
+
+    const eH = [];
+    for (let r = 0; r < rows - 1; r++){
+      const row = []; for (let c = 0; c < cols; c++) row.push(randomEdge()); eH.push(row);
+    }
+    const eV = [];
+    for (let r = 0; r < rows; r++){
+      const row = []; for (let c = 0; c < cols - 1; c++) row.push(randomEdge()); eV.push(row);
+    }
+    edgesH = eH; edgesV = eV;
+
+    total = rows*cols; locked = 0; moves = 0; elapsed = 0;
+    lockedVal.textContent = 0; totalVal.textContent = total; pieceCountDisplay.textContent = total; movesVal.textContent = 0; timeVal.textContent = '00:00';
+
+    const data = {
+      imageData: baseCanvas.toDataURL('image/jpeg', 0.82),
+      baseW: baseW, baseH: baseH,
+      rows: rows, cols: cols,
+      pieceTarget: target,
+      edgesH: eH, edgesV: eV,
+      pieces: [],
+      moves: 0, locked: 0, total: total, elapsed: 0,
+      updatedAt: Date.now()
+    };
+    slots[activeIndex] = data;
+
+    stage.classList.add('show');
+    hud.style.display = 'flex';
+    emptyMsg.style.display = 'none';
+    winModal.classList.remove('show');
+
+    renderBoardAndTraySkeleton(pieceW*cols, pieceH*rows, ghostToggle.checked);
+
+    buildPiecesIntoDOM(eH, eV, null, () => {
+      startTimer();
+      autosaveActive();
+    });
+  }
+
+  // ---------- reset progress of the active slot (same image & shapes) ----------
+  function resetActiveSlot(skipConfirm){
+    const data = slots[activeIndex];
+    if (!data) return;
+    if (!skipConfirm && !confirm('Vuoi azzerare i progressi di questo puzzle? Tutti i pezzi torneranno sul tavolo.')){
+      return;
+    }
+    stopTimer();
+    rows = data.rows; cols = data.cols;
+    const geom = computeGeom(rows, cols, data.baseW, data.baseH);
+    pieceW = geom.pieceW; pieceH = geom.pieceH; amp = geom.amp; pad = geom.pad;
+    baseW = data.baseW; baseH = data.baseH;
+    edgesH = data.edgesH; edgesV = data.edgesV;
+    total = rows*cols; locked = 0; moves = 0; elapsed = 0;
+    lockedVal.textContent = 0; totalVal.textContent = total; pieceCountDisplay.textContent = total; movesVal.textContent = 0; timeVal.textContent = '00:00';
+    winModal.classList.remove('show');
+
+    const img = new Image();
+    img.onload = () => {
+      baseCanvas = document.createElement('canvas');
+      baseCanvas.width = baseW; baseCanvas.height = baseH;
+      baseCanvas.getContext('2d').drawImage(img, 0, 0, baseW, baseH);
+      renderBoardAndTraySkeleton(pieceW*cols, pieceH*rows, ghostToggle.checked);
+      buildPiecesIntoDOM(edgesH, edgesV, null, () => {
+        startTimer();
+        autosaveActive();
+      });
+    };
+    img.src = data.imageData;
+  }
+
+  // ---------- load a slot (existing puzzle, with saved piece positions) into view ----------
+  function loadActiveSlotIntoView(){
+    stopTimer();
+    winModal.classList.remove('show');
+    playfield.querySelectorAll('.piece').forEach(p => p.remove());
+    board.innerHTML = '';
+    baseCanvas = null;
+    genBtn.disabled = true;
+    genStatus.style.display = 'none';
+
+    const data = slots[activeIndex];
+    if (!data){
+      stage.classList.remove('show');
+      hud.style.display = 'none';
+      emptyMsg.style.display = 'block';
+      restartBtn.style.display = 'none';
+      return;
+    }
+
+    viewLoading = true;
+    const img = new Image();
+    img.onload = () => {
+      baseW = data.baseW; baseH = data.baseH;
+      rows = data.rows; cols = data.cols;
+      edgesH = data.edgesH; edgesV = data.edgesV;
+      const geom = computeGeom(rows, cols, baseW, baseH);
+      pieceW = geom.pieceW; pieceH = geom.pieceH; amp = geom.amp; pad = geom.pad;
+
+      baseCanvas = document.createElement('canvas');
+      baseCanvas.width = baseW; baseCanvas.height = baseH;
+      baseCanvas.getContext('2d').drawImage(img, 0, 0, baseW, baseH);
+
+      total = data.total; locked = data.locked; moves = data.moves; elapsed = data.elapsed;
+      lockedVal.textContent = locked; totalVal.textContent = total; pieceCountDisplay.textContent = total; movesVal.textContent = moves;
+      timeVal.textContent = fmtTime(elapsed);
+
+      stage.classList.add('show');
+      hud.style.display = 'flex';
+      emptyMsg.style.display = 'none';
+
+      renderBoardAndTraySkeleton(pieceW*cols, pieceH*rows, ghostToggle.checked);
+
+      const placementMap = new Map();
+      (data.pieces || []).forEach(p => {
+        placementMap.set(p.row + ',' + p.col, p);
+      });
+
+      buildPiecesIntoDOM(edgesH, edgesV, placementMap, () => {
+        viewLoading = false;
+        if (locked < total){
+          startTimer();
+        } else {
+          timeVal.textContent = fmtTime(elapsed);
+        }
+      });
+    };
+    img.src = data.imageData;
+  }
+
+  // ---------- slot switching ----------
+  function selectSlot(i){
+    if (i === activeIndex) return;
+    autosaveActive();
+    activeIndex = i;
+    try{ localStorage.setItem(STORAGE_ACTIVE, String(i)); }catch(e){}
+    renderSlotsBar();
+    loadActiveSlotIntoView();
+  }
+
+  // ---------- export / import ----------
+  exportBtn.addEventListener('click', () => {
+    autosaveActive();
+    const payload = { version: 1, exportedAt: Date.now(), slots: slots };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'puzzle-salvataggi.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  importBtn.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (!confirm('Importare sostituirà tutti e ' + SLOT_COUNT + ' gli slot salvati in questo browser. Continuare?')){
+      importInput.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(reader.result);
+        if (!obj || !Array.isArray(obj.slots)) throw new Error('formato non valido');
+        stopTimer();
+        for (let i = 0; i < SLOT_COUNT; i++){
+          const s = obj.slots[i] || null;
+          slots[i] = s;
+          if (s) saveSlotRaw(i, s); else clearSlotRaw(i);
+        }
+        activeIndex = 0;
+        try{ localStorage.setItem(STORAGE_ACTIVE, '0'); }catch(err){}
+        renderSlotsBar();
+        refreshStorageMeter();
+        loadActiveSlotIntoView();
+      }catch(err){
+        alert('Il file scelto non è un salvataggio valido di questo puzzle.');
+      }
+      importInput.value = '';
+    };
+    reader.readAsText(f);
+  });
+
+  wipeBtn.addEventListener('click', () => {
+    if (!confirm('Questo cancella TUTTI i puzzle salvati e tutte le preferenze (tema, difficoltà, trasparenza) in questo browser. L\'operazione non è annullabile. Continuare?')){
+      return;
+    }
+    stopTimer();
+    for (let i = 0; i < SLOT_COUNT; i++) clearSlotRaw(i);
+    try{
+      localStorage.removeItem(STORAGE_ACTIVE);
+      localStorage.removeItem(THEME_STORAGE);
+      localStorage.removeItem(GHOST_OPACITY_STORAGE);
+      localStorage.removeItem(DIFFICULTY_STORAGE);
+    }catch(e){}
+    location.reload();
+  });
+
+  // ---------- buttons ----------
+  genBtn.addEventListener('click', createNewPuzzleForActiveSlot);
+  restartBtn.addEventListener('click', () => resetActiveSlot(false));
+  playAgainBtn.addEventListener('click', () => resetActiveSlot(true));
+  newImgBtn.addEventListener('click', () => {
+    winModal.classList.remove('show');
+    fileInput.click();
+  });
+
+  window.addEventListener('beforeunload', () => { autosaveActive(); });
+  setInterval(() => { if (running) autosaveActive(); }, 8000);
+
+  // ---------- init ----------
+  (function init(){
+    renderThemeRow();
+    let savedTheme = 'noce';
+    try{ savedTheme = localStorage.getItem(THEME_STORAGE) || 'noce'; }catch(e){}
+    if (!THEMES.some(t => t.id === savedTheme)) savedTheme = 'noce';
+    setTheme(savedTheme);
+
+    let savedGhostOpacity = 20;
+    try{
+      const g = parseInt(localStorage.getItem(GHOST_OPACITY_STORAGE), 10);
+      if (!isNaN(g) && g >= 4 && g <= 80) savedGhostOpacity = g;
+    }catch(e){}
+    ghostOpacity.value = savedGhostOpacity;
+    setGhostOpacity(savedGhostOpacity);
+
+    let savedDifficulty = 'semplice';
+    try{
+      const d = localStorage.getItem(DIFFICULTY_STORAGE);
+      if (d === 'semplice' || d === 'normale' || d === 'difficile') savedDifficulty = d;
+    }catch(e){}
+    currentDifficulty = savedDifficulty;
+    updateDifficultyButtons();
+
+    for (let i = 0; i < SLOT_COUNT; i++) slots[i] = loadSlotRaw(i);
+    let a = parseInt(localStorage.getItem(STORAGE_ACTIVE), 10);
+    if (isNaN(a) || a < 0 || a >= SLOT_COUNT) a = 0;
+    activeIndex = a;
+    renderSlotsBar();
+    refreshStorageMeter();
+    loadActiveSlotIntoView();
+  })();
+
+})();
+</script>
+</body>
+</html>
