@@ -542,6 +542,8 @@
   let zTop = 10;
   let timerId = null, startTime = 0, elapsed = 0, running = false;
   let currentDifficulty = 'semplice';
+  let hoveredPiece = null;
+  let draggingPiece = null;
   const DIFFICULTY_STORAGE = 'puzzleDifficulty';
   const ROTATION_STEPS = [0, 45, 90, 135, 180, 225, 270, 315];
 
@@ -836,6 +838,18 @@
     setTimeout(() => piece.classList.remove('bump'), 600);
   }
 
+  function rotatePieceBy(piece, deltaDeg){
+    if (currentDifficulty === 'semplice') return;
+    if (!piece || piece.classList.contains('locked') || piece.classList.contains('dragging')) return;
+    const deg = ((parseInt(piece.dataset.rotation || '0', 10) + deltaDeg) % 360 + 360) % 360;
+    applyRotation(piece, deg);
+    if (currentDifficulty === 'normale' && deg === 0){
+      triggerBump(piece);
+    }
+    tryAutoLockIfCorrectlyPositioned(piece);
+    autosaveActive();
+  }
+
   function lockPieceIntoSlot(piece, slot){
     slot.appendChild(piece);
     piece.style.left = (-pad) + 'px';
@@ -905,17 +919,16 @@
   function attachDrag(piece){
     let offX = 0, offY = 0;
 
+    piece.addEventListener('pointerenter', () => {
+      if (!piece.classList.contains('locked')) hoveredPiece = piece;
+    });
+    piece.addEventListener('pointerleave', () => {
+      if (hoveredPiece === piece) hoveredPiece = null;
+    });
+
     piece.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      if (currentDifficulty === 'semplice') return;
-      if (piece.classList.contains('locked') || piece.classList.contains('dragging')) return;
-      const deg = (parseInt(piece.dataset.rotation || '0', 10) + 45) % 360;
-      applyRotation(piece, deg);
-      if (currentDifficulty === 'normale' && deg === 0){
-        triggerBump(piece);
-      }
-      tryAutoLockIfCorrectlyPositioned(piece);
-      autosaveActive();
+      rotatePieceBy(piece, 45);
     });
 
     piece.addEventListener('pointerdown', (e) => {
@@ -927,6 +940,7 @@
       offX = e.clientX - rect.left;
       offY = e.clientY - rect.top;
       piece.classList.add('dragging');
+      draggingPiece = piece;
       piece.style.zIndex = ++zTop;
       if (piece.parentElement !== playfield){
         playfield.appendChild(piece);
@@ -951,6 +965,7 @@
       if (!piece.classList.contains('dragging')) return;
       piece.classList.remove('dragging');
       piece.releasePointerCapture(e.pointerId);
+      if (draggingPiece === piece) draggingPiece = null;
 
       piece.style.visibility = 'hidden';
       const dropEl = document.elementFromPoint(e.clientX, e.clientY);
@@ -1071,6 +1086,7 @@
   // placementMap: Map "r,c" -> {locked, x, y} | null => if null entirely, everything is scattered randomly
   function buildPiecesIntoDOM(eH, eV, placementMap, onDone){
     playfield.querySelectorAll('.piece').forEach(p => p.remove());
+    hoveredPiece = null; draggingPiece = null;
 
     const perRow = Math.max(3, Math.floor((pieceW*cols) / (Math.max(pieceW,pieceH) + 2*pad + 14)));
     const spacing = Math.max(pieceW, pieceH) + 2*pad + 14;
@@ -1235,6 +1251,7 @@
     stopTimer();
     winModal.classList.remove('show');
     playfield.querySelectorAll('.piece').forEach(p => p.remove());
+    hoveredPiece = null; draggingPiece = null;
     board.innerHTML = '';
     baseCanvas = null;
     genBtn.disabled = true;
@@ -1372,6 +1389,39 @@
 
   window.addEventListener('beforeunload', () => { autosaveActive(); });
   setInterval(() => { if (running) autosaveActive(); }, 8000);
+
+  // ---------- keyboard shortcuts ----------
+  function isTypingTarget(el){
+    return el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA');
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Control'){
+      document.documentElement.style.setProperty('--ghost-opacity', '1');
+      return;
+    }
+    if (isTypingTarget(document.activeElement)) return;
+    if (e.key === 'x' || e.key === 'X'){
+      rotatePieceBy(hoveredPiece, 45);
+    } else if (e.key === 'z' || e.key === 'Z'){
+      rotatePieceBy(hoveredPiece, -45);
+    } else if (e.code === 'Space' || e.key === ' '){
+      if (draggingPiece){
+        e.preventDefault();
+        board.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'Control'){
+      document.documentElement.style.setProperty('--ghost-opacity', (parseInt(ghostOpacity.value, 10) / 100).toFixed(2));
+    }
+  });
+
+  window.addEventListener('blur', () => {
+    document.documentElement.style.setProperty('--ghost-opacity', (parseInt(ghostOpacity.value, 10) / 100).toFixed(2));
+  });
 
   // ---------- init ----------
   (function init(){
