@@ -1223,16 +1223,19 @@
       piece.setPointerCapture(e.pointerId);
       const rect = piece.getBoundingClientRect();
       const pfRect = playfield.getBoundingClientRect();
-      offX = e.clientX - rect.left;
-      offY = e.clientY - rect.top;
+      // rect/pfRect are in screen pixels (already scaled by the zoom transform);
+      // style.left/top are in the playfield's local, pre-zoom pixel space, so every
+      // screen-pixel quantity must be divided by zoomLevel before being stored/used.
+      offX = (e.clientX - rect.left) / zoomLevel;
+      offY = (e.clientY - rect.top) / zoomLevel;
       piece.classList.add('dragging');
       draggingPiece = piece;
       piece.style.zIndex = ++zTop;
       if (piece.parentElement !== playfield){
         playfield.appendChild(piece);
       }
-      const left = rect.left - pfRect.left;
-      const top = rect.top - pfRect.top;
+      const left = (rect.left - pfRect.left) / zoomLevel;
+      const top = (rect.top - pfRect.top) / zoomLevel;
       piece.style.left = left + 'px';
       piece.style.top = top + 'px';
       e.preventDefault();
@@ -1241,8 +1244,8 @@
     piece.addEventListener('pointermove', (e) => {
       if (!piece.classList.contains('dragging')) return;
       const pfRect = playfield.getBoundingClientRect();
-      const left = e.clientX - pfRect.left - offX;
-      const top = e.clientY - pfRect.top - offY;
+      const left = (e.clientX - pfRect.left) / zoomLevel - offX;
+      const top = (e.clientY - pfRect.top) / zoomLevel - offY;
       piece.style.left = left + 'px';
       piece.style.top = top + 'px';
       updateHoverSlotHighlight(piece);
