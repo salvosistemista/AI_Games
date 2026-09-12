@@ -500,7 +500,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.13</span>
+  <span class="version-badge">v1.15</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -563,7 +563,7 @@
         </label>
         <div class="field">
           <label for="ghostOpacity">Trasparenza riferimento: <span class="rangeval" id="ghostOpacityVal">20%</span></label>
-          <input type="range" id="ghostOpacity" min="4" max="80" step="1" value="20">
+          <input type="range" id="ghostOpacity" min="0" max="100" step="1" value="20">
         </div>
       </div>
     </div>
@@ -755,6 +755,8 @@
   let soundsEnabled = true;
   let optionsOpen = true; // options panel starts open: the game is paused until the player collapses it
   let baseImageDataURL = null; // cached JPEG dataURL for the current baseCanvas, computed once and reused
+  let buildToken = 0; // increments on every buildPiecesIntoDOM call to cancel stale in-flight builds
+  let viewToken = 0; // increments on every slot-view load/reset to cancel stale async image loads
   const DIFFICULTY_STORAGE = 'puzzleDifficulty';
   const SOUND_STORAGE = 'puzzleSoundsEnabled';
   const ROTATION_STEPS = [0, 45, 90, 135, 180, 225, 270, 315];
@@ -1442,8 +1444,15 @@
   // ---------- unified piece builder (used for fresh generation, loading, resetting) ----------
   // placementMap: Map "r,c" -> {locked, x, y} | null => if null entirely, everything is scattered randomly
   function buildPiecesIntoDOM(eH, eV, placementMap, onDone){
+    // cancel any still-running chunked build from a previous puzzle/slot: without this,
+    // switching slots or regenerating while pieces are still being built lets the old
+    // loop keep running with the (now overwritten) shared geometry/image variables,
+    // producing stray pieces with mismatched shape/content.
+    const myBuildToken = ++buildToken;
+
     playfield.querySelectorAll('.piece').forEach(p => p.remove());
     hoveredPiece = null; draggingPiece = null;
+    currentHoverSlot = null;
 
     const perRow = Math.max(3, Math.floor((pieceW*cols) / (Math.max(pieceW,pieceH) + 2*pad + 14)));
     const spacing = Math.max(pieceW, pieceH) + 2*pad + 14;
@@ -1476,6 +1485,7 @@
     genOverlayText.textContent = 'Creazione pezzi… 0/' + cells.length;
 
     function buildChunk(){
+      if (myBuildToken !== buildToken) return; // a newer build has superseded this one
       const end = Math.min(idx + CHUNK, cells.length);
       for (; idx < end; idx++){
         const [r, c] = cells[idx];
@@ -1530,6 +1540,7 @@
     if (slots[activeIndex] && !confirm('Generare un nuovo puzzle in questo slot cancellerà il progresso attuale. Continuare?')){
       return;
     }
+    viewToken++; // invalidate any pending async image load from a previous slot view
     stopTimer();
     const target = parseInt(pieceCountInput.value, 10);
     const aspect = baseW / baseH;
@@ -1583,6 +1594,7 @@
     if (!skipConfirm && !confirm('Vuoi azzerare i progressi di questo puzzle? Tutti i pezzi torneranno sul tavolo.')){
       return;
     }
+    const myViewToken = ++viewToken;
     stopTimer();
     rows = data.rows; cols = data.cols;
     const geom = computeGeom(rows, cols, data.baseW, data.baseH);
@@ -1595,6 +1607,7 @@
 
     const img = new Image();
     img.onload = () => {
+      if (myViewToken !== viewToken) return; // superseded by a newer slot switch/action
       baseCanvas = document.createElement('canvas');
       baseCanvas.width = baseW; baseCanvas.height = baseH;
       baseCanvas.getContext('2d').drawImage(img, 0, 0, baseW, baseH);
@@ -1610,6 +1623,7 @@
 
   // ---------- load a slot (existing puzzle, with saved piece positions) into view ----------
   function loadActiveSlotIntoView(){
+    const myViewToken = ++viewToken;
     stopTimer();
     winModal.classList.remove('show');
     playfield.querySelectorAll('.piece').forEach(p => p.remove());
@@ -1632,6 +1646,7 @@
     viewLoading = true;
     const img = new Image();
     img.onload = () => {
+      if (myViewToken !== viewToken) return; // superseded by a newer slot switch/action
       baseW = data.baseW; baseH = data.baseH;
       rows = data.rows; cols = data.cols;
       edgesH = data.edgesH; edgesV = data.edgesV;
@@ -1798,7 +1813,7 @@
     let savedGhostOpacity = 20;
     try{
       const g = parseInt(localStorage.getItem(GHOST_OPACITY_STORAGE), 10);
-      if (!isNaN(g) && g >= 4 && g <= 80) savedGhostOpacity = g;
+      if (!isNaN(g) && g >= 0 && g <= 100) savedGhostOpacity = g;
     }catch(e){}
     ghostOpacity.value = savedGhostOpacity;
     setGhostOpacity(savedGhostOpacity);
