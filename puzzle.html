@@ -504,7 +504,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.17</span>
+  <span class="version-badge">v1.18</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -646,6 +646,7 @@
       <li><span>Torna al tabellone mentre trascini</span><kbd>Barra spaziatrice</kbd></li>
       <li><span>Prendi/rilascia un pezzo in mano (fino a 10)</span><kbd>Doppio click sul pezzo</kbd></li>
       <li><span>Sparpaglia i pezzi che hai in mano intorno al punto</span><kbd>Doppio click su spazio vuoto</kbd></li>
+      <li><span>Avvicina due pezzi vicini sul tavolo: si uniscono da soli</span><kbd>Trascina vicino</kbd></li>
       <li><span>Implodi le opzioni per avviare/riprendere il tempo, esplodile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
     <div class="row">
@@ -1147,10 +1148,67 @@
     setTimeout(() => piece.classList.remove('bump'), 600);
   }
 
+  // ---------- table groups: pieces snapped together off-board move as one block ----------
+  function getGroup(piece){ return piece.groupMembers || [piece]; }
+  function setGroup(members){ members.forEach(p => { p.groupMembers = members; }); }
+  function mergeGroups(a, b){
+    const gA = getGroup(a), gB = getGroup(b);
+    if (gA === gB) return gA;
+    const merged = gA.concat(gB.filter(p => gA.indexOf(p) === -1));
+    setGroup(merged);
+    return merged;
+  }
+
+  // after dropping a piece (or a group) on the table, check whether any of its members
+  // now sit close enough to another loose piece that actually belongs next to it in the
+  // solved image; if so, snap them together exactly and fuse the groups. Repeats until
+  // nothing new joins, so dropping one piece into a gap can chain-join a whole cluster.
+  function tryMergeAfterDrop(startingGroup){
+    let group = startingGroup;
+    let changed = true;
+    while (changed){
+      changed = false;
+      const loosePieces = Array.from(document.querySelectorAll('.piece:not(.locked)'));
+      outer:
+      for (const gp of group){
+        const gpDeg = parseInt(gp.dataset.rotation || '0', 10) % 360;
+        if (gpDeg !== 0) continue; // only cleanly-upright pieces can be judged for adjacency
+        const r1 = parseInt(gp.dataset.row, 10), c1 = parseInt(gp.dataset.col, 10);
+        const left1 = parseFloat(gp.style.left) || 0, top1 = parseFloat(gp.style.top) || 0;
+        for (const other of loosePieces){
+          if (other === gp || getGroup(other) === getGroup(gp)) continue;
+          const oDeg = parseInt(other.dataset.rotation || '0', 10) % 360;
+          if (oDeg !== 0) continue;
+          const r2 = parseInt(other.dataset.row, 10), c2 = parseInt(other.dataset.col, 10);
+          const dr = r2 - r1, dc = c2 - c1;
+          if (Math.abs(dr) + Math.abs(dc) !== 1) continue; // must be true grid neighbours
+          const expectedDX = dc * pieceW, expectedDY = dr * pieceH;
+          const left2 = parseFloat(other.style.left) || 0, top2 = parseFloat(other.style.top) || 0;
+          const tol = Math.max(10, Math.round(Math.min(pieceW, pieceH) * 0.22));
+          if (Math.abs((left2 - left1) - expectedDX) <= tol && Math.abs((top2 - top1) - expectedDY) <= tol){
+            const snapDX = (left1 + expectedDX) - left2;
+            const snapDY = (top1 + expectedDY) - top2;
+            getGroup(other).forEach(p => {
+              p.style.left = ((parseFloat(p.style.left) || 0) + snapDX) + 'px';
+              p.style.top = ((parseFloat(p.style.top) || 0) + snapDY) + 'px';
+            });
+            group = mergeGroups(gp, other);
+            triggerBump(gp); triggerBump(other);
+            playLockSound();
+            changed = true;
+            break outer;
+          }
+        }
+      }
+    }
+    return group;
+  }
+
   function rotatePieceBy(piece, deltaDeg){
     if (optionsOpen) return;
     if (currentDifficulty === 'semplice') return;
     if (!piece || piece.classList.contains('locked') || piece.classList.contains('dragging')) return;
+    if (getGroup(piece).length > 1) return; // a fused block rotates as a whole, not one piece at a time — not yet supported
     const deg = ((parseInt(piece.dataset.rotation || '0', 10) + deltaDeg) % 360 + 360) % 360;
     applyRotation(piece, deg);
     if (currentDifficulty === 'normale' && deg === 0){
@@ -1165,50 +1223,70 @@
     if (handCountVal) handCountVal.textContent = handPieces.length;
   }
 
+  // double-clicking any member of a fused block picks up (or releases) the WHOLE block
+  // together, so the group's relative arrangement is never silently torn apart
   function togglePieceInHand(piece){
-    const idx = handPieces.indexOf(piece);
-    if (idx !== -1){
-      handPieces.splice(idx, 1);
-      piece.classList.remove('held');
+    const group = getGroup(piece);
+    const allInHand = group.every(p => handPieces.indexOf(p) !== -1);
+    if (allInHand){
+      group.forEach(p => {
+        const idx = handPieces.indexOf(p);
+        if (idx !== -1) handPieces.splice(idx, 1);
+        p.classList.remove('held');
+      });
     } else {
-      if (handPieces.length >= MAX_HAND) return; // hand already full
-      handPieces.push(piece);
-      piece.classList.add('held');
-      piece.style.zIndex = ++zTop;
+      const toAdd = group.filter(p => handPieces.indexOf(p) === -1);
+      if (handPieces.length + toAdd.length > MAX_HAND) return; // not enough room for the whole block
+      toAdd.forEach(p => {
+        handPieces.push(p);
+        p.classList.add('held');
+        p.style.zIndex = ++zTop;
+      });
     }
     updateHandIndicator();
   }
 
-  // lays the held pieces out around (clientX, clientY) in a small jittered grid so
-  // they never land exactly on top of one another
+  // lays the held pieces (or fused blocks) out around (clientX, clientY) in a small
+  // jittered grid so they never land exactly on top of one another; each fused block is
+  // moved as a rigid unit so it keeps the arrangement it was picked up with
   function scatterHandAt(clientX, clientY){
     if (handPieces.length === 0) return;
     const pfRect = playfield.getBoundingClientRect();
     const cx = (clientX - pfRect.left) / zoomLevel;
     const cy = (clientY - pfRect.top) / zoomLevel;
-    const pieces = handPieces.slice();
-    const n = pieces.length;
+
+    const seen = new Set();
+    const units = [];
+    handPieces.forEach(p => {
+      const g = getGroup(p);
+      if (!seen.has(g)){ seen.add(g); units.push(g); }
+    });
+
+    const n = units.length;
     const gridCols = Math.ceil(Math.sqrt(n));
     const gridRows = Math.ceil(n / gridCols);
     const spacingX = pieceW + 2*pad + 14;
     const spacingY = pieceH + 2*pad + 14;
 
-    pieces.forEach((piece, i) => {
+    units.forEach((group, i) => {
       const col = i % gridCols;
       const row = Math.floor(i / gridCols);
-      const offX = (col - (gridCols - 1) / 2) * spacingX;
-      const offY = (row - (gridRows - 1) / 2) * spacingY;
       const jitterX = (Math.random() - 0.5) * spacingX * 0.3;
       const jitterY = (Math.random() - 0.5) * spacingY * 0.3;
-      const x = cx + offX + jitterX - (pieceW + 2*pad) / 2;
-      const y = cy + offY + jitterY - (pieceH + 2*pad) / 2;
+      const targetX = cx + (col - (gridCols - 1) / 2) * spacingX + jitterX - (pieceW + 2*pad) / 2;
+      const targetY = cy + (row - (gridRows - 1) / 2) * spacingY + jitterY - (pieceH + 2*pad) / 2;
+      const anchor = group[0];
+      const dx = targetX - (parseFloat(anchor.style.left) || 0);
+      const dy = targetY - (parseFloat(anchor.style.top) || 0);
 
-      if (piece.parentElement !== playfield) playfield.appendChild(piece);
-      piece.style.position = 'absolute';
-      piece.style.left = x + 'px';
-      piece.style.top = y + 'px';
-      piece.style.zIndex = ++zTop;
-      piece.classList.remove('held');
+      group.forEach(piece => {
+        if (piece.parentElement !== playfield) playfield.appendChild(piece);
+        piece.style.position = 'absolute';
+        piece.style.left = ((parseFloat(piece.style.left) || 0) + dx) + 'px';
+        piece.style.top = ((parseFloat(piece.style.top) || 0) + dy) + 'px';
+        piece.style.zIndex = ++zTop;
+        piece.classList.remove('held');
+      });
     });
 
     handPieces.length = 0;
@@ -1343,16 +1421,22 @@
       // screen-pixel quantity must be divided by zoomLevel before being stored/used.
       offX = (e.clientX - rect.left) / zoomLevel;
       offY = (e.clientY - rect.top) / zoomLevel;
-      piece.classList.add('dragging');
+      const leaderLeft0 = (rect.left - pfRect.left) / zoomLevel;
+      const leaderTop0 = (rect.top - pfRect.top) / zoomLevel;
+
+      const group = getGroup(piece);
+      group.forEach(p => {
+        p.classList.add('dragging');
+        p.style.zIndex = ++zTop;
+        if (p.parentElement !== playfield) playfield.appendChild(p);
+        if (p !== piece){
+          p._dragDX = (parseFloat(p.style.left) || 0) - leaderLeft0;
+          p._dragDY = (parseFloat(p.style.top) || 0) - leaderTop0;
+        }
+      });
       draggingPiece = piece;
-      piece.style.zIndex = ++zTop;
-      if (piece.parentElement !== playfield){
-        playfield.appendChild(piece);
-      }
-      const left = (rect.left - pfRect.left) / zoomLevel;
-      const top = (rect.top - pfRect.top) / zoomLevel;
-      piece.style.left = left + 'px';
-      piece.style.top = top + 'px';
+      piece.style.left = leaderLeft0 + 'px';
+      piece.style.top = leaderTop0 + 'px';
       e.preventDefault();
     });
 
@@ -1363,30 +1447,49 @@
       const top = (e.clientY - pfRect.top) / zoomLevel - offY;
       piece.style.left = left + 'px';
       piece.style.top = top + 'px';
-      updateHoverSlotHighlight(piece);
+      const group = getGroup(piece);
+      if (group.length > 1){
+        group.forEach(p => {
+          if (p === piece) return;
+          p.style.left = (left + p._dragDX) + 'px';
+          p.style.top = (top + p._dragDY) + 'px';
+        });
+      } else {
+        updateHoverSlotHighlight(piece);
+      }
     });
 
     piece.addEventListener('pointerup', (e) => {
       if (!piece.classList.contains('dragging')) return;
-      piece.classList.remove('dragging');
+      const group = getGroup(piece);
+      group.forEach(p => p.classList.remove('dragging'));
       piece.releasePointerCapture(e.pointerId);
       if (draggingPiece === piece) draggingPiece = null;
 
-      updateHoverSlotHighlight(piece);
-      const slot = currentHoverSlot;
-      if (currentHoverSlot){
-        currentHoverSlot.classList.remove('hover-target');
-        currentHoverSlot = null;
-      }
-
-      if (slot && slot.childElementCount === 0 &&
-          slot.dataset.row === piece.dataset.row &&
-          slot.dataset.col === piece.dataset.col){
-        const deg = parseInt(piece.dataset.rotation || '0', 10) % 360;
-        if (currentDifficulty !== 'difficile' || deg === 0){
-          lockPieceIntoSlot(piece, slot);
+      if (group.length === 1){
+        // solo piece: same board-slot check as always
+        updateHoverSlotHighlight(piece);
+        const slot = currentHoverSlot;
+        if (currentHoverSlot){
+          currentHoverSlot.classList.remove('hover-target');
+          currentHoverSlot = null;
+        }
+        if (slot && slot.childElementCount === 0 &&
+            slot.dataset.row === piece.dataset.row &&
+            slot.dataset.col === piece.dataset.col){
+          const deg = parseInt(piece.dataset.rotation || '0', 10) % 360;
+          if (currentDifficulty !== 'difficile' || deg === 0){
+            lockPieceIntoSlot(piece, slot);
+          }
         }
       }
+      // whether it just locked (solo) or not, see if it (or its block) now sits next to
+      // another loose piece it belongs with on the table
+      const stillLoose = getGroup(piece).filter(p => !p.classList.contains('locked'));
+      if (stillLoose.length){
+        tryMergeAfterDrop(stillLoose);
+      }
+
       moves++;
       movesVal.textContent = moves;
       autosaveActive();
