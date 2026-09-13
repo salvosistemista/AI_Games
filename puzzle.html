@@ -363,6 +363,29 @@
     z-index: 999;
     pointer-events: none;
   }
+
+  .oob-alert{
+    position: fixed;
+    left: 18px;
+    bottom: 18px;
+    max-width: 340px;
+    background: linear-gradient(180deg, var(--brass-light), var(--brass));
+    color: var(--btn-text);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    z-index: 300;
+    display: none;
+    animation: oobPulse 1.4s ease-in-out infinite;
+  }
+  .oob-alert.show{ display: block; }
+  @keyframes oobPulse{
+    0%, 100%{ transform: translateY(0); box-shadow: 0 8px 20px rgba(0,0,0,0.45); }
+    50%{ transform: translateY(-5px); box-shadow: 0 15px 28px rgba(0,0,0,0.55); }
+  }
   .piece.locked{
     cursor:default;
     pointer-events:none;
@@ -521,7 +544,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.29</span>
+  <span class="version-badge">v1.30</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -676,6 +699,7 @@
       <li><span>Avvicina due pezzi vicini sul tavolo: si uniscono da soli anche se ruotati, purché nello stesso modo</span><kbd>Trascina vicino</kbd></li>
       <li><span>Trascina un intero blocco unito sul tabellone: se ogni pezzo cade nella casella giusta si agganciano tutti insieme</span><kbd>Trascina il blocco</kbd></li>
       <li><span>Scuoti rapidamente avanti e indietro un blocco mentre lo trascini: si stacca in pezzi singoli</span><kbd>Shake col mouse</kbd></li>
+      <li><span>Recupera i pezzi finiti fuori dall'area del tavolo</span><kbd>R</kbd></li>
       <li><span>Chiudi le opzioni per avviare/riprendere il tempo, riaprile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
     <div class="row">
@@ -683,6 +707,8 @@
     </div>
   </div>
 </div>
+
+<div class="oob-alert" id="oobAlert"></div>
 
 <script>
 (function(){
@@ -730,6 +756,7 @@
   const genBarFill = document.getElementById('genBarFill');
   const genOverlayText = document.getElementById('genOverlayText');
   const zoomIndicator = document.getElementById('zoomIndicator');
+  const oobAlert = document.getElementById('oobAlert');
   const hudZoomVal = document.getElementById('hudZoomVal');
   const handCountVal = document.getElementById('handCountVal');
   const optionsToggleBtn = document.getElementById('optionsToggleBtn');
@@ -1679,6 +1706,62 @@
     finishMarquee(e.clientX, e.clientY);
   });
 
+  // ---------- recover pieces that ended up outside the table area ----------
+  function getPlayfieldBounds(){
+    return {
+      minX: 0, minY: 0,
+      maxX: pieceW * cols,
+      maxY: pieceH * rows + 14 + (parseInt(tray.style.height, 10) || 0)
+    };
+  }
+  function isPieceOutOfBounds(p){
+    const cw = pieceW + 2*pad, ch = pieceH + 2*pad;
+    const cx = (parseFloat(p.style.left) || 0) + cw/2;
+    const cy = (parseFloat(p.style.top) || 0) + ch/2;
+    const b = getPlayfieldBounds();
+    return cx < b.minX || cx > b.maxX || cy < b.minY || cy > b.maxY;
+  }
+  function showOobAlert(n){
+    oobAlert.textContent = 'Attenzione: ci sono ' + n + (n === 1 ? ' pezzo' : ' pezzi') +
+      ' fuori dal tavolo. Premi R per rimetterl' + (n === 1 ? 'o' : 'i') + ' sul tavolo.';
+    oobAlert.classList.add('show');
+  }
+  function hideOobAlert(){ oobAlert.classList.remove('show'); }
+  function checkOutOfBoundsPieces(){
+    if (total === 0 || !stage.classList.contains('show')){ hideOobAlert(); return; }
+    const n = Array.from(document.querySelectorAll('.piece:not(.locked)')).filter(isPieceOutOfBounds).length;
+    if (n > 0) showOobAlert(n); else hideOobAlert();
+  }
+  function recoverOutOfBoundsPieces(){
+    if (optionsOpen || total === 0) return;
+    const oob = Array.from(document.querySelectorAll('.piece:not(.locked)')).filter(isPieceOutOfBounds);
+    if (oob.length === 0) return;
+    const boardW = pieceW*cols, boardH = pieceH*rows;
+    const cw = pieceW + 2*pad, ch = pieceH + 2*pad;
+    const trayH = parseInt(tray.style.height, 10) || 220;
+    const maxX = Math.max(0, boardW - cw);
+    const maxY = Math.max(0, trayH - ch);
+    // move whole fused blocks together so recovery never tears a block apart
+    const seen = new Set();
+    const units = [];
+    oob.forEach(p => {
+      const g = getGroup(p);
+      if (!seen.has(g)){ seen.add(g); units.push(g); }
+    });
+    units.forEach(group => {
+      const anchor = group[0];
+      const dx = (Math.random()*maxX) - (parseFloat(anchor.style.left) || 0);
+      const dy = (boardH + 14 + Math.random()*maxY) - (parseFloat(anchor.style.top) || 0);
+      group.forEach(p => {
+        p.style.left = ((parseFloat(p.style.left) || 0) + dx) + 'px';
+        p.style.top = ((parseFloat(p.style.top) || 0) + dy) + 'px';
+        p.style.zIndex = ++zTop;
+      });
+    });
+    hideOobAlert();
+    autosaveActive();
+  }
+
   function rescatterUnlockedPieces(){
     if (total === 0) return;
     const boardW = pieceW*cols, boardH = pieceH*rows;
@@ -1921,6 +2004,7 @@
 
   function autosaveActive(){
     if (viewLoading) return;
+    checkOutOfBoundsPieces();
     const data = slots[activeIndex];
     if (!data || total === 0) return;
     data.pieces = collectPiecesArray();
@@ -1990,6 +2074,7 @@
     currentHoverSlot = null; groupHoverSlots = [];
     if (carriedGroup){ document.removeEventListener('pointermove', onCarryMove); carriedGroup.forEach(p=>p.classList.remove('carrying')); carriedGroup = null; }
     if (marqueeEl){ marqueeEl.remove(); marqueeEl = null; } marqueeStart = null;
+    hideOobAlert();
     if (pendingClickTimer){ clearTimeout(pendingClickTimer); pendingClickTimer = null; }
     currentHoverSlot = null;
 
@@ -2171,6 +2256,7 @@
     currentHoverSlot = null; groupHoverSlots = [];
     if (carriedGroup){ document.removeEventListener('pointermove', onCarryMove); carriedGroup.forEach(p=>p.classList.remove('carrying')); carriedGroup = null; }
     if (marqueeEl){ marqueeEl.remove(); marqueeEl = null; } marqueeStart = null;
+    hideOobAlert();
     if (pendingClickTimer){ clearTimeout(pendingClickTimer); pendingClickTimer = null; }
     board.innerHTML = '';
     baseCanvas = null;
@@ -2384,6 +2470,8 @@
       rotatePieceBy(hoveredPiece, 45);
     } else if (e.key === 'z' || e.key === 'Z'){
       rotatePieceBy(hoveredPiece, -45);
+    } else if (e.key === 'r' || e.key === 'R'){
+      recoverOutOfBoundsPieces();
     } else if (e.code === 'Space' || e.key === ' '){
       if (draggingPiece){
         e.preventDefault();
