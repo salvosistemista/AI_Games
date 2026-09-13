@@ -462,6 +462,41 @@
   }
   .zoom-indicator.show{ display:block; }
 
+  .gamepad-cursor{
+    position: fixed;
+    width: 26px; height: 26px;
+    margin-left: -13px; margin-top: -13px;
+    border: 2px solid var(--brass-light);
+    border-radius: 50%;
+    background: rgba(224,181,104,0.18);
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    z-index: 500;
+    display: none;
+    pointer-events: none;
+  }
+  .gamepad-cursor::after{
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 4px; height: 4px;
+    margin: -2px 0 0 -2px;
+    background: var(--brass-light);
+    border-radius: 50%;
+  }
+  .gamepad-cursor.charging{
+    border-color: #e05a5a;
+    background: rgba(224,90,90,0.22);
+  }
+  .gamepad-select-circle{
+    position: fixed;
+    border: 1.5px dashed var(--brass-light);
+    background: rgba(224,181,104,0.12);
+    border-radius: 50%;
+    z-index: 499;
+    display: none;
+    pointer-events: none;
+  }
+
   .zoom-popup{
     position: fixed;
     right: 18px;
@@ -621,7 +656,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.35</span>
+  <span class="version-badge">v1.37</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -697,7 +732,7 @@
       <div class="tool-section-title">DATI SALVATI</div>
       <div class="tool-section-row">
         <button id="exportBtn" class="secondary">Esporta tutti i puzzle</button>
-        <button id="importBtn" class="secondary">Importa puzzle</button>
+        <button id="importBtn" class="secondary">Importa tutti i puzzle</button>
         <input type="file" id="importInput" accept="application/json" style="display:none;">
         <button id="wipeBtn" class="secondary" style="border-color:#8a3b3b; color:#e8b3b3;">Reset completo memoria</button>
       </div>
@@ -765,6 +800,9 @@
       <li><span>Mescola sul tavolo tutti i pezzi non ancora piazzati (i blocchi già uniti restano intatti)</span><kbd>S</kbd></li>
       <li><span>Evidenzia/nascondi i pezzi di bordo</span><kbd>B</kbd></li>
       <li><span>Chiudi le opzioni per avviare/riprendere il tempo, riaprile per mettere in pausa</span><kbd>Pulsante "Opzioni" / G</kbd></li>
+      <li><span>Levetta sinistra muove il cursore · A prendi/lascia · X/Y/LB/RB ruotano (LB/RB fanno zoom se tieni A) · B interruttore riferimento · LT tenuto mostra il riferimento · L3 Riporta · R3 Mescola · D-pad su Bordi · Start chiude le opzioni · Select apre questo aiuto</span><kbd>Gamepad</kbd></li>
+      <li><span>Tieni A e muovi la levetta destra: cresce un cerchio di selezione, rilascia A per prendere in mano tutto ciò che contiene</span><kbd>Gamepad: A + levetta destra</kbd></li>
+      <li><span>Con un blocco in mano, tieni B per 3 secondi per staccarlo in pezzi singoli</span><kbd>Gamepad: B tenuto</kbd></li>
     </ul>
     <div class="row">
       <button id="helpCloseBtn">Chiudi</button>
@@ -773,6 +811,8 @@
 </div>
 
 <div class="oob-alert" id="oobAlert"></div>
+<div class="gamepad-cursor" id="gamepadCursor"></div>
+<div class="gamepad-select-circle" id="gamepadSelectCircle"></div>
 
 <div class="zoom-popup" id="zoomPopup">
   <div class="zoom-popup-normal" id="zoomPopupNormal">
@@ -855,6 +895,8 @@
   const genOverlayText = document.getElementById('genOverlayText');
   const zoomIndicator = document.getElementById('zoomIndicator');
   const oobAlert = document.getElementById('oobAlert');
+  const gamepadCursor = document.getElementById('gamepadCursor');
+  const gamepadSelectCircle = document.getElementById('gamepadSelectCircle');
   const zoomPopup = document.getElementById('zoomPopup');
   const zoomPopupButtons = document.getElementById('zoomPopupButtons');
   const panelShuffleBtn = document.getElementById('panelShuffleBtn');
@@ -2589,7 +2631,7 @@
         refreshStorageMeter();
         loadActiveSlotIntoView();
       }catch(err){
-        alert('Il file scelto non è un salvataggio valido di un singolo puzzle. Se è un file con tutti gli slot esportati insieme, usa "Importa puzzle" invece.');
+        alert('Il file scelto non è un salvataggio valido di un singolo puzzle. Se è un file con tutti gli slot esportati insieme, usa "Importa tutti i puzzle" invece.');
       }
       importSlotInput.value = '';
     };
@@ -2711,6 +2753,175 @@
   // firing alongside our shortcuts
   window.addEventListener('auxclick', (e) => {
     if (e.button === 1 || e.button === 3 || e.button === 4) e.preventDefault();
+  });
+
+  // ---------- gamepad support ----------
+  // Standard mapping: 0=A 1=B 2=X 3=Y 4=LB 5=RB 6=LT 7=RT 8=Select/Back 9=Start
+  // 10=L3 11=R3 12=D-up 13=D-down 14=D-left 15=D-right
+  let gamepadIndex = null;
+  let gpVX = window.innerWidth / 2, gpVY = window.innerHeight / 2;
+  let gpPrevButtons = [];
+  let gpPrevLT = false;
+  let gpSelecting = false;
+  let gpSelectRadius = 0;
+  let gpBreakHoldSince = null;
+
+  function moveGamepadCursor(x, y){
+    gpVX = x; gpVY = y;
+    gamepadCursor.style.left = gpVX + 'px';
+    gamepadCursor.style.top = gpVY + 'px';
+  }
+
+  function showSelectCircle(cx, cy, r){
+    gamepadSelectCircle.style.display = 'block';
+    gamepadSelectCircle.style.left = (cx - r) + 'px';
+    gamepadSelectCircle.style.top = (cy - r) + 'px';
+    gamepadSelectCircle.style.width = (r * 2) + 'px';
+    gamepadSelectCircle.style.height = (r * 2) + 'px';
+  }
+  function hideSelectCircle(){ gamepadSelectCircle.style.display = 'none'; }
+
+  function handleGamepadFrame(gp){
+    const DEAD = 0.18, SPEED = 14;
+    let dx = gp.axes[0] || 0, dy = gp.axes[1] || 0;
+    if (Math.abs(dx) < DEAD) dx = 0;
+    if (Math.abs(dy) < DEAD) dy = 0;
+    if (dx !== 0 || dy !== 0){
+      moveGamepadCursor(
+        Math.max(0, Math.min(window.innerWidth, gpVX + dx * SPEED)),
+        Math.max(0, Math.min(window.innerHeight, gpVY + dy * SPEED))
+      );
+    }
+
+    if (!optionsOpen){
+      const el = document.elementFromPoint(gpVX, gpVY);
+      const pieceEl = el ? el.closest('.piece') : null;
+      hoveredPiece = (pieceEl && !pieceEl.classList.contains('locked')) ? pieceEl : null;
+    }
+    if (carriedGroup) onCarryMove({ clientX: gpVX, clientY: gpVY });
+
+    const pressed = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+    const justPressed = (i) => pressed(i) && !gpPrevButtons[i];
+    const justReleased = (i) => !pressed(i) && gpPrevButtons[i];
+    const aHeld = pressed(0);
+    const bHeld = pressed(1);
+
+    // A: tap picks up/drops a single piece; holding A while pushing the right stick
+    // grows a circular selection instead, picking up everything inside on release
+    const RS_DEAD = 0.15, RADIUS_SPEED = 6, MAX_RADIUS = 260;
+    if (aHeld && !carriedGroup){
+      let rsx = gp.axes[2] || 0, rsy = gp.axes[3] || 0;
+      const rsMag = Math.hypot(rsx, rsy);
+      if (rsMag > RS_DEAD){
+        gpSelecting = true;
+        gpSelectRadius = Math.min(MAX_RADIUS, gpSelectRadius + rsMag * RADIUS_SPEED);
+        showSelectCircle(gpVX, gpVY, gpSelectRadius);
+      } else if (gpSelecting){
+        showSelectCircle(gpVX, gpVY, gpSelectRadius); // keep it centred while holding still
+      }
+    }
+    if (justPressed(0) && carriedGroup){
+      dropCarriedPiece(); // already carrying: A always drops immediately
+    }
+    if (justReleased(0)){
+      if (gpSelecting){
+        const cx = gpVX, cy = gpVY, r = gpSelectRadius;
+        hideSelectCircle();
+        gpSelecting = false; gpSelectRadius = 0;
+        const selected = [];
+        document.querySelectorAll('.piece:not(.locked)').forEach(p => {
+          const rect = p.getBoundingClientRect();
+          const pcx = rect.left + rect.width/2, pcy = rect.top + rect.height/2;
+          if (Math.hypot(pcx - cx, pcy - cy) <= r) selected.push(p);
+        });
+        if (selected.length) startCarry(selected, cx, cy);
+      } else if (!carriedGroup && hoveredPiece){
+        startCarry(getGroup(hoveredPiece), gpVX, gpVY); // plain tap: pick up one piece/block
+      }
+    }
+
+    // B: while carrying a fused block (2+ pieces), hold 3s to shake it apart; otherwise
+    // a normal press toggles the reference image, same as everywhere else
+    if (carriedGroup && carriedGroup.length > 1){
+      if (justPressed(1)){
+        gpBreakHoldSince = performance.now();
+        gamepadCursor.classList.add('charging');
+      } else if (bHeld && gpBreakHoldSince !== null){
+        if (performance.now() - gpBreakHoldSince >= 3000){
+          const brokenLeader = carriedGroup[0];
+          breakGroupApart(carriedGroup, brokenLeader);
+          document.removeEventListener('pointermove', onCarryMove);
+          carriedGroup.forEach(p => p.classList.remove('carrying'));
+          carriedGroup = null;
+          gpBreakHoldSince = null;
+          gamepadCursor.classList.remove('charging');
+        }
+      } else if (justReleased(1)){
+        gpBreakHoldSince = null;
+        gamepadCursor.classList.remove('charging');
+      }
+    } else {
+      if (justPressed(1)){
+        ghostToggle.checked = !ghostToggle.checked;
+        ghostToggle.dispatchEvent(new Event('change'));
+      }
+      gpBreakHoldSince = null;
+      gamepadCursor.classList.remove('charging');
+    }
+
+    if (justPressed(2)){ // X: rotate clockwise (or zoom- if nothing hovered)
+      if (hoveredPiece) rotatePieceBy(hoveredPiece, 45);
+      else stepZoomPreset(-1);
+    }
+    if (justPressed(3)){ // Y: rotate counter-clockwise (or zoom+ if nothing hovered)
+      if (hoveredPiece) rotatePieceBy(hoveredPiece, -45);
+      else stepZoomPreset(1);
+    }
+    if (justPressed(4)){ // LB: same as Y, unless A is held -> zoom out
+      if (aHeld) stepZoomPreset(-1);
+      else if (hoveredPiece) rotatePieceBy(hoveredPiece, -45);
+    }
+    if (justPressed(5)){ // RB: same as X, unless A is held -> zoom in
+      if (aHeld) stepZoomPreset(1);
+      else if (hoveredPiece) rotatePieceBy(hoveredPiece, 45);
+    }
+    const ltPressed = pressed(6); // LT held: show reference at full opacity, like Shift
+    if (ltPressed && !gpPrevLT) forceGhostVisible();
+    if (!ltPressed && gpPrevLT) restoreGhostVisibility();
+    gpPrevLT = ltPressed;
+
+    if (justPressed(8)) helpModal.classList.toggle('show');           // Select/Back
+    if (justPressed(9) && optionsOpen){ optionsOpen = false; applyOptionsOpenState(); } // Start
+    if (justPressed(10)) recoverOutOfBoundsPieces();                  // L3
+    if (justPressed(11)) shuffleTablePieces();                        // R3
+    if (justPressed(12)) toggleEdgeHighlight();                       // D-pad up
+
+    gpPrevButtons = gp.buttons.map(b => b.pressed);
+  }
+
+  function pollGamepad(){
+    if (gamepadIndex === null) return;
+    const gp = navigator.getGamepads()[gamepadIndex];
+    if (gp) handleGamepadFrame(gp);
+    requestAnimationFrame(pollGamepad);
+  }
+
+  window.addEventListener('gamepadconnected', (e) => {
+    gamepadIndex = e.gamepad.index;
+    gpPrevButtons = e.gamepad.buttons.map(b => b.pressed);
+    gpPrevLT = false;
+    moveGamepadCursor(window.innerWidth / 2, window.innerHeight / 2);
+    gamepadCursor.style.display = 'block';
+    requestAnimationFrame(pollGamepad);
+  });
+  window.addEventListener('gamepaddisconnected', (e) => {
+    if (e.gamepad.index === gamepadIndex){
+      gamepadIndex = null;
+      gamepadCursor.style.display = 'none';
+      gamepadCursor.classList.remove('charging');
+      hideSelectCircle();
+      gpSelecting = false; gpSelectRadius = 0; gpBreakHoldSince = null;
+    }
   });
 
   // ---------- init ----------
