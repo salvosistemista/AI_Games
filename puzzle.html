@@ -473,7 +473,7 @@
     box-shadow: 0 8px 20px rgba(0,0,0,0.4);
     z-index: 300;
     display: none;
-    opacity: 0.5;
+    opacity: 0.4;
     transition: opacity 0.2s ease;
   }
   .zoom-popup.show{ display: block; }
@@ -608,7 +608,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.32</span>
+  <span class="version-badge">v1.33</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -748,6 +748,7 @@
       <li><span>Scuoti rapidamente avanti e indietro un blocco mentre lo trascini: si stacca in pezzi singoli</span><kbd>Shake col mouse</kbd></li>
       <li><span>Recupera i pezzi finiti fuori dall'area del tavolo</span><kbd>R</kbd></li>
       <li><span>Mescola sul tavolo tutti i pezzi non ancora piazzati (i blocchi già uniti restano intatti)</span><kbd>S</kbd></li>
+      <li><span>Evidenzia/nascondi i pezzi di bordo</span><kbd>B</kbd></li>
       <li><span>Chiudi le opzioni per avviare/riprendere il tempo, riaprile per mettere in pausa</span><kbd>Pulsante "Opzioni"</kbd></li>
     </ul>
     <div class="row">
@@ -768,8 +769,9 @@
     <button type="button" class="zoom-preset-btn" data-zoom="2">200%</button>
   </div>
   <div class="zoom-popup-row">
-    <button type="button" id="panelShuffleBtn" class="zoom-preset-btn zoom-popup-wide">Mescola</button>
-    <button id="edgeHlBtn" type="button" class="zoom-preset-btn zoom-popup-wide">Bordi</button>
+    <button type="button" id="panelShuffleBtn" class="zoom-preset-btn zoom-popup-wide">Mescola (S)</button>
+    <button type="button" id="panelRecoverBtn" class="zoom-preset-btn zoom-popup-wide">Riporta (R)</button>
+    <button id="edgeHlBtn" type="button" class="zoom-preset-btn zoom-popup-wide">Bordi (B)</button>
   </div>
   <div class="zoom-popup-row">
     <label class="switch">
@@ -831,6 +833,7 @@
   const zoomPopup = document.getElementById('zoomPopup');
   const zoomPopupButtons = document.getElementById('zoomPopupButtons');
   const panelShuffleBtn = document.getElementById('panelShuffleBtn');
+  const panelRecoverBtn = document.getElementById('panelRecoverBtn');
   const hudZoomVal = document.getElementById('hudZoomVal');
   const handCountVal = document.getElementById('handCountVal');
   const optionsToggleBtn = document.getElementById('optionsToggleBtn');
@@ -1026,13 +1029,15 @@
       p.classList.toggle('edge-hl', edgeHighlightOn && isBorderPiece(r, c));
     });
   }
-  edgeHlBtn.addEventListener('click', () => {
+  function toggleEdgeHighlight(){
     edgeHighlightOn = !edgeHighlightOn;
     edgeHlBtn.classList.toggle('active', edgeHighlightOn);
     applyEdgeHighlightToExistingPieces();
-  });
+  }
+  edgeHlBtn.addEventListener('click', toggleEdgeHighlight);
 
   panelShuffleBtn.addEventListener('click', shuffleTablePieces);
+  panelRecoverBtn.addEventListener('click', recoverOutOfBoundsPieces);
 
   // ---------- zoom (Ctrl + wheel) ----------
   const ZOOM_LEVELS = [1, 1.25, 1.5, 1.75, 2];
@@ -2597,6 +2602,8 @@
       recoverOutOfBoundsPieces();
     } else if (e.key === 's' || e.key === 'S'){
       shuffleTablePieces();
+    } else if (e.key === 'b' || e.key === 'B'){
+      toggleEdgeHighlight();
     } else if (e.code === 'Space' || e.key === ' '){
       if (draggingPiece){
         e.preventDefault();
