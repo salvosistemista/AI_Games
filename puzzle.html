@@ -621,7 +621,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.34</span>
+  <span class="version-badge">v1.35</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -751,7 +751,9 @@
       <li><span>Disegna un riquadro tratteggiato sul tavolo vuoto: prende in mano tutti i pezzi al suo interno</span><kbd>Trascina su spazio vuoto</kbd></li>
       <li><span>Ruota il pezzo sotto il cursore (o l'intero blocco); se il cursore non è su un pezzo, aumenta lo zoom</span><kbd>Tasto destro / X (orario) · Z (zoom avanti se nessun pezzo sotto)</kbd></li>
       <li><span>Ruota di 45° in senso antiorario il pezzo sotto il cursore; se il cursore non è su un pezzo, diminuisce lo zoom</span><kbd>Ctrl + tasto destro / Z (antiorario) · X (zoom indietro se nessun pezzo sotto)</kbd></li>
-      <li><span>Vedi l'immagine reale, senza trasparenza</span><kbd>Maiusc (tenuto premuto)</kbd></li>
+      <li><span>Uguale a X (tasto laterale "indietro") e a Z (tasto laterale "avanti") del mouse, se presenti</span><kbd>Tasti laterali del mouse</kbd></li>
+      <li><span>Vedi l'immagine reale, senza trasparenza (funziona anche a switch spento)</span><kbd>Maiusc tenuto / Tasto centrale tenuto</kbd></li>
+      <li><span>Attiva/disattiva l'immagine di riferimento</span><kbd>Click tasto centrale</kbd></li>
       <li><span>Zoom sulla vista (continuo, o scegli un valore fisso dal popup in basso a destra)</span><kbd>Ctrl + rotellina</kbd></li>
       <li><span>Torna al tabellone mentre trascini</span><kbd>Barra spaziatrice</kbd></li>
       <li><span>Prendi/rilascia un pezzo in mano (fino a 50)</span><kbd>Doppio click sul pezzo</kbd></li>
@@ -2621,14 +2623,27 @@
   window.addEventListener('beforeunload', () => { autosaveActive(); });
   setInterval(() => { if (running) autosaveActive(); }, 8000);
 
-  // ---------- keyboard shortcuts ----------
+  // ---------- keyboard & mouse-button shortcuts ----------
   function isTypingTarget(el){
     return el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA');
   }
 
+  // shows the reference image at full strength regardless of the on/off switch — used
+  // while Shift or the middle mouse button is held down
+  function forceGhostVisible(){
+    document.documentElement.style.setProperty('--ghost-opacity', '1');
+    const g = board.querySelector('.ghost');
+    if (g) g.classList.add('show');
+  }
+  function restoreGhostVisibility(){
+    document.documentElement.style.setProperty('--ghost-opacity', (parseInt(ghostOpacity.value, 10) / 100).toFixed(2));
+    const g = board.querySelector('.ghost');
+    if (g) g.classList.toggle('show', ghostToggle.checked);
+  }
+
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Shift'){
-      document.documentElement.style.setProperty('--ghost-opacity', '1');
+      forceGhostVisible();
       return;
     }
     if (isTypingTarget(document.activeElement)) return;
@@ -2658,13 +2673,44 @@
   });
 
   window.addEventListener('keyup', (e) => {
-    if (e.key === 'Shift'){
-      document.documentElement.style.setProperty('--ghost-opacity', (parseInt(ghostOpacity.value, 10) / 100).toFixed(2));
-    }
+    if (e.key === 'Shift') restoreGhostVisibility();
   });
 
   window.addEventListener('blur', () => {
-    document.documentElement.style.setProperty('--ghost-opacity', (parseInt(ghostOpacity.value, 10) / 100).toFixed(2));
+    restoreGhostVisibility();
+  });
+
+  // middle mouse button: held down = same as Shift; a quick press-and-release instead
+  // toggles the reference image on/off (same as the panel's switch)
+  let middleDownTime = 0;
+  window.addEventListener('mousedown', (e) => {
+    if (e.button === 1){
+      e.preventDefault();
+      middleDownTime = Date.now();
+      forceGhostVisible();
+    } else if (e.button === 3){ // "back" side button — same as the X key
+      e.preventDefault();
+      if (hoveredPiece) rotatePieceBy(hoveredPiece, 45);
+      else stepZoomPreset(-1);
+    } else if (e.button === 4){ // "forward" side button — same as the Z key
+      e.preventDefault();
+      if (hoveredPiece) rotatePieceBy(hoveredPiece, -45);
+      else stepZoomPreset(1);
+    }
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 1){
+      restoreGhostVisibility();
+      if (Date.now() - middleDownTime < 300){
+        ghostToggle.checked = !ghostToggle.checked;
+        ghostToggle.dispatchEvent(new Event('change'));
+      }
+    }
+  });
+  // stop the browser's own back/forward navigation and middle-click autoscroll from
+  // firing alongside our shortcuts
+  window.addEventListener('auxclick', (e) => {
+    if (e.button === 1 || e.button === 3 || e.button === 4) e.preventDefault();
   });
 
   // ---------- init ----------
