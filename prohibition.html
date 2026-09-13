@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Prohibition</title>
+<style>
+  :root{
+    --amber:#e8b23d;
+    --amber-dim:#8a6a1f;
+    --red:#c23b3b;
+    --green:#5a8f4c;
+    --paper:#d9c9a3;
+    --ink:#1a1410;
+  }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:#000; overflow:hidden;
+    font-family:'Courier New', monospace;
+    -webkit-user-select:none; user-select:none;
+  }
+  #stage{
+    position:relative; width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background:#000;
+  }
+  #game{
+    image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges;
+    background:#000;
+    cursor:none;
+    box-shadow:0 0 0 2px #000, 0 0 40px rgba(0,0,0,0.8);
+  }
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(6,4,2,0.92);
+    color:var(--paper);
+    text-align:center;
+    letter-spacing:1px;
+    z-index:10;
+  }
+  .hidden{ display:none !important; }
+  .title{
+    font-size:clamp(28px,6vw,64px);
+    color:var(--amber);
+    text-shadow:3px 3px 0 #000, 0 0 18px rgba(232,178,61,0.35);
+    margin:0 0 6px 0;
+    letter-spacing:4px;
+  }
+  .subtitle{
+    font-size:clamp(11px,1.6vw,16px);
+    color:var(--red);
+    margin:0 0 28px 0;
+    letter-spacing:3px;
+  }
+  .panel{
+    border:2px solid var(--amber-dim);
+    background:rgba(20,15,10,0.85);
+    padding:18px 26px;
+    max-width:560px;
+    font-size:clamp(11px,1.5vw,14px);
+    line-height:1.7;
+    color:var(--paper);
+  }
+  .panel b{ color:var(--amber); }
+  .btn{
+    margin-top:24px;
+    padding:12px 30px;
+    background:var(--amber);
+    color:#1a1410;
+    border:2px solid #000;
+    font-family:inherit;
+    font-weight:bold;
+    font-size:clamp(13px,1.8vw,17px);
+    letter-spacing:2px;
+    cursor:pointer;
+    box-shadow:3px 3px 0 #000;
+  }
+  .btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:3px 3px 0 #000; }
+  .btn:disabled:active{ transform:none; box-shadow:3px 3px 0 #000; }
+  .blink{ animation:blink 1.1s steps(2) infinite; }
+  @keyframes blink{ 50%{ opacity:0.25; } }
+  .bigscore{ font-size:clamp(20px,3vw,30px); color:var(--amber); margin:10px 0; }
+  .small{ font-size:11px; color:#a89878; margin-top:18px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="384" height="216"></canvas>
+
+  <!-- MENU -->
+  <div id="menu" class="overlay">
+    <div class="title">PROHIBITION</div>
+    <div class="subtitle">NEW YORK, 1931</div>
+    <button class="btn" id="btnContinueMenu">CONTINUA</button>
+    <button class="btn" id="btnNewGame">NUOVA PARTITA</button>
+    <button class="btn" id="btnLeaderboardMenu">CLASSIFICA</button>
+    <button class="btn" id="btnInfoMenu">INFO</button>
+    <div class="small blink" id="gpHint">Nessun gamepad rilevato — userai il mouse</div>
+  </div>
+
+  <!-- INFO / COME SI GIOCA -->
+  <div id="infoscreen" class="overlay hidden">
+    <div class="title" style="font-size:clamp(22px,4vw,40px)">COME SI GIOCA</div>
+    <div class="panel">
+      La città è in mano ai gangster. La polizia non può fare niente di <b>legale</b>...
+      così ha assoldato te. Ripulisci i quartieri, palazzo dopo palazzo.<br><br>
+      <b>MIRA:</b> stick sinistro del gamepad o mouse<br>
+      <b>FUOCO:</b> A / R2 gamepad — click o SPAZIO<br>
+      <b>RIPARO:</b> B / L2 gamepad — SHIFT o click destro<br><br>
+      Colpisci i gangster prima che aprano il fuoco. Occhio ai civili: non sparargli,
+      costa il <b>25%</b> di energia. A volte un gangster tiene un <b>ostaggio</b> accanto a sé:
+      mira con precisione, colpire l'ostaggio per errore costa caro.<br><br>
+      Le stelle bonus danno sempre un po' di energia, più un premio a sorpresa.
+      Se hai meno di 3 vite, a volte al posto della stella spunta un <b>cuore</b>: colpiscilo
+      per guadagnare una vita in più.<br><br>
+      Hai <b>5 proiettili</b> in canna: tieni premuto X del gamepad (o R da tastiera)
+      per ricaricare, un colpo al secondo. Più l'energia è bassa, più lento si ricarica il riparo.
+      Ogni 3 quartieri superati guadagni un proiettile in più nel caricatore.<br><br>
+      Dopo ogni capobanda dovrai scortare l'auto della polizia: colpisci prima
+      le <b>ruote</b> per rallentare le auto nemiche, poi il <b>guidatore</b> per bloccarle.
+      Negli ultimi 30 secondi arrivano anche auto corazzate: vanno colpite su <b>entrambe</b> le ruote.
+      Hai <b id="livesInfo">3 vite</b>.
+    </div>
+    <button class="btn" id="btnInfoBack">TORNA AL MENU</button>
+  </div>
+
+  <!-- CLASSIFICA (anche a fine partita) -->
+  <div id="leaderboard" class="overlay hidden">
+    <div class="title" id="lbTitle" style="font-size:clamp(20px,3.6vw,36px)">CLASSIFICA</div>
+    <div class="subtitle" id="lbSubtitle">I MIGLIORI SUL CAMPO</div>
+    <div class="panel" style="max-width:520px; text-align:left;" id="lbTableWrap"></div>
+    <button class="btn" id="btnLbBack">TORNA AL MENU</button>
+  </div>
+
+  <!-- LEVEL TRANSITION -->
+  <div id="levelup" class="overlay hidden">
+    <div class="title" style="color:var(--green)">QUARTIERE RIPULITO</div>
+    <div class="subtitle" id="nextLevelText">SI PARTE PER IL PROSSIMO</div>
+    <div class="bigscore">PUNTEGGIO: <span id="midScore">0</span></div>
+    <button class="btn" id="btnNext">AVANTI</button>
+  </div>
+
+  <!-- PAUSE -->
+  <div id="pausescreen" class="overlay hidden">
+    <div class="title" style="font-size:clamp(22px,4vw,40px)">PAUSA</div>
+    <button class="btn" id="btnResume">RIPRENDI</button>
+  </div>
+
+  <!-- ESCORT INTRO -->
+  <div id="escortintro" class="overlay hidden">
+    <div class="title" style="color:var(--amber); font-size:clamp(20px,3.6vw,36px)">SCORTA LA VOLANTE</div>
+    <div class="subtitle">LA BANDA VUOLE VENDICARSI</div>
+    <div class="panel">
+      Per <b>2 minuti</b> proteggi l'auto della polizia dalle macchine dei gangster
+      che arrivano da sinistra.<br><br>
+      Colpisci prima una <b>ruota</b> per rallentarle, poi il <b>guidatore</b> per bloccarle
+      definitivamente. Se raggiungono la volante, subisce danni.<br><br>
+      Occhio anche ai gangster che si sporgono dai finestrini: sparano se non li anticipi.
+    </div>
+    <button class="btn" id="btnEscortGo">VIA COSÌ!</button>
+  </div>
+
+  <!-- ESCORT RESULT -->
+  <div id="escortresult" class="overlay hidden">
+    <div class="title" id="escortResultTitle" style="font-size:clamp(20px,3.6vw,36px)">SCORTA COMPLETATA</div>
+    <div class="subtitle" id="escortResultSubtitle">LA VOLANTE È AL SICURO</div>
+    <div class="panel" style="max-width:420px" id="escortResultPanel">Vite rimaste: <b><span id="escortLives">3</span></b></div>
+    <button class="btn" id="btnEscortContinue">AVANTI</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================= CONFIG ============================= */
+const CFG = {
+  viewW: 384, viewH: 216,
+  worldW: 1536, worldH: 420,
+  streetY: 400,                 // livello marciapiede (base dei palazzi)
+  aimSpeed: 210,                // px/s velocità mirino con gamepad
+  edgeMargin: 46,               // margine di scroll ai bordi (mouse ed effetto gamepad)
+  scrollLerp: 0.18,
+  baseEnemyTimer: 6.2,           // secondi concessi al livello 1 (raddoppiato)
+  minEnemyTimer: 2.7,
+  timerStepPerLevel: 0.14,
+  spawnDelayMin: 0.55, spawnDelayMax: 1.1,
+  enemiesPerLevel: 8,
+  civilianChance: 0.16,
+  powerupChance: 0.12,
+  hostageChance: 0.14,
+  heartChance: 0.22,          // probabilità (tra i bonus) che esca un cuore invece della stella, solo se vite<3
+  bossHp: 5,
+  shootCooldown: 0.22,
+  recoilKick: 7,
+  coverDrainPerSec: 42,
+  coverRegenPerSec: 11,
+  playerMaxEnergy: 100,
+  dmgGangster: 20,
+  dmgBoss: 20,
+  innocentPenaltyScore: 60,
+  innocentPenaltyEnergy: 25,
+  powerupEnergyBonus: 20,
+
+  startLives: 3,
+  maxLives: 3,
+
+  magSize: 5,
+  reloadRatePerSec: 1,          // proiettili ricaricati per secondo di pressione
+
+  escortDuration: 120,           // secondi da resistere (2 minuti)
+  escortCarBaseSpeed: 27,
+  escortCarSpeedPerLevel: 2.2,
+  escortSpawnMin: 1.5, escortSpawnMax: 2.7,
+  escortDamagePerHit: 20,        // % danno all'auto della polizia
+  escortMaxCarsBase: 2,          // auto contemporanee al livello 1, +1 per livello successivo
+  escortArmoredWindow: 30,       // ultimi N secondi in cui possono comparire auto corazzate
+  escortArmoredChance: 0.5,
+  escortShooterMin: 3.2, escortShooterMax: 6.0,
+  escortShooterDuration: 2.6,
+  escortShooterBonus: 40
+};
+
+/* ============================= CANVAS SETUP ============================= */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+function fitCanvas(){
+  const stage = document.getElementById('stage');
+  const availW = stage.clientWidth, availH = stage.clientHeight;
+  const scale = Math.max(1, Math.min(availW / CFG.viewW, availH / CFG.viewH));
+  canvas.style.width = (CFG.viewW * scale) + 'px';
+  canvas.style.height = (CFG.viewH * scale) + 'px';
+}
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+
+/* ============================= AUDIO ============================= */
+const Audio_ = {
+  ctx:null,
+  init(){ if(!this.ctx){ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); } },
+  tone(freq, dur, type, vol, slideTo){
+    if(!this.ctx) return;
+    const t0 = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type||'square';
+    osc.frequency.setValueAtTime(freq, t0);
+    if(slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(20,slideTo), t0+dur);
+    gain.gain.setValueAtTime(vol||0.15, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  },
+  noise(dur, vol){
+    if(!this.ctx) return;
+    const bufferSize = this.ctx.sampleRate * dur;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol||0.2, this.ctx.currentTime);
+    src.connect(gain); gain.connect(this.ctx.destination);
+    src.start();
+  },
+  shoot(){ this.noise(0.09, 0.22); this.tone(180,0.05,'square',0.08,90); },
+  hitEnemy(){ this.tone(520,0.09,'square',0.16,880); },
+  hitBoss(){ this.tone(300,0.14,'sawtooth',0.18,150); },
+  playerHit(){ this.tone(140,0.28,'sawtooth',0.22,50); },
+  civilianPenalty(){ this.tone(700,0.06,'square',0.15); setTimeout(()=>this.tone(500,0.09,'square',0.15),70); },
+  powerup(){ [660,880,1100].forEach((f,i)=>setTimeout(()=>this.tone(f,0.11,'triangle',0.16),i*70)); },
+  lifeGained(){ [440,660,880,1180].forEach((f,i)=>setTimeout(()=>this.tone(f,0.14,'triangle',0.18),i*90)); },
+  levelClear(){ [520,660,880,1100].forEach((f,i)=>setTimeout(()=>this.tone(f,0.16,'triangle',0.18),i*110)); },
+  gameOver(){ [300,240,180,120].forEach((f,i)=>setTimeout(()=>this.tone(f,0.35,'sawtooth',0.2),i*180)); },
+  lifeLost(){ [260,180].forEach((f,i)=>setTimeout(()=>this.tone(f,0.22,'square',0.2),i*140)); },
+  bossAppear(){ this.tone(90,0.4,'sawtooth',0.22,60); },
+  bossMove(){ this.tone(260,0.09,'sine',0.14,420); },
+  cover(){ this.tone(220,0.08,'sine',0.1); },
+  emptyClick(){ this.tone(140,0.05,'square',0.1); },
+  reloadTick(){ this.tone(500,0.05,'triangle',0.1,700); }
+};
+function unlockAudio(){ Audio_.init(); window.removeEventListener('pointerdown', unlockAudio); window.removeEventListener('keydown', unlockAudio); }
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
+
+/* ============================= INPUT ============================= */
+const Input = {
+  mode:'mouse',
+  mouseLogicalX: CFG.viewW/2, mouseLogicalY: CFG.viewH/2,
+  mouseMoved:false,
+  shootDown:false, shootEdge:false, shootPrevGP:false, shootPrevKB:false,
+  coverHeld:false, coverHeldKB:false,
+  reloadHeld:false, reloadHeldKB:false,
+  gpIndex:null,
+  startPressedEdge:false, startPrev:false,
+  init(){
+    canvas.addEventListener('mousemove', (e)=>{
+      const r = canvas.getBoundingClientRect();
+      this.mouseLogicalX = (e.clientX - r.left) / r.width * CFG.viewW;
+      this.mouseLogicalY = (e.clientY - r.top) / r.height * CFG.viewH;
+      this.mode = 'mouse'; this.mouseMoved = true;
+    });
+    canvas.addEventListener('mousedown', (e)=>{
+      if(e.button===0) this.shootDown = true;
+      if(e.button===2) this.coverHeldKB = true;
+      this.mode='mouse';
+    });
+    window.addEventListener('mouseup', (e)=>{
+      if(e.button===0) this.shootDown = false;
+      if(e.button===2) this.coverHeldKB = false;
+    });
+    canvas.addEventListener('contextmenu', (e)=>e.preventDefault());
+    window.addEventListener('keydown', (e)=>{
+      if(e.code==='Space'){ this.shootDown = true; this.mode='mouse'; e.preventDefault(); }
+      if(e.code==='ShiftLeft'||e.code==='ShiftRight'){ this.coverHeldKB = true; }
+      if(e.code==='KeyR'){ this.reloadHeldKB = true; }
+      if(e.code==='Escape'){ Game.togglePause(); }
+      if(e.code==='Enter'){ this.startPressedEdge = true; }
+    });
+    window.addEventListener('keyup', (e)=>{
+      if(e.code==='Space') this.shootDown = false;
+      if(e.code==='ShiftLeft'||e.code==='ShiftRight') this.coverHeldKB = false;
+      if(e.code==='KeyR') this.reloadHeldKB = false;
+    });
+    window.addEventListener('gamepadconnected', (e)=>{
+      this.gpIndex = e.gamepad.index; this.mode='gamepad';
+      document.getElementById('gpHint').textContent = 'Gamepad rilevato: ' + e.gamepad.id.slice(0,34);
+    });
+    window.addEventListener('gamepaddisconnected', ()=>{ this.gpIndex = null; this.mode='mouse'; });
+  },
+  axisX:0, axisY:0,
+  poll(){
+    this.shootEdge = false;
+    let gpShoot=false, gpCover=false, gpStart=false, gpReload=false;
+    if(this.gpIndex!==null){
+      const gp = navigator.getGamepads()[this.gpIndex];
+      if(gp){
+        const dz = 0.16;
+        let ax = gp.axes[0]||0, ay = gp.axes[1]||0;
+        if(Math.abs(ax)<dz) ax=0; if(Math.abs(ay)<dz) ay=0;
+        if(ax!==0||ay!==0){ this.mode='gamepad'; }
+        this.axisX = ax; this.axisY = ay;
+        const bt = (i)=> gp.buttons[i] && gp.buttons[i].pressed;
+        gpShoot = bt(7)||bt(0);
+        gpCover = bt(6)||bt(1);
+        gpReload = bt(2);
+        gpStart = bt(9)||bt(8);
+        if(gpShoot||gpCover||gpReload) this.mode='gamepad';
+      }
+    } else { this.axisX=0; this.axisY=0; }
+
+    const kbShoot = this.shootDown;
+    const rawShoot = gpShoot || kbShoot;
+    if(rawShoot && !this.shootPrevAll) this.shootEdge = true;
+    this.shootPrevAll = rawShoot;
+
+    this.coverHeld = this.coverHeldKB || gpCover;
+    this.reloadHeld = this.reloadHeldKB || gpReload;
+    if(gpStart && !this.startPrev) this.startPressedEdge = true;
+    this.startPrev = gpStart;
+
+    const result = { shootEdge:this.shootEdge, coverHeld:this.coverHeld, reloadHeld:this.reloadHeld };
+    return result;
+  }
+};
+Input.init();
+
+/* ============================= WORLD GENERATION ============================= */
+let buildings = [];
+let windows = [];
+let worldWidthActual = CFG.worldW; // può crescere se l'ultimo palazzo generato sborda oltre CFG.worldW
+
+function buildWorld(paletteIdx){
+  buildings = []; windows = [];
+  const palettes = [
+    { wall:'#5b3a2e', wallDark:'#432a21', trim:'#caa15a', win:'#2b241a', winLit:'#e8c878' },
+    { wall:'#3d4a52', wallDark:'#2b353b', trim:'#9fb3ba', win:'#1c2226', winLit:'#cfe6ee' },
+    { wall:'#54432f', wallDark:'#3a2f20', trim:'#d6b36a', win:'#221c14', winLit:'#f0d090' },
+    { wall:'#463c4a', wallDark:'#312a35', trim:'#b79fc4', win:'#201a24', winLit:'#e6d4f0' }
+  ];
+  const pal = palettes[paletteIdx % palettes.length];
+  let x = -20;
+  let bi = 0;
+  let maxRight = CFG.worldW;
+  while(x < CFG.worldW - 40){
+    const bw = 200 + Math.floor(Math.random()*90);
+    const floors = 3 + Math.floor(Math.random()*3);
+    const cols = 3 + Math.floor(Math.random()*2);
+    const roofY = CFG.streetY - floors*46 - 14;
+    const b = { x, w:bw, floors, cols, roofY, pal };
+    buildings.push(b);
+    maxRight = Math.max(maxRight, x + bw);
+    const marginX = 18, marginTop = 26;
+    const colSpacing = (bw - marginX*2) / cols;
+    for(let f=0; f<floors; f++){
+      for(let c=0; c<cols; c++){
+        const wx = x + marginX + c*colSpacing + colSpacing*0.5 - 11;
+        const wy = roofY + marginTop + f*46;
+        windows.push({ bIndex:bi, x:wx, y:wy, w:22, h:28, occupied:false });
+      }
+    }
+    x += bw + 26 + Math.floor(Math.random()*20);
+    bi++;
+  }
+  // il mondo scrollabile deve essere sempre almeno largo quanto l'ultimo palazzo generato,
+  // altrimenti le sue finestre più a destra restano irraggiungibili dalla telecamera
+  worldWidthActual = Math.max(CFG.worldW, maxRight + 24);
+}
+buildWorld(0);
+
+/* ============================= SALVATAGGIO E CLASSIFICA ============================= */
+const SaveSystem = {
+  SAVE_KEY: 'prohibition_save_v1',
+  LB_KEY: 'prohibition_leaderboard_v1',
+  hasSave(){ try{ return !!localStorage.getItem(this.SAVE_KEY); }catch(e){ return false; } },
+  save(data){ try{ localStorage.setItem(this.SAVE_KEY, JSON.stringify(data)); }catch(e){} },
+  load(){ try{ const raw=localStorage.getItem(this.SAVE_KEY); return raw?JSON.parse(raw):null; }catch(e){ return null; } },
+  clear(){ try{ localStorage.removeItem(this.SAVE_KEY); }catch(e){} },
+  getLeaderboard(){ try{ const raw=localStorage.getItem(this.LB_KEY); return raw?JSON.parse(raw):[]; }catch(e){ return []; } },
+  addScore(entry){
+    const list = this.getLeaderboard();
+    list.push(entry);
+    list.sort((a,b)=> (b.level-a.level) || (b.kills-a.kills) || (b.score-a.score));
+    const trimmed = list.slice(0,10);
+    try{ localStorage.setItem(this.LB_KEY, JSON.stringify(trimmed)); }catch(e){}
+    return trimmed;
+  }
+};
+
+/* ============================= GAME STATE ============================= */
+const Game = {
+  state:'menu', // menu, info, leaderboard, playing, paused, levelup, escortintro, escort, escortresult
+  level:1,
+  score:0,
+  totalKills:0,
+  lives:CFG.startLives,
+  energy:CFG.playerMaxEnergy,
+  coverStamina:100,
+  ammo:CFG.magSize,
+  reloadProgress:0,
+  cameraX: 0, cameraY: 60,
+  crossX: CFG.worldW/2, crossY: 160,
+  recoilOff:0,
+  shootCd:0,
+  enemiesDefeatedThisLevel:0,
+  activeEnemy:null,
+  spawnTimer:0.8,
+  particles:[],
+  floaters:[],
+  muzzleFlashes:[],
+  lastTime:0,
+  escort:null,
+  escortOutcome:null,
+
+  currentMagSize(){
+    return CFG.magSize + Math.floor(this.level/3);
+  },
+  saveProgress(){
+    SaveSystem.save({ level:this.level, score:this.score, lives:this.lives, totalKills:this.totalKills });
+  },
+  reset(){
+    this.level=1; this.score=0; this.totalKills=0; this.lives=CFG.startLives;
+    this.energy=CFG.playerMaxEnergy; this.coverStamina=100;
+    this.ammo=this.currentMagSize(); this.reloadProgress=0;
+    this.enemiesDefeatedThisLevel=0; this.activeEnemy=null; this.spawnTimer=0.8;
+    this.cameraX=0; this.cameraY=60; this.crossX=CFG.worldW/2; this.crossY=160;
+    buildWorld(0);
+  },
+  currentEnemyTimer(){
+    return Math.max(CFG.minEnemyTimer, CFG.baseEnemyTimer - (this.level-1)*CFG.timerStepPerLevel);
+  },
+  togglePause(){
+    if(this.state==='playing'||this.state==='escort'){ this._prevState=this.state; this.state='paused'; show('pausescreen'); }
+    else if(this.state==='paused'){ this.state=this._prevState||'playing'; hide('pausescreen'); }
+  },
+  start(){
+    SaveSystem.clear();
+    this.reset();
+    this.state='playing';
+    hideAllOverlays();
+    this.saveProgress();
+  },
+  continueGame(){
+    const d = SaveSystem.load();
+    if(!d){ this.start(); return; }
+    this.level = d.level||1; this.score = d.score||0; this.lives = d.lives||CFG.startLives;
+    this.totalKills = d.totalKills||0;
+    this.energy = CFG.playerMaxEnergy; this.coverStamina = 100;
+    this.ammo = this.currentMagSize(); this.reloadProgress = 0;
+    this.enemiesDefeatedThisLevel = 0; this.activeEnemy = null; this.spawnTimer = 0.8;
+    this.cameraX=0; this.cameraY=60; this.crossX=CFG.worldW/2; this.crossY=160;
+    buildWorld(this.level-1);
+    this.state='playing';
+    hideAllOverlays();
+  },
+  nextLevel(){
+    this.level++;
+    this.enemiesDefeatedThisLevel=0;
+    this.activeEnemy=null;
+    this.spawnTimer=0.6;
+    this.energy=CFG.playerMaxEnergy;
+    this.coverStamina=100;
+    this.ammo=this.currentMagSize(); this.reloadProgress=0;
+    buildWorld(this.level-1);
+    this.state='playing';
+    hideAllOverlays();
+    this.saveProgress();
+  },
+  gameOver(){
+    Audio_.gameOver();
+    const entry = {
+      id: Date.now()+'-'+Math.floor(Math.random()*9999),
+      level: this.level, kills: this.totalKills, score: this.score,
+      date: new Date().toLocaleDateString('it-IT')
+    };
+    SaveSystem.addScore(entry);
+    SaveSystem.clear();
+    this.state='leaderboard';
+    hideAllOverlays();
+    document.getElementById('lbTitle').textContent = 'SEI FUORI GIOCO';
+    document.getElementById('lbTitle').style.color = 'var(--red)';
+    document.getElementById('lbSubtitle').textContent = 'QUARTIERE '+this.level+' — PUNTI '+this.score;
+    renderLeaderboard(entry.id);
+    show('leaderboard');
+  },
+  loseLife(){
+    this.lives--;
+    if(this.lives<=0){ this.lives=0; this.gameOver(); return false; }
+    this.energy = CFG.playerMaxEnergy;
+    Audio_.lifeLost();
+    spawnFloater(this.cameraX+CFG.viewW/2, this.cameraY+42, 'VITA PERSA! ('+this.lives+' rimaste)', '#c23b3b');
+    this.saveProgress();
+    return true;
+  },
+  gainLife(){
+    this.lives = Math.min(CFG.maxLives, this.lives+1);
+    this.saveProgress();
+  },
+
+  triggerEscortIntro(){
+    this.state='escortintro';
+    hideAllOverlays();
+    show('escortintro');
+  },
+  beginEscort(){
+    this.state='escort';
+    hideAllOverlays();
+    this.energy = CFG.playerMaxEnergy;
+    this.coverStamina = 100;
+    this.ammo = this.currentMagSize(); this.reloadProgress=0;
+    this.crossX = CFG.viewW/2; this.crossY = CFG.viewH/2;
+    this.escort = {
+      elapsed:0, policeHealth:100,
+      cars:[], spawnTimer:1.0,
+      shooterTimer: CFG.escortShooterMin + Math.random()*(CFG.escortShooterMax-CFG.escortShooterMin),
+      nextId:1
+    };
+  },
+  escortSucceeded(){
+    this.gainLife();
+    this.escortOutcome = 'success';
+    this.state = 'escortresult';
+    Audio_.levelClear();
+    document.getElementById('escortResultTitle').textContent = 'SCORTA COMPLETATA';
+    document.getElementById('escortResultTitle').style.color = 'var(--green)';
+    document.getElementById('escortResultSubtitle').textContent = 'LA VOLANTE È AL SICURO';
+    document.getElementById('escortResultPanel').innerHTML = 'Vita guadagnata! Vite: <b>'+this.lives+'</b><br>Si parte per il quartiere '+(this.level+1);
+    document.getElementById('btnEscortContinue').textContent = 'AVANTI';
+    hideAllOverlays(); show('escortresult');
+  },
+  escortFailed(){
+    const alive = this.loseLife();
+    if(!alive) return; // game over già gestito
+    this.escortOutcome = 'retry';
+    this.state = 'escortresult';
+    Audio_.playerHit();
+    document.getElementById('escortResultTitle').textContent = 'VOLANTE DISTRUTTA';
+    document.getElementById('escortResultTitle').style.color = 'var(--red)';
+    document.getElementById('escortResultSubtitle').textContent = 'CI RIPROVIAMO';
+    document.getElementById('escortResultPanel').innerHTML = 'Hai perso una vita. Vite rimaste: <b>'+this.lives+'</b><br>Un\'altra volante è pronta a partire.';
+    document.getElementById('btnEscortContinue').textContent = 'RIPROVA';
+    hideAllOverlays(); show('escortresult');
+  },
+  levelComplete(){
+    this.state='levelup';
+    Audio_.levelClear();
+    document.getElementById('midScore').textContent = this.score;
+    document.getElementById('nextLevelText').textContent = 'QUARTIERE ' + (this.level+1);
+    show('levelup');
+  }
+};
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+function hideAllOverlays(){ ['menu','infoscreen','leaderboard','levelup','pausescreen','escortintro','escortresult'].forEach(hide); }
+
+function renderLeaderboard(highlightId){
+  const list = SaveSystem.getLeaderboard();
+  const wrap = document.getElementById('lbTableWrap');
+  if(list.length===0){
+    wrap.innerHTML = '<div style="text-align:center">Nessun punteggio registrato ancora. Vai a farti valere per primo!</div>';
+    return;
+  }
+  let html = '<div style="display:grid; grid-template-columns:22px 1fr 1fr 1fr 1fr; gap:6px 10px; font-size:11px; line-height:1.6;">';
+  html += '<div></div><div><b>QUARTIERE</b></div><div><b>NEMICI</b></div><div><b>PUNTI</b></div><div><b>DATA</b></div>';
+  list.forEach((e,i)=>{
+    const hi = (e.id===highlightId);
+    const style = hi ? ' style="color:var(--amber); font-weight:bold;"' : '';
+    html += '<div'+style+'>'+(i+1)+'</div><div'+style+'>'+e.level+'</div><div'+style+'>'+e.kills+'</div><div'+style+'>'+e.score+'</div><div'+style+'>'+e.date+'</div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function updateContinueButton(){
+  const btn = document.getElementById('btnContinueMenu');
+  if(SaveSystem.hasSave()){
+    const d = SaveSystem.load();
+    btn.disabled = false;
+    btn.textContent = 'CONTINUA (quartiere '+(d?d.level:1)+')';
+  } else {
+    btn.disabled = true;
+    btn.textContent = 'CONTINUA';
+  }
+}
+
+/* ============================= ENEMY LOGIC ============================= */
+function freeWindows(){
+  return windows.filter(w=>!w.occupied);
+}
+
+function carWheelsCleared(c){
+  return c.armored ? (c.leftWheelHit && c.rightWheelHit) : (c.leftWheelHit || c.rightWheelHit);
+}
+
+function findNearbyWindowForBoss(win){
+  const sameBuilding = windows.filter(w=>w.bIndex===win.bIndex && w!==win && !w.occupied);
+  const pool = sameBuilding.length>0 ? sameBuilding : windows.filter(w=>w!==win && !w.occupied);
+  if(pool.length===0) return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function spawnEnemy(){
+  const free = freeWindows();
+  if(free.length===0) return;
+  const w = free[Math.floor(Math.random()*free.length)];
+  w.occupied = true;
+
+  const isBossWave = Game.enemiesDefeatedThisLevel >= CFG.enemiesPerLevel;
+  let type = 'gangster';
+  const roll = Math.random();
+  if(isBossWave){ type='boss'; }
+  else if(roll < CFG.civilianChance){ type='civilian'; }
+  else if(roll < CFG.civilianChance + CFG.powerupChance){
+    type = (Game.lives < 3 && Math.random() < CFG.heartChance) ? 'heart' : 'powerup';
+  }
+  else if(roll < CFG.civilianChance + CFG.powerupChance + CFG.hostageChance){ type='hostage'; }
+
+  const maxT = type==='boss' ? Game.currentEnemyTimer()+0.6 : Game.currentEnemyTimer();
+  Game.activeEnemy = {
+    win:w, type, timer:maxT, maxTimer:maxT,
+    state:'exposed', hp: type==='boss'?CFG.bossHp:1,
+    bob: Math.random()*Math.PI*2,
+    gangsterSide: Math.random()<0.5 ? 'left' : 'right'
+  };
+  if(type==='boss') Audio_.bossAppear();
+}
+
+function killActiveEnemy(hitX, hitY){
+  const e = Game.activeEnemy;
+  if(!e) return;
+  if(e.type==='civilian'){
+    Game.score = Math.max(0, Game.score - CFG.innocentPenaltyScore);
+    Game.energy -= CFG.innocentPenaltyEnergy;
+    Audio_.civilianPenalty();
+    spawnFloater(hitX, hitY, '-'+CFG.innocentPenaltyEnergy+'%', '#c23b3b');
+    if(Game.energy<=0){ Game.energy=0; endEnemy(); Game.loseLife(); return; }
+    endEnemy();
+    return;
+  }
+  if(e.type==='powerup'){
+    applyPowerup(hitX, hitY);
+    endEnemy();
+    return;
+  }
+  if(e.type==='heart'){
+    Game.gainLife();
+    Audio_.lifeGained();
+    spawnFloater(hitX, hitY, '+1 VITA', '#c23b3b');
+    endEnemy();
+    return;
+  }
+  e.hp--;
+  if(e.type==='boss'){
+    Audio_.hitBoss();
+    spawnFloater(hitX, hitY, 'COLPITO!', '#e8b23d');
+    if(e.hp<=0){
+      Game.score += 500;
+      Game.totalKills++;
+      spawnFloater(hitX, hitY-14, '+500', '#e8b23d');
+      Game.enemiesDefeatedThisLevel = 0;
+      endEnemy();
+      setTimeout(()=>{ if(Game.state==='playing') Game.triggerEscortIntro(); }, 400);
+    } else {
+      let newTimer = e.maxTimer * 0.85;
+      if(Math.random() < 0.5){
+        const dest = findNearbyWindowForBoss(e.win);
+        if(dest){
+          spawnFloater(hitX, hitY-6, 'SCAPPA!', '#cfae7a');
+          e.win.occupied = false;
+          dest.occupied = true;
+          e.win = dest;
+          Audio_.bossMove();
+        }
+        newTimer -= e.maxTimer * 0.10;
+      }
+      e.timer = Math.max(0.4, newTimer);
+      e.state='exposed';
+    }
+    return;
+  }
+  // gangster normale
+  const bonus = Math.floor(80 * (e.timer/e.maxTimer)) + 20;
+  Game.score += bonus;
+  Game.totalKills++;
+  Audio_.hitEnemy();
+  spawnFloater(hitX, hitY, '+'+bonus, '#5a8f4c');
+  Game.enemiesDefeatedThisLevel++;
+  endEnemy();
+}
+
+function endEnemy(){
+  if(Game.activeEnemy){ Game.activeEnemy.win.occupied = false; }
+  Game.activeEnemy = null;
+  Game.spawnTimer = CFG.spawnDelayMin + Math.random()*(CFG.spawnDelayMax-CFG.spawnDelayMin);
+}
+
+function applyPowerup(x,y){
+  Game.energy = Math.min(CFG.playerMaxEnergy, Game.energy + CFG.powerupEnergyBonus);
+  spawnFloater(x,y-9,'+'+CFG.powerupEnergyBonus+'% ENERGIA','#5a8f4c');
+  const kind = Math.floor(Math.random()*2);
+  if(kind===0){
+    Game.score += 150;
+    spawnFloater(x,y+8,'+150','#e8b23d');
+  } else {
+    Game.coverStamina = 100;
+    spawnFloater(x,y+8,'RIPARO PIENO','#7fb8d8');
+  }
+  Audio_.powerup();
+}
+
+function enemyMiss(){
+  const e = Game.activeEnemy;
+  if(!e) return;
+  if(e.type==='civilian' || e.type==='powerup'){ endEnemy(); return; }
+  const w = e.win;
+  const mx = w.x + w.w/2, my = w.y + w.h/2;
+  spawnMuzzleFlash(mx,my);
+  if(isCoveredNow()){
+    spawnFloater(mx, my-16, 'PARATO!', '#7fb8d8');
+    Audio_.cover();
+  } else {
+    const dmg = e.type==='boss' ? CFG.dmgBoss : CFG.dmgGangster;
+    Game.energy -= dmg;
+    Audio_.playerHit();
+    flashDamage();
+    spawnFloater(mx, my-16, '-'+dmg+'%', '#c23b3b');
+    if(Game.energy<=0){
+      Game.energy=0;
+      const wasBoss = e.type==='boss';
+      endEnemy();
+      Game.loseLife();
+      return;
+    }
+  }
+  if(e.type==='boss'){ e.timer = e.maxTimer*0.85; e.state='exposed'; }
+  else { endEnemy(); }
+}
+
+let damageFlash = 0;
+function flashDamage(){ damageFlash = 0.28; }
+
+function spawnFloater(wx,wy,text,color){
+  Game.floaters.push({ x:wx, y:wy, text, color, life:1.0 });
+}
+function spawnMuzzleFlash(wx,wy){
+  Game.muzzleFlashes.push({ x:wx, y:wy, life:0.18, maxLife:0.18 });
+}
+
+/* ============================= UPDATE ============================= */
+function isCoveredNow(){
+  return Input.coverHeld && Game.coverStamina > 1;
+}
+
+function update(dt){
+  if(Game.state==='escort'){ updateEscort(dt); return; }
+  if(Game.state!=='playing') return;
+
+  // --- movimento mirino ---
+  if(Input.mode==='gamepad'){
+    Game.crossX += Input.axisX * CFG.aimSpeed * dt;
+    Game.crossY += Input.axisY * CFG.aimSpeed * dt;
+  } else {
+    Game.crossX = Game.cameraX + Input.mouseLogicalX;
+    Game.crossY = Game.cameraY + Input.mouseLogicalY;
+  }
+  Game.crossX = clamp(Game.crossX, 4, worldWidthActual-4);
+  Game.crossY = clamp(Game.crossY, 20, CFG.worldH-4);
+
+  // --- scroll camera in base a posizione mirino relativa allo schermo ---
+  const relX = Game.crossX - Game.cameraX;
+  const relY = Game.crossY - Game.cameraY;
+  let targetCamX = Game.cameraX, targetCamY = Game.cameraY;
+  if(relX < CFG.edgeMargin) targetCamX -= (CFG.edgeMargin - relX);
+  if(relX > CFG.viewW-CFG.edgeMargin) targetCamX += (relX - (CFG.viewW-CFG.edgeMargin));
+  if(relY < CFG.edgeMargin) targetCamY -= (CFG.edgeMargin - relY);
+  if(relY > CFG.viewH-CFG.edgeMargin) targetCamY += (relY - (CFG.viewH-CFG.edgeMargin));
+  targetCamX = clamp(targetCamX, 0, worldWidthActual-CFG.viewW);
+  targetCamY = clamp(targetCamY, 0, CFG.worldH-CFG.viewH);
+  Game.cameraX += (targetCamX-Game.cameraX)*CFG.scrollLerp;
+  Game.cameraY += (targetCamY-Game.cameraY)*CFG.scrollLerp;
+
+  // --- riparo: si scarica mentre premuto, si ricarica quando rilasciato ---
+  // più l'energia è bassa, più il recupero è lento (fino a un minimo del 15% della velocità normale)
+  const covering = Input.coverHeld;
+  const regenFactor = Math.max(0.15, Game.energy/CFG.playerMaxEnergy);
+  if(covering && Game.coverStamina>0){
+    Game.coverStamina = Math.max(0, Game.coverStamina - CFG.coverDrainPerSec*dt);
+  } else if(!covering && Game.coverStamina<100){
+    Game.coverStamina = Math.min(100, Game.coverStamina + CFG.coverRegenPerSec*regenFactor*dt);
+  }
+
+  // --- cooldown sparo / rinculo ---
+  if(Game.shootCd>0) Game.shootCd -= dt;
+  if(Game.recoilOff>0) Game.recoilOff = Math.max(0, Game.recoilOff - dt*40);
+
+  // --- ricarica proiettili ---
+  const reloading = Input.reloadHeld && Game.ammo < Game.currentMagSize();
+  if(reloading){
+    Game.reloadProgress += dt*CFG.reloadRatePerSec;
+    while(Game.reloadProgress>=1 && Game.ammo<Game.currentMagSize()){
+      Game.ammo++; Game.reloadProgress-=1; Audio_.reloadTick();
+    }
+  }
+
+  const shoot = Input.poll();
+  if(shoot.shootEdge && !covering && !reloading){
+    if(Game.ammo>0 && Game.shootCd<=0){
+      Game.shootCd = CFG.shootCooldown;
+      Game.recoilOff = CFG.recoilKick;
+      Game.ammo--;
+      Audio_.shoot();
+      tryHit();
+    } else if(Game.ammo<=0){
+      Audio_.emptyClick();
+    }
+  }
+
+  // --- nemico attivo ---
+  if(Game.activeEnemy){
+    const e = Game.activeEnemy;
+    e.bob += dt*3;
+    e.timer -= dt;
+    if(e.timer<=0){ enemyMiss(); }
+  } else {
+    Game.spawnTimer -= dt;
+    if(Game.spawnTimer<=0) spawnEnemy();
+  }
+
+  updateCommonEffects(dt);
+}
+
+function updateCommonEffects(dt){
+  if(damageFlash>0) damageFlash = Math.max(0, damageFlash - dt);
+  if(policeFlash>0) policeFlash = Math.max(0, policeFlash - dt);
+  Game.floaters = Game.floaters.filter(f=>{
+    f.y -= dt*14; f.life -= dt*0.9; return f.life>0;
+  });
+  Game.muzzleFlashes = Game.muzzleFlashes.filter(m=>{
+    m.life -= dt; return m.life>0;
+  });
+}
+
+/* ============================= ESCORT MODE ============================= */
+let policeFlash = 0;
+function flashPolice(){ policeFlash = 0.28; }
+
+function updateEscort(dt){
+  const es = Game.escort;
+  if(!es) return;
+  es.elapsed += dt;
+
+  // --- mirino: schermo fisso, nessuno scroll di camera ---
+  Game.cameraX = 0; Game.cameraY = 0;
+  if(Input.mode==='gamepad'){
+    Game.crossX += Input.axisX * CFG.aimSpeed * dt;
+    Game.crossY += Input.axisY * CFG.aimSpeed * dt;
+  } else {
+    Game.crossX = Input.mouseLogicalX;
+    Game.crossY = Input.mouseLogicalY;
+  }
+  Game.crossX = clamp(Game.crossX, 4, CFG.viewW-4);
+  Game.crossY = clamp(Game.crossY, 4, CFG.viewH-4);
+
+  // --- riparo ---
+  const covering = Input.coverHeld;
+  const regenFactor = Math.max(0.15, Game.energy/CFG.playerMaxEnergy);
+  if(covering && Game.coverStamina>0){
+    Game.coverStamina = Math.max(0, Game.coverStamina - CFG.coverDrainPerSec*dt);
+  } else if(!covering && Game.coverStamina<100){
+    Game.coverStamina = Math.min(100, Game.coverStamina + CFG.coverRegenPerSec*regenFactor*dt);
+  }
+
+  // --- sparo / ricarica ---
+  if(Game.shootCd>0) Game.shootCd -= dt;
+  if(Game.recoilOff>0) Game.recoilOff = Math.max(0, Game.recoilOff - dt*40);
+  const reloading = Input.reloadHeld && Game.ammo < Game.currentMagSize();
+  if(reloading){
+    Game.reloadProgress += dt*CFG.reloadRatePerSec;
+    while(Game.reloadProgress>=1 && Game.ammo<Game.currentMagSize()){
+      Game.ammo++; Game.reloadProgress-=1; Audio_.reloadTick();
+    }
+  }
+  const shoot = Input.poll();
+  if(shoot.shootEdge && !covering && !reloading){
+    if(Game.ammo>0 && Game.shootCd<=0){
+      Game.shootCd = CFG.shootCooldown;
+      Game.recoilOff = CFG.recoilKick;
+      Game.ammo--;
+      Audio_.shoot();
+      tryHitEscort();
+    } else if(Game.ammo<=0){
+      Audio_.emptyClick();
+    }
+  }
+
+  // --- spawn auto nemiche (max contemporanee: 2 al livello 1, +1 per livello) ---
+  es.spawnTimer -= dt;
+  if(es.spawnTimer<=0){
+    const maxCars = CFG.escortMaxCarsBase + (Game.level-1);
+    const onScreen = es.cars.filter(c=>!c.removed).length;
+    if(onScreen < maxCars){
+      const scale = 0.78 + Math.random()*0.3;
+      // alcune auto arrivano fino al 25% più veloci del normale
+      const speed = (CFG.escortCarBaseSpeed + Game.level*CFG.escortCarSpeedPerLevel) * (0.75+scale*0.3) * (0.85+Math.random()*0.4);
+      const timeLeft = CFG.escortDuration - es.elapsed;
+      const armored = (timeLeft <= CFG.escortArmoredWindow) && (Math.random() < CFG.escortArmoredChance);
+      es.cars.push({
+        id: es.nextId++,
+        x: -46, y: 108 + (scale>0.95?34:0) + Math.random()*8,
+        scale, speed, armored,
+        leftWheelHit:false, rightWheelHit:false,
+        disabled:false, disabledTimer:0,
+        removed:false, hasShooter:false, shooterTimer:0
+      });
+      es.spawnTimer = Math.max(0.55, CFG.escortSpawnMin + Math.random()*(CFG.escortSpawnMax-CFG.escortSpawnMin) - Game.level*0.05);
+    } else {
+      es.spawnTimer = 0.4; // riprova a breve, senza sprecare il tempo di attesa
+    }
+  }
+
+  // --- gestione tiratore casuale ---
+  const activeCars = es.cars.filter(c=>!c.disabled && !c.removed);
+  const anyShooter = activeCars.some(c=>c.hasShooter);
+  if(!anyShooter && activeCars.length>0){
+    es.shooterTimer -= dt;
+    if(es.shooterTimer<=0){
+      const c = activeCars[Math.floor(Math.random()*activeCars.length)];
+      c.hasShooter = true; c.shooterTimer = CFG.escortShooterDuration;
+      es.shooterTimer = CFG.escortShooterMin + Math.random()*(CFG.escortShooterMax-CFG.escortShooterMin);
+    }
+  }
+
+  // --- aggiorna auto ---
+  const policeX = CFG.viewW - 46;
+  for(const c of es.cars){
+    if(c.removed) continue;
+    if(c.hasShooter){
+      c.shooterTimer -= dt;
+      if(c.shooterTimer<=0){
+        c.hasShooter = false;
+        const sx=c.x, sy=c.y-24*c.scale;
+        spawnMuzzleFlash(sx,sy);
+        if(isCoveredNow()){
+          spawnFloater(sx, sy-14, 'PARATO!', '#7fb8d8');
+          Audio_.cover();
+        } else {
+          Game.energy -= CFG.dmgGangster;
+          Audio_.playerHit(); flashDamage();
+          spawnFloater(sx, sy-14, '-'+CFG.dmgGangster+'%', '#c23b3b');
+          if(Game.energy<=0){
+            Game.energy=0;
+            const alive = Game.loseLife();
+            if(!alive) return;
+          }
+        }
+      }
+    }
+    if(c.disabled){
+      c.disabledTimer -= dt;
+      if(c.disabledTimer<=0) c.removed = true;
+      continue;
+    }
+    c.x += c.speed * (carWheelsCleared(c)?0.35:1) * dt;
+    if(c.x >= policeX - 10){
+      c.removed = true;
+      es.policeHealth -= CFG.escortDamagePerHit;
+      flashPolice();
+      spawnFloater(policeX, 150, '-'+CFG.escortDamagePerHit+'%', '#c23b3b');
+      Audio_.playerHit();
+      if(es.policeHealth<=0){ es.policeHealth=0; Game.escortFailed(); return; }
+    }
+  }
+  es.cars = es.cars.filter(c=>!c.removed);
+
+  if(es.elapsed >= CFG.escortDuration){
+    Game.escortSucceeded();
+    return;
+  }
+
+  updateCommonEffects(dt);
+}
+
+function tryHitEscort(){
+  const es = Game.escort;
+  if(!es) return;
+  const cx = Game.crossX, cy = Game.crossY;
+  // priorità: tiratori sporti dal finestrino
+  for(const c of es.cars){
+    if(c.removed||c.disabled) continue;
+    if(c.hasShooter){
+      const sx=c.x, sy=c.y-24*c.scale;
+      if(Math.abs(cx-sx)<12*c.scale && Math.abs(cy-sy)<14*c.scale){
+        c.hasShooter=false;
+        Game.score += CFG.escortShooterBonus;
+        Game.totalKills++;
+        spawnFloater(sx,sy,'+'+CFG.escortShooterBonus,'#5a8f4c');
+        Audio_.hitEnemy();
+        return;
+      }
+    }
+  }
+  // ruote e guidatore
+  for(const c of es.cars){
+    if(c.removed||c.disabled) continue;
+    const w = 46*c.scale, h = 20*c.scale;
+    const leftWheelX = c.x - 14*c.scale, rightWheelX = c.x + 14*c.scale, wheelY = c.y + 10*c.scale;
+    const wheelR = 9*c.scale;
+    const driverX = c.x + w*0.28, driverY = c.y - h*0.15;
+    const cleared = carWheelsCleared(c);
+
+    if(!c.leftWheelHit && Math.abs(cx-leftWheelX)<wheelR && Math.abs(cy-wheelY)<wheelR){
+      c.leftWheelHit = true;
+      Game.score += 25;
+      spawnFloater(c.x,c.y-10, carWheelsCleared(c)?'RALLENTATA':'RUOTA SX!', '#e8b23d');
+      Audio_.hitEnemy();
+      return;
+    }
+    if(!c.rightWheelHit && Math.abs(cx-rightWheelX)<wheelR && Math.abs(cy-wheelY)<wheelR){
+      c.rightWheelHit = true;
+      Game.score += 25;
+      spawnFloater(c.x,c.y-10, carWheelsCleared(c)?'RALLENTATA':'RUOTA DX!', '#e8b23d');
+      Audio_.hitEnemy();
+      return;
+    }
+    if(cleared && Math.abs(cx-driverX)<w*0.3 && Math.abs(cy-driverY)<h*0.4){
+      c.disabled = true; c.disabledTimer = 1.4;
+      Game.score += 90;
+      Game.totalKills++;
+      spawnFloater(c.x,c.y-10,'BLOCCATA!','#5a8f4c');
+      Audio_.hitBoss();
+      return;
+    }
+    if(!cleared && Math.abs(cx-driverX)<w*0.3 && Math.abs(cy-driverY)<h*0.4){
+      spawnFloater(c.x,c.y-10, c.armored?'CORAZZATA: ENTRAMBE LE RUOTE!':'PRIMA LE RUOTE!', '#cfae7a');
+      return;
+    }
+  }
+}
+
+function tryHit(){
+  const e = Game.activeEnemy;
+  if(!e) return;
+  const w = e.win;
+  if(e.type==='hostage'){
+    const cy = w.y + w.h/2;
+    const halfW = w.w*0.23, halfH = w.h*0.44;
+    const leftX = w.x + w.w*0.27, rightX = w.x + w.w*0.73;
+    const gangsterX = e.gangsterSide==='left' ? leftX : rightX;
+    const hostageX = e.gangsterSide==='left' ? rightX : leftX;
+    if(Math.abs(Game.crossX-hostageX)<halfW && Math.abs(Game.crossY-cy)<halfH){
+      hitHostageByMistake(hostageX,cy);
+      return;
+    }
+    if(Math.abs(Game.crossX-gangsterX)<halfW && Math.abs(Game.crossY-cy)<halfH){
+      killActiveEnemy(gangsterX,cy);
+    }
+    return;
+  }
+  const cx = w.x + w.w/2, cy = w.y + w.h/2;
+  const hitW = e.type==='boss' ? w.w*1.6 : w.w*1.15;
+  const hitH = e.type==='boss' ? w.h*1.6 : w.h*1.15;
+  if(Math.abs(Game.crossX-cx) < hitW/2 && Math.abs(Game.crossY-cy) < hitH/2){
+    killActiveEnemy(cx,cy);
+  }
+}
+
+function hitHostageByMistake(x,y){
+  Game.score = Math.max(0, Game.score - CFG.innocentPenaltyScore);
+  Game.energy -= CFG.innocentPenaltyEnergy;
+  Audio_.civilianPenalty();
+  flashDamage();
+  spawnFloater(x,y-14,'OSTAGGIO COLPITO! -'+CFG.innocentPenaltyEnergy+'%','#c23b3b');
+  if(Game.energy<=0){ Game.energy=0; endEnemy(); Game.loseLife(); return; }
+  endEnemy();
+}
+
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+/* ============================= RENDER ============================= */
+function render(){
+  ctx.fillStyle = '#0d1420';
+  ctx.fillRect(0,0,CFG.viewW,CFG.viewH);
+
+  if(Game.state==='menu' || Game.state==='info'){ drawSkylineIdle(); return; }
+
+  if(Game.state==='escort' || Game.state==='escortresult'){
+    renderEscort();
+  } else {
+    renderShooting();
+  }
+
+  if(damageFlash>0){
+    ctx.fillStyle = 'rgba(180,20,20,'+(damageFlash*0.55)+')';
+    ctx.fillRect(0,0,CFG.viewW,CFG.viewH);
+  }
+}
+
+function renderShooting(){
+  const camX = Game.cameraX, camY = Game.cameraY;
+  drawSky(camX,camY);
+  drawStreet(camX,camY);
+  for(const b of buildings) drawBuilding(b, camX, camY);
+  drawWindowsContent(camX,camY);
+  drawParticlesAndFloaters(camX,camY);
+  drawOffscreenArrow(camX,camY);
+  drawCrosshair();
+  drawCoverOverlay();
+  drawHUD();
+}
+
+function renderEscort(){
+  const es = Game.escort;
+  // cielo e strada
+  const g = ctx.createLinearGradient(0,0,0,CFG.viewH);
+  g.addColorStop(0,'#2a2536'); g.addColorStop(1,'#4a3f2e');
+  ctx.fillStyle=g; ctx.fillRect(0,0,CFG.viewW,CFG.viewH);
+  ctx.fillStyle='#2f2f2f'; ctx.fillRect(0,90,CFG.viewW,CFG.viewH-90);
+  ctx.fillStyle='#3d3d3d'; ctx.fillRect(0,90,CFG.viewW,4);
+  const scroll = es ? (es.elapsed*80)%28 : 0;
+  ctx.fillStyle='#c9a840';
+  for(let x=-scroll; x<CFG.viewW; x+=28){ ctx.fillRect(x,150,16,3); }
+
+  if(!es){ return; }
+
+  // auto della polizia
+  const policeX = CFG.viewW-46, policeY = 158;
+  drawPoliceCar(policeX, policeY);
+  {
+    const pPctCar = es.policeHealth/100;
+    let showPct = true;
+    if(pPctCar < 0.4){ showPct = Math.floor(performance.now()/300)%2===0; }
+    if(showPct){
+      ctx.font='8px monospace'; ctx.textAlign='center';
+      ctx.fillStyle = pPctCar<0.4 ? '#c23b3b' : '#cfe6ee';
+      ctx.fillText(Math.round(es.policeHealth)+'%', policeX, policeY-22);
+    }
+  }
+
+  // auto nemiche
+  for(const c of es.cars) drawEnemyCar(c);
+
+  drawParticlesAndFloaters(0,0);
+  drawCrosshair();
+  drawCoverOverlay();
+
+  // HUD scorta
+  ctx.textAlign='center';
+  ctx.font='9px monospace'; ctx.fillStyle='#e8b23d';
+  const timeLeft = Math.max(0, CFG.escortDuration-es.elapsed);
+  const mm = Math.floor(timeLeft/60), ss = Math.floor(timeLeft%60);
+  ctx.fillText('SCORTA — '+mm+':'+(ss<10?'0':'')+ss, CFG.viewW/2, 12);
+
+  const bw=140, bx=CFG.viewW/2-bw/2, by=16;
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(bx-2,by-2,bw+4,8);
+  const pPct = es.policeHealth/100;
+  ctx.fillStyle = pPct>0.4?'#5a8f4c':(pPct>0.18?'#e8b23d':'#c23b3b');
+  ctx.fillRect(bx,by,bw*pPct,4);
+  ctx.strokeStyle='#7fb8d8'; ctx.strokeRect(bx-2,by-2,bw+4,8);
+  ctx.font='6px monospace'; ctx.fillStyle='#cfe6ee';
+  ctx.fillText('AUTO DELLA POLIZIA', CFG.viewW/2, by+16);
+
+  ctx.textAlign='left';
+  drawHUD();
+
+  if(policeFlash>0){
+    ctx.fillStyle='rgba(120,140,220,'+(policeFlash*0.4)+')';
+    ctx.fillRect(0,0,CFG.viewW,CFG.viewH);
+  }
+}
+
+function drawPoliceCar(x,y){
+  ctx.save(); ctx.translate(x,y);
+  ctx.fillStyle='#e8e8e8'; ctx.fillRect(-24,-10,48,20);
+  ctx.fillStyle='#2b3a55'; ctx.fillRect(-24,-10,16,10); ctx.fillRect(8,-10,16,10);
+  ctx.fillStyle= (Math.floor(performance.now()/150)%2===0) ? '#c23b3b' : '#3b5ec2';
+  ctx.fillRect(-6,-15,12,5);
+  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(-14,10,6,0,Math.PI*2); ctx.arc(14,10,6,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawEnemyCar(c){
+  if(c.removed) return;
+  ctx.save();
+  ctx.globalAlpha = c.disabled ? Math.max(0.15, c.disabledTimer/1.4) : 1;
+  ctx.translate(c.x, c.y);
+  ctx.scale(c.scale, c.scale);
+  ctx.fillStyle = c.disabled ? '#3a2a2a' : (c.armored ? '#2e3438' : '#241414');
+  ctx.fillRect(-23,-10,46,20);
+  if(c.armored){
+    ctx.fillStyle='#4a545a';
+    ctx.fillRect(-23,-10,46,4);
+    ctx.fillRect(-23,6,46,4);
+  }
+  ctx.fillStyle = c.disabled ? '#552a2a' : (c.armored ? '#5a6a70' : '#5a1f1f');
+  ctx.fillRect(-6,-16,20,7);
+  ctx.fillStyle = c.leftWheelHit ? '#555' : '#111';
+  ctx.beginPath(); ctx.arc(-14,10,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = c.rightWheelHit ? '#555' : '#111';
+  ctx.beginPath(); ctx.arc(14,10,6,0,Math.PI*2); ctx.fill();
+  if(c.leftWheelHit && !c.disabled){
+    ctx.strokeStyle='#e8b23d'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(-14,10,8,0,Math.PI*2); ctx.stroke();
+  }
+  if(c.rightWheelHit && !c.disabled){
+    ctx.strokeStyle='#e8b23d'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(14,10,8,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+
+  if(c.armored && !c.disabled){
+    ctx.font=(7*c.scale)+'px monospace'; ctx.textAlign='center';
+    ctx.fillStyle='#cfe6ee';
+    ctx.fillText('⛨', c.x, c.y-22*c.scale);
+  }
+
+  if(c.hasShooter){
+    const sx=c.x, sy=c.y-24*c.scale;
+    ctx.save(); ctx.translate(sx,sy);
+    ctx.fillStyle='#141414';
+    ctx.beginPath(); ctx.arc(0,0,5*c.scale,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-2*c.scale,4*c.scale,10*c.scale,3*c.scale);
+    ctx.restore();
+    const pct = Math.max(0,c.shooterTimer/CFG.escortShooterDuration);
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(sx-14,sy-14,28,4);
+    ctx.fillStyle = pct>0.4?'#5a8f4c':(pct>0.18?'#e8b23d':'#c23b3b');
+    ctx.fillRect(sx-14,sy-14,28*pct,4);
+  }
+}
+
+function drawSky(camX,camY){
+  const g = ctx.createLinearGradient(0,-camY,0,CFG.viewH-camY);
+  g.addColorStop(0,'#1b2338'); g.addColorStop(1,'#3a3428');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,CFG.viewW,CFG.viewH);
+}
+
+function drawStreet(camX,camY){
+  const sy = CFG.streetY - camY;
+  if(sy > CFG.viewH || sy < -40) return;
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(0, sy, CFG.viewW, CFG.viewH-sy);
+  ctx.fillStyle = '#3a3a3a';
+  for(let x=-((camX)%24); x<CFG.viewW; x+=24){ ctx.fillRect(x, sy+4, 14, 2); }
+}
+
+function drawBuilding(b,camX,camY){
+  const bx = b.x - camX;
+  if(bx+b.w < 0 || bx > CFG.viewW) return;
+  const pal = b.pal;
+  const topY = b.roofY - camY;
+  const baseH = CFG.streetY - b.roofY;
+  ctx.fillStyle = pal.wallDark;
+  ctx.fillRect(bx-3, topY-6, b.w+6, baseH+6);
+  ctx.fillStyle = pal.wall;
+  ctx.fillRect(bx, topY, b.w, baseH);
+  ctx.fillStyle = pal.trim;
+  ctx.fillRect(bx, topY-4, b.w, 4);
+  for(let f=1; f<b.floors; f++){
+    ctx.fillRect(bx, topY+26+f*46, b.w, 2);
+  }
+  // finestre spente (buchi) — quelle con contenuto disegnate dopo
+}
+
+function drawWindowsContent(camX,camY){
+  for(const w of windows){
+    const wx = w.x-camX, wy = w.y-camY;
+    if(wx+w.w<0||wx>CFG.viewW||wy+w.h<0||wy>CFG.viewH) continue;
+    const pal = buildings[w.bIndex].pal;
+    const lit = w.occupied;
+    ctx.fillStyle = lit ? pal.winLit : pal.win;
+    ctx.fillRect(wx,wy,w.w,w.h);
+    ctx.strokeStyle = pal.trim; ctx.lineWidth=1;
+    ctx.strokeRect(wx+0.5,wy+0.5,w.w-1,w.h-1);
+  }
+  if(Game.activeEnemy) drawEnemySprite(Game.activeEnemy, camX, camY);
+}
+
+function drawGangsterFigure(){
+  ctx.fillStyle = '#141414';
+  ctx.fillRect(-7,-4,14,16);
+  ctx.beginPath(); ctx.arc(0,-9,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(-8,-15,16,4);
+  ctx.fillRect(-2,-3,10,3);
+}
+function drawHostageFigure(){
+  ctx.fillStyle = '#7a6a55';
+  ctx.fillRect(-6,-4,12,16);
+  ctx.beginPath(); ctx.arc(0,-9,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#c9b896';
+  ctx.beginPath(); ctx.arc(0,-9,4.4,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#7a6a55'; ctx.lineWidth=2.4;
+  ctx.beginPath();
+  ctx.moveTo(-6,-2); ctx.lineTo(-10,-15);
+  ctx.moveTo(6,-2); ctx.lineTo(10,-15);
+  ctx.stroke();
+}
+
+function drawEnemySprite(e,camX,camY){
+  const w = e.win;
+  const wx = w.x-camX, wy = w.y-camY;
+  const bob = Math.sin(e.bob)*1.5;
+  ctx.save();
+  ctx.translate(wx+w.w/2, wy+w.h/2+bob);
+  if(e.type==='gangster'){
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(-7,-4,14,16);
+    ctx.beginPath(); ctx.arc(0,-9,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(-8,-15,16,4);
+    ctx.fillRect(-2,-3,10,3);
+  } else if(e.type==='civilian'){
+    ctx.fillStyle = '#7a6a55';
+    ctx.fillRect(-6,-4,12,16);
+    ctx.beginPath(); ctx.arc(0,-9,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#c9b896';
+    ctx.beginPath(); ctx.arc(0,-9,4.4,0,Math.PI*2); ctx.fill();
+  } else if(e.type==='powerup'){
+    ctx.fillStyle = '#e8b23d';
+    ctx.beginPath();
+    for(let i=0;i<5;i++){
+      const a1=(-Math.PI/2)+i*(Math.PI*2/5), a2=a1+Math.PI/5;
+      ctx.lineTo(Math.cos(a1)*9,Math.sin(a1)*9);
+      ctx.lineTo(Math.cos(a2)*4,Math.sin(a2)*4);
+    }
+    ctx.closePath(); ctx.fill();
+  } else if(e.type==='heart'){
+    ctx.fillStyle = '#c23b3b';
+    ctx.beginPath();
+    ctx.arc(-3.6,-2.5,4.6,0,Math.PI*2);
+    ctx.arc(3.6,-2.5,4.6,0,Math.PI*2);
+    ctx.moveTo(-8,-0.5);
+    ctx.lineTo(0,8.5);
+    ctx.lineTo(8,-0.5);
+    ctx.closePath(); ctx.fill();
+  } else if(e.type==='boss'){
+    ctx.fillStyle = '#1a0e0e';
+    ctx.fillRect(-13,-6,26,24);
+    ctx.beginPath(); ctx.arc(0,-13,9,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a0a0a';
+    ctx.fillRect(-15,-22,30,5);
+    ctx.fillStyle='#c23b3b';
+    ctx.fillRect(-3,-4,16,4);
+  } else if(e.type==='hostage'){
+    const leftIsGangster = e.gangsterSide==='left';
+    ctx.save(); ctx.translate(-6,3); ctx.scale(0.7,0.7);
+    if(leftIsGangster) drawGangsterFigure(); else drawHostageFigure();
+    ctx.restore();
+    ctx.save(); ctx.translate(6,3); ctx.scale(0.7,0.7);
+    if(!leftIsGangster) drawGangsterFigure(); else drawHostageFigure();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // barra timer sopra la finestra
+  const tw = w.w+8;
+  const pct = Math.max(0,e.timer/e.maxTimer);
+  ctx.fillStyle='rgba(0,0,0,0.6)';
+  ctx.fillRect(wx-4, wy-9, tw, 4);
+  ctx.fillStyle = pct>0.4 ? '#5a8f4c' : (pct>0.18?'#e8b23d':'#c23b3b');
+  ctx.fillRect(wx-4, wy-9, tw*pct, 4);
+
+  if(e.type==='boss'){
+    const bw=60, bx=CFG.viewW/2-bw/2, by=10;
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(bx-2,by-2,bw+4,8);
+    ctx.fillStyle='#c23b3b'; ctx.fillRect(bx,by,bw*(e.hp/CFG.bossHp),4);
+    ctx.strokeStyle='#e8b23d'; ctx.strokeRect(bx-2,by-2,bw+4,8);
+  }
+}
+
+function drawParticlesAndFloaters(camX,camY){
+  for(const m of Game.muzzleFlashes){
+    const pct = m.life/m.maxLife;
+    ctx.globalAlpha = pct;
+    ctx.fillStyle = '#fff7c2';
+    ctx.beginPath(); ctx.arc(m.x-camX, m.y-camY, 10*pct+2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e8b23d';
+    ctx.beginPath(); ctx.arc(m.x-camX, m.y-camY, 5*pct+1, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.font = '8px monospace';
+  ctx.textAlign='center';
+  for(const f of Game.floaters){
+    ctx.fillStyle = f.color;
+    ctx.globalAlpha = Math.max(0,f.life);
+    ctx.fillText(f.text, f.x-camX, f.y-camY);
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawOffscreenArrow(camX,camY){
+  const e = Game.activeEnemy;
+  if(!e) return;
+  const cx = e.win.x + e.win.w/2;
+  const screenX = cx - camX;
+  if(screenX>=-10 && screenX<=CFG.viewW+10) return;
+  const dir = screenX < 0 ? -1 : 1;
+  const ax = dir<0 ? 14 : CFG.viewW-14;
+  const ay = CFG.viewH/2;
+  const pct = Math.max(0,e.timer/e.maxTimer);
+  ctx.fillStyle = pct>0.3 ? '#e8b23d' : '#c23b3b';
+  ctx.save();
+  ctx.translate(ax,ay);
+  ctx.beginPath();
+  if(dir<0){ ctx.moveTo(6,-8); ctx.lineTo(-8,0); ctx.lineTo(6,8); }
+  else { ctx.moveTo(-6,-8); ctx.lineTo(8,0); ctx.lineTo(-6,8); }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawCrosshair(){
+  const sx = Game.crossX - Game.cameraX;
+  const sy = Game.crossY - Game.cameraY;
+  const kick = Game.recoilOff;
+  ctx.strokeStyle = '#e8b23d';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(sx,sy,7+kick*0.3,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx-12,sy); ctx.lineTo(sx-4,sy);
+  ctx.moveTo(sx+4,sy); ctx.lineTo(sx+12,sy);
+  ctx.moveTo(sx,sy-12); ctx.lineTo(sx,sy-4);
+  ctx.moveTo(sx,sy+4); ctx.lineTo(sx,sy+12);
+  ctx.stroke();
+}
+
+function drawCoverOverlay(){
+  if(!isCoveredNow()) return;
+  ctx.fillStyle = 'rgba(20,30,45,0.55)';
+  ctx.fillRect(0, CFG.viewH*0.62, CFG.viewW, CFG.viewH*0.38);
+  ctx.fillStyle = '#4a4038';
+  ctx.fillRect(0, CFG.viewH*0.68, CFG.viewW, 10);
+  ctx.font='10px monospace'; ctx.fillStyle='#cfe6ee'; ctx.textAlign='center';
+  ctx.fillText('AL RIPARO', CFG.viewW/2, CFG.viewH*0.62+14);
+}
+
+function drawHUD(){
+  ctx.textAlign='left';
+  // energia
+  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(6,6,110,10);
+  const ePct = Game.energy/CFG.playerMaxEnergy;
+  ctx.fillStyle = ePct>0.4?'#5a8f4c':(ePct>0.18?'#e8b23d':'#c23b3b');
+  ctx.fillRect(7,7,108*ePct,8);
+  ctx.strokeStyle='#e8b23d'; ctx.strokeRect(6.5,6.5,109,9);
+  ctx.font='7px monospace'; ctx.fillStyle='#fff';
+  ctx.fillText('ENERGIA '+Math.round(ePct*100)+'%',8,17);
+
+  // riparo
+  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(6,20,110,7);
+  ctx.fillStyle='#7fb8d8';
+  ctx.fillRect(7,21,108*(Game.coverStamina/100),5);
+  ctx.strokeStyle='#7fb8d8'; ctx.strokeRect(6.5,20.5,109,6);
+
+  // vite
+  ctx.font='8px monospace'; ctx.fillStyle='#c23b3b'; ctx.textAlign='left';
+  ctx.fillText('VITE ' + '♥'.repeat(Game.lives), 8, 38);
+
+  // proiettili
+  const ammoColor = Game.ammo<=0 ? '#c23b3b' : (Game.ammo<=1 ? '#e8b23d' : '#cfae7a');
+  ctx.font='8px monospace'; ctx.fillStyle=ammoColor; ctx.textAlign='left';
+  ctx.fillText('PROIETTILI '+Game.ammo+'/'+Game.currentMagSize(), 8, 49);
+  if(Input.reloadHeld && Game.ammo<Game.currentMagSize()){
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(8,52,70,5);
+    ctx.fillStyle='#e8b23d'; ctx.fillRect(9,53,68*Game.reloadProgress,3);
+  }
+
+  // messaggio lampeggiante "senza munizioni"
+  if(Game.ammo<=0){
+    const blink = Math.floor(performance.now()/280)%2===0;
+    if(blink){
+      ctx.textAlign='center'; ctx.font='11px monospace';
+      ctx.fillStyle='#c23b3b';
+      ctx.fillText('SENZA MUNIZIONI — TIENI X PER RICARICARE', CFG.viewW/2, 10);
+    }
+  }
+
+  // punteggio e livello
+  ctx.textAlign='right';
+  ctx.font='9px monospace'; ctx.fillStyle='#e8b23d';
+  ctx.fillText('PUNTI '+Game.score, CFG.viewW-6, 15);
+  ctx.font='7px monospace'; ctx.fillStyle='#cfae7a';
+  ctx.fillText('QUARTIERE '+Game.level, CFG.viewW-6, 25);
+  ctx.fillText('BANDITI '+Game.enemiesDefeatedThisLevel+'/'+CFG.enemiesPerLevel, CFG.viewW-6, 34);
+}
+
+function drawSkylineIdle(){
+  drawSky(0,0);
+  drawStreet(0,0);
+  const savedCamX = 0, savedCamY = 40;
+  for(const b of buildings) drawBuilding(b, savedCamX, savedCamY);
+}
+
+/* ============================= LOOP ============================= */
+function frame(ts){
+  if(!Game.lastTime) Game.lastTime = ts;
+  let dt = (ts - Game.lastTime)/1000;
+  Game.lastTime = ts;
+  dt = Math.min(dt, 0.05);
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ============================= UI HOOKS ============================= */
+document.getElementById('livesInfo').textContent = CFG.startLives + ' vite';
+updateContinueButton();
+
+document.getElementById('btnContinueMenu').addEventListener('click', ()=>{
+  if(document.getElementById('btnContinueMenu').disabled) return;
+  Audio_.init(); Game.continueGame();
+});
+document.getElementById('btnNewGame').addEventListener('click', ()=>{ Audio_.init(); Game.start(); });
+document.getElementById('btnInfoMenu').addEventListener('click', ()=>{
+  Game.state='info'; hideAllOverlays(); show('infoscreen');
+});
+document.getElementById('btnInfoBack').addEventListener('click', ()=>{
+  Game.state='menu'; hideAllOverlays(); updateContinueButton(); show('menu');
+});
+document.getElementById('btnLeaderboardMenu').addEventListener('click', ()=>{
+  Game.state='leaderboard';
+  document.getElementById('lbTitle').textContent = 'CLASSIFICA';
+  document.getElementById('lbTitle').style.color = 'var(--amber)';
+  document.getElementById('lbSubtitle').textContent = 'I MIGLIORI SUL CAMPO';
+  renderLeaderboard(null);
+  hideAllOverlays(); show('leaderboard');
+});
+document.getElementById('btnLbBack').addEventListener('click', ()=>{
+  Game.state='menu'; hideAllOverlays(); updateContinueButton(); show('menu');
+});
+document.getElementById('btnNext').addEventListener('click', ()=>{ Game.nextLevel(); });
+document.getElementById('btnResume').addEventListener('click', ()=>{ Game.togglePause(); });
+document.getElementById('btnEscortGo').addEventListener('click', ()=>{ Game.beginEscort(); });
+document.getElementById('btnEscortContinue').addEventListener('click', ()=>{
+  if(Game.escortOutcome==='success') Game.nextLevel();
+  else Game.beginEscort();
+});
+
+setInterval(()=>{
+  if(Input.startPressedEdge){
+    Input.startPressedEdge = false;
+    if(Game.state==='menu') document.getElementById('btnNewGame').click();
+    else if(Game.state==='info') document.getElementById('btnInfoBack').click();
+    else if(Game.state==='leaderboard') document.getElementById('btnLbBack').click();
+    else if(Game.state==='levelup') document.getElementById('btnNext').click();
+    else if(Game.state==='escortintro') document.getElementById('btnEscortGo').click();
+    else if(Game.state==='escortresult') document.getElementById('btnEscortContinue').click();
+    else if(Game.state==='playing'||Game.state==='escort'||Game.state==='paused') Game.togglePause();
+  }
+}, 50);
+
+})();
+</script>
+</body>
+</html>
