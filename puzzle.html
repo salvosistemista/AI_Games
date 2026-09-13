@@ -627,28 +627,35 @@
   }
   .modal p{ color: var(--cream); margin: 4px 0 20px; line-height:1.5; }
   .modal .row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
-  .modal.help-modal{ max-width:460px; text-align:left; }
+  .modal.help-modal{ max-width:540px; text-align:left; }
   .modal.help-modal h2{ text-align:center; }
   .help-list{ list-style:none; padding:0; margin:0 0 16px; }
   .help-list li{
     display:flex;
+    flex-wrap: wrap;
     justify-content:space-between;
-    gap:14px;
+    align-items: center;
+    gap:8px 14px;
     padding:8px 0;
     border-bottom:1px solid var(--line);
-    font-size:0.88rem;
+    font-size:0.86rem;
     color:var(--cream);
   }
   .help-list li:last-child{ border-bottom:none; }
+  .help-list li > span{ flex: 1 1 220px; min-width: 0; }
   .help-list kbd{
     background: var(--wood-dark);
     border:1px solid var(--line);
     border-radius:5px;
-    padding:2px 7px;
+    padding:3px 8px;
     font-family:inherit;
-    font-size:0.8rem;
+    font-size:0.74rem;
+    line-height:1.3;
     color: var(--brass-light);
-    white-space:nowrap;
+    white-space: normal;
+    text-align: right;
+    max-width: 200px;
+    flex-shrink: 0;
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -786,8 +793,8 @@
       <li><span>Trascina un pezzo</span><kbd>Tasto sinistro</kbd></li>
       <li><span>Prendi un pezzo (o il blocco) e portalo col cursore; un altro click lo lascia lì</span><kbd>Click singolo</kbd></li>
       <li><span>Disegna un riquadro tratteggiato sul tavolo vuoto: prende in mano tutti i pezzi al suo interno</span><kbd>Trascina su spazio vuoto</kbd></li>
-      <li><span>Ruota il pezzo sotto il cursore (o l'intero blocco); se il cursore non è su un pezzo, aumenta lo zoom</span><kbd>Tasto destro / X (orario) · Z (zoom avanti se nessun pezzo sotto)</kbd></li>
-      <li><span>Ruota di 45° in senso antiorario il pezzo sotto il cursore; se il cursore non è su un pezzo, diminuisce lo zoom</span><kbd>Ctrl + tasto destro / Z (antiorario) · X (zoom indietro se nessun pezzo sotto)</kbd></li>
+      <li><span>Ruota di 45° in senso orario il pezzo sotto il cursore (o l'intero blocco); se il cursore non è su un pezzo, zooma indietro</span><kbd>Tasto destro / X</kbd></li>
+      <li><span>Ruota di 45° in senso antiorario il pezzo sotto il cursore (o l'intero blocco); se il cursore non è su un pezzo, zooma avanti</span><kbd>Ctrl + tasto destro / Z</kbd></li>
       <li><span>Uguale a X (tasto laterale "indietro") e a Z (tasto laterale "avanti") del mouse, se presenti</span><kbd>Tasti laterali del mouse</kbd></li>
       <li><span>Vedi l'immagine reale, senza trasparenza (funziona anche a switch spento)</span><kbd>Maiusc tenuto / Tasto centrale tenuto</kbd></li>
       <li><span>Attiva/disattiva l'immagine di riferimento</span><kbd>Click tasto centrale</kbd></li>
