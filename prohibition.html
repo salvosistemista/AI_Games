@@ -79,6 +79,7 @@
   .btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
   .btn:disabled{ opacity:0.35; cursor:not-allowed; box-shadow:3px 3px 0 #000; }
   .btn:disabled:active{ transform:none; box-shadow:3px 3px 0 #000; }
+  .btn.focused{ box-shadow:3px 3px 0 #000, 0 0 0 3px #fff; }
   .blink{ animation:blink 1.1s steps(2) infinite; }
   @keyframes blink{ 50%{ opacity:0.25; } }
   .bigscore{ font-size:clamp(20px,3vw,30px); color:var(--amber); margin:10px 0; }
@@ -98,6 +99,7 @@
     <button class="btn" id="btnLeaderboardMenu">CLASSIFICA</button>
     <button class="btn" id="btnInfoMenu">INFO</button>
     <div class="small blink" id="gpHint">Nessun gamepad rilevato — userai il mouse</div>
+    <div class="small" id="navHint">Gamepad: D-pad/levetta per muoversi, A per confermare, B per tornare indietro</div>
   </div>
 
   <!-- INFO / COME SI GIOCA -->
@@ -369,6 +371,97 @@ const Input = {
   }
 };
 Input.init();
+
+/* ============================= NAVIGAZIONE MENU (mouse/gamepad) ============================= */
+function isMenuState(s){
+  return s==='menu' || s==='info' || s==='leaderboard' || s==='levelup' ||
+         s==='paused' || s==='escortintro' || s==='escortresult';
+}
+
+const MenuNav = {
+  lastState:null,
+  focusIndex:0,
+  getButtons(state){
+    let list;
+    switch(state){
+      case 'menu': list = Array.from(document.querySelectorAll('#menu .btn')); break;
+      case 'info': list = [document.getElementById('btnInfoBack')]; break;
+      case 'leaderboard': list = [document.getElementById('btnLbBack')]; break;
+      case 'levelup': list = [document.getElementById('btnNext')]; break;
+      case 'paused': list = [document.getElementById('btnResume')]; break;
+      case 'escortintro': list = [document.getElementById('btnEscortGo')]; break;
+      case 'escortresult': list = [document.getElementById('btnEscortContinue')]; break;
+      default: list = [];
+    }
+    return list.filter(b=>b && !b.disabled);
+  },
+  applyVisual(buttons){
+    document.querySelectorAll('.btn.focused').forEach(b=>b.classList.remove('focused'));
+    if(buttons[this.focusIndex]) buttons[this.focusIndex].classList.add('focused');
+  },
+  refresh(){
+    const state = Game.state;
+    let buttons = this.getButtons(state);
+    if(state !== this.lastState){
+      this.lastState = state;
+      this.focusIndex = 0;
+    }
+    if(this.focusIndex >= buttons.length) this.focusIndex = 0;
+    if(isMenuState(state)) this.applyVisual(buttons);
+    return buttons;
+  },
+  moveUp(){
+    const buttons = this.getButtons(Game.state);
+    if(buttons.length===0) return;
+    this.focusIndex = (this.focusIndex - 1 + buttons.length) % buttons.length;
+    this.applyVisual(buttons);
+  },
+  moveDown(){
+    const buttons = this.getButtons(Game.state);
+    if(buttons.length===0) return;
+    this.focusIndex = (this.focusIndex + 1) % buttons.length;
+    this.applyVisual(buttons);
+  },
+  confirm(){
+    const buttons = this.getButtons(Game.state);
+    const b = buttons[this.focusIndex];
+    if(b) b.click();
+  },
+  back(){
+    const state = Game.state;
+    if(state==='info') document.getElementById('btnInfoBack').click();
+    else if(state==='leaderboard') document.getElementById('btnLbBack').click();
+    else if(state==='paused') document.getElementById('btnResume').click();
+  }
+};
+
+const GamepadNav = {
+  prevUp:false, prevDown:false, prevA:false, prevB:false, prevStart:false,
+  poll(){
+    if(Input.gpIndex===null) return;
+    const gp = navigator.getGamepads()[Input.gpIndex];
+    if(!gp) return;
+    const bt = (i)=> gp.buttons[i] && gp.buttons[i].pressed;
+    const stickY = gp.axes[1]||0;
+    const up = bt(12) || stickY < -0.6;
+    const down = bt(13) || stickY > 0.6;
+    const a = bt(0);
+    const b = bt(1);
+    const start = bt(9)||bt(8);
+
+    if(!isMenuState(Game.state)){
+      this.prevUp=up; this.prevDown=down; this.prevA=a; this.prevB=b; this.prevStart=start;
+      return;
+    }
+
+    if(up && !this.prevUp){ MenuNav.moveUp(); Audio_.cover(); }
+    if(down && !this.prevDown){ MenuNav.moveDown(); Audio_.cover(); }
+    if((a && !this.prevA) || (start && !this.prevStart)){ Audio_.init(); MenuNav.confirm(); }
+    if(b && !this.prevB){ MenuNav.back(); }
+
+    this.prevUp=up; this.prevDown=down; this.prevA=a; this.prevB=b; this.prevStart=start;
+  }
+};
 
 /* ============================= WORLD GENERATION ============================= */
 let buildings = [];
@@ -1542,6 +1635,8 @@ function frame(ts){
   let dt = (ts - Game.lastTime)/1000;
   Game.lastTime = ts;
   dt = Math.min(dt, 0.05);
+  GamepadNav.poll();
+  MenuNav.refresh();
   update(dt);
   render();
   requestAnimationFrame(frame);
@@ -1585,12 +1680,7 @@ document.getElementById('btnEscortContinue').addEventListener('click', ()=>{
 setInterval(()=>{
   if(Input.startPressedEdge){
     Input.startPressedEdge = false;
-    if(Game.state==='menu') document.getElementById('btnNewGame').click();
-    else if(Game.state==='info') document.getElementById('btnInfoBack').click();
-    else if(Game.state==='leaderboard') document.getElementById('btnLbBack').click();
-    else if(Game.state==='levelup') document.getElementById('btnNext').click();
-    else if(Game.state==='escortintro') document.getElementById('btnEscortGo').click();
-    else if(Game.state==='escortresult') document.getElementById('btnEscortContinue').click();
+    if(isMenuState(Game.state)) MenuNav.confirm();
     else if(Game.state==='playing'||Game.state==='escort'||Game.state==='paused') Game.togglePause();
   }
 }, 50);
