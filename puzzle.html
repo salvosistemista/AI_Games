@@ -656,7 +656,7 @@
 </head>
 <body>
 <div class="wrap">
-  <span class="version-badge">v1.37</span>
+  <span class="version-badge">v1.38</span>
   <button type="button" class="help-btn" id="helpBtn" title="Comandi e scorciatoie">?</button>
   <h1>My Jigsaw Puzzle</h1>
   <p class="sub">Fino a 5 puzzle salvati in questo browser. Scegli uno slot, carica una foto, imposta il numero di pezzi e ricomponila trascinando i pezzi dal tavolo di legno fino al tappeto verde.</p>
@@ -802,6 +802,7 @@
       <li><span>Chiudi le opzioni per avviare/riprendere il tempo, riaprile per mettere in pausa</span><kbd>Pulsante "Opzioni" / G</kbd></li>
       <li><span>Levetta sinistra muove il cursore · A prendi/lascia · X/Y/LB/RB ruotano (LB/RB fanno zoom se tieni A) · B interruttore riferimento · LT tenuto mostra il riferimento · L3 Riporta · R3 Mescola · D-pad su Bordi · Start chiude le opzioni · Select apre questo aiuto</span><kbd>Gamepad</kbd></li>
       <li><span>Tieni A e muovi la levetta destra: cresce un cerchio di selezione, rilascia A per prendere in mano tutto ciò che contiene</span><kbd>Gamepad: A + levetta destra</kbd></li>
+      <li><span>Scorri la pagina su/giù/lati (quando non tieni A); il cursore vicino al bordo dello schermo scorre da solo</span><kbd>Gamepad: levetta destra</kbd></li>
       <li><span>Con un blocco in mano, tieni B per 3 secondi per staccarlo in pezzi singoli</span><kbd>Gamepad: B tenuto</kbd></li>
     </ul>
     <div class="row">
@@ -2793,6 +2794,28 @@
       );
     }
 
+    const pressed = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+    const justPressed = (i) => pressed(i) && !gpPrevButtons[i];
+    const justReleased = (i) => !pressed(i) && gpPrevButtons[i];
+    const aHeld = pressed(0);
+    const bHeld = pressed(1);
+
+    // scroll the page: right stick pans it directly (only when A isn't busy growing a
+    // selection circle), and pushing the cursor against a screen edge nudges it too —
+    // the virtual cursor is confined to the viewport like a real one, so without this
+    // there'd be no way to reach content above/below the visible area
+    const EDGE_ZONE = 60, EDGE_SPEED = 12, SCROLL_SPEED = 18;
+    let rsx = gp.axes[2] || 0, rsy = gp.axes[3] || 0;
+    if (Math.abs(rsx) < DEAD) rsx = 0;
+    if (Math.abs(rsy) < DEAD) rsy = 0;
+    if (!aHeld && (rsx !== 0 || rsy !== 0)){
+      window.scrollBy(rsx * SCROLL_SPEED, rsy * SCROLL_SPEED);
+    }
+    if (dy < 0 && gpVY < EDGE_ZONE) window.scrollBy(0, -EDGE_SPEED);
+    else if (dy > 0 && gpVY > window.innerHeight - EDGE_ZONE) window.scrollBy(0, EDGE_SPEED);
+    if (dx < 0 && gpVX < EDGE_ZONE) window.scrollBy(-EDGE_SPEED, 0);
+    else if (dx > 0 && gpVX > window.innerWidth - EDGE_ZONE) window.scrollBy(EDGE_SPEED, 0);
+
     if (!optionsOpen){
       const el = document.elementFromPoint(gpVX, gpVY);
       const pieceEl = el ? el.closest('.piece') : null;
@@ -2800,18 +2823,12 @@
     }
     if (carriedGroup) onCarryMove({ clientX: gpVX, clientY: gpVY });
 
-    const pressed = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
-    const justPressed = (i) => pressed(i) && !gpPrevButtons[i];
-    const justReleased = (i) => !pressed(i) && gpPrevButtons[i];
-    const aHeld = pressed(0);
-    const bHeld = pressed(1);
-
     // A: tap picks up/drops a single piece; holding A while pushing the right stick
     // grows a circular selection instead, picking up everything inside on release
     const RS_DEAD = 0.15, RADIUS_SPEED = 6, MAX_RADIUS = 260;
     if (aHeld && !carriedGroup){
-      let rsx = gp.axes[2] || 0, rsy = gp.axes[3] || 0;
-      const rsMag = Math.hypot(rsx, rsy);
+      let rsx2 = gp.axes[2] || 0, rsy2 = gp.axes[3] || 0;
+      const rsMag = Math.hypot(rsx2, rsy2);
       if (rsMag > RS_DEAD){
         gpSelecting = true;
         gpSelectRadius = Math.min(MAX_RADIUS, gpSelectRadius + rsMag * RADIUS_SPEED);
