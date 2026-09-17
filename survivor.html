@@ -23,6 +23,8 @@
       --energy-max-cap: #7d6b38;
       --weapon-color: #e9c46a;
       --caps-color: #f4a261;
+      --context-btn-bg: #3d3d3d;
+      --context-btn-border: #5a5a5a;
     }
 
     * {
@@ -351,6 +353,18 @@
       background: #383838;
     }
 
+    .btn-context {
+      background: var(--context-btn-bg) !important;
+      border: 1px solid var(--context-btn-border) !important;
+      color: #ffffff !important;
+      text-align: center !important;
+      font-weight: 600;
+    }
+
+    .btn-context:active:not(:disabled) {
+      background: #4f4f4f !important;
+    }
+
     .btn-move {
       background: #1f3b34;
       border-color: #2a9d8f;
@@ -382,20 +396,21 @@
       gap: 5px;
     }
 
-    .encounter-actions-row {
+    .encounter-actions-row, .trade-row {
       display: flex;
       gap: 6px;
       width: 100%;
     }
 
-    .encounter-actions-row button {
+    .encounter-actions-row button, .trade-row button {
       flex: 1;
+      text-align: center !important;
     }
 
     .action-sub-grid button {
-      font-size: 0.78rem;
-      padding: 6px 8px;
-      text-align: left;
+      font-size: 0.8rem;
+      padding: 7px 10px;
+      text-align: center;
     }
 
     .modal {
@@ -670,18 +685,18 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v16";
+  const STORAGE_KEY = "terra_desolata_save_v17";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
-  const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
-  const THIRST_TOTAL_SEC = 18 * 3600;     // 18 ore = 64.800s per il 100% di idratazione
-  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 648s per 1%
-  const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // 1 energia corr ogni 9 min (540s)
-  const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // 1 energia max ogni 10 min (600s)
-  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 energia max ogni 4 min (240s)
-  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 energia corr ogni 6 min (360s)
-  const FOOD_PERISH_LIMIT_SEC = 86400;    // 24 ore interne
-  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600; // Massimo 8 ore continue
+  const FOOD_TICK_SEC = 480;
+  const THIRST_TOTAL_SEC = 18 * 3600;
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100;
+  const AWAKE_CUR_ENERGY_DECAY_SEC = 540;
+  const AWAKE_MAX_ENERGY_DECAY_SEC = 600;
+  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;
+  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;
+  const FOOD_PERISH_LIMIT_SEC = 86400;
+  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600;
 
   let isResetting = false;
 
@@ -691,7 +706,7 @@
     food: 80,
     maxFood: 100,
     thirst: 100,
-    caps: 5, // Valuta iniziale: 5 tappi
+    caps: 5,
     drinkFlask: 1.0,
     dirtyFlask: 0.0,
     energy: 100,
@@ -1479,10 +1494,12 @@
     }
     player.energy = Math.max(0, player.energy - 3);
 
-    // Tappi trovati (da 2 a 6)
-    const capsFound = Math.floor(Math.random() * 5) + 2;
-    player.caps = (player.caps || 0) + capsFound;
-    log(`Hai recuperato ${capsFound} Tappi (tp) tra i detriti!`, "caps");
+    // 50% di possibilità di trovare dai 2 ai 5 tappi
+    if (Math.random() < 0.5) {
+      const capsFound = Math.floor(Math.random() * 4) + 2; // 2, 3, 4, 5
+      player.caps = (player.caps || 0) + capsFound;
+      log(`Hai recuperato ${capsFound} Tappi (tp) tra i detriti!`, "caps");
+    }
 
     // Raccolta automatica acqua
     const prevDirty = player.dirtyFlask || 0;
@@ -1759,71 +1776,100 @@
   }
 
   /* =========================================================================
-     SISTEMA DI BARATTO (CON OPZIONE TAPPI TP)
+     SISTEMA DI BARATTO A RIGHE ACCOPPIATE
      ========================================================================= */
   function renderTradeOptions() {
-    const tradeOptions = [
-      // 2 rottami o 10 tp > 1 cibo
-      {
-        label: "2 Rottami ➔ 1 Cibo",
-        action: () => executeTradeItem("scrap", 2, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 }])
-      },
-      {
-        label: "10 Tappi (tp) ➔ 1 Cibo",
-        action: () => executeTradeCaps(10, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 }])
-      },
-      // 3 rottami o 15 tp > 1 Bende/Disinfettante
-      {
-        label: "3 Rottami ➔ 1 Bende/Disinfettante",
-        action: () => executeTradeItem("scrap", 3, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
-      },
-      {
-        label: "15 Tappi (tp) ➔ 1 Bende/Disinfettante",
-        action: () => executeTradeCaps(15, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
-      },
-      // 1 rottame o 8 tp > 1 nastro + 1 tessuto
-      {
-        label: "1 Rottame ➔ 1 Nastro + 1 Tessuto",
-        action: () => executeTradeItem("scrap", 1, [
-          { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1 },
-          { id: "cloth", name: "Tessuto", type: "material", qty: 1 }
-        ])
-      },
-      {
-        label: "8 Tappi (tp) ➔ 1 Nastro + 1 Tessuto",
-        action: () => executeTradeCaps(8, [
-          { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1 },
-          { id: "cloth", name: "Tessuto", type: "material", qty: 1 }
-        ])
-      },
-      // 2 cibo o 15 tp > 1 Bende/Disinfettante
-      {
-        label: "2 Cibo ➔ 1 Bende/Disinfettante",
-        action: () => executeTradeItem("canned_food", 2, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
-      },
-      {
-        label: "15 Tappi (tp) ➔ 1 Bende/Disinfettante",
-        action: () => executeTradeCaps(15, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
-      },
-      // 1 Bende/Disinfettante o 15 tp > 2 cibo
-      {
-        label: "1 Bende/Disinfettante ➔ 2 Cibo",
-        action: () => executeTradeItem("medkit", 1, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 }])
-      },
-      {
-        label: "15 Tappi (tp) ➔ 2 Cibo",
-        action: () => executeTradeCaps(15, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 }])
-      }
+    const tradeRows = [
+      [
+        {
+          label: "2 Rottami ➔ 1 Cibo",
+          action: () => executeTradeItem("scrap", 2, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 }])
+        },
+        {
+          label: "10 tp ➔ 1 Cibo",
+          action: () => executeTradeCaps(10, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 }])
+        }
+      ],
+      [
+        {
+          label: "3 Rottami ➔ 1 Bende",
+          action: () => executeTradeItem("scrap", 3, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
+        },
+        {
+          label: "15 tp ➔ 1 Bende",
+          action: () => executeTradeCaps(15, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
+        }
+      ],
+      [
+        {
+          label: "1 Rottame ➔ Nastro+Tessuto",
+          action: () => executeTradeItem("scrap", 1, [
+            { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1 },
+            { id: "cloth", name: "Tessuto", type: "material", qty: 1 }
+          ])
+        },
+        {
+          label: "8 tp ➔ Nastro+Tessuto",
+          action: () => executeTradeCaps(8, [
+            { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1 },
+            { id: "cloth", name: "Tessuto", type: "material", qty: 1 }
+          ])
+        }
+      ],
+      [
+        {
+          label: "2 Cibo ➔ 1 Bende",
+          action: () => executeTradeItem("canned_food", 2, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
+        },
+        {
+          label: "15 tp ➔ 1 Bende",
+          action: () => executeTradeCaps(15, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }])
+        }
+      ],
+      [
+        {
+          label: "1 Bende ➔ 2 Cibo",
+          action: () => executeTradeItem("medkit", 1, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 }])
+        },
+        {
+          label: "15 tp ➔ 2 Cibo",
+          action: () => executeTradeCaps(15, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 }])
+        }
+      ]
     ];
 
-    setContextActions(tradeOptions);
+    setTradeRows(tradeRows);
+  }
+
+  function setTradeRows(rows) {
+    const box = document.getElementById("context-actions");
+    box.innerHTML = "";
+    if (player.isSleeping) {
+      box.style.display = "none";
+      return;
+    }
+
+    rows.forEach(rowGroup => {
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "trade-row";
+      rowGroup.forEach(btnConfig => {
+        const btn = document.createElement("button");
+        btn.className = "btn-main btn-context";
+        btn.textContent = btnConfig.label;
+        btn.onclick = btnConfig.action;
+        rowDiv.appendChild(btn);
+      });
+      box.appendChild(rowDiv);
+    });
+
+    box.style.display = "flex";
   }
 
   function executeTradeItem(giveId, giveQty, receiveList) {
     if (player.isSleeping) return;
     const sourceItem = player.inventory.find(i => i.id === giveId);
     if (!sourceItem || sourceItem.qty < giveQty) {
-      log(`Non possiedi abbastanza risorse (${sourceItem ? sourceItem.name : giveId} x${giveQty}) per questo scambio.`, "danger");
+      log(`Non possiedi abbastanza risorse per questo baratto.`, "danger");
       return;
     }
 
@@ -1854,7 +1900,7 @@
   function executeTradeCaps(costCaps, receiveList) {
     if (player.isSleeping) return;
     if ((player.caps || 0) < costCaps) {
-      log(`Non possiedi abbastanza Tappi (richiesti: ${costCaps} tp, possiedi: ${player.caps || 0} tp).`, "danger");
+      log(`Non possiedi abbastanza Tappi (tp) (richiesti: ${costCaps} tp, possiedi: ${player.caps || 0} tp).`, "danger");
       return;
     }
 
@@ -1875,7 +1921,7 @@
     });
 
     const recDesc = receiveList.map(r => `${r.qty}x ${r.name}`).join(" e ");
-    log(`Acquisto completato: pagati ${costCaps} tp per ricevere ${recDesc}.`, "success");
+    log(`Acquisto completato: pagati ${costCaps} Tappi (tp) per ricevere ${recDesc}.`, "success");
     clearContextActions();
     saveGame();
     updateUI();
@@ -1913,7 +1959,7 @@
     }
     actions.forEach(a => {
       const btn = document.createElement("button");
-      btn.className = "btn-main";
+      btn.className = "btn-main btn-context";
       btn.textContent = a.label;
       btn.onclick = a.action;
       box.appendChild(btn);
@@ -1934,7 +1980,7 @@
       rowDiv.className = "encounter-actions-row";
       combatRowActions.forEach(a => {
         const btn = document.createElement("button");
-        btn.className = "btn-main";
+        btn.className = "btn-main btn-context";
         btn.textContent = a.label;
         btn.onclick = a.action;
         rowDiv.appendChild(btn);
@@ -1945,7 +1991,7 @@
     if (otherActions && otherActions.length > 0) {
       otherActions.forEach(a => {
         const btn = document.createElement("button");
-        btn.className = "btn-main";
+        btn.className = "btn-main btn-context";
         btn.textContent = a.label;
         btn.onclick = a.action;
         box.appendChild(btn);
@@ -1956,7 +2002,9 @@
   }
 
   function clearContextActions() {
-    setContextActions([]);
+    const box = document.getElementById("context-actions");
+    box.innerHTML = "";
+    box.style.display = "none";
   }
 
   function updateUI() {
@@ -1971,7 +2019,6 @@
     document.getElementById("bar-thirst").style.width = `${player.thirst}%`;
     document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
 
-    // Tappi
     document.getElementById("val-caps").textContent = player.caps !== undefined ? player.caps : 0;
 
     const petRow = document.getElementById("pet-stat-row");
