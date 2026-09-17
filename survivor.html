@@ -664,7 +664,7 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v14";
+  const STORAGE_KEY = "terra_desolata_save_v15";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
@@ -890,7 +890,6 @@
     player.energy = Math.min(player.maxEnergy, player.energy + curGains);
 
     if (player.sick) {
-      // Modificato da 0.15 a 0.05 HP al secondo
       const sickDmg = secondsToAdd * 0.05;
       player.hp = Math.max(0, player.hp - sickDmg);
       if (!silent) log(`La malattia ti debilita durante il riposo (-${Math.round(sickDmg)} HP).`, "danger");
@@ -943,7 +942,6 @@
     player.energy = Math.max(0, player.energy - curLoss);
 
     if (player.sick) {
-      // Modificato da 0.2 a 0.1 HP al secondo
       const sickDmg = secondsToAdd * 0.1;
       player.hp = Math.max(0, player.hp - sickDmg);
       if (!silent) log(`L'infezione progredisce (-${Math.round(sickDmg)} HP).`, "danger");
@@ -1526,7 +1524,7 @@
   }
 
   /* =========================================================================
-     INCONTRI & MICRO-BIVI CON COMPAGNO
+     INCONTRI & MICRO-BIVI
      ========================================================================= */
   function handleAnimalEncounter() {
     if (Math.random() < 0.45) {
@@ -1571,7 +1569,7 @@
     }
 
     otherActions.push({
-      label: "Fuggi (-15 Energia)",
+      label: "Fuggi",
       action: () => fleeEncounter("animal")
     });
 
@@ -1616,15 +1614,49 @@
     }
 
     otherActions.push({
-      label: "Fuggi (-15 Energia)",
+      label: "Fuggi",
       action: () => fleeEncounter("human")
     });
 
     setContextActionsRow(combatRow, otherActions);
   }
 
+  function lootRaiderItems(count) {
+    const possibleLoot = [
+      { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35 },
+      { id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30 },
+      { id: "scrap", name: "Rottami metallici", type: "material" },
+      { id: "duct_tape", name: "Nastro adesivo", type: "material" },
+      { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20 }
+    ];
+
+    let looted = 0;
+    for (let i = 0; i < count; i++) {
+      const chosen = possibleLoot[Math.floor(Math.random() * possibleLoot.length)];
+      if (chosen.type === "perishable_food") {
+        if (addPerishableFood(chosen.id, chosen.name, chosen.val)) {
+          log(`Nello scontro, il predone perde dallo zaino: ${chosen.name}! Lo raccogli al volo.`, "combat");
+          looted++;
+        } else {
+          log(`Il predone perde ${chosen.name}, ma il tuo zaino è pieno e non puoi raccoglierlo.`, "idle");
+        }
+      } else {
+        if (addItem(chosen.id, chosen.name, chosen.type, chosen.val || 0, 1)) {
+          log(`Nello scontro, il predone perde dallo zaino: ${chosen.name}! Lo raccogli al volo.`, "combat");
+          looted++;
+        } else {
+          log(`Il predone perde ${chosen.name}, ma il tuo zaino è pieno e non puoi raccoglierlo.`, "idle");
+        }
+      }
+    }
+  }
+
   function resolveCombat(type, minDmg, maxDmg, enemyName) {
     if (tryDodgeAttack(enemyName)) {
+      if (type === "human") {
+        // Schivato = 0 danni subiti (< 10 danni) -> 2 oggetti
+        lootRaiderItems(2);
+      }
       endEncounter();
       return;
     }
@@ -1641,6 +1673,14 @@
     player.hp = Math.max(0, player.hp - baseDmg);
     log(`Nello scontro contro ${enemyName} subisci ${baseDmg} danni.`, "danger");
 
+    if (type === "human") {
+      if (baseDmg < 10) {
+        lootRaiderItems(2);
+      } else if (baseDmg < 20) {
+        lootRaiderItems(1);
+      }
+    }
+
     endEncounter();
     checkDeath();
   }
@@ -1650,6 +1690,9 @@
 
     if (Math.random() < 0.35) {
       log(`${player.companion.name} balza con agilità e svia l'attacco di ${enemyName} senza subire ferite!`, "pet");
+      if (type === "human") {
+        lootRaiderItems(2); // Danni subiti dal giocatore = 0 (< 10)
+      }
       endEncounter();
       return;
     }
@@ -1658,19 +1701,44 @@
     player.companion.hp = Math.max(0, player.companion.hp - baseDmg);
     log(`${player.companion.name} si scaglia con coraggio contro ${enemyName} subendo ${baseDmg} danni al posto tuo!`, "danger");
 
+    if (type === "human") {
+      lootRaiderItems(2); // Danni subiti dal giocatore = 0 (< 10)
+    }
+
     checkPetStatus();
     endEncounter();
   }
 
   function fleeEncounter(type) {
-    if (player.energy < 15) {
-      log("Non hai abbastanza energia corrente per fuggire (minimo 15)! Sei costretto allo scontro!", "danger");
-      return;
+    if (type === "human") {
+      // Predone: -20 Ene corr, -10 Ene max, -10 idratazione, -10 sazietà, -5 salute
+      if (player.energy < 20) {
+        log("Non hai abbastanza energia corrente per sfuggire al predone (richiesti 20)! Sei costretto a combattere!", "danger");
+        return;
+      }
+      player.energy = Math.max(0, player.energy - 20);
+      player.maxEnergy = Math.max(0, player.maxEnergy - 10);
+      player.thirst = Math.max(0, player.thirst - 10);
+      player.food = Math.max(0, player.food - 10);
+      player.hp = Math.max(0, player.hp - 5);
+      enforceEnergyCaps();
+      log("Fuggi disperatamente dal predone! Subisci lo sforzo estremo (-20 Ene corr, -10 Ene max, -10 Idratazione, -10 Sazietà, -5 HP).", "idle");
+    } else {
+      // Predatore selvatico: -15 Ene corr, -8 Ene max, -5 idratazione, -5 sazietà, -3 salute
+      if (player.energy < 15) {
+        log("Non hai abbastanza energia corrente per scappare dalla fiera (richiesti 15)! Devi combattere!", "danger");
+        return;
+      }
+      player.energy = Math.max(0, player.energy - 15);
+      player.maxEnergy = Math.max(0, player.maxEnergy - 8);
+      player.thirst = Math.max(0, player.thirst - 5);
+      player.food = Math.max(0, player.food - 5);
+      player.hp = Math.max(0, player.hp - 3);
+      enforceEnergyCaps();
+      log("Scatti e semini il predatore selvatico tra le macerie (-15 Ene corr, -8 Ene max, -5 Idratazione, -5 Sazietà, -3 HP).", "idle");
     }
-    player.energy = Math.max(0, player.energy - 15);
-    enforceEnergyCaps();
-    log("Scatti e distanzi la minaccia (-15 Energia Corrente).", "idle");
     endEncounter();
+    checkDeath();
   }
 
   function endEncounter() {
@@ -1682,14 +1750,15 @@
 
   function renderTradeOptions() {
     setContextActions([
-      { label: "Baratta: 2 Rottami ➔ 1 Cibo", action: () => executeTrade("scrap", 2, "canned_food", "Cibo in scatola", "food", 35, 1) },
-      { label: "Baratta: 4 Rottami ➔ 1 Bende/Disinfettante", action: () => executeTrade("scrap", 4, "medkit", "Bende e disinfettante", "cure", 30, 1) },
-      { label: "Baratta: 2 Cibo ➔ 1 Bende/Disinfettante", action: () => executeTrade("canned_food", 2, "medkit", "Bende e disinfettante", "cure", 30, 1) },
-      { label: "Baratta: 1 Bende/Disinfettante ➔ 2 Cibo", action: () => executeTrade("medkit", 1, "canned_food", "Cibo in scatola", "food", 35, 2) }
+      { label: "Baratta: 2 Rottami ➔ 1 Cibo", action: () => executeTrade("scrap", 2, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 }]) },
+      { label: "Baratta: 3 Rottami ➔ 1 Bende/Disinfettante", action: () => executeTrade("scrap", 3, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }]) },
+      { label: "Baratta: 1 Rottame ➔ 1 Nastro + 1 Tessuto", action: () => executeTrade("scrap", 1, [{ id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1 }, { id: "cloth", name: "Tessuto", type: "material", qty: 1 }]) },
+      { label: "Baratta: 2 Cibo ➔ 1 Bende/Disinfettante", action: () => executeTrade("canned_food", 2, [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }]) },
+      { label: "Baratta: 1 Bende/Disinfettante ➔ 2 Cibo", action: () => executeTrade("medkit", 1, [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 }]) }
     ]);
   }
 
-  function executeTrade(giveId, giveQty, receiveId, receiveName, receiveType, receiveVal, receiveQty) {
+  function executeTrade(giveId, giveQty, receiveList) {
     if (player.isSleeping) return;
     const sourceItem = player.inventory.find(i => i.id === giveId);
     if (!sourceItem || sourceItem.qty < giveQty) {
@@ -1698,18 +1767,24 @@
     }
 
     const giveWeight = getItemSlotWeight(giveId, sourceItem.type) * giveQty;
-    const recWeight = getItemSlotWeight(receiveId, receiveType) * receiveQty;
-    const projectedSlots = getTotalUsedSlots() - giveWeight + recWeight;
+    let recWeight = 0;
+    receiveList.forEach(r => {
+      recWeight += getItemSlotWeight(r.id, r.type) * r.qty;
+    });
 
+    const projectedSlots = getTotalUsedSlots() - giveWeight + recWeight;
     if (projectedSlots > player.maxSlots + 0.001) {
-      log("Zaino colmo! Spazio insufficiente.", "danger");
+      log("Zaino colmo! Spazio insufficiente per completare lo scambio.", "danger");
       return;
     }
 
     removeItem(giveId, giveQty);
-    addItem(receiveId, receiveName, receiveType, receiveVal, receiveQty);
+    receiveList.forEach(r => {
+      addItem(r.id, r.name, r.type, r.val || 0, r.qty);
+    });
 
-    log(`Scambio concluso: ceduti ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
+    const recDesc = receiveList.map(r => `${r.qty}x ${r.name}`).join(" e ");
+    log(`Scambio completato: ceduti ${giveQty}x per ricevere ${recDesc}.`, "success");
     clearContextActions();
     saveGame();
     updateUI();
