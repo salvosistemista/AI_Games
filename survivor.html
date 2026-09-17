@@ -319,6 +319,13 @@
       color: #8da9c4;
     }
 
+    .btn-hour-sleep {
+      background: #23344d;
+      border-color: #5c84b8;
+      color: #c0d8f8;
+      margin-bottom: 2px;
+    }
+
     .btn-danger-opt {
       background: #3a1c1c;
       border-color: var(--danger);
@@ -336,7 +343,7 @@
       padding: 8px 10px;
     }
 
-    /* Finestre Modali */
+    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -364,7 +371,6 @@
       margin-bottom: 4px;
     }
 
-    /* Tabella Classifica */
     .leaderboard-table-container {
       max-height: 240px;
       overflow-y: auto;
@@ -412,9 +418,8 @@
     </header>
 
     <div class="status-panel">
-      <!-- Riga Tempo Trascorso -->
       <div class="time-tracker-row">
-        <span>Sopravvissuto:</span>
+        <span>Tempo di sopravvivenza:</span>
         <strong id="val-time-elapsed">0g 0h 0m</strong>
       </div>
 
@@ -464,6 +469,10 @@
 
     <div class="controls">
       <div id="context-actions" class="action-sub-grid" style="display:none; margin-bottom: 4px;"></div>
+      
+      <!-- Pulsante per avanzare di 1 ora durante il sonno -->
+      <button id="btn-sleep-hour" class="btn-main btn-hour-sleep" style="display:none;">Dormi 1 Ora (+60 min)</button>
+
       <div class="main-actions-grid">
         <button id="btn-sleep-toggle" class="btn-main btn-sleep">Dormi</button>
         <button id="btn-move" class="btn-main btn-move">Avanza (+1 Km)</button>
@@ -500,7 +509,7 @@
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
-      <div id="leaderboard-empty" class="leaderboard-empty" style="display:none;">Nessun decesso memorizzato finora.</div>
+      <div id="leaderboard-empty" class="leaderboard-empty" style="display:none;">Nessun decesso registrato.</div>
     </div>
     <button class="btn-main" id="btn-close-leaderboard">Indietro</button>
   </div>
@@ -510,14 +519,14 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v4";
+  const STORAGE_KEY = "terra_desolata_save_v6";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
-  const FOOD_TICK_SEC = 480;
-  const AWAKE_CUR_ENERGY_DECAY_SEC = 540;
-  const AWAKE_MAX_ENERGY_DECAY_SEC = 600;
-  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;
-  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;
+  const FOOD_TICK_SEC = 480;              // 1 sazietà ogni 8 min (480s)
+  const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // 1 energia corr ogni 9 min (540s)
+  const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // 1 energia max ogni 10 min (600s)
+  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 energia max ogni 4 min (240s)
+  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 energia corr ogni 6 min (360s)
 
   const defaultPlayerState = {
     hp: 100,
@@ -529,8 +538,9 @@
     km: 0,
     sick: false,
     isSleeping: false,
+    consecutiveSleepHours: 0, // Ore consecutive dormite
     maxSlots: 10,
-    survivalSeconds: 0, // Tempo totale sopravvissuto in secondi
+    survivalSeconds: 0,
     isDead: false,
     lastActiveTimestamp: Date.now(),
     secFood: 0,
@@ -570,7 +580,77 @@
   }
 
   /* =========================================================================
-     LOGICA DI SCHIVATA (SALUTE 85-100 & ENERGIA > 70 => 50% SCHIVATA)
+     AVANZAMENTO DEL TEMPO
+     ========================================================================= */
+  function advanceTime(secondsToAdd, silent = false) {
+    if (player.hp <= 0 || secondsToAdd <= 0) return;
+
+    player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
+
+    if (player.isSleeping) {
+      // Guadagno energia massima (+1 ogni 240s)
+      const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
+      const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
+      player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
+      player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
+
+      // Guadagno energia corrente (+1 ogni 360s)
+      const totalSleepCurSec = (player.secSleepCur || 0) + secondsToAdd;
+      const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
+      player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
+      player.energy = Math.min(player.maxEnergy, player.energy + curGains);
+
+      if (player.sick) {
+        const sickDmg = secondsToAdd * 0.15;
+        player.hp = Math.max(0, player.hp - sickDmg);
+        if (!silent) log(`La malattia ha peggiorato le tue condizioni durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
+      }
+    } else {
+      // Perdita sazietà (-1 ogni 480s)
+      const totalFoodSec = (player.secFood || 0) + secondsToAdd;
+      const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
+      player.secFood = totalFoodSec % FOOD_TICK_SEC;
+
+      if (foodLoss > 0) {
+        const foodBefore = player.food;
+        player.food = Math.max(0, player.food - foodLoss);
+        const actualLoss = foodBefore - player.food;
+
+        if (player.food <= 0) {
+          const starvedUnits = foodLoss - actualLoss;
+          const starvationDamage = Math.max(1, starvedUnits * 10);
+          player.hp = Math.max(0, player.hp - starvationDamage);
+          if (!silent) log(`Sei rimasto a digiuno! Subisci ${Math.round(starvationDamage)} danni per inedia.`, "danger");
+        }
+      }
+
+      // Perdita energia massima (-1 ogni 600s)
+      const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
+      const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
+      player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
+      player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
+
+      // Perdita energia corrente (-1 ogni 540s)
+      const totalAwakeCurSec = (player.secAwakeCur || 0) + secondsToAdd;
+      const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
+      player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
+      player.energy = Math.max(0, player.energy - curLoss);
+
+      if (player.sick) {
+        const sickDmg = secondsToAdd * 0.2;
+        player.hp = Math.max(0, player.hp - sickDmg);
+        if (!silent) log(`L'infezione si è aggravata col passare del tempo (-${Math.round(sickDmg)} HP).`, "danger");
+      }
+    }
+
+    enforceEnergyCaps();
+    checkDeath();
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     SCHIVATA
      ========================================================================= */
   function canAttemptDodge() {
     return player.hp >= 85 && player.hp <= 100 && player.energy > 70;
@@ -578,7 +658,7 @@
 
   function tryDodgeAttack(enemyType) {
     if (canAttemptDodge() && Math.random() < 0.5) {
-      log(`I tuoi riflessi sono pronti (Salute ed Energia ottimali): schivi agilmente l'attacco di ${enemyType}!`, "success");
+      log(`I tuoi riflessi sono ottimali: schivi prontamente l'attacco di ${enemyType}!`, "success");
       return true;
     }
     return false;
@@ -592,7 +672,7 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
     } catch (e) {
-      console.warn("Impossibile salvare su LocalStorage", e);
+      console.warn("Impossibile salvare", e);
     }
   }
 
@@ -600,7 +680,7 @@
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) {
       log("Ti trovi in una landa desolata. La sopravvivenza dipenderà dalle tue scelte.");
-      log("Riposare dormendo ripristina la resistenza massima e corrente, bloccando la fame.");
+      log("Dormire blocca la fame e rigenera l'energia. Puoi anche decidere di dormire 1 ora alla volta.");
       saveGame();
       return;
     }
@@ -614,160 +694,32 @@
       const elapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
       player.lastActiveTimestamp = now;
 
-      if (!player.isDead && elapsedSeconds > 10) {
-        simulateOfflineProgress(elapsedSeconds);
+      if (!player.isDead && elapsedSeconds > 5) {
+        const mins = Math.floor(elapsedSeconds / 60);
+        log(`Sei rimasto via per circa ${mins > 0 ? mins + " minuti" : elapsedSeconds + " secondi"}.`, "idle");
+        advanceTime(elapsedSeconds, true);
       } else if (!player.isDead) {
         log("Bentornato nelle rovine.");
       }
     } catch (e) {
-      console.error("Errore nel caricamento del salvataggio", e);
+      console.error("Errore di caricamento salvataggio", e);
       player = JSON.parse(JSON.stringify(defaultPlayerState));
     }
     enforceEnergyCaps();
   }
 
-  function simulateOfflineProgress(totalSeconds) {
-    const minutes = Math.floor(totalSeconds / 60);
-    log(`Sei rimasto via per circa ${minutes > 0 ? minutes + " minuti" : totalSeconds + " secondi"}.`, "idle");
-
-    // Incrementa il tempo complessivo di sopravvivenza
-    player.survivalSeconds = (player.survivalSeconds || 0) + totalSeconds;
-
-    if (player.isSleeping) {
-      const totalSleepMaxSec = (player.secSleepMax || 0) + totalSeconds;
-      const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
-      player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
-      player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
-
-      const totalSleepCurSec = (player.secSleepCur || 0) + totalSeconds;
-      const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
-      player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
-      player.energy = Math.min(player.maxEnergy, player.energy + curGains);
-
-      enforceEnergyCaps();
-      log(`Durante il sonno hai recuperato energie (Massima: ${Math.round(player.maxEnergy)}, Attuale: ${Math.round(player.energy)}).`, "sleep");
-
-      if (player.sick) {
-        const sickDmg = totalSeconds * 0.15;
-        player.hp = Math.max(0, player.hp - sickDmg);
-        log(`L'infezione ha continuato a debilitarti durante la notte (-${Math.round(sickDmg)} HP).`, "danger");
-      }
-    } else {
-      const totalFoodSec = (player.secFood || 0) + totalSeconds;
-      const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
-      player.secFood = totalFoodSec % FOOD_TICK_SEC;
-
-      if (foodLoss > 0) {
-        const foodBefore = player.food;
-        player.food = Math.max(0, player.food - foodLoss);
-        const actualLoss = foodBefore - player.food;
-        log(`Il tempo trascorso ti ha affamato (-${actualLoss} Sazietà).`, "idle");
-
-        if (player.food <= 0) {
-          const starvedUnits = foodLoss - actualLoss;
-          const starvationDamage = starvedUnits * 10;
-          player.hp = Math.max(0, player.hp - starvationDamage);
-          log(`Sei rimasto a lungo senza provviste! (-${Math.round(starvationDamage)} HP per inedia).`, "danger");
-        }
-      }
-
-      const totalAwakeMaxSec = (player.secAwakeMax || 0) + totalSeconds;
-      const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
-      player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
-      player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
-
-      const totalAwakeCurSec = (player.secAwakeCur || 0) + totalSeconds;
-      const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
-      player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
-      player.energy = Math.max(0, player.energy - curLoss);
-
-      enforceEnergyCaps();
-
-      if (player.sick) {
-        const sickDmg = totalSeconds * 0.2;
-        player.hp = Math.max(0, player.hp - sickDmg);
-        log(`La malattia si è aggravata (-${Math.round(sickDmg)} HP).`, "danger");
-      }
-    }
-
-    checkDeath();
-    saveGame();
-  }
-
   /* =========================================================================
-     LOOP DI GIOCO REAL-TIME (OGNI SECONDO)
+     LOOP REAL-TIME (OGNI 1 SECONDO)
      ========================================================================= */
   setInterval(() => {
-    gameTick();
-  }, 1000);
-
-  function gameTick() {
     if (player.hp <= 0) return;
+    advanceTime(1, true);
 
-    player.survivalSeconds = (player.survivalSeconds || 0) + 1;
-
-    if (player.isSleeping) {
-      player.secSleepMax = (player.secSleepMax || 0) + 1;
-      if (player.secSleepMax >= SLEEP_MAX_ENERGY_GAIN_SEC) {
-        if (player.maxEnergy < 100) {
-          player.maxEnergy = Math.min(100, player.maxEnergy + 1);
-        }
-        player.secSleepMax = 0;
-      }
-
-      player.secSleepCur = (player.secSleepCur || 0) + 1;
-      if (player.secSleepCur >= SLEEP_CUR_ENERGY_GAIN_SEC) {
-        if (player.energy < player.maxEnergy) {
-          player.energy = Math.min(player.maxEnergy, player.energy + 1);
-        }
-        player.secSleepCur = 0;
-      }
-
-      player.secAwakeCur = 0;
-      player.secAwakeMax = 0;
-      player.secFood = 0;
-
-    } else {
-      if (player.food > 0) {
-        player.secFood = (player.secFood || 0) + 1;
-        if (player.secFood >= FOOD_TICK_SEC) {
-          player.food = Math.max(0, player.food - 1);
-          player.secFood = 0;
-        }
-      } else {
-        player.hp = Math.max(0, player.hp - 0.2);
-        if (Math.random() < 0.04) log("Stai morendo di fame! Trova cibo al più presto.", "danger");
-      }
-
-      player.secAwakeMax = (player.secAwakeMax || 0) + 1;
-      if (player.secAwakeMax >= AWAKE_MAX_ENERGY_DECAY_SEC) {
-        player.maxEnergy = Math.max(0, player.maxEnergy - 1);
-        player.secAwakeMax = 0;
-      }
-
-      player.secAwakeCur = (player.secAwakeCur || 0) + 1;
-      if (player.secAwakeCur >= AWAKE_CUR_ENERGY_DECAY_SEC) {
-        player.energy = Math.max(0, player.energy - 1);
-        player.secAwakeCur = 0;
-      }
-
-      player.secSleepCur = 0;
-      player.secSleepMax = 0;
+    if (!player.sick && player.food > 60 && player.energy > 60 && player.hp < player.maxHp) {
+      player.hp = Math.min(player.maxHp, player.hp + 0.1);
+      updateUI();
     }
-
-    enforceEnergyCaps();
-
-    if (player.sick) {
-      player.hp = Math.max(0, player.hp - 0.2);
-      if (Math.random() < 0.02) log("L'infezione ti fa tremare e perdere forze...", "danger");
-    } else if (player.food > 50 && player.energy > 50 && player.hp < player.maxHp) {
-      player.hp = Math.min(player.maxHp, player.hp + 0.2);
-    }
-
-    checkDeath();
-    updateUI();
-    saveGame();
-  }
+  }, 1000);
 
   /* =========================================================================
      MECCANICA DEL SONNO
@@ -778,18 +730,33 @@
     player.isSleeping = !player.isSleeping;
 
     if (player.isSleeping) {
-      log("Ti corichi per dormire: la fame si ferma, l'energia massima e corrente iniziano a rigenerarsi.", "sleep");
+      player.consecutiveSleepHours = 0; // Azzera il contatore al momento di coricarsi
+      log("Ti corichi al riparo e chiudi gli occhi. Entri in un sonno profondo.", "sleep");
       clearContextActions();
     } else {
-      log("Ti svegli pronto all'azione.", "idle");
+      player.consecutiveSleepHours = 0; // Azzera al risveglio
+      log("Ti svegli e torni vigile.", "idle");
     }
 
     saveGame();
     updateUI();
   }
 
+  function sleepOneHour() {
+    if (!player.isSleeping || player.hp <= 0) return;
+
+    // Incrementa le ore dormite dall'ultima volta che si è pigiato Dormi
+    player.consecutiveSleepHours = (player.consecutiveSleepHours || 0) + 1;
+
+    // Fa avanzare il tempo di 3600 secondi
+    advanceTime(3600);
+
+    const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
+    log(`Stai dormendo da ${oreTesto}. Energia: ${Math.round(player.energy)}/${Math.round(player.maxEnergy)}.`, "sleep");
+  }
+
   /* =========================================================================
-     MOVIMENTO ED EVENTI
+     MOVIMENTO (AVANZARE +1 KM = +12 MINUTI)
      ========================================================================= */
   function move() {
     if (player.isSleeping) {
@@ -798,7 +765,7 @@
     }
 
     if (player.energy < 5) {
-      log("Non hai abbastanza energia corrente per camminare (richiesti 5). Dormi o mangia per recuperare.", "danger");
+      log("Non hai abbastanza energia corrente per marciare (minimo 5).", "danger");
       return;
     }
 
@@ -810,7 +777,8 @@
     currentLocation = null;
     clearContextActions();
 
-    log(`Avanzi tra le rovine. Chilometro ${player.km} (-5 En. Max, -5 En. Corrente).`);
+    log(`Avanzi di 1 Km attraverso la desolazione. Passano 12 minuti.`, "idle");
+    advanceTime(720);
 
     const dice = Math.random();
     if (dice < 0.28) {
@@ -822,7 +790,7 @@
     } else if (dice < 0.80) {
       handleHazardEncounter();
     } else {
-      log("Solo macerie e vento freddo lungo la via desolata.", "idle");
+      log("Solo silenzi e macerie lungo il cammino.", "idle");
     }
 
     checkDeath();
@@ -848,13 +816,20 @@
     ]);
   }
 
+  /* =========================================================================
+     PERLUSTRATURA (+15 A 30 MINUTI)
+     ========================================================================= */
   function scavengeLocation() {
     if (player.isSleeping || !currentLocation) return;
     if (player.energy < 3) {
-      log("Sei troppo stanco per frugare a fondo (richiesti 3 Energia Corrente).", "danger");
+      log("Sei troppo stanco per perquisire accuratamente (richiesti 3 Energia Corrente).", "danger");
       return;
     }
     player.energy = Math.max(0, player.energy - 3);
+
+    const minutesPassed = Math.floor(Math.random() * 16) + 15;
+    log(`Frughi con cautela tra i resti per ${minutesPassed} minuti...`, "idle");
+    advanceTime(minutesPassed * 60);
 
     const lootRoll = Math.random();
     if (lootRoll < 0.35) {
@@ -862,18 +837,18 @@
       log("Hai recuperato del metallo utile dai rottami.", "success");
     } else if (lootRoll < 0.65) {
       addItem("canned_food", "Cibo in scatola", "food", 35, 1);
-      log("Hai scovato cibo in scatola ben sigillato!", "success");
+      log("Hai trovato una confezione di cibo intatta!", "success");
     } else if (lootRoll < 0.85) {
       addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
-      log("Trovi una cassetta di pronto soccorso integra.", "success");
+      log("Trovi una cassetta di pronto soccorso con bende.", "success");
     } else {
-      log("Hai frugato ovunque ma non è rimasto niente di utile.", "idle");
+      log("Hai frugato ovunque ma non c'era niente di utile.", "idle");
     }
 
     currentLocation.searchesDone += 1;
 
     if (currentLocation.searchesDone < currentLocation.maxSearches) {
-      log("Sembra esserci un'altra area non ancora esplorata in questo posto. Puoi perlustrare di nuovo!", "idle");
+      log("Un'altra stanza/settore della zona sembra ancora accessibile. Puoi perlustrare di nuovo!", "idle");
       setContextActions([
         { label: "Perquisisci ancora", action: () => scavengeLocation() }
       ]);
@@ -888,27 +863,23 @@
 
   function handleAnimalEncounter() {
     if (Math.random() < 0.5) {
-      if (tryDodgeAttack("un predatore selvatico")) {
-        return;
-      }
+      if (tryDodgeAttack("un predatore feroce")) return;
       const dmg = Math.floor(Math.random() * 15) + 10;
       player.hp = Math.max(0, player.hp - dmg);
-      log(`Un predatore selvatico ti assale! Subisci ${dmg} danni prima di respingerlo.`, "danger");
+      log(`Un predatore feroce ti attacca! Subisci ${dmg} danni prima di allontanarlo.`, "danger");
     } else {
-      log("Una volpe magra ti osserva cauta per poi fuggire tra i calcinacci.", "idle");
+      log("Una volpe magra ti osserva a debita distanza prima di dileguarsi.", "idle");
     }
   }
 
   function handleHumanEncounter() {
     if (Math.random() < 0.5) {
-      if (tryDodgeAttack("un predone armato")) {
-        return;
-      }
+      if (tryDodgeAttack("un predone armato")) return;
       const dmg = Math.floor(Math.random() * 20) + 10;
       player.hp = Math.max(0, player.hp - dmg);
-      log(`Un predone armato ti aggredisce! Nello scontro subisci ${dmg} danni prima di fuggire.`, "danger");
+      log(`Un predone ti aggredisce! Nello scontro subisci ${dmg} danni prima di fuggire.`, "danger");
     } else {
-      log("Incontri un viandante disposto a fare affari. Cosa vuoi scambiare?", "success");
+      log("Incontri un viaggiatore pacifico disposto a barattare risorse.", "success");
       renderTradeOptions();
     }
   }
@@ -926,20 +897,20 @@
 
     const sourceItem = player.inventory.find(i => i.id === giveId);
     if (!sourceItem || sourceItem.qty < giveQty) {
-      log(`Non hai abbastanza oggetti per questo baratto (richiesti: ${giveQty}x ${giveId === 'scrap' ? 'Rottami' : giveId === 'canned_food' ? 'Cibo' : 'Bende'}).`, "danger");
+      log(`Non hai abbastanza oggetti per questo baratto.`, "danger");
       return;
     }
 
     const projectedSlots = (getTotalItemsCount() - giveQty) + receiveQty;
     if (projectedSlots > player.maxSlots) {
-      log("Zaino colmo! Non hai abbastanza spazio per ricevere gli oggetti di questo scambio.", "danger");
+      log("Zaino colmo! Spazio insufficiente per lo scambio.", "danger");
       return;
     }
 
     removeItem(giveId, giveQty);
     addItem(receiveId, receiveName, receiveType, receiveVal, receiveQty);
 
-    log(`Scambio completato: hai ceduto ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
+    log(`Scambio completato: ceduti ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
     clearContextActions();
     saveGame();
     updateUI();
@@ -948,11 +919,11 @@
   function handleHazardEncounter() {
     if (!player.sick && Math.random() < 0.5) {
       player.sick = true;
-      log("Inali esalazioni tossiche o polvere infetta: sei MALATO.", "danger");
+      log("Inali aria satura di tossine: sei MALATO.", "danger");
     } else {
       const dmg = 8;
       player.hp = Math.max(0, player.hp - dmg);
-      log(`Inciampi su lamiere arrugginite e ti procuri un taglio profondo (-${dmg} HP).`, "danger");
+      log(`Ti procuri una brutta ferita contro detriti taglienti (-${dmg} HP).`, "danger");
     }
   }
 
@@ -1016,12 +987,12 @@
       if (player.sick) {
         player.sick = false;
         used = true;
-        log("Hai usato le medicine: infezione debellata!", "success");
+        log("Hai usato le medicine: infezione guarita!", "success");
       }
       if (player.hp < player.maxHp) {
         player.hp = Math.min(player.maxHp, player.hp + item.val);
         used = true;
-        log(`Hai fasciato le ferite (+${item.val} HP).`, "success");
+        log(`Hai trattato le ferite (+${item.val} HP).`, "success");
       }
       if (used) {
         removeItem(id, 1);
@@ -1067,24 +1038,20 @@
   }
 
   function updateUI() {
-    // Aggiorna tempo trascorso
     document.getElementById("val-time-elapsed").textContent = formatDuration(player.survivalSeconds || 0);
 
-    // Salute & Sazietà
     document.getElementById("bar-hp").style.width = `${(player.hp / player.maxHp) * 100}%`;
     document.getElementById("val-hp").textContent = `${Math.round(player.hp)}/${player.maxHp}`;
 
     document.getElementById("bar-food").style.width = `${(player.food / player.maxFood) * 100}%`;
     document.getElementById("val-food").textContent = `${Math.round(player.food)}/${player.maxFood}`;
 
-    // Energia Doppia Barra
     document.getElementById("bar-energy-max").style.width = `${player.maxEnergy}%`;
     document.getElementById("bar-energy-cur").style.width = `${player.energy}%`;
     document.getElementById("val-energy").textContent = `${Math.round(player.energy)}/${Math.round(player.maxEnergy)}`;
 
     document.getElementById("val-km").textContent = player.km;
 
-    // Badge
     const condTag = document.getElementById("condition-tag");
     if (player.sick) {
       condTag.textContent = "Malato";
@@ -1099,22 +1066,25 @@
 
     const btnMove = document.getElementById("btn-move");
     const btnSleep = document.getElementById("btn-sleep-toggle");
+    const btnSleepHour = document.getElementById("btn-sleep-hour");
 
     if (player.isDead) {
       btnMove.disabled = true;
       btnSleep.disabled = true;
+      btnSleepHour.style.display = "none";
       btnMove.textContent = "Deceduto";
     } else if (player.isSleeping) {
       btnMove.disabled = true;
       btnSleep.textContent = "Svegliati";
       btnSleep.style.background = "#2b3d54";
+      btnSleepHour.style.display = "block";
     } else {
       btnMove.disabled = player.energy < 5;
       btnSleep.textContent = "Dormi";
       btnSleep.style.background = "#1a2636";
+      btnSleepHour.style.display = "none";
     }
 
-    // Zaino
     const currentSlots = getTotalItemsCount();
     document.getElementById("val-inventory-slots").textContent = `${currentSlots} / ${player.maxSlots} Slot`;
 
@@ -1175,21 +1145,20 @@
       date: deathDate
     });
 
-    // Ordina per durata decrescente e conserva solo le migliori 10
     leaderboard.sort((a, b) => b.duration - a.duration);
     leaderboard = leaderboard.slice(0, 10);
 
     try {
       localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
     } catch (e) {
-      console.warn("Impossibile salvare la classifica", e);
+      console.warn("Impossibile salvare classifica", e);
     }
   }
 
   function checkDeath() {
     if (player.hp <= 0 && !player.isDead) {
       player.isDead = true;
-      log("SEI MORTO. Le tue spoglie rimangono nella desolazione.", "danger");
+      log("SEI MORTO. Il tuo cammino nella desolazione finisce qui.", "danger");
       recordDeathLeaderboard();
       clearContextActions();
       saveGame();
@@ -1235,10 +1204,11 @@
   }
 
   /* =========================================================================
-     INIZIALIZZAZIONE & EVENTI
+     EVENTI
      ========================================================================= */
   document.getElementById("btn-move").addEventListener("click", move);
   document.getElementById("btn-sleep-toggle").addEventListener("click", toggleSleep);
+  document.getElementById("btn-sleep-hour").addEventListener("click", sleepOneHour);
 
   const modalOptions = document.getElementById("modal-options");
   const modalLeaderboard = document.getElementById("modal-leaderboard");
@@ -1247,7 +1217,6 @@
   document.getElementById("btn-close-options").onclick = () => { modalOptions.style.display = "none"; };
   document.getElementById("btn-reset-game").onclick = resetGame;
 
-  // Gestione schermata classifica
   document.getElementById("btn-open-leaderboard").onclick = () => {
     renderLeaderboard();
     modalOptions.style.display = "none";
