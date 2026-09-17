@@ -643,12 +643,12 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v11";
+  const STORAGE_KEY = "terra_desolata_save_v12";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
-  const THIRST_TOTAL_SEC = 36 * 3600;     // 36 ore = 129.600s per consumare 100% idratazione
-  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 1296s per 1% idratazione
+  const THIRST_TOTAL_SEC = 18 * 3600;     // 18 ore = 64.800s per consumare il 100% dell'idratazione da svegli
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 648s per 1% idratazione
   const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // 1 energia corr ogni 9 min (540s)
   const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // 1 energia max ogni 10 min (600s)
   const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 energia max ogni 4 min (240s)
@@ -670,7 +670,7 @@
     sick: false,
     isSleeping: false,
     consecutiveSleepHours: 0,
-    consecutiveSleepSeconds: 0, // Accumulatore secondi di sonno continui
+    consecutiveSleepSeconds: 0,
     maxSlots: 10,
     survivalSeconds: 0,
     isDead: false,
@@ -761,25 +761,21 @@
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
 
-    // Se si sta dormendo, verificare il limite continuo di 8 ore (28.800 secondi)
     if (player.isSleeping) {
       const currentSleepSec = player.consecutiveSleepSeconds || 0;
       const sleepCapacity = MAX_CONSECUTIVE_SLEEP_SEC - currentSleepSec;
 
       if (secondsToAdd >= sleepCapacity) {
-        // Applica i benefici del sonno per il tempo rimanente fino alle 8 ore
         applySleepTime(sleepCapacity, silent);
         player.survivalSeconds = (player.survivalSeconds || 0) + sleepCapacity;
         player.consecutiveSleepSeconds = MAX_CONSECUTIVE_SLEEP_SEC;
         player.consecutiveSleepHours = 8;
 
-        // Risveglio automatico
         player.isSleeping = false;
         player.consecutiveSleepHours = 0;
         player.consecutiveSleepSeconds = 0;
         log("Hai dormito 8 ore di fila: ti svegli automaticamente ben riposato!", "success");
 
-        // Il restante tempo viene simulato come tempo trascorso da sveglio
         const remainingSeconds = secondsToAdd - sleepCapacity;
         if (remainingSeconds > 0) {
           advanceTime(remainingSeconds, silent);
@@ -822,7 +818,7 @@
   }
 
   function applyAwakeTime(secondsToAdd, silent) {
-    // Consumo Idratazione (100% in 36 ore)
+    // Consumo Idratazione (100% in 18 ore)
     const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
     const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
     player.secThirst = totalThirstSec % THIRST_TICK_SEC;
@@ -1270,7 +1266,6 @@
     }
 
     if (!player.isSleeping) {
-      // Controllo: disattiva se l'energia è superiore a 40
       if (player.energy > 40) {
         log("Sei ancora troppo attivo per addormentarti (Energia > 40).", "idle");
         return;
@@ -1679,7 +1674,6 @@
       btnDrink.disabled = player.drinkFlask < 0.19 || player.thirst >= 100;
       btnSleepHour.style.display = "none";
 
-      // Disattivazione Dormi se energia > 40
       if (player.energy > 40 || currentEncounter !== null) {
         btnSleep.disabled = true;
         btnSleep.textContent = player.energy > 40 ? "Dormi (Ene > 40)" : "Dormi";
