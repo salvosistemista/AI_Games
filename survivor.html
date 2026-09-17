@@ -562,7 +562,6 @@
         <span id="val-energy" class="stat-val">100/100</span>
       </div>
 
-      <!-- Barra Compagno di Viaggio (se presente) -->
       <div class="stat-row" id="pet-stat-row" style="display:none;">
         <span class="stat-label" id="val-pet-name">Compagno</span>
         <div class="bar-bg"><div id="bar-pet" class="bar-fill fill-pet"></div></div>
@@ -665,18 +664,20 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v13";
+  const STORAGE_KEY = "terra_desolata_save_v14";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
-  const THIRST_TOTAL_SEC = 18 * 3600;     // 18 ore = 64.800s per consumare il 100% dell'idratazione da svegli
-  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 648s per 1% idratazione
+  const THIRST_TOTAL_SEC = 18 * 3600;     // 18 ore = 64.800s per il 100% di idratazione
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 648s per 1%
   const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // 1 energia corr ogni 9 min (540s)
   const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // 1 energia max ogni 10 min (600s)
   const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 energia max ogni 4 min (240s)
   const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 energia corr ogni 6 min (360s)
   const FOOD_PERISH_LIMIT_SEC = 86400;    // 24 ore interne
-  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600; // Massimo 8 ore di sonno continuativo
+  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600; // Massimo 8 ore continue
+
+  let isResetting = false;
 
   const defaultPlayerState = {
     hp: 100,
@@ -706,7 +707,7 @@
     secPetRegen: 0,
     backpackTier: 0,
     equippedWeapon: null,
-    companion: null, // { name: "Dogmeat", hp: 100, maxHp: 100 }
+    companion: null,
     inventory: [
       { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2, slotWeight: 1 },
       { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20, qty: 1, acquiredAt: 0, slotWeight: 1 },
@@ -780,7 +781,7 @@
   function checkPetStatus() {
     if (player.companion) {
       if (player.companion.hp < 1) {
-        log(`Purtroppo ${player.companion.name} ha esalato il suo ultimo respiro ed è deceduto...`, "danger");
+        log(`Purtroppo ${player.companion.name} non ce l'ha fatta ed è deceduto...`, "danger");
         player.companion = null;
         updateUI();
       }
@@ -829,7 +830,6 @@
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
 
-    // Rigenerazione passiva compagno (+2 HP per ora = 3600 sec)
     if (player.companion && player.companion.hp > 0) {
       const totalPetSec = (player.secPetRegen || 0) + secondsToAdd;
       const petHealTicks = Math.floor(totalPetSec / 3600);
@@ -961,7 +961,7 @@
   }
 
   /* =========================================================================
-     INVENTARIO
+     INVENTARIO (CON FIX GESTIONE CURE_MINOR E CAPIENZA)
      ========================================================================= */
   function getItemSlotWeight(id, type) {
     if (id === "duct_tape" || id === "cloth") return 0.2;
@@ -981,9 +981,10 @@
     return found ? found.qty : 0;
   }
 
+  // FIX: Supporta esplicitamente cure_minor in modo che prenda val e qty corretti
   function addItem(id, name, type, param1, param2) {
     let val = 0, qty = 1;
-    if (type === "food" || type === "cure") {
+    if (type === "food" || type === "cure" || type === "cure_minor") {
       val = param1;
       qty = param2 || 1;
     } else {
@@ -1143,7 +1144,7 @@
   }
 
   /* =========================================================================
-     CRAFTING
+     CRAFTING (CON CONSUMO MATERIALI PROTETTO)
      ========================================================================= */
   const CRAFTING_RECIPES = [
     {
@@ -1271,6 +1272,19 @@
     if (!rec || !canCraftRecipe(rec)) {
       log("Requisiti mancanti per questa azione.", "danger");
       return;
+    }
+
+    // Se l'oggetto da creare occupa spazio, verifichiamo lo zaino PRIMA di togliere le risorse
+    if (rec.type === "item") {
+      // calcoliamo lo spazio liberato e quello occupato
+      let freedSpace = 0;
+      for (const [matId, reqQty] of Object.entries(rec.reqs)) {
+        freedSpace += getItemSlotWeight(matId, "material") * reqQty;
+      }
+      if (getTotalUsedSlots() - freedSpace + 1 > player.maxSlots + 0.001) {
+        log("Zaino colmo! Non hai abbastanza spazio.", "danger");
+        return;
+      }
     }
 
     for (const [matId, reqQty] of Object.entries(rec.reqs)) {
@@ -1526,7 +1540,6 @@
 
     const combatRow = [];
 
-    // Tasto Aiuto del compagno se presente
     if (player.companion && player.companion.hp > 0) {
       combatRow.push({
         label: `Aiuto (${player.companion.name})`,
@@ -1546,7 +1559,6 @@
         label: `Getta ${perishableItem.name}`,
         action: () => {
           removeItem(perishableItem.id, 1);
-          // Chance 5-10% di addomesticare se non si ha compagno
           const tameRoll = Math.random();
           if (!player.companion && tameRoll < 0.08) {
             log(`Lanci ${perishableItem.name}. L'animale mangia voracemente e si calma, avvicinandosi docile!`, "success");
@@ -1579,7 +1591,6 @@
 
     const combatRow = [];
 
-    // Tasto Aiuto del compagno se presente
     if (player.companion && player.companion.hp > 0) {
       combatRow.push({
         label: `Aiuto (${player.companion.name})`,
@@ -1638,7 +1649,6 @@
   function resolvePetCombat(type, minDmg, maxDmg, enemyName) {
     if (!player.companion) return;
 
-    // Chance che il cane schivi/svii l'attacco
     if (Math.random() < 0.35) {
       log(`${player.companion.name} balza con agilità e svia l'attacco di ${enemyName} senza subire ferite!`, "pet");
       endEncounter();
@@ -1796,7 +1806,6 @@
     document.getElementById("bar-thirst").style.width = `${player.thirst}%`;
     document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
 
-    // Visualizzazione Compagno di Viaggio
     const petRow = document.getElementById("pet-stat-row");
     if (player.companion && player.companion.hp > 0) {
       petRow.style.display = "flex";
@@ -1914,7 +1923,6 @@
           actions.appendChild(btnUse);
         }
 
-        // Tasti di cura dedicati al compagno
         if (player.companion && player.companion.hp > 0) {
           if (item.type === "cure_minor") {
             const btnHealPet = document.createElement("button");
@@ -1940,7 +1948,7 @@
   }
 
   /* =========================================================================
-     CLASSIFICA & SALVATAGGIO
+     CLASSIFICA & SALVATAGGIO (CON FIX RESISTENTE ALLE RACE CONDITION)
      ========================================================================= */
   function recordDeathLeaderboard() {
     let leaderboard = [];
@@ -2018,12 +2026,18 @@
 
   function resetGame() {
     if (confirm("Vuoi azzerare la partita e ricominciare da capo? La classifica resterà salvata.")) {
-      localStorage.removeItem(STORAGE_KEY);
-      location.reload();
+      isResetting = true; // Blocca i salvataggi automatici in background
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.error("Errore cancellazione salvataggio", e);
+      }
+      window.location.href = window.location.pathname + "?reset=" + Date.now();
     }
   }
 
   function saveGame() {
+    if (isResetting) return; // Non salva nulla se il reset è in corso
     player.lastActiveTimestamp = Date.now();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
