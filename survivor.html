@@ -17,6 +17,7 @@
       --sleep-color: #4a6fa5;
       --hp-bar: #e63946;
       --food-bar: #e76f51;
+      --thirst-bar: #3a86ff;
       --energy-current: #2a9d8f;
       --energy-max-cap: #7d6b38;
       --weapon-color: #e9c46a;
@@ -72,21 +73,27 @@
       text-transform: uppercase;
     }
 
+    .header-actions {
+      display: flex;
+      gap: 6px;
+    }
+
     .btn-icon {
       background: transparent;
       border: 1px solid var(--border-color);
       color: var(--text-main);
       border-radius: 6px;
       padding: 5px 9px;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       cursor: pointer;
+      line-height: 1;
     }
 
     .status-panel {
       padding: 8px 16px 10px 16px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
 
     .stat-row {
@@ -97,13 +104,13 @@
     }
 
     .stat-label {
-      width: 75px;
+      width: 82px;
       font-weight: 500;
     }
 
     .bar-bg {
       flex: 1;
-      height: 9px;
+      height: 8px;
       background: #2b2b2b;
       border-radius: 5px;
       overflow: hidden;
@@ -118,10 +125,11 @@
 
     .fill-hp { background: var(--hp-bar); width: 100%; }
     .fill-food { background: var(--food-bar); width: 100%; }
+    .fill-thirst { background: var(--thirst-bar); width: 100%; }
 
     .bar-energy-container {
       flex: 1;
-      height: 9px;
+      height: 8px;
       background: #202020;
       border-radius: 5px;
       overflow: hidden;
@@ -152,7 +160,7 @@
     .stat-val {
       width: 55px;
       text-align: right;
-      font-size: 0.75rem;
+      font-size: 0.74rem;
     }
 
     .condition-badges {
@@ -177,38 +185,38 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--accent);
       background: rgba(0,0,0,0.25);
-      padding: 4px 8px;
+      padding: 3px 8px;
       border-radius: 4px;
       border: 1px solid rgba(255,255,255,0.04);
     }
 
-    .weapon-slot-row {
+    .slot-row-card {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 5px 8px;
+      padding: 4px 8px;
       background: #1a1a1a;
       border: 1px dashed var(--border-color);
       border-radius: 4px;
-      font-size: 0.78rem;
-      margin-bottom: 6px;
+      font-size: 0.76rem;
+      margin-bottom: 5px;
     }
 
-    .weapon-slot-row strong {
+    .slot-row-card strong {
       color: var(--weapon-color);
     }
 
     #log-container {
       flex: 1;
-      padding: 14px 16px;
+      padding: 12px 16px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 9px;
-      font-size: 0.88rem;
+      gap: 8px;
+      font-size: 0.86rem;
       line-height: 1.4;
       background: var(--bg-color);
       -webkit-overflow-scrolling: touch;
@@ -225,6 +233,7 @@
     .log-entry.idle { border-color: #666; color: var(--text-muted); }
     .log-entry.sleep { border-color: var(--sleep-color); color: #a4c2f4; }
     .log-entry.combat { border-color: var(--weapon-color); color: #ffe6a7; }
+    .log-entry.water { border-color: var(--thirst-bar); color: #90e0ef; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -268,8 +277,8 @@
     .inventory-list {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      max-height: 95px;
+      gap: 4px;
+      max-height: 88px;
       overflow-y: auto;
     }
 
@@ -278,20 +287,20 @@
       justify-content: space-between;
       align-items: center;
       background: #262626;
-      padding: 4px 8px;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
     }
 
     .inv-item-actions button {
       background: #3a3a3a;
       border: none;
       color: var(--text-main);
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: 4px;
-      margin-left: 5px;
+      margin-left: 4px;
       cursor: pointer;
-      font-size: 0.74rem;
+      font-size: 0.72rem;
     }
 
     .inv-item-actions button:hover { background: #505050; }
@@ -369,7 +378,6 @@
       padding: 7px 10px;
     }
 
-    /* Modal Generiche */
     .modal {
       display: none;
       position: fixed;
@@ -498,7 +506,10 @@
   <div class="top-fixed-section">
     <header>
       <h1>Terra Desolata</h1>
-      <button class="btn-icon" id="btn-options" title="Opzioni">⚙ Opzioni</button>
+      <div class="header-actions">
+        <button class="btn-icon" id="btn-options" title="Opzioni">⚙</button>
+        <button class="btn-icon" id="btn-fullscreen-header" title="Schermo Intero">⛶</button>
+      </div>
     </header>
 
     <div class="status-panel">
@@ -517,6 +528,12 @@
         <span class="stat-label">Sazietà</span>
         <div class="bar-bg"><div id="bar-food" class="bar-fill fill-food"></div></div>
         <span id="val-food" class="stat-val">80/100</span>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">Idratazione</span>
+        <div class="bar-bg"><div id="bar-thirst" class="bar-fill fill-thirst"></div></div>
+        <span id="val-thirst" class="stat-val">100%</span>
       </div>
 
       <div class="stat-row">
@@ -542,8 +559,15 @@
 
   <div class="bottom-fixed-section">
     <div class="inventory-section">
-      <div class="weapon-slot-row">
-        <span>Arma impugnata: <strong id="val-weapon-name">Nessuna</strong></span>
+      <!-- Slot Borracce -->
+      <div class="slot-row-card" style="border-color:#2a6f97;">
+        <span>💧 Bere: <strong id="val-flask-drink" style="color:#90e0ef;">1.00 / 1.00 L</strong> | Raccolta: <strong id="val-flask-dirty" style="color:#d4a373;">0.00 / 1.00 L</strong></span>
+        <button id="btn-drink-water" class="btn-crafting-open" style="border-color:#3a86ff; color:#90e0ef;">Bevi (-0.2L)</button>
+      </div>
+
+      <!-- Slot Arma Equipaggiata -->
+      <div class="slot-row-card">
+        <span>Arma: <strong id="val-weapon-name">Nessuna</strong></span>
         <span id="val-weapon-durability" style="color:var(--text-muted);">0 usi</span>
       </div>
 
@@ -571,7 +595,7 @@
 
 </div>
 
-<!-- Modal Fabbricazione / Crafting -->
+<!-- Modal Fabbricazione -->
 <div id="modal-crafting" class="modal">
   <div class="modal-content">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -588,7 +612,6 @@
   <div class="modal-content">
     <h2>Opzioni</h2>
     <button class="btn-main" id="btn-open-leaderboard">🏆 Classifica</button>
-    <button class="btn-main" id="btn-fullscreen">Schermo Intero</button>
     <button class="btn-main btn-danger-opt" id="btn-reset-game">Ricomincia Partita</button>
     <button class="btn-main" id="btn-close-options">Chiudi</button>
   </div>
@@ -618,23 +641,28 @@
 
 <script>
   /* =========================================================================
-     CONFIGURAZIONE COSTANTI & TEMPISTICHE
+     CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v9";
+  const STORAGE_KEY = "terra_desolata_save_v10";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
-  const FOOD_TICK_SEC = 480;              // 1 sazietà ogni 8 min (480s)
+  const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
+  const THIRST_TOTAL_SEC = 36 * 3600;     // 36 ore = 129.600s per consumare 100% idratazione
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 1296s per 1% di idratazione
   const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // 1 energia corr ogni 9 min (540s)
   const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // 1 energia max ogni 10 min (600s)
   const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 energia max ogni 4 min (240s)
   const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 energia corr ogni 6 min (360s)
-  const FOOD_PERISH_LIMIT_SEC = 86400;    // 24 ore di orologio interno
+  const FOOD_PERISH_LIMIT_SEC = 86400;    // 24 ore interne
 
   const defaultPlayerState = {
     hp: 100,
     maxHp: 100,
     food: 80,
     maxFood: 100,
+    thirst: 100, // 0 - 100%
+    drinkFlask: 1.0, // 0.0 - 1.0 Litri
+    dirtyFlask: 0.0, // 0.0 - 1.0 Litri
     energy: 100,
     maxEnergy: 100,
     km: 0,
@@ -646,11 +674,12 @@
     isDead: false,
     lastActiveTimestamp: Date.now(),
     secFood: 0,
+    secThirst: 0,
     secAwakeCur: 0,
     secAwakeMax: 0,
     secSleepCur: 0,
     secSleepMax: 0,
-    backpackTier: 0, // 0 = 10 slot, 1 = 14 slot, 2 = 18 slot
+    backpackTier: 0,
     equippedWeapon: null,
     inventory: [
       { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2, slotWeight: 1 },
@@ -688,7 +717,7 @@
       if (item.type === "perishable_food") {
         const age = (player.survivalSeconds || 0) - (item.acquiredAt || 0);
         if (age >= FOOD_PERISH_LIMIT_SEC) {
-          log(`La confezione di ${item.name} è andata a male ed è immangiabile. Gettata via.`, "danger");
+          log(`La confezione di ${item.name} è andata a male. L'hai gettata via.`, "danger");
           return false;
         }
       }
@@ -700,7 +729,32 @@
   }
 
   /* =========================================================================
-     AVANZAMENTO TEMPORALE
+     MECCANICA DEL BERE
+     ========================================================================= */
+  function drinkWater() {
+    if (player.isSleeping) {
+      log("Devi svegliarti prima di bere!", "idle");
+      return;
+    }
+    if (player.drinkFlask < 0.19) {
+      log("La borraccia per bere è vuota! Trova e bolli dell'acqua.", "danger");
+      return;
+    }
+    if (player.thirst >= 100) {
+      log("Non hai sete al momento.", "idle");
+      return;
+    }
+
+    player.drinkFlask = Math.max(0, Math.round((player.drinkFlask - 0.20) * 100) / 100);
+    player.thirst = Math.min(100, player.thirst + 20);
+
+    log("Bevi una generosa sorsata d'acqua fresca (-0.20 L, +20% Idratazione).", "water");
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     AVANZAMENTO TEMPO
      ========================================================================= */
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
@@ -709,6 +763,7 @@
     checkPerishableFood();
 
     if (player.isSleeping) {
+      // In sonno idratazione e sazietà sono congelate
       const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
       const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
       player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
@@ -725,6 +780,25 @@
         if (!silent) log(`La malattia ti debilita durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
       }
     } else {
+      // Consumo Sete (100% in 36 ore)
+      const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
+      const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
+      player.secThirst = totalThirstSec % THIRST_TICK_SEC;
+
+      if (thirstLoss > 0) {
+        const thirstBefore = player.thirst;
+        player.thirst = Math.max(0, player.thirst - thirstLoss);
+        const actualLoss = thirstBefore - player.thirst;
+
+        if (player.thirst <= 0) {
+          const dehydratedUnits = thirstLoss - actualLoss;
+          const dehydrationDamage = Math.max(1, dehydratedUnits * 12);
+          player.hp = Math.max(0, player.hp - dehydrationDamage);
+          if (!silent) log(`Sei completamente disidratato! Subisci ${Math.round(dehydrationDamage)} danni per sete estrema.`, "danger");
+        }
+      }
+
+      // Consumo Sazietà
       const totalFoodSec = (player.secFood || 0) + secondsToAdd;
       const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
       player.secFood = totalFoodSec % FOOD_TICK_SEC;
@@ -742,6 +816,7 @@
         }
       }
 
+      // Consumo Energia
       const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
       const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
       player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
@@ -778,7 +853,7 @@
   }
 
   /* =========================================================================
-     INVENTARIO CON PESO FRAZIONARIO (0.2 SLOT)
+     INVENTARIO
      ========================================================================= */
   function getItemSlotWeight(id, type) {
     if (id === "duct_tape" || id === "cloth") return 0.2;
@@ -887,7 +962,7 @@
     } else if (item.type === "cure_minor") {
       if (player.hp < player.maxHp) {
         player.hp = Math.min(player.maxHp, player.hp + item.val);
-        log(`Applichi le bende rudimentali (+${item.val} HP). Non hanno effetto su malattie gravi.`, "success");
+        log(`Applichi le bende rudimentali (+${item.val} HP).`, "success");
         removeItem(id, 1);
       } else {
         log("Sei già al massimo della salute.", "idle");
@@ -939,9 +1014,29 @@
   }
 
   /* =========================================================================
-     SISTEMA DI CRAFTING (FABBRICAZIONE)
+     CRAFTING
      ========================================================================= */
   const CRAFTING_RECIPES = [
+    {
+      id: "boil_water",
+      name: "Filtra e bolli acqua",
+      desc: "Scalda l'acqua raccolta purificandola e travasandola nella borraccia da bere.",
+      reqs: {},
+      type: "water",
+      isUnique: false,
+      condition: () => (player.dirtyFlask || 0) > 0.05 && (player.drinkFlask || 0) < 0.99,
+      craft: () => {
+        const availableDirty = player.dirtyFlask || 0;
+        const availableRoom = 1.0 - (player.drinkFlask || 0);
+        const amountToTransfer = Math.min(availableDirty, availableRoom);
+
+        player.dirtyFlask = Math.max(0, Math.round((player.dirtyFlask - amountToTransfer) * 100) / 100);
+        player.drinkFlask = Math.min(1.0, Math.round((player.drinkFlask + amountToTransfer) * 100) / 100);
+
+        log(`Hai scaldato e purificato ${amountToTransfer.toFixed(2)} L di acqua spostandoli nella borraccia per bere!`, "water");
+        return true;
+      }
+    },
     {
       id: "rudimentary_bandage",
       name: "Bende rudimentali",
@@ -995,8 +1090,7 @@
       type: "weapon",
       isUnique: false,
       craft: () => {
-        const weaponObj = { name: "Bastone chiodato", maxUses: 4, uses: 4, dmgReduction: 0.5 };
-        promptEquipWeapon(weaponObj);
+        promptEquipWeapon({ name: "Bastone chiodato", maxUses: 4, uses: 4, dmgReduction: 0.5 });
         return true;
       }
     },
@@ -1008,8 +1102,7 @@
       type: "weapon",
       isUnique: false,
       craft: () => {
-        const weaponObj = { name: "Lama rinforzata", maxUses: 6, uses: 6, dmgReduction: 0.65 };
-        promptEquipWeapon(weaponObj);
+        promptEquipWeapon({ name: "Lama rinforzata", maxUses: 6, uses: 6, dmgReduction: 0.65 });
         return true;
       }
     },
@@ -1021,8 +1114,7 @@
       type: "weapon",
       isUnique: false,
       craft: () => {
-        const weaponObj = { name: "Piede di porco", maxUses: 6, uses: 6, dmgReduction: 0.8 };
-        promptEquipWeapon(weaponObj);
+        promptEquipWeapon({ name: "Piede di porco", maxUses: 6, uses: 6, dmgReduction: 0.8 });
         return true;
       }
     }
@@ -1048,16 +1140,14 @@
 
     const rec = CRAFTING_RECIPES.find(r => r.id === recipeId);
     if (!rec || !canCraftRecipe(rec)) {
-      log("Materiali o requisiti mancanti per questa formula.", "danger");
+      log("Requisiti mancanti per questa azione.", "danger");
       return;
     }
 
-    // Consumo materiali
     for (const [matId, reqQty] of Object.entries(rec.reqs)) {
       removeItem(matId, reqQty);
     }
 
-    // Regole & Equilibrio: Consumo tempo ed energia
     player.energy = Math.max(0, player.energy - 3);
     enforceEnergyCaps();
     advanceTime(360); // 6 minuti
@@ -1083,7 +1173,7 @@
     headerNote.style.fontSize = "0.74rem";
     headerNote.style.color = "var(--accent)";
     headerNote.style.marginBottom = "4px";
-    headerNote.textContent = `Scorte: ${availableScrap}x Rottami, ${availableTape}x Nastro, ${availableCloth}x Tessuto`;
+    headerNote.textContent = `Scorte: ${availableScrap}x Rottami, ${availableTape}x Nastro, ${availableCloth}x Tessuto | Raccolta: ${(player.dirtyFlask||0).toFixed(2)}L`;
     listEl.appendChild(headerNote);
 
     CRAFTING_RECIPES.forEach(rec => {
@@ -1103,7 +1193,7 @@
       const canCraft = canCraftRecipe(rec) && player.energy >= 3 && !player.isSleeping;
 
       const btn = document.createElement("button");
-      btn.textContent = "Crea";
+      btn.textContent = rec.type === "water" ? "Bolli" : "Crea";
       btn.disabled = !canCraft;
       btn.onclick = () => craftItem(rec.id);
       topRow.appendChild(btn);
@@ -1115,16 +1205,19 @@
       desc.textContent = rec.desc;
       card.appendChild(desc);
 
-      const reqsText = Object.entries(rec.reqs).map(([matId, qty]) => {
-        const matNames = { scrap: "Rottami", duct_tape: "Nastro", cloth: "Tessuto" };
-        const have = getItemQty(matId);
-        return `${qty}x ${matNames[matId]} (hai: ${have})`;
-      }).join(" | ");
+      const reqEntries = Object.entries(rec.reqs);
+      if (reqEntries.length > 0) {
+        const reqsText = reqEntries.map(([matId, qty]) => {
+          const matNames = { scrap: "Rottami", duct_tape: "Nastro", cloth: "Tessuto" };
+          const have = getItemQty(matId);
+          return `${qty}x ${matNames[matId]} (hai: ${have})`;
+        }).join(" | ");
 
-      const reqsEl = document.createElement("div");
-      reqsEl.className = "crafting-reqs";
-      reqsEl.textContent = `Richiede: ${reqsText}`;
-      card.appendChild(reqsEl);
+        const reqsEl = document.createElement("div");
+        reqsEl.className = "crafting-reqs";
+        reqsEl.textContent = `Richiede: ${reqsText}`;
+        card.appendChild(reqsEl);
+      }
 
       listEl.appendChild(card);
     });
@@ -1168,7 +1261,7 @@
       return;
     }
     if (currentEncounter) {
-      log("Devi prima risolvere l'incontro!", "danger");
+      log("Risolvi prima l'incontro!", "danger");
       return;
     }
     if (player.energy < 5) {
@@ -1231,6 +1324,16 @@
     }
     player.energy = Math.max(0, player.energy - 3);
 
+    // Raccolta automatica acqua +25% (0.25 L)
+    const prevDirty = player.dirtyFlask || 0;
+    player.dirtyFlask = Math.min(1.0, Math.round((prevDirty + 0.25) * 100) / 100);
+    const gatheredWater = Math.round((player.dirtyFlask - prevDirty) * 100) / 100;
+    if (gatheredWater > 0) {
+      log(`Raccogli ${gatheredWater.toFixed(2)} L di acqua non potabile nella borraccia di raccolta (+25%).`, "water");
+    } else {
+      log("La tua borraccia di raccolta è già completamente piena (1.00 L).", "water");
+    }
+
     const minutesPassed = Math.floor(Math.random() * 16) + 15;
     log(`Frughi con cura tra le macerie per ${minutesPassed} minuti...`, "idle");
     advanceTime(minutesPassed * 60);
@@ -1255,7 +1358,7 @@
       addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
       log("Trovi una cassetta medica intatta.", "success");
     } else {
-      log("Hai frugato ovunque ma non c'era niente di utilizzabile.", "idle");
+      log("Hai frugato ovunque ma non c'era altro di valore.", "idle");
     }
 
     currentLocation.searchesDone += 1;
@@ -1274,16 +1377,16 @@
   }
 
   /* =========================================================================
-     INCONTRI E COMBATTIMENTO
+     INCONTRI & MICRO-BIVI
      ========================================================================= */
   function handleAnimalEncounter() {
     if (Math.random() < 0.45) {
-      log("Una volpe magra ti osserva con cautela e si dilegua tra le rocce.", "idle");
+      log("Una volpe ti osserva con cautela e svanisce tra i calcinacci.", "idle");
       return;
     }
 
     currentEncounter = "animal";
-    log("Un predatore selvatico ringhia e sbarra il tuo cammino con fare aggressivo!", "danger");
+    log("Un predatore ringhia e ti sbarra la strada con fare feroce!", "danger");
 
     const actions = [
       { label: "Combatti", action: () => resolveCombat("animal", 12, 22, "l'animale selvatico") }
@@ -1294,7 +1397,7 @@
       actions.push({
         label: `Getta ${perishableItem.name}`,
         action: () => {
-          log(`Lanci prontamente ${perishableItem.name}: l'animale si avventa sul cibo e ti lascia passare!`, "success");
+          log(`Lanci ${perishableItem.name}: la fiera si avventa sulla carne e ti lascia passare!`, "success");
           removeItem(perishableItem.id, 1);
           endEncounter();
         }
@@ -1311,13 +1414,13 @@
 
   function handleHumanEncounter() {
     if (Math.random() < 0.5) {
-      log("Incontri un viaggiatore pacifico disposto a barattare risorse.", "success");
+      log("Incontri un viandante pacifico disposto a barattare con te.", "success");
       renderTradeOptions();
       return;
     }
 
     currentEncounter = "human";
-    log("Un predone sbuca da un relitto brandendo un'arma improvvisata!", "danger");
+    log("Un predone sbuca da un angolo puntandoti contro una spranga!", "danger");
 
     const actions = [
       { label: "Combatti", action: () => resolveCombat("human", 14, 28, "il predone") }
@@ -1328,7 +1431,7 @@
       actions.push({
         label: `Cedi 1x ${foodItem.name}`,
         action: () => {
-          log(`Cedi 1x ${foodItem.name}. Il predone arraffa il bottino e scappa via.`, "idle");
+          log(`Cedi 1x ${foodItem.name}. Il predone arraffa il cibo e scappa.`, "idle");
           removeItem(foodItem.id, 1);
           endEncounter();
         }
@@ -1367,12 +1470,12 @@
 
   function fleeEncounter(type) {
     if (player.energy < 15) {
-      log("Troppo esausto per scattare via (minimo 15 Energia Corrente)! Sei costretto a lottare!", "danger");
+      log("Non hai abbastanza energia corrente per fuggire (minimo 15)! Sei costretto allo scontro!", "danger");
       return;
     }
     player.energy = Math.max(0, player.energy - 15);
     enforceEnergyCaps();
-    log("Fuggi via a tutta velocità distanziando il pericolo (-15 Energia).", "idle");
+    log("Scatti e distanzi la minaccia (-15 Energia Corrente).", "idle");
     endEncounter();
   }
 
@@ -1405,14 +1508,14 @@
     const projectedSlots = getTotalUsedSlots() - giveWeight + recWeight;
 
     if (projectedSlots > player.maxSlots + 0.001) {
-      log("Zaino colmo! Spazio insufficiente per completare lo scambio.", "danger");
+      log("Zaino colmo! Spazio insufficiente.", "danger");
       return;
     }
 
     removeItem(giveId, giveQty);
     addItem(receiveId, receiveName, receiveType, receiveVal, receiveQty);
 
-    log(`Scambio completato: ceduti ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
+    log(`Scambio concluso: ceduti ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
     clearContextActions();
     saveGame();
     updateUI();
@@ -1421,16 +1524,16 @@
   function handleHazardEncounter() {
     if (!player.sick && Math.random() < 0.5) {
       player.sick = true;
-      log("Respiri esalazioni tossiche: sei MALATO.", "danger");
+      log("Inali esalazioni tossiche: sei MALATO.", "danger");
     } else {
       const dmg = 8;
       player.hp = Math.max(0, player.hp - dmg);
-      log(`Una lamiera arrugginita cede ferendoti al braccio (-${dmg} HP).`, "danger");
+      log(`Una lastra arrugginita cede ferendoti al polpaccio (-${dmg} HP).`, "danger");
     }
   }
 
   /* =========================================================================
-     RENDERING INTERFACCIA
+     RENDERING
      ========================================================================= */
   function log(msg, type = "normal") {
     const logBox = document.getElementById("log-container");
@@ -1471,6 +1574,16 @@
     document.getElementById("bar-food").style.width = `${(player.food / player.maxFood) * 100}%`;
     document.getElementById("val-food").textContent = `${Math.round(player.food)}/${player.maxFood}`;
 
+    // Barra Idratazione
+    document.getElementById("bar-thirst").style.width = `${player.thirst}%`;
+    document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
+
+    // Stato Borracce
+    const dFlask = (player.drinkFlask || 0).toFixed(2);
+    const rFlask = (player.dirtyFlask || 0).toFixed(2);
+    document.getElementById("val-flask-drink").textContent = `${dFlask} / 1.00 L`;
+    document.getElementById("val-flask-dirty").textContent = `${rFlask} / 1.00 L`;
+
     document.getElementById("bar-energy-max").style.width = `${player.maxEnergy}%`;
     document.getElementById("bar-energy-cur").style.width = `${player.energy}%`;
     document.getElementById("val-energy").textContent = `${Math.round(player.energy)}/${Math.round(player.maxEnergy)}`;
@@ -1502,20 +1615,24 @@
     const btnMove = document.getElementById("btn-move");
     const btnSleep = document.getElementById("btn-sleep-toggle");
     const btnSleepHour = document.getElementById("btn-sleep-hour");
+    const btnDrink = document.getElementById("btn-drink-water");
 
     if (player.isDead) {
       btnMove.disabled = true;
       btnSleep.disabled = true;
       btnSleepHour.style.display = "none";
+      btnDrink.disabled = true;
       btnMove.textContent = "Deceduto";
     } else if (player.isSleeping) {
       btnMove.disabled = true;
+      btnDrink.disabled = true;
       btnSleep.textContent = "Svegliati";
       btnSleep.style.background = "#2b3d54";
       btnSleepHour.style.display = "block";
     } else {
       btnMove.disabled = player.energy < 5 || currentEncounter !== null;
       btnSleep.disabled = currentEncounter !== null;
+      btnDrink.disabled = player.drinkFlask < 0.19 || player.thirst >= 100;
       btnSleep.textContent = "Dormi";
       btnSleep.style.background = "#1a2636";
       btnSleepHour.style.display = "none";
@@ -1565,7 +1682,7 @@
   }
 
   /* =========================================================================
-     CLASSIFICA & STATO MORTE
+     CLASSIFICA & SALVATAGGIO
      ========================================================================= */
   function recordDeathLeaderboard() {
     let leaderboard = [];
@@ -1660,8 +1777,7 @@
   function loadGameAndSimulateOffline() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) {
-      log("Ti svegli tra le rovine. Usa le tue risorse con saggezza.");
-      log("Puoi perquisire le zone per trovare nastro adesivo e tessuti da combinare nel menu Fabbrica.");
+      log("Ti svegli tra le rovine. Ricorda di bere e controllare le borracce.");
       saveGame();
       return;
     }
@@ -1682,7 +1798,7 @@
         log("Bentornato nelle rovine.");
       }
     } catch (e) {
-      console.error("Errore di caricamento salvataggio", e);
+      console.error("Errore caricamento", e);
       player = JSON.parse(JSON.stringify(defaultPlayerState));
     }
     enforceEnergyCaps();
@@ -1692,18 +1808,19 @@
     if (player.hp <= 0) return;
     advanceTime(1, true);
 
-    if (!player.sick && player.food > 60 && player.energy > 60 && player.hp < player.maxHp) {
+    if (!player.sick && player.food > 60 && player.thirst > 60 && player.energy > 60 && player.hp < player.maxHp) {
       player.hp = Math.min(player.maxHp, player.hp + 0.1);
       updateUI();
     }
   }, 1000);
 
   /* =========================================================================
-     LISTENERS INTERFACCIA
+     LISTENERS
      ========================================================================= */
   document.getElementById("btn-move").addEventListener("click", move);
   document.getElementById("btn-sleep-toggle").addEventListener("click", toggleSleep);
   document.getElementById("btn-sleep-hour").addEventListener("click", sleepOneHour);
+  document.getElementById("btn-drink-water").addEventListener("click", drinkWater);
 
   const modalOptions = document.getElementById("modal-options");
   const modalLeaderboard = document.getElementById("modal-leaderboard");
@@ -1732,14 +1849,15 @@
     modalOptions.style.display = "flex";
   };
 
-  document.getElementById("btn-fullscreen").onclick = () => {
+  const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen().catch(() => {});
     }
-    modalOptions.style.display = "none";
   };
+
+  document.getElementById("btn-fullscreen-header").onclick = toggleFullscreen;
 
   loadGameAndSimulateOffline();
   updateUI();
