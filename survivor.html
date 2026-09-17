@@ -302,6 +302,7 @@
     .inv-item-actions {
       display: flex;
       gap: 4px;
+      align-items: center;
     }
 
     .inv-item-actions button {
@@ -315,6 +316,20 @@
     }
 
     .inv-item-actions button:hover { background: #505050; }
+
+    .btn-delete-item {
+      background: #4a1e1e !important;
+      color: #ffadad !important;
+      border: 1px solid #7a2d2d !important;
+      padding: 2px 6px !important;
+      font-size: 0.70rem !important;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .btn-delete-item:hover {
+      background: #6e2525 !important;
+    }
 
     .controls {
       padding: 8px 16px 12px 16px;
@@ -685,7 +700,7 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v17";
+  const STORAGE_KEY = "terra_desolata_save_v18";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;
@@ -1053,6 +1068,21 @@
     if (item.qty <= 0) {
       player.inventory = player.inventory.filter(i => i.id !== id);
     }
+  }
+
+  function discardItem(id) {
+    const item = player.inventory.find(i => i.id === id);
+    if (!item) return;
+
+    if (item.qty > 1) {
+      item.qty -= 1;
+      log(`Hai gettato 1x ${item.name} per fare spazio (rimasti: x${item.qty}).`, "idle");
+    } else {
+      player.inventory = player.inventory.filter(i => i.id !== id);
+      log(`Hai gettato ${item.name} liberando spazio nello zaino.`, "idle");
+    }
+    saveGame();
+    updateUI();
   }
 
   function useItem(id, targetCompanion = false) {
@@ -1496,7 +1526,7 @@
 
     // 50% di possibilità di trovare dai 2 ai 5 tappi
     if (Math.random() < 0.5) {
-      const capsFound = Math.floor(Math.random() * 4) + 2; // 2, 3, 4, 5
+      const capsFound = Math.floor(Math.random() * 4) + 2; // 2..5
       player.caps = (player.caps || 0) + capsFound;
       log(`Hai recuperato ${capsFound} Tappi (tp) tra i detriti!`, "caps");
     }
@@ -2155,6 +2185,15 @@
             actions.appendChild(btnFullPet);
           }
         }
+
+        // Tasto di eliminazione (decrementa di 1 o rimuove l'oggetto)
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-delete-item";
+        btnDel.textContent = "✕";
+        btnDel.title = item.qty > 1 ? `Getta 1x ${item.name}` : `Getta ${item.name}`;
+        btnDel.onclick = () => discardItem(item.id);
+        if (player.isDead) btnDel.disabled = true;
+        actions.appendChild(btnDel);
 
         row.appendChild(actions);
         invList.appendChild(row);
