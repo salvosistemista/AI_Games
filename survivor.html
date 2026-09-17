@@ -18,6 +18,7 @@
       --hp-bar: #e63946;
       --food-bar: #e76f51;
       --thirst-bar: #3a86ff;
+      --pet-bar: #9d4edd;
       --energy-current: #2a9d8f;
       --energy-max-cap: #7d6b38;
       --weapon-color: #e9c46a;
@@ -126,6 +127,7 @@
     .fill-hp { background: var(--hp-bar); width: 100%; }
     .fill-food { background: var(--food-bar); width: 100%; }
     .fill-thirst { background: var(--thirst-bar); width: 100%; }
+    .fill-pet { background: var(--pet-bar); width: 100%; }
 
     .bar-energy-container {
       flex: 1;
@@ -234,6 +236,7 @@
     .log-entry.sleep { border-color: var(--sleep-color); color: #a4c2f4; }
     .log-entry.combat { border-color: var(--weapon-color); color: #ffe6a7; }
     .log-entry.water { border-color: var(--thirst-bar); color: #90e0ef; }
+    .log-entry.pet { border-color: var(--pet-bar); color: #e0aaff; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -292,15 +295,19 @@
       font-size: 0.78rem;
     }
 
+    .inv-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+
     .inv-item-actions button {
       background: #3a3a3a;
       border: none;
       color: var(--text-main);
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 4px;
-      margin-left: 4px;
       cursor: pointer;
-      font-size: 0.72rem;
+      font-size: 0.70rem;
     }
 
     .inv-item-actions button:hover { background: #505050; }
@@ -371,6 +378,16 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
+    }
+
+    .encounter-actions-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .encounter-actions-row button {
+      flex: 1;
     }
 
     .action-sub-grid button {
@@ -545,6 +562,13 @@
         <span id="val-energy" class="stat-val">100/100</span>
       </div>
 
+      <!-- Barra Compagno di Viaggio (se presente) -->
+      <div class="stat-row" id="pet-stat-row" style="display:none;">
+        <span class="stat-label" id="val-pet-name">Compagno</span>
+        <div class="bar-bg"><div id="bar-pet" class="bar-fill fill-pet"></div></div>
+        <span id="val-pet-hp" class="stat-val">100/100</span>
+      </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
         <div class="condition-badges">
           <span id="condition-tag" class="condition-tag">In salute</span>
@@ -559,13 +583,11 @@
 
   <div class="bottom-fixed-section">
     <div class="inventory-section">
-      <!-- Slot Borracce -->
       <div class="slot-row-card" style="border-color:#2a6f97;">
         <span>💧 Bere: <strong id="val-flask-drink" style="color:#90e0ef;">1.00 / 1.00 L</strong> | Raccolta: <strong id="val-flask-dirty" style="color:#d4a373;">0.00 / 1.00 L</strong></span>
         <button id="btn-drink-water" class="btn-crafting-open" style="border-color:#3a86ff; color:#90e0ef;">Bevi (-0.2L)</button>
       </div>
 
-      <!-- Slot Arma Equipaggiata -->
       <div class="slot-row-card">
         <span>Arma: <strong id="val-weapon-name">Nessuna</strong></span>
         <span id="val-weapon-durability" style="color:var(--text-muted);">0 usi</span>
@@ -643,7 +665,7 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v12";
+  const STORAGE_KEY = "terra_desolata_save_v13";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
@@ -681,8 +703,10 @@
     secAwakeMax: 0,
     secSleepCur: 0,
     secSleepMax: 0,
+    secPetRegen: 0,
     backpackTier: 0,
     equippedWeapon: null,
+    companion: null, // { name: "Dogmeat", hp: 100, maxHp: 100 }
     inventory: [
       { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2, slotWeight: 1 },
       { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20, qty: 1, acquiredAt: 0, slotWeight: 1 },
@@ -731,8 +755,52 @@
   }
 
   /* =========================================================================
-     MECCANICA DEL BERE
+     COMPAGNO DI VIAGGIO
      ========================================================================= */
+  function tameAnimal() {
+    const defaultName = "Dogmeat";
+    let chosenName = prompt("L'animale selvatico sembra affezionarsi a te! Come vuoi chiamarlo?", defaultName);
+    if (!chosenName || chosenName.trim() === "") {
+      chosenName = defaultName;
+    } else {
+      chosenName = chosenName.trim();
+    }
+
+    player.companion = {
+      name: chosenName,
+      hp: 100,
+      maxHp: 100
+    };
+
+    log(`Incredibile! ${chosenName} si è unito a te come fedele compagno di viaggio!`, "pet");
+    saveGame();
+    updateUI();
+  }
+
+  function checkPetStatus() {
+    if (player.companion) {
+      if (player.companion.hp < 1) {
+        log(`Purtroppo ${player.companion.name} ha esalato il suo ultimo respiro ed è deceduto...`, "danger");
+        player.companion = null;
+        updateUI();
+      }
+    }
+  }
+
+  function healCompanion(amount, isFull = false) {
+    if (!player.companion) return false;
+    if (isFull) {
+      player.companion.hp = player.companion.maxHp;
+      log(`Hai utilizzato bende e disinfettante su ${player.companion.name}: salute completamente ripristinata!`, "pet");
+    } else {
+      player.companion.hp = Math.min(player.companion.maxHp, player.companion.hp + amount);
+      log(`Hai medicato ${player.companion.name} con bende rudimentali (+${amount} HP).`, "pet");
+    }
+    saveGame();
+    updateUI();
+    return true;
+  }
+
   function drinkWater() {
     if (player.isSleeping) {
       log("Devi svegliarti prima di bere!", "idle");
@@ -756,10 +824,20 @@
   }
 
   /* =========================================================================
-     AVANZAMENTO TEMPO & LIMITAZIONE 8 ORE DI SONNO
+     AVANZAMENTO TEMPO
      ========================================================================= */
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
+
+    // Rigenerazione passiva compagno (+2 HP per ora = 3600 sec)
+    if (player.companion && player.companion.hp > 0) {
+      const totalPetSec = (player.secPetRegen || 0) + secondsToAdd;
+      const petHealTicks = Math.floor(totalPetSec / 3600);
+      player.secPetRegen = totalPetSec % 3600;
+      if (petHealTicks > 0) {
+        player.companion.hp = Math.min(player.companion.maxHp, player.companion.hp + (petHealTicks * 2));
+      }
+    }
 
     if (player.isSleeping) {
       const currentSleepSec = player.consecutiveSleepSeconds || 0;
@@ -793,6 +871,7 @@
     }
 
     checkPerishableFood();
+    checkPetStatus();
     enforceEnergyCaps();
     checkDeath();
     saveGame();
@@ -818,7 +897,6 @@
   }
 
   function applyAwakeTime(secondsToAdd, silent) {
-    // Consumo Idratazione (100% in 18 ore)
     const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
     const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
     player.secThirst = totalThirstSec % THIRST_TICK_SEC;
@@ -836,7 +914,6 @@
       }
     }
 
-    // Consumo Sazietà
     const totalFoodSec = (player.secFood || 0) + secondsToAdd;
     const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
     player.secFood = totalFoodSec % FOOD_TICK_SEC;
@@ -854,7 +931,6 @@
       }
     }
 
-    // Consumo Energia
     const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
     const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
     player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
@@ -957,7 +1033,7 @@
     }
   }
 
-  function useItem(id) {
+  function useItem(id, targetCompanion = false) {
     if (player.isSleeping) {
       log("Devi prima svegliarti per usare gli oggetti!", "idle");
       return;
@@ -965,6 +1041,27 @@
 
     const item = player.inventory.find(i => i.id === id);
     if (!item) return;
+
+    if (targetCompanion && player.companion) {
+      if (item.type === "cure_minor") {
+        if (player.companion.hp >= player.companion.maxHp) {
+          log(`${player.companion.name} è già al massimo della salute.`, "idle");
+          return;
+        }
+        healCompanion(30, false);
+        removeItem(id, 1);
+      } else if (item.type === "cure") {
+        if (player.companion.hp >= player.companion.maxHp) {
+          log(`${player.companion.name} è già al massimo della salute.`, "idle");
+          return;
+        }
+        healCompanion(100, true);
+        removeItem(id, 1);
+      }
+      saveGame();
+      updateUI();
+      return;
+    }
 
     if (item.type === "food" || item.type === "perishable_food") {
       player.food = Math.min(player.maxFood, player.food + item.val);
@@ -1072,7 +1169,7 @@
     {
       id: "rudimentary_bandage",
       name: "Bende rudimentali",
-      desc: "Cura parziale (+15 HP, non guarisce malattie gravi).",
+      desc: "Cura parziale (+15 HP a te o +30 HP al compagno).",
       reqs: { duct_tape: 1, cloth: 2 },
       type: "item",
       isUnique: false,
@@ -1364,7 +1461,6 @@
     }
     player.energy = Math.max(0, player.energy - 3);
 
-    // Raccolta automatica acqua +25% (0.25 L)
     const prevDirty = player.dirtyFlask || 0;
     player.dirtyFlask = Math.min(1.0, Math.round((prevDirty + 0.25) * 100) / 100);
     const gatheredWater = Math.round((player.dirtyFlask - prevDirty) * 100) / 100;
@@ -1417,7 +1513,7 @@
   }
 
   /* =========================================================================
-     INCONTRI & MICRO-BIVI
+     INCONTRI & MICRO-BIVI CON COMPAGNO
      ========================================================================= */
   function handleAnimalEncounter() {
     if (Math.random() < 0.45) {
@@ -1426,30 +1522,49 @@
     }
 
     currentEncounter = "animal";
-    log("Un predatore ringhia e ti sbarra la strada con fare feroce!", "danger");
+    log("Un predatore selvatico ringhia e ti sbarra la strada con fare feroce!", "danger");
 
-    const actions = [
-      { label: "Combatti", action: () => resolveCombat("animal", 12, 22, "l'animale selvatico") }
-    ];
+    const combatRow = [];
 
+    // Tasto Aiuto del compagno se presente
+    if (player.companion && player.companion.hp > 0) {
+      combatRow.push({
+        label: `Aiuto (${player.companion.name})`,
+        action: () => resolvePetCombat("animal", 12, 22, "l'animale selvatico")
+      });
+    }
+
+    combatRow.push({
+      label: "Combatti",
+      action: () => resolveCombat("animal", 12, 22, "l'animale selvatico")
+    });
+
+    const otherActions = [];
     const perishableItem = player.inventory.find(i => i.type === "perishable_food");
     if (perishableItem) {
-      actions.push({
+      otherActions.push({
         label: `Getta ${perishableItem.name}`,
         action: () => {
-          log(`Lanci ${perishableItem.name}: la fiera si avventa sulla carne e ti lascia passare!`, "success");
           removeItem(perishableItem.id, 1);
+          // Chance 5-10% di addomesticare se non si ha compagno
+          const tameRoll = Math.random();
+          if (!player.companion && tameRoll < 0.08) {
+            log(`Lanci ${perishableItem.name}. L'animale mangia voracemente e si calma, avvicinandosi docile!`, "success");
+            tameAnimal();
+          } else {
+            log(`Lanci ${perishableItem.name}: la fiera si avventa sulla carne e ti lascia passare!`, "success");
+          }
           endEncounter();
         }
       });
     }
 
-    actions.push({
+    otherActions.push({
       label: "Fuggi (-15 Energia)",
       action: () => fleeEncounter("animal")
     });
 
-    setContextActions(actions);
+    setContextActionsRow(combatRow, otherActions);
   }
 
   function handleHumanEncounter() {
@@ -1462,13 +1577,25 @@
     currentEncounter = "human";
     log("Un predone sbuca da un angolo puntandoti contro una spranga!", "danger");
 
-    const actions = [
-      { label: "Combatti", action: () => resolveCombat("human", 14, 28, "il predone") }
-    ];
+    const combatRow = [];
 
+    // Tasto Aiuto del compagno se presente
+    if (player.companion && player.companion.hp > 0) {
+      combatRow.push({
+        label: `Aiuto (${player.companion.name})`,
+        action: () => resolvePetCombat("human", 14, 28, "il predone")
+      });
+    }
+
+    combatRow.push({
+      label: "Combatti",
+      action: () => resolveCombat("human", 14, 28, "il predone")
+    });
+
+    const otherActions = [];
     const foodItem = player.inventory.find(i => i.type === "food" || i.type === "perishable_food");
     if (foodItem) {
-      actions.push({
+      otherActions.push({
         label: `Cedi 1x ${foodItem.name}`,
         action: () => {
           log(`Cedi 1x ${foodItem.name}. Il predone arraffa il cibo e scappa.`, "idle");
@@ -1478,12 +1605,12 @@
       });
     }
 
-    actions.push({
+    otherActions.push({
       label: "Fuggi (-15 Energia)",
       action: () => fleeEncounter("human")
     });
 
-    setContextActions(actions);
+    setContextActionsRow(combatRow, otherActions);
   }
 
   function resolveCombat(type, minDmg, maxDmg, enemyName) {
@@ -1506,6 +1633,24 @@
 
     endEncounter();
     checkDeath();
+  }
+
+  function resolvePetCombat(type, minDmg, maxDmg, enemyName) {
+    if (!player.companion) return;
+
+    // Chance che il cane schivi/svii l'attacco
+    if (Math.random() < 0.35) {
+      log(`${player.companion.name} balza con agilità e svia l'attacco di ${enemyName} senza subire ferite!`, "pet");
+      endEncounter();
+      return;
+    }
+
+    const baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+    player.companion.hp = Math.max(0, player.companion.hp - baseDmg);
+    log(`${player.companion.name} si scaglia con coraggio contro ${enemyName} subendo ${baseDmg} danni al posto tuo!`, "danger");
+
+    checkPetStatus();
+    endEncounter();
   }
 
   function fleeEncounter(type) {
@@ -1601,6 +1746,40 @@
     box.style.display = "flex";
   }
 
+  function setContextActionsRow(combatRowActions, otherActions) {
+    const box = document.getElementById("context-actions");
+    box.innerHTML = "";
+    if (player.isSleeping) {
+      box.style.display = "none";
+      return;
+    }
+
+    if (combatRowActions && combatRowActions.length > 0) {
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "encounter-actions-row";
+      combatRowActions.forEach(a => {
+        const btn = document.createElement("button");
+        btn.className = "btn-main";
+        btn.textContent = a.label;
+        btn.onclick = a.action;
+        rowDiv.appendChild(btn);
+      });
+      box.appendChild(rowDiv);
+    }
+
+    if (otherActions && otherActions.length > 0) {
+      otherActions.forEach(a => {
+        const btn = document.createElement("button");
+        btn.className = "btn-main";
+        btn.textContent = a.label;
+        btn.onclick = a.action;
+        box.appendChild(btn);
+      });
+    }
+
+    box.style.display = "flex";
+  }
+
   function clearContextActions() {
     setContextActions([]);
   }
@@ -1616,6 +1795,18 @@
 
     document.getElementById("bar-thirst").style.width = `${player.thirst}%`;
     document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
+
+    // Visualizzazione Compagno di Viaggio
+    const petRow = document.getElementById("pet-stat-row");
+    if (player.companion && player.companion.hp > 0) {
+      petRow.style.display = "flex";
+      document.getElementById("val-pet-name").textContent = player.companion.name;
+      const petPct = (player.companion.hp / player.companion.maxHp) * 100;
+      document.getElementById("bar-pet").style.width = `${petPct}%`;
+      document.getElementById("val-pet-hp").textContent = `${Math.round(player.companion.hp)}/${player.companion.maxHp}`;
+    } else {
+      petRow.style.display = "none";
+    }
 
     const dFlask = (player.drinkFlask || 0).toFixed(2);
     const rFlask = (player.dirtyFlask || 0).toFixed(2);
@@ -1718,9 +1909,28 @@
         if (item.type === "food" || item.type === "perishable_food" || item.type === "cure" || item.type === "cure_minor") {
           const btnUse = document.createElement("button");
           btnUse.textContent = "Usa";
-          btnUse.onclick = () => useItem(item.id);
+          btnUse.onclick = () => useItem(item.id, false);
           if (player.isSleeping || player.isDead) btnUse.disabled = true;
           actions.appendChild(btnUse);
+        }
+
+        // Tasti di cura dedicati al compagno
+        if (player.companion && player.companion.hp > 0) {
+          if (item.type === "cure_minor") {
+            const btnHealPet = document.createElement("button");
+            btnHealPet.textContent = `Cura ${player.companion.name}`;
+            btnHealPet.style.borderColor = "var(--pet-bar)";
+            btnHealPet.onclick = () => useItem(item.id, true);
+            if (player.isSleeping || player.isDead || player.companion.hp >= player.companion.maxHp) btnHealPet.disabled = true;
+            actions.appendChild(btnHealPet);
+          } else if (item.type === "cure") {
+            const btnFullPet = document.createElement("button");
+            btnFullPet.textContent = `Full ${player.companion.name}`;
+            btnFullPet.style.borderColor = "var(--pet-bar)";
+            btnFullPet.onclick = () => useItem(item.id, true);
+            if (player.isSleeping || player.isDead || player.companion.hp >= player.companion.maxHp) btnFullPet.disabled = true;
+            actions.appendChild(btnFullPet);
+          }
         }
 
         row.appendChild(actions);
