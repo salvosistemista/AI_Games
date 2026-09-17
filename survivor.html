@@ -519,7 +519,7 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v6";
+  const STORAGE_KEY = "terra_desolata_save_v7";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // 1 sazietà ogni 8 min (480s)
@@ -538,7 +538,7 @@
     km: 0,
     sick: false,
     isSleeping: false,
-    consecutiveSleepHours: 0, // Ore consecutive dormite
+    consecutiveSleepHours: 0,
     maxSlots: 10,
     survivalSeconds: 0,
     isDead: false,
@@ -588,13 +588,11 @@
     player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
 
     if (player.isSleeping) {
-      // Guadagno energia massima (+1 ogni 240s)
       const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
       const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
       player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
       player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
 
-      // Guadagno energia corrente (+1 ogni 360s)
       const totalSleepCurSec = (player.secSleepCur || 0) + secondsToAdd;
       const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
       player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
@@ -606,7 +604,6 @@
         if (!silent) log(`La malattia ha peggiorato le tue condizioni durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
       }
     } else {
-      // Perdita sazietà (-1 ogni 480s)
       const totalFoodSec = (player.secFood || 0) + secondsToAdd;
       const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
       player.secFood = totalFoodSec % FOOD_TICK_SEC;
@@ -624,13 +621,11 @@
         }
       }
 
-      // Perdita energia massima (-1 ogni 600s)
       const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
       const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
       player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
       player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
 
-      // Perdita energia corrente (-1 ogni 540s)
       const totalAwakeCurSec = (player.secAwakeCur || 0) + secondsToAdd;
       const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
       player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
@@ -730,11 +725,11 @@
     player.isSleeping = !player.isSleeping;
 
     if (player.isSleeping) {
-      player.consecutiveSleepHours = 0; // Azzera il contatore al momento di coricarsi
+      player.consecutiveSleepHours = 0;
       log("Ti corichi al riparo e chiudi gli occhi. Entri in un sonno profondo.", "sleep");
       clearContextActions();
     } else {
-      player.consecutiveSleepHours = 0; // Azzera al risveglio
+      player.consecutiveSleepHours = 0;
       log("Ti svegli e torni vigile.", "idle");
     }
 
@@ -745,10 +740,7 @@
   function sleepOneHour() {
     if (!player.isSleeping || player.hp <= 0) return;
 
-    // Incrementa le ore dormite dall'ultima volta che si è pigiato Dormi
     player.consecutiveSleepHours = (player.consecutiveSleepHours || 0) + 1;
-
-    // Fa avanzare il tempo di 3600 secondi
     advanceTime(3600);
 
     const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
@@ -884,9 +876,13 @@
     }
   }
 
+  /* =========================================================================
+     BARATTO
+     ========================================================================= */
   function renderTradeOptions() {
     setContextActions([
       { label: "Baratta: 2 Rottami ➔ 1 Cibo", action: () => executeTrade("scrap", 2, "canned_food", "Cibo in scatola", "food", 35, 1) },
+      { label: "Baratta: 4 Rottami ➔ 1 Bende e disinfettante", action: () => executeTrade("scrap", 4, "medkit", "Bende e disinfettante", "cure", 30, 1) },
       { label: "Baratta: 2 Cibo ➔ 1 Bende e disinfettante", action: () => executeTrade("canned_food", 2, "medkit", "Bende e disinfettante", "cure", 30, 1) },
       { label: "Baratta: 1 Bende e disinfettante ➔ 2 Cibo", action: () => executeTrade("medkit", 1, "canned_food", "Cibo in scatola", "food", 35, 2) }
     ]);
@@ -897,7 +893,7 @@
 
     const sourceItem = player.inventory.find(i => i.id === giveId);
     if (!sourceItem || sourceItem.qty < giveQty) {
-      log(`Non hai abbastanza oggetti per questo baratto.`, "danger");
+      log(`Non hai abbastanza oggetti per questo baratto (richiesti: ${giveQty}x).`, "danger");
       return;
     }
 
