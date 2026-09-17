@@ -643,32 +643,34 @@
   /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v10";
+  const STORAGE_KEY = "terra_desolata_save_v11";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // -1 sazietà ogni 8 min (480s)
   const THIRST_TOTAL_SEC = 36 * 3600;     // 36 ore = 129.600s per consumare 100% idratazione
-  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 1296s per 1% di idratazione
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // 1296s per 1% idratazione
   const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // 1 energia corr ogni 9 min (540s)
   const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // 1 energia max ogni 10 min (600s)
   const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 energia max ogni 4 min (240s)
   const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 energia corr ogni 6 min (360s)
   const FOOD_PERISH_LIMIT_SEC = 86400;    // 24 ore interne
+  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600; // Massimo 8 ore di sonno continuativo
 
   const defaultPlayerState = {
     hp: 100,
     maxHp: 100,
     food: 80,
     maxFood: 100,
-    thirst: 100, // 0 - 100%
-    drinkFlask: 1.0, // 0.0 - 1.0 Litri
-    dirtyFlask: 0.0, // 0.0 - 1.0 Litri
+    thirst: 100,
+    drinkFlask: 1.0,
+    dirtyFlask: 0.0,
     energy: 100,
     maxEnergy: 100,
     km: 0,
     sick: false,
     isSleeping: false,
     consecutiveSleepHours: 0,
+    consecutiveSleepSeconds: 0, // Accumulatore secondi di sonno continui
     maxSlots: 10,
     survivalSeconds: 0,
     isDead: false,
@@ -754,90 +756,124 @@
   }
 
   /* =========================================================================
-     AVANZAMENTO TEMPO
+     AVANZAMENTO TEMPO & LIMITAZIONE 8 ORE DI SONNO
      ========================================================================= */
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
 
-    player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
-    checkPerishableFood();
-
+    // Se si sta dormendo, verificare il limite continuo di 8 ore (28.800 secondi)
     if (player.isSleeping) {
-      // In sonno idratazione e sazietà sono congelate
-      const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
-      const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
-      player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
-      player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
+      const currentSleepSec = player.consecutiveSleepSeconds || 0;
+      const sleepCapacity = MAX_CONSECUTIVE_SLEEP_SEC - currentSleepSec;
 
-      const totalSleepCurSec = (player.secSleepCur || 0) + secondsToAdd;
-      const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
-      player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
-      player.energy = Math.min(player.maxEnergy, player.energy + curGains);
+      if (secondsToAdd >= sleepCapacity) {
+        // Applica i benefici del sonno per il tempo rimanente fino alle 8 ore
+        applySleepTime(sleepCapacity, silent);
+        player.survivalSeconds = (player.survivalSeconds || 0) + sleepCapacity;
+        player.consecutiveSleepSeconds = MAX_CONSECUTIVE_SLEEP_SEC;
+        player.consecutiveSleepHours = 8;
 
-      if (player.sick) {
-        const sickDmg = secondsToAdd * 0.15;
-        player.hp = Math.max(0, player.hp - sickDmg);
-        if (!silent) log(`La malattia ti debilita durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
+        // Risveglio automatico
+        player.isSleeping = false;
+        player.consecutiveSleepHours = 0;
+        player.consecutiveSleepSeconds = 0;
+        log("Hai dormito 8 ore di fila: ti svegli automaticamente ben riposato!", "success");
+
+        // Il restante tempo viene simulato come tempo trascorso da sveglio
+        const remainingSeconds = secondsToAdd - sleepCapacity;
+        if (remainingSeconds > 0) {
+          advanceTime(remainingSeconds, silent);
+        }
+        return;
+      } else {
+        player.consecutiveSleepSeconds = currentSleepSec + secondsToAdd;
+        player.consecutiveSleepHours = Math.floor(player.consecutiveSleepSeconds / 3600);
+        applySleepTime(secondsToAdd, silent);
+        player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
       }
     } else {
-      // Consumo Sete (100% in 36 ore)
-      const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
-      const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
-      player.secThirst = totalThirstSec % THIRST_TICK_SEC;
-
-      if (thirstLoss > 0) {
-        const thirstBefore = player.thirst;
-        player.thirst = Math.max(0, player.thirst - thirstLoss);
-        const actualLoss = thirstBefore - player.thirst;
-
-        if (player.thirst <= 0) {
-          const dehydratedUnits = thirstLoss - actualLoss;
-          const dehydrationDamage = Math.max(1, dehydratedUnits * 12);
-          player.hp = Math.max(0, player.hp - dehydrationDamage);
-          if (!silent) log(`Sei completamente disidratato! Subisci ${Math.round(dehydrationDamage)} danni per sete estrema.`, "danger");
-        }
-      }
-
-      // Consumo Sazietà
-      const totalFoodSec = (player.secFood || 0) + secondsToAdd;
-      const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
-      player.secFood = totalFoodSec % FOOD_TICK_SEC;
-
-      if (foodLoss > 0) {
-        const foodBefore = player.food;
-        player.food = Math.max(0, player.food - foodLoss);
-        const actualLoss = foodBefore - player.food;
-
-        if (player.food <= 0) {
-          const starvedUnits = foodLoss - actualLoss;
-          const starvationDamage = Math.max(1, starvedUnits * 10);
-          player.hp = Math.max(0, player.hp - starvationDamage);
-          if (!silent) log(`Sei rimasto a digiuno! Subisci ${Math.round(starvationDamage)} danni per inedia.`, "danger");
-        }
-      }
-
-      // Consumo Energia
-      const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
-      const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
-      player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
-      player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
-
-      const totalAwakeCurSec = (player.secAwakeCur || 0) + secondsToAdd;
-      const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
-      player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
-      player.energy = Math.max(0, player.energy - curLoss);
-
-      if (player.sick) {
-        const sickDmg = secondsToAdd * 0.2;
-        player.hp = Math.max(0, player.hp - sickDmg);
-        if (!silent) log(`L'infezione progredisce (-${Math.round(sickDmg)} HP).`, "danger");
-      }
+      player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
+      applyAwakeTime(secondsToAdd, silent);
     }
 
+    checkPerishableFood();
     enforceEnergyCaps();
     checkDeath();
     saveGame();
     updateUI();
+  }
+
+  function applySleepTime(secondsToAdd, silent) {
+    const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
+    const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
+    player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
+    player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
+
+    const totalSleepCurSec = (player.secSleepCur || 0) + secondsToAdd;
+    const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
+    player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
+    player.energy = Math.min(player.maxEnergy, player.energy + curGains);
+
+    if (player.sick) {
+      const sickDmg = secondsToAdd * 0.15;
+      player.hp = Math.max(0, player.hp - sickDmg);
+      if (!silent) log(`La malattia ti debilita durante il riposo (-${Math.round(sickDmg)} HP).`, "danger");
+    }
+  }
+
+  function applyAwakeTime(secondsToAdd, silent) {
+    // Consumo Idratazione (100% in 36 ore)
+    const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
+    const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
+    player.secThirst = totalThirstSec % THIRST_TICK_SEC;
+
+    if (thirstLoss > 0) {
+      const thirstBefore = player.thirst;
+      player.thirst = Math.max(0, player.thirst - thirstLoss);
+      const actualLoss = thirstBefore - player.thirst;
+
+      if (player.thirst <= 0) {
+        const dehydratedUnits = thirstLoss - actualLoss;
+        const dehydrationDamage = Math.max(1, dehydratedUnits * 12);
+        player.hp = Math.max(0, player.hp - dehydrationDamage);
+        if (!silent) log(`Sei completamente disidratato! Subisci ${Math.round(dehydrationDamage)} danni per sete estrema.`, "danger");
+      }
+    }
+
+    // Consumo Sazietà
+    const totalFoodSec = (player.secFood || 0) + secondsToAdd;
+    const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
+    player.secFood = totalFoodSec % FOOD_TICK_SEC;
+
+    if (foodLoss > 0) {
+      const foodBefore = player.food;
+      player.food = Math.max(0, player.food - foodLoss);
+      const actualLoss = foodBefore - player.food;
+
+      if (player.food <= 0) {
+        const starvedUnits = foodLoss - actualLoss;
+        const starvationDamage = Math.max(1, starvedUnits * 10);
+        player.hp = Math.max(0, player.hp - starvationDamage);
+        if (!silent) log(`Sei rimasto a digiuno! Subisci ${Math.round(starvationDamage)} danni per inedia.`, "danger");
+      }
+    }
+
+    // Consumo Energia
+    const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
+    const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
+    player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
+    player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
+
+    const totalAwakeCurSec = (player.secAwakeCur || 0) + secondsToAdd;
+    const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
+    player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
+    player.energy = Math.max(0, player.energy - curLoss);
+
+    if (player.sick) {
+      const sickDmg = secondsToAdd * 0.2;
+      player.hp = Math.max(0, player.hp - sickDmg);
+      if (!silent) log(`L'infezione progredisce (-${Math.round(sickDmg)} HP).`, "danger");
+    }
   }
 
   function canAttemptDodge() {
@@ -1150,7 +1186,7 @@
 
     player.energy = Math.max(0, player.energy - 3);
     enforceEnergyCaps();
-    advanceTime(360); // 6 minuti
+    advanceTime(360);
 
     const success = rec.craft();
     if (success) {
@@ -1233,13 +1269,21 @@
       return;
     }
 
-    player.isSleeping = !player.isSleeping;
-    if (player.isSleeping) {
+    if (!player.isSleeping) {
+      // Controllo: disattiva se l'energia è superiore a 40
+      if (player.energy > 40) {
+        log("Sei ancora troppo attivo per addormentarti (Energia > 40).", "idle");
+        return;
+      }
+      player.isSleeping = true;
       player.consecutiveSleepHours = 0;
+      player.consecutiveSleepSeconds = 0;
       log("Ti accovacci in un angolo riparato e ti addormenti.", "sleep");
       clearContextActions();
     } else {
+      player.isSleeping = false;
       player.consecutiveSleepHours = 0;
+      player.consecutiveSleepSeconds = 0;
       log("Riapri gli occhi e ti rimetti in piedi.", "idle");
     }
 
@@ -1249,10 +1293,11 @@
 
   function sleepOneHour() {
     if (!player.isSleeping || player.hp <= 0) return;
-    player.consecutiveSleepHours = (player.consecutiveSleepHours || 0) + 1;
     advanceTime(3600);
-    const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
-    log(`Stai dormendo da ${oreTesto}. Energia: ${Math.round(player.energy)}/${Math.round(player.maxEnergy)}.`, "sleep");
+    if (player.isSleeping) {
+      const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
+      log(`Stai dormendo da ${oreTesto}. Energia: ${Math.round(player.energy)}/${Math.round(player.maxEnergy)}.`, "sleep");
+    }
   }
 
   function move() {
@@ -1574,11 +1619,9 @@
     document.getElementById("bar-food").style.width = `${(player.food / player.maxFood) * 100}%`;
     document.getElementById("val-food").textContent = `${Math.round(player.food)}/${player.maxFood}`;
 
-    // Barra Idratazione
     document.getElementById("bar-thirst").style.width = `${player.thirst}%`;
     document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
 
-    // Stato Borracce
     const dFlask = (player.drinkFlask || 0).toFixed(2);
     const rFlask = (player.dirtyFlask || 0).toFixed(2);
     document.getElementById("val-flask-drink").textContent = `${dFlask} / 1.00 L`;
@@ -1626,16 +1669,27 @@
     } else if (player.isSleeping) {
       btnMove.disabled = true;
       btnDrink.disabled = true;
+      btnSleep.disabled = false;
       btnSleep.textContent = "Svegliati";
+      btnSleep.title = "";
       btnSleep.style.background = "#2b3d54";
       btnSleepHour.style.display = "block";
     } else {
       btnMove.disabled = player.energy < 5 || currentEncounter !== null;
-      btnSleep.disabled = currentEncounter !== null;
       btnDrink.disabled = player.drinkFlask < 0.19 || player.thirst >= 100;
-      btnSleep.textContent = "Dormi";
-      btnSleep.style.background = "#1a2636";
       btnSleepHour.style.display = "none";
+
+      // Disattivazione Dormi se energia > 40
+      if (player.energy > 40 || currentEncounter !== null) {
+        btnSleep.disabled = true;
+        btnSleep.textContent = player.energy > 40 ? "Dormi (Ene > 40)" : "Dormi";
+        btnSleep.title = player.energy > 40 ? "Hai troppa energia per dormire (richiesti ≤ 40)" : "";
+      } else {
+        btnSleep.disabled = false;
+        btnSleep.textContent = "Dormi";
+        btnSleep.title = "";
+      }
+      btnSleep.style.background = "#1a2636";
     }
 
     const usedSlots = getTotalUsedSlots();
