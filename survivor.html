@@ -185,7 +185,6 @@
       border: 1px solid rgba(255,255,255,0.04);
     }
 
-    /* Slot Arma Attiva */
     .weapon-slot-row {
       display: flex;
       justify-content: space-between;
@@ -202,7 +201,6 @@
       color: var(--weapon-color);
     }
 
-    /* Diario di bordo */
     #log-container {
       flex: 1;
       padding: 14px 16px;
@@ -248,10 +246,23 @@
       font-size: 0.8rem;
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-bottom: 5px;
       color: var(--accent);
       text-transform: uppercase;
       font-weight: bold;
+    }
+
+    .btn-crafting-open {
+      background: #2b3a42;
+      border: 1px solid #4a6572;
+      color: #b0bec5;
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: normal;
+      text-transform: none;
     }
 
     .inventory-list {
@@ -358,7 +369,7 @@
       padding: 7px 10px;
     }
 
-    /* Modal */
+    /* Modal Generiche */
     .modal {
       display: none;
       position: fixed;
@@ -373,17 +384,76 @@
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 20px;
+      padding: 18px;
       width: 90%;
-      max-width: 360px;
+      max-width: 380px;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      max-height: 85vh;
     }
 
     .modal-content h2 {
-      font-size: 1.1rem;
-      margin-bottom: 4px;
+      font-size: 1.05rem;
+      margin-bottom: 2px;
+    }
+
+    .crafting-recipe-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 55vh;
+      padding-right: 4px;
+    }
+
+    .crafting-card {
+      background: #242424;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.78rem;
+    }
+
+    .crafting-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .crafting-card-title {
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .crafting-desc {
+      color: var(--text-muted);
+      font-size: 0.74rem;
+    }
+
+    .crafting-reqs {
+      font-size: 0.72rem;
+      color: #aaa;
+    }
+
+    .crafting-card button {
+      align-self: flex-end;
+      background: #2a9d8f;
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .crafting-card button:disabled {
+      background: #3a3a3a;
+      color: #666;
+      cursor: not-allowed;
     }
 
     .leaderboard-table-container {
@@ -472,14 +542,16 @@
 
   <div class="bottom-fixed-section">
     <div class="inventory-section">
-      <!-- Slot Arma Unica Equipaggiata -->
       <div class="weapon-slot-row">
         <span>Arma impugnata: <strong id="val-weapon-name">Nessuna</strong></span>
         <span id="val-weapon-durability" style="color:var(--text-muted);">0 usi</span>
       </div>
 
       <div class="inventory-header">
-        <span>Zaino</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span>Zaino</span>
+          <button id="btn-open-crafting" class="btn-crafting-open">🛠 Fabbrica</button>
+        </div>
         <span id="val-inventory-slots">0 / 10 Slot</span>
       </div>
       <div class="inventory-list" id="inventory-list"></div>
@@ -497,6 +569,18 @@
     </div>
   </div>
 
+</div>
+
+<!-- Modal Fabbricazione / Crafting -->
+<div id="modal-crafting" class="modal">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>🛠 Fabbrica Oggetti</h2>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Costo: 3 Ene, 6 min</span>
+    </div>
+    <div class="crafting-recipe-list" id="crafting-recipe-list"></div>
+    <button class="btn-main" id="btn-close-crafting">Chiudi</button>
+  </div>
 </div>
 
 <!-- Modal Opzioni -->
@@ -534,9 +618,9 @@
 
 <script>
   /* =========================================================================
-     CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
+     CONFIGURAZIONE COSTANTI & TEMPISTICHE
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v8";
+  const STORAGE_KEY = "terra_desolata_save_v9";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;              // 1 sazietà ogni 8 min (480s)
@@ -566,18 +650,21 @@
     secAwakeMax: 0,
     secSleepCur: 0,
     secSleepMax: 0,
-    equippedWeapon: null, // { name: "Tubo arrugginito", maxUses: 4, uses: 4, dmgReduction: 0.5 }
+    backpackTier: 0, // 0 = 10 slot, 1 = 14 slot, 2 = 18 slot
+    equippedWeapon: null,
     inventory: [
-      { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 },
-      { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20, qty: 1, acquiredAt: 0 },
-      { id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 },
-      { id: "scrap", name: "Rottami metallici", type: "material", qty: 3 }
+      { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2, slotWeight: 1 },
+      { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20, qty: 1, acquiredAt: 0, slotWeight: 1 },
+      { id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1, slotWeight: 1 },
+      { id: "scrap", name: "Rottami metallici", type: "material", qty: 3, slotWeight: 1 },
+      { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1, slotWeight: 0.2 },
+      { id: "cloth", name: "Tessuto", type: "material", qty: 2, slotWeight: 0.2 }
     ]
   };
 
   let player = JSON.parse(JSON.stringify(defaultPlayerState));
   let currentLocation = null;
-  let currentEncounter = null; // Memorizza lo stato del bivio attivo
+  let currentEncounter = null;
 
   function formatDuration(totalSeconds) {
     const d = Math.floor(totalSeconds / 86400);
@@ -594,9 +681,6 @@
     player.energy = Math.max(0, player.energy);
   }
 
-  /* =========================================================================
-     GESTIONE CIBO DEPERIBILE (24 ORE INTERNE)
-     ========================================================================= */
   function checkPerishableFood() {
     if (!player.inventory) return;
     const initialCount = player.inventory.length;
@@ -604,7 +688,7 @@
       if (item.type === "perishable_food") {
         const age = (player.survivalSeconds || 0) - (item.acquiredAt || 0);
         if (age >= FOOD_PERISH_LIMIT_SEC) {
-          log(`La confezione di ${item.name} è andata a male ed è immangiabile. L'hai gettata via.`, "danger");
+          log(`La confezione di ${item.name} è andata a male ed è immangiabile. Gettata via.`, "danger");
           return false;
         }
       }
@@ -616,7 +700,7 @@
   }
 
   /* =========================================================================
-     SIMULAZIONE TEMPORALE
+     AVANZAMENTO TEMPORALE
      ========================================================================= */
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
@@ -638,7 +722,7 @@
       if (player.sick) {
         const sickDmg = secondsToAdd * 0.15;
         player.hp = Math.max(0, player.hp - sickDmg);
-        if (!silent) log(`La malattia ha peggiorato le tue condizioni durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
+        if (!silent) log(`La malattia ti debilita durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
       }
     } else {
       const totalFoodSec = (player.secFood || 0) + secondsToAdd;
@@ -671,7 +755,7 @@
       if (player.sick) {
         const sickDmg = secondsToAdd * 0.2;
         player.hp = Math.max(0, player.hp - sickDmg);
-        if (!silent) log(`L'infezione si è aggravata col passare del tempo (-${Math.round(sickDmg)} HP).`, "danger");
+        if (!silent) log(`L'infezione progredisce (-${Math.round(sickDmg)} HP).`, "danger");
       }
     }
 
@@ -687,450 +771,31 @@
 
   function tryDodgeAttack(enemyType) {
     if (canAttemptDodge() && Math.random() < 0.5) {
-      log(`I tuoi riflessi sono impeccabili: schivi l'assalto di ${enemyType}!`, "success");
+      log(`Riflessi pronti: schivi l'assalto di ${enemyType}!`, "success");
       return true;
     }
     return false;
   }
 
   /* =========================================================================
-     GESTIONE ARMA
+     INVENTARIO CON PESO FRAZIONARIO (0.2 SLOT)
      ========================================================================= */
-  function promptEquipWeapon(newWeapon) {
-    const currentName = player.equippedWeapon ? `${player.equippedWeapon.name} (${player.equippedWeapon.uses} usi)` : "Nessuna";
-    log(`Hai trovato: ${newWeapon.name} (${newWeapon.uses} utilizzi, protezione ${Math.round(newWeapon.dmgReduction * 100)}%). Arma attuale: ${currentName}.`, "combat");
-
-    setContextActions([
-      {
-        label: `Impugna ${newWeapon.name}`,
-        action: () => {
-          player.equippedWeapon = newWeapon;
-          log(`Hai impugnato ${newWeapon.name}.`, "success");
-          clearContextActions();
-          saveGame();
-          updateUI();
-        }
-      },
-      {
-        label: "Lascia a terra",
-        action: () => {
-          log(`Decidi di non raccogliere ${newWeapon.name}.`, "idle");
-          clearContextActions();
-          saveGame();
-          updateUI();
-        }
-      }
-    ]);
+  function getItemSlotWeight(id, type) {
+    if (id === "duct_tape" || id === "cloth") return 0.2;
+    return 1;
   }
 
-  function useEquippedWeapon() {
-    if (!player.equippedWeapon) return false;
-
-    player.equippedWeapon.uses -= 1;
-    log(`Usi ${player.equippedWeapon.name} per difenderti! Usi rimasti: ${player.equippedWeapon.uses}.`, "combat");
-
-    if (player.equippedWeapon.uses <= 0) {
-      log(`CRACK! ${player.equippedWeapon.name} si è spezzata durante lo scontro!`, "danger");
-      player.equippedWeapon = null;
-    }
-    return true;
+  function getTotalUsedSlots() {
+    const rawSum = player.inventory.reduce((sum, item) => {
+      const weight = item.slotWeight || getItemSlotWeight(item.id, item.type);
+      return sum + (weight * item.qty);
+    }, 0);
+    return Math.round(rawSum * 10) / 10;
   }
 
-  /* =========================================================================
-     SALVATAGGIO & CARICAMENTO
-     ========================================================================= */
-  function saveGame() {
-    player.lastActiveTimestamp = Date.now();
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
-    } catch (e) {
-      console.warn("Impossibile salvare", e);
-    }
-  }
-
-  function loadGameAndSimulateOffline() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) {
-      log("Ti svegli tra le rovine. Usa le tue risorse con saggezza.");
-      log("Gli incontri ora offrono scelte contestuali. Tieni d'occhio armi e cibo fresco.");
-      saveGame();
-      return;
-    }
-
-    try {
-      const loaded = JSON.parse(saved);
-      player = Object.assign({}, defaultPlayerState, loaded);
-      player.maxSlots = 10;
-
-      const now = Date.now();
-      const elapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
-      player.lastActiveTimestamp = now;
-
-      if (!player.isDead && elapsedSeconds > 5) {
-        const mins = Math.floor(elapsedSeconds / 60);
-        log(`Sei rimasto assente per circa ${mins > 0 ? mins + " minuti" : elapsedSeconds + " secondi"}.`, "idle");
-        advanceTime(elapsedSeconds, true);
-      } else if (!player.isDead) {
-        log("Bentornato nelle rovine.");
-      }
-    } catch (e) {
-      console.error("Errore di caricamento salvataggio", e);
-      player = JSON.parse(JSON.stringify(defaultPlayerState));
-    }
-    enforceEnergyCaps();
-  }
-
-  setInterval(() => {
-    if (player.hp <= 0) return;
-    advanceTime(1, true);
-
-    if (!player.sick && player.food > 60 && player.energy > 60 && player.hp < player.maxHp) {
-      player.hp = Math.min(player.maxHp, player.hp + 0.1);
-      updateUI();
-    }
-  }, 1000);
-
-  /* =========================================================================
-     COMANDI DI GIOCO
-     ========================================================================= */
-  function toggleSleep() {
-    if (player.hp <= 0) return;
-    if (currentEncounter) {
-      log("Non puoi addormentarti durante un incontro!", "danger");
-      return;
-    }
-
-    player.isSleeping = !player.isSleeping;
-
-    if (player.isSleeping) {
-      player.consecutiveSleepHours = 0;
-      log("Ti accovacci in un angolo riparato e ti addormenti.", "sleep");
-      clearContextActions();
-    } else {
-      player.consecutiveSleepHours = 0;
-      log("Riapri gli occhi e ti rimetti in piedi.", "idle");
-    }
-
-    saveGame();
-    updateUI();
-  }
-
-  function sleepOneHour() {
-    if (!player.isSleeping || player.hp <= 0) return;
-    player.consecutiveSleepHours = (player.consecutiveSleepHours || 0) + 1;
-    advanceTime(3600);
-    const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
-    log(`Stai dormendo da ${oreTesto}. Energia: ${Math.round(player.energy)}/${Math.round(player.maxEnergy)}.`, "sleep");
-  }
-
-  function move() {
-    if (player.isSleeping) {
-      log("Non puoi camminare mentre stai dormendo!", "idle");
-      return;
-    }
-
-    if (currentEncounter) {
-      log("Devi prima risolvere l'incontro prima di avanzare!", "danger");
-      return;
-    }
-
-    if (player.energy < 5) {
-      log("Non hai abbastanza energia corrente per camminare (minimo 5).", "danger");
-      return;
-    }
-
-    player.km += 1;
-    player.maxEnergy = Math.max(0, player.maxEnergy - 5);
-    player.energy = Math.max(0, player.energy - 5);
-    enforceEnergyCaps();
-
-    currentLocation = null;
-    clearContextActions();
-
-    log(`Avanzi di 1 Km attraverso la desolazione (+12 min).`, "idle");
-    advanceTime(720);
-
-    const dice = Math.random();
-    if (dice < 0.28) {
-      handleLocationDiscovery();
-    } else if (dice < 0.48) {
-      handleAnimalEncounter();
-    } else if (dice < 0.68) {
-      handleHumanEncounter();
-    } else if (dice < 0.80) {
-      handleHazardEncounter();
-    } else {
-      log("Solo silenzi e macerie lungo il cammino.", "idle");
-    }
-
-    checkDeath();
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     PERLUSTRATURA
-     ========================================================================= */
-  function handleLocationDiscovery() {
-    const locs = [
-      { name: "una vecchia casa abbandonata", type: "casa" },
-      { name: "i resti di un accampamento improvvisato", type: "campo" },
-      { name: "una discarica a cielo aperto", type: "discarica" }
-    ];
-    const loc = locs[Math.floor(Math.random() * locs.length)];
-    loc.searchesDone = 0;
-    loc.maxSearches = Math.random() < 0.5 ? 2 : 1;
-
-    currentLocation = loc;
-    log(`Scorgi ${loc.name}. Puoi perlustrare la zona.`, "success");
-
-    setContextActions([
-      { label: "Perquisisci zona", action: () => scavengeLocation() }
-    ]);
-  }
-
-  function scavengeLocation() {
-    if (player.isSleeping || !currentLocation) return;
-    if (player.energy < 3) {
-      log("Troppo esausto per cercare con cura (richiesti 3 Energia Corrente).", "danger");
-      return;
-    }
-    player.energy = Math.max(0, player.energy - 3);
-
-    const minutesPassed = Math.floor(Math.random() * 16) + 15;
-    log(`Frughi con cura tra le macerie per ${minutesPassed} minuti...`, "idle");
-    advanceTime(minutesPassed * 60);
-
-    const lootRoll = Math.random();
-    if (lootRoll < 0.25) {
-      addItem("scrap", "Rottami metallici", "material", 1);
-      log("Hai recuperato del metallo utile dai rottami.", "success");
-    } else if (lootRoll < 0.45) {
-      addItem("canned_food", "Cibo in scatola", "food", 35, 1);
-      log("Hai trovato una latta di cibo intatta!", "success");
-    } else if (lootRoll < 0.60) {
-      // Cibo fresco deperibile
-      addPerishableFood("raw_meat", "Carne cruda", 20);
-      log("Trovi della carne fresca commestibile (si deteriora entro 24 ore!).", "success");
-    } else if (lootRoll < 0.75) {
-      // Arma
-      const weapons = [
-        { name: "Ramo nodoso rinforzato", maxUses: 3, uses: 3, dmgReduction: 0.4 },
-        { name: "Tubo di ferro acuminato", maxUses: 5, uses: 5, dmgReduction: 0.6 },
-        { name: "Lama di lamiera sagomata", maxUses: 4, uses: 4, dmgReduction: 0.5 }
-      ];
-      const foundWp = weapons[Math.floor(Math.random() * weapons.length)];
-      promptEquipWeapon(foundWp);
-      return;
-    } else if (lootRoll < 0.88) {
-      addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
-      log("Trovi una cassetta di pronto soccorso con bende.", "success");
-    } else {
-      log("Hai frugato ovunque ma non c'era niente di utile.", "idle");
-    }
-
-    currentLocation.searchesDone += 1;
-
-    if (currentLocation.searchesDone < currentLocation.maxSearches) {
-      log("Un'altra zona dell'edificio sembra accessibile. Puoi perlustrare di nuovo!", "idle");
-      setContextActions([
-        { label: "Perquisisci ancora", action: () => scavengeLocation() }
-      ]);
-    } else {
-      clearContextActions();
-      currentLocation = null;
-    }
-
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     INCONTRI CON MICRO-BIVI DECISIONALI
-     ========================================================================= */
-  function handleAnimalEncounter() {
-    if (Math.random() < 0.45) {
-      log("Una volpe magra ti osserva con cautela e si dilegua tra le rocce.", "idle");
-      return;
-    }
-
-    // Animale selvatico aggressivo
-    currentEncounter = "animal";
-    log("Un predatore selvatico ringhia e sbarra il tuo cammino con fare aggressivo!", "danger");
-
-    const actions = [
-      {
-        label: "Combatti",
-        action: () => resolveCombat("animal", 12, 22, "l'animale selvatico")
-      }
-    ];
-
-    // Se il giocatore ha carne deperibile può lanciarla
-    const perishableItem = player.inventory.find(i => i.type === "perishable_food");
-    if (perishableItem) {
-      actions.push({
-        label: `Getta ${perishableItem.name}`,
-        action: () => {
-          log(`Lanci prontamente ${perishableItem.name} lontano: l'animale si fionda sul cibo e ti ignora!`, "success");
-          removeItem(perishableItem.id, 1);
-          endEncounter();
-        }
-      });
-    }
-
-    actions.push({
-      label: "Fuggi (-15 Energia)",
-      action: () => fleeEncounter("animal")
-    });
-
-    setContextActions(actions);
-  }
-
-  function handleHumanEncounter() {
-    if (Math.random() < 0.5) {
-      log("Incontri un viaggiatore pacifico disposto a barattare risorse.", "success");
-      renderTradeOptions();
-      return;
-    }
-
-    // Predone ostile
-    currentEncounter = "human";
-    log("Un predone sbuca da dietro un relitto brandendo un'arma improvvisata!", "danger");
-
-    const actions = [
-      {
-        label: "Combatti",
-        action: () => resolveCombat("human", 14, 28, "il predone")
-      }
-    ];
-
-    // Cedere cibo per salvarsi
-    const foodItem = player.inventory.find(i => i.type === "food" || i.type === "perishable_food");
-    if (foodItem) {
-      actions.push({
-        label: `Cedi 1x ${foodItem.name}`,
-        action: () => {
-          log(`Cedi 1x ${foodItem.name}. Il predone arraffa il cibo con un grugnito e si allontana.`, "idle");
-          removeItem(foodItem.id, 1);
-          endEncounter();
-        }
-      });
-    }
-
-    actions.push({
-      label: "Fuggi (-15 Energia)",
-      action: () => fleeEncounter("human")
-    });
-
-    setContextActions(actions);
-  }
-
-  function resolveCombat(type, minDmg, maxDmg, enemyName) {
-    if (tryDodgeAttack(enemyName)) {
-      endEncounter();
-      return;
-    }
-
-    let baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
-
-    if (player.equippedWeapon) {
-      const reduction = player.equippedWeapon.dmgReduction || 0.5;
-      const absorbedDmg = Math.round(baseDmg * reduction);
-      baseDmg = Math.max(2, baseDmg - absorbedDmg);
-      useEquippedWeapon();
-      log(`Ti difendi con la tua arma assorbendo parte dell'impatto!`, "combat");
-    }
-
-    player.hp = Math.max(0, player.hp - baseDmg);
-    log(`Nello scontro contro ${enemyName} subisci ${baseDmg} danni.`, "danger");
-
-    endEncounter();
-    checkDeath();
-  }
-
-  function fleeEncounter(type) {
-    if (player.energy < 15) {
-      log("Non hai abbastanza energia corrente per fuggire a gambe levate (richiesti 15)! Sei costretto ad affrontarlo!", "danger");
-      return;
-    }
-
-    player.energy = Math.max(0, player.energy - 15);
-    enforceEnergyCaps();
-    log("Scatti a perdifiato e riesci a seminare il pericolo (-15 Energia Corrente).", "idle");
-    endEncounter();
-  }
-
-  function endEncounter() {
-    currentEncounter = null;
-    clearContextActions();
-    saveGame();
-    updateUI();
-  }
-
-  function renderTradeOptions() {
-    setContextActions([
-      { label: "Baratta: 2 Rottami ➔ 1 Cibo", action: () => executeTrade("scrap", 2, "canned_food", "Cibo in scatola", "food", 35, 1) },
-      { label: "Baratta: 4 Rottami ➔ 1 Bende e disinfettante", action: () => executeTrade("scrap", 4, "medkit", "Bende e disinfettante", "cure", 30, 1) },
-      { label: "Baratta: 2 Cibo ➔ 1 Bende e disinfettante", action: () => executeTrade("canned_food", 2, "medkit", "Bende e disinfettante", "cure", 30, 1) },
-      { label: "Baratta: 1 Bende e disinfettante ➔ 2 Cibo", action: () => executeTrade("medkit", 1, "canned_food", "Cibo in scatola", "food", 35, 2) }
-    ]);
-  }
-
-  function executeTrade(giveId, giveQty, receiveId, receiveName, receiveType, receiveVal, receiveQty) {
-    if (player.isSleeping) return;
-
-    const sourceItem = player.inventory.find(i => i.id === giveId);
-    if (!sourceItem || sourceItem.qty < giveQty) {
-      log(`Non hai abbastanza oggetti per questo baratto (richiesti: ${giveQty}x).`, "danger");
-      return;
-    }
-
-    const projectedSlots = (getTotalItemsCount() - giveQty) + receiveQty;
-    if (projectedSlots > player.maxSlots) {
-      log("Zaino colmo! Spazio insufficiente per lo scambio.", "danger");
-      return;
-    }
-
-    removeItem(giveId, giveQty);
-    addItem(receiveId, receiveName, receiveType, receiveVal, receiveQty);
-
-    log(`Scambio completato: ceduti ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
-    clearContextActions();
-    saveGame();
-    updateUI();
-  }
-
-  function handleHazardEncounter() {
-    if (!player.sick && Math.random() < 0.5) {
-      player.sick = true;
-      log("Inali esalazioni tossiche da una cavità: sei MALATO.", "danger");
-    } else {
-      const dmg = 8;
-      player.hp = Math.max(0, player.hp - dmg);
-      log(`Un crollo improvviso di ferraglia ti ferisce (-${dmg} HP).`, "danger");
-    }
-  }
-
-  /* =========================================================================
-     INVENTARIO
-     ========================================================================= */
-  function getTotalItemsCount() {
-    return player.inventory.reduce((sum, item) => sum + item.qty, 0);
-  }
-
-  function addPerishableFood(id, name, val) {
-    if (getTotalItemsCount() + 1 > player.maxSlots) {
-      log("Zaino colmo! Impossibile raccogliere la risorsa.", "danger");
-      return;
-    }
-    player.inventory.push({
-      id: id + "_" + Date.now(),
-      name: name,
-      type: "perishable_food",
-      val: val,
-      qty: 1,
-      acquiredAt: player.survivalSeconds || 0
-    });
+  function getItemQty(id) {
+    const found = player.inventory.find(i => i.id === id);
+    return found ? found.qty : 0;
   }
 
   function addItem(id, name, type, param1, param2) {
@@ -1142,17 +807,38 @@
       qty = param1 || 1;
     }
 
-    if (getTotalItemsCount() + qty > player.maxSlots) {
+    const weight = getItemSlotWeight(id, type);
+    const addedSpace = weight * qty;
+
+    if (getTotalUsedSlots() + addedSpace > player.maxSlots + 0.001) {
       log("Zaino colmo! Impossibile raccogliere altro.", "danger");
-      return;
+      return false;
     }
 
     const existing = player.inventory.find(i => i.id === id);
     if (existing) {
       existing.qty += qty;
     } else {
-      player.inventory.push({ id, name, type, val, qty });
+      player.inventory.push({ id, name, type, val, qty, slotWeight: weight });
     }
+    return true;
+  }
+
+  function addPerishableFood(id, name, val) {
+    if (getTotalUsedSlots() + 1 > player.maxSlots + 0.001) {
+      log("Zaino colmo! Impossibile raccogliere la risorsa.", "danger");
+      return false;
+    }
+    player.inventory.push({
+      id: id + "_" + Date.now(),
+      name: name,
+      type: "perishable_food",
+      val: val,
+      qty: 1,
+      slotWeight: 1,
+      acquiredAt: player.survivalSeconds || 0
+    });
+    return true;
   }
 
   function removeItem(id, qty = 1) {
@@ -1198,13 +884,553 @@
       } else {
         log("Sei già in salute, non serve usarlo adesso.", "idle");
       }
+    } else if (item.type === "cure_minor") {
+      if (player.hp < player.maxHp) {
+        player.hp = Math.min(player.maxHp, player.hp + item.val);
+        log(`Applichi le bende rudimentali (+${item.val} HP). Non hanno effetto su malattie gravi.`, "success");
+        removeItem(id, 1);
+      } else {
+        log("Sei già al massimo della salute.", "idle");
+      }
     }
     saveGame();
     updateUI();
   }
 
   /* =========================================================================
-     RENDERING
+     GESTIONE ARMA
+     ========================================================================= */
+  function promptEquipWeapon(newWeapon) {
+    const currentName = player.equippedWeapon ? `${player.equippedWeapon.name} (${player.equippedWeapon.uses} usi)` : "Nessuna";
+    log(`Nuova arma: ${newWeapon.name} (${newWeapon.uses} usi, protez. ${Math.round(newWeapon.dmgReduction * 100)}%). Attuale: ${currentName}.`, "combat");
+
+    setContextActions([
+      {
+        label: `Impugna ${newWeapon.name}`,
+        action: () => {
+          player.equippedWeapon = newWeapon;
+          log(`Hai equipaggiato: ${newWeapon.name}.`, "success");
+          clearContextActions();
+          saveGame();
+          updateUI();
+        }
+      },
+      {
+        label: "Lascia a terra",
+        action: () => {
+          log(`Lasci a terra ${newWeapon.name}.`, "idle");
+          clearContextActions();
+          saveGame();
+          updateUI();
+        }
+      }
+    ]);
+  }
+
+  function useEquippedWeapon() {
+    if (!player.equippedWeapon) return false;
+    player.equippedWeapon.uses -= 1;
+    log(`Usi ${player.equippedWeapon.name} per parare! Usi rimasti: ${player.equippedWeapon.uses}.`, "combat");
+    if (player.equippedWeapon.uses <= 0) {
+      log(`CRACK! ${player.equippedWeapon.name} si è frantumata!`, "danger");
+      player.equippedWeapon = null;
+    }
+    return true;
+  }
+
+  /* =========================================================================
+     SISTEMA DI CRAFTING (FABBRICAZIONE)
+     ========================================================================= */
+  const CRAFTING_RECIPES = [
+    {
+      id: "rudimentary_bandage",
+      name: "Bende rudimentali",
+      desc: "Cura parziale (+15 HP, non guarisce malattie gravi).",
+      reqs: { duct_tape: 1, cloth: 2 },
+      type: "item",
+      isUnique: false,
+      craft: () => {
+        if (addItem("rudimentary_bandage", "Bende rudimentali", "cure_minor", 15, 1)) {
+          log("Hai fabbricato un set di Bende rudimentali.", "success");
+          return true;
+        }
+        return false;
+      }
+    },
+    {
+      id: "backpack_up_1",
+      name: "Potenz. Zaino I",
+      desc: "Aumenta la capienza massima da 10 a 14 slot.",
+      reqs: { duct_tape: 2, cloth: 5 },
+      type: "upgrade",
+      isUnique: true,
+      condition: () => (player.backpackTier || 0) === 0,
+      craft: () => {
+        player.backpackTier = 1;
+        player.maxSlots = 14;
+        log("Hai rinforzato il tuo zaino! Capienza estesa a 14 Slot!", "success");
+        return true;
+      }
+    },
+    {
+      id: "backpack_up_2",
+      name: "Potenz. Zaino II",
+      desc: "Aumenta la capienza massima da 14 a 18 slot.",
+      reqs: { duct_tape: 4, cloth: 8 },
+      type: "upgrade",
+      isUnique: true,
+      condition: () => (player.backpackTier || 0) === 1,
+      craft: () => {
+        player.backpackTier = 2;
+        player.maxSlots = 18;
+        log("Hai espanso al massimo lo zaino! Capienza estesa a 18 Slot!", "success");
+        return true;
+      }
+    },
+    {
+      id: "spiked_club",
+      name: "Bastone chiodato",
+      desc: "Arma corpo a corpo: assorbe il 50% dei danni, 4 utilizzi.",
+      reqs: { scrap: 2, duct_tape: 1 },
+      type: "weapon",
+      isUnique: false,
+      craft: () => {
+        const weaponObj = { name: "Bastone chiodato", maxUses: 4, uses: 4, dmgReduction: 0.5 };
+        promptEquipWeapon(weaponObj);
+        return true;
+      }
+    },
+    {
+      id: "reinforced_blade",
+      name: "Lama rinforzata",
+      desc: "Arma tagliente: assorbe il 65% dei danni, 6 utilizzi.",
+      reqs: { scrap: 3, duct_tape: 1 },
+      type: "weapon",
+      isUnique: false,
+      craft: () => {
+        const weaponObj = { name: "Lama rinforzata", maxUses: 6, uses: 6, dmgReduction: 0.65 };
+        promptEquipWeapon(weaponObj);
+        return true;
+      }
+    },
+    {
+      id: "crowbar",
+      name: "Piede di porco",
+      desc: "Attrezzo pesante: assorbe l'80% dei danni, 6 utilizzi.",
+      reqs: { scrap: 3, duct_tape: 2 },
+      type: "weapon",
+      isUnique: false,
+      craft: () => {
+        const weaponObj = { name: "Piede di porco", maxUses: 6, uses: 6, dmgReduction: 0.8 };
+        promptEquipWeapon(weaponObj);
+        return true;
+      }
+    }
+  ];
+
+  function canCraftRecipe(rec) {
+    if (rec.condition && !rec.condition()) return false;
+    for (const [matId, reqQty] of Object.entries(rec.reqs)) {
+      if (getItemQty(matId) < reqQty) return false;
+    }
+    return true;
+  }
+
+  function craftItem(recipeId) {
+    if (player.isSleeping) {
+      log("Devi essere sveglio per fabbricare.", "idle");
+      return;
+    }
+    if (player.energy < 3) {
+      log("Sei troppo esausto per lavorare (richiesti 3 Energia Corrente).", "danger");
+      return;
+    }
+
+    const rec = CRAFTING_RECIPES.find(r => r.id === recipeId);
+    if (!rec || !canCraftRecipe(rec)) {
+      log("Materiali o requisiti mancanti per questa formula.", "danger");
+      return;
+    }
+
+    // Consumo materiali
+    for (const [matId, reqQty] of Object.entries(rec.reqs)) {
+      removeItem(matId, reqQty);
+    }
+
+    // Regole & Equilibrio: Consumo tempo ed energia
+    player.energy = Math.max(0, player.energy - 3);
+    enforceEnergyCaps();
+    advanceTime(360); // 6 minuti
+
+    const success = rec.craft();
+    if (success) {
+      document.getElementById("modal-crafting").style.display = "none";
+    }
+
+    saveGame();
+    updateUI();
+  }
+
+  function renderCraftingModal() {
+    const listEl = document.getElementById("crafting-recipe-list");
+    listEl.innerHTML = "";
+
+    const availableScrap = getItemQty("scrap");
+    const availableTape = getItemQty("duct_tape");
+    const availableCloth = getItemQty("cloth");
+
+    const headerNote = document.createElement("div");
+    headerNote.style.fontSize = "0.74rem";
+    headerNote.style.color = "var(--accent)";
+    headerNote.style.marginBottom = "4px";
+    headerNote.textContent = `Scorte: ${availableScrap}x Rottami, ${availableTape}x Nastro, ${availableCloth}x Tessuto`;
+    listEl.appendChild(headerNote);
+
+    CRAFTING_RECIPES.forEach(rec => {
+      if (rec.condition && !rec.condition()) return;
+
+      const card = document.createElement("div");
+      card.className = "crafting-card";
+
+      const topRow = document.createElement("div");
+      topRow.className = "crafting-card-header";
+
+      const title = document.createElement("span");
+      title.className = "crafting-card-title";
+      title.textContent = rec.name;
+      topRow.appendChild(title);
+
+      const canCraft = canCraftRecipe(rec) && player.energy >= 3 && !player.isSleeping;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Crea";
+      btn.disabled = !canCraft;
+      btn.onclick = () => craftItem(rec.id);
+      topRow.appendChild(btn);
+
+      card.appendChild(topRow);
+
+      const desc = document.createElement("div");
+      desc.className = "crafting-desc";
+      desc.textContent = rec.desc;
+      card.appendChild(desc);
+
+      const reqsText = Object.entries(rec.reqs).map(([matId, qty]) => {
+        const matNames = { scrap: "Rottami", duct_tape: "Nastro", cloth: "Tessuto" };
+        const have = getItemQty(matId);
+        return `${qty}x ${matNames[matId]} (hai: ${have})`;
+      }).join(" | ");
+
+      const reqsEl = document.createElement("div");
+      reqsEl.className = "crafting-reqs";
+      reqsEl.textContent = `Richiede: ${reqsText}`;
+      card.appendChild(reqsEl);
+
+      listEl.appendChild(card);
+    });
+  }
+
+  /* =========================================================================
+     COMANDI BASE & MOVIMENTO
+     ========================================================================= */
+  function toggleSleep() {
+    if (player.hp <= 0) return;
+    if (currentEncounter) {
+      log("Non puoi addormentarti durante un incontro!", "danger");
+      return;
+    }
+
+    player.isSleeping = !player.isSleeping;
+    if (player.isSleeping) {
+      player.consecutiveSleepHours = 0;
+      log("Ti accovacci in un angolo riparato e ti addormenti.", "sleep");
+      clearContextActions();
+    } else {
+      player.consecutiveSleepHours = 0;
+      log("Riapri gli occhi e ti rimetti in piedi.", "idle");
+    }
+
+    saveGame();
+    updateUI();
+  }
+
+  function sleepOneHour() {
+    if (!player.isSleeping || player.hp <= 0) return;
+    player.consecutiveSleepHours = (player.consecutiveSleepHours || 0) + 1;
+    advanceTime(3600);
+    const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
+    log(`Stai dormendo da ${oreTesto}. Energia: ${Math.round(player.energy)}/${Math.round(player.maxEnergy)}.`, "sleep");
+  }
+
+  function move() {
+    if (player.isSleeping) {
+      log("Non puoi camminare mentre stai dormendo!", "idle");
+      return;
+    }
+    if (currentEncounter) {
+      log("Devi prima risolvere l'incontro!", "danger");
+      return;
+    }
+    if (player.energy < 5) {
+      log("Non hai abbastanza energia per marciare (minimo 5).", "danger");
+      return;
+    }
+
+    player.km += 1;
+    player.maxEnergy = Math.max(0, player.maxEnergy - 5);
+    player.energy = Math.max(0, player.energy - 5);
+    enforceEnergyCaps();
+
+    currentLocation = null;
+    clearContextActions();
+
+    log(`Avanzi di 1 Km attraverso la desolazione (+12 min).`, "idle");
+    advanceTime(720);
+
+    const dice = Math.random();
+    if (dice < 0.28) {
+      handleLocationDiscovery();
+    } else if (dice < 0.48) {
+      handleAnimalEncounter();
+    } else if (dice < 0.68) {
+      handleHumanEncounter();
+    } else if (dice < 0.80) {
+      handleHazardEncounter();
+    } else {
+      log("Solo silenzi e macerie lungo il cammino.", "idle");
+    }
+
+    checkDeath();
+    saveGame();
+    updateUI();
+  }
+
+  function handleLocationDiscovery() {
+    const locs = [
+      { name: "una vecchia casa abbandonata", type: "casa" },
+      { name: "i resti di un accampamento improvvisato", type: "campo" },
+      { name: "una discarica a cielo aperto", type: "discarica" }
+    ];
+    const loc = locs[Math.floor(Math.random() * locs.length)];
+    loc.searchesDone = 0;
+    loc.maxSearches = Math.random() < 0.5 ? 2 : 1;
+
+    currentLocation = loc;
+    log(`Scorgi ${loc.name}. Puoi perlustrare la zona.`, "success");
+
+    setContextActions([
+      { label: "Perquisisci zona", action: () => scavengeLocation() }
+    ]);
+  }
+
+  function scavengeLocation() {
+    if (player.isSleeping || !currentLocation) return;
+    if (player.energy < 3) {
+      log("Troppo esausto per cercare con cura (richiesti 3 Energia).", "danger");
+      return;
+    }
+    player.energy = Math.max(0, player.energy - 3);
+
+    const minutesPassed = Math.floor(Math.random() * 16) + 15;
+    log(`Frughi con cura tra le macerie per ${minutesPassed} minuti...`, "idle");
+    advanceTime(minutesPassed * 60);
+
+    const lootRoll = Math.random();
+    if (lootRoll < 0.22) {
+      addItem("scrap", "Rottami metallici", "material", 1);
+      log("Hai recuperato del metallo utile dai rottami.", "success");
+    } else if (lootRoll < 0.36) {
+      addItem("duct_tape", "Nastro adesivo", "material", 1);
+      log("Hai trovato un rotolo di nastro adesivo!", "success");
+    } else if (lootRoll < 0.50) {
+      addItem("cloth", "Tessuto", "material", 2);
+      log("Hai recuperato pezzi di tessuto integro (2x).", "success");
+    } else if (lootRoll < 0.65) {
+      addItem("canned_food", "Cibo in scatola", "food", 35, 1);
+      log("Hai trovato una latta di cibo intatta!", "success");
+    } else if (lootRoll < 0.78) {
+      addPerishableFood("raw_meat", "Carne cruda", 20);
+      log("Trovi della carne commestibile (si guasta entro 24 ore!).", "success");
+    } else if (lootRoll < 0.88) {
+      addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
+      log("Trovi una cassetta medica intatta.", "success");
+    } else {
+      log("Hai frugato ovunque ma non c'era niente di utilizzabile.", "idle");
+    }
+
+    currentLocation.searchesDone += 1;
+    if (currentLocation.searchesDone < currentLocation.maxSearches) {
+      log("Un'altra parte dell'area sembra accessibile. Puoi perquisire di nuovo!", "idle");
+      setContextActions([
+        { label: "Perquisisci ancora", action: () => scavengeLocation() }
+      ]);
+    } else {
+      clearContextActions();
+      currentLocation = null;
+    }
+
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     INCONTRI E COMBATTIMENTO
+     ========================================================================= */
+  function handleAnimalEncounter() {
+    if (Math.random() < 0.45) {
+      log("Una volpe magra ti osserva con cautela e si dilegua tra le rocce.", "idle");
+      return;
+    }
+
+    currentEncounter = "animal";
+    log("Un predatore selvatico ringhia e sbarra il tuo cammino con fare aggressivo!", "danger");
+
+    const actions = [
+      { label: "Combatti", action: () => resolveCombat("animal", 12, 22, "l'animale selvatico") }
+    ];
+
+    const perishableItem = player.inventory.find(i => i.type === "perishable_food");
+    if (perishableItem) {
+      actions.push({
+        label: `Getta ${perishableItem.name}`,
+        action: () => {
+          log(`Lanci prontamente ${perishableItem.name}: l'animale si avventa sul cibo e ti lascia passare!`, "success");
+          removeItem(perishableItem.id, 1);
+          endEncounter();
+        }
+      });
+    }
+
+    actions.push({
+      label: "Fuggi (-15 Energia)",
+      action: () => fleeEncounter("animal")
+    });
+
+    setContextActions(actions);
+  }
+
+  function handleHumanEncounter() {
+    if (Math.random() < 0.5) {
+      log("Incontri un viaggiatore pacifico disposto a barattare risorse.", "success");
+      renderTradeOptions();
+      return;
+    }
+
+    currentEncounter = "human";
+    log("Un predone sbuca da un relitto brandendo un'arma improvvisata!", "danger");
+
+    const actions = [
+      { label: "Combatti", action: () => resolveCombat("human", 14, 28, "il predone") }
+    ];
+
+    const foodItem = player.inventory.find(i => i.type === "food" || i.type === "perishable_food");
+    if (foodItem) {
+      actions.push({
+        label: `Cedi 1x ${foodItem.name}`,
+        action: () => {
+          log(`Cedi 1x ${foodItem.name}. Il predone arraffa il bottino e scappa via.`, "idle");
+          removeItem(foodItem.id, 1);
+          endEncounter();
+        }
+      });
+    }
+
+    actions.push({
+      label: "Fuggi (-15 Energia)",
+      action: () => fleeEncounter("human")
+    });
+
+    setContextActions(actions);
+  }
+
+  function resolveCombat(type, minDmg, maxDmg, enemyName) {
+    if (tryDodgeAttack(enemyName)) {
+      endEncounter();
+      return;
+    }
+
+    let baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+    if (player.equippedWeapon) {
+      const reduction = player.equippedWeapon.dmgReduction || 0.5;
+      const absorbedDmg = Math.round(baseDmg * reduction);
+      baseDmg = Math.max(2, baseDmg - absorbedDmg);
+      useEquippedWeapon();
+      log(`Ti difendi con la tua arma assorbendo il colpo!`, "combat");
+    }
+
+    player.hp = Math.max(0, player.hp - baseDmg);
+    log(`Nello scontro contro ${enemyName} subisci ${baseDmg} danni.`, "danger");
+
+    endEncounter();
+    checkDeath();
+  }
+
+  function fleeEncounter(type) {
+    if (player.energy < 15) {
+      log("Troppo esausto per scattare via (minimo 15 Energia Corrente)! Sei costretto a lottare!", "danger");
+      return;
+    }
+    player.energy = Math.max(0, player.energy - 15);
+    enforceEnergyCaps();
+    log("Fuggi via a tutta velocità distanziando il pericolo (-15 Energia).", "idle");
+    endEncounter();
+  }
+
+  function endEncounter() {
+    currentEncounter = null;
+    clearContextActions();
+    saveGame();
+    updateUI();
+  }
+
+  function renderTradeOptions() {
+    setContextActions([
+      { label: "Baratta: 2 Rottami ➔ 1 Cibo", action: () => executeTrade("scrap", 2, "canned_food", "Cibo in scatola", "food", 35, 1) },
+      { label: "Baratta: 4 Rottami ➔ 1 Bende/Disinfettante", action: () => executeTrade("scrap", 4, "medkit", "Bende e disinfettante", "cure", 30, 1) },
+      { label: "Baratta: 2 Cibo ➔ 1 Bende/Disinfettante", action: () => executeTrade("canned_food", 2, "medkit", "Bende e disinfettante", "cure", 30, 1) },
+      { label: "Baratta: 1 Bende/Disinfettante ➔ 2 Cibo", action: () => executeTrade("medkit", 1, "canned_food", "Cibo in scatola", "food", 35, 2) }
+    ]);
+  }
+
+  function executeTrade(giveId, giveQty, receiveId, receiveName, receiveType, receiveVal, receiveQty) {
+    if (player.isSleeping) return;
+    const sourceItem = player.inventory.find(i => i.id === giveId);
+    if (!sourceItem || sourceItem.qty < giveQty) {
+      log(`Non possiedi abbastanza risorse per questo baratto.`, "danger");
+      return;
+    }
+
+    const giveWeight = getItemSlotWeight(giveId, sourceItem.type) * giveQty;
+    const recWeight = getItemSlotWeight(receiveId, receiveType) * receiveQty;
+    const projectedSlots = getTotalUsedSlots() - giveWeight + recWeight;
+
+    if (projectedSlots > player.maxSlots + 0.001) {
+      log("Zaino colmo! Spazio insufficiente per completare lo scambio.", "danger");
+      return;
+    }
+
+    removeItem(giveId, giveQty);
+    addItem(receiveId, receiveName, receiveType, receiveVal, receiveQty);
+
+    log(`Scambio completato: ceduti ${giveQty}x per ricevere ${receiveQty}x ${receiveName}.`, "success");
+    clearContextActions();
+    saveGame();
+    updateUI();
+  }
+
+  function handleHazardEncounter() {
+    if (!player.sick && Math.random() < 0.5) {
+      player.sick = true;
+      log("Respiri esalazioni tossiche: sei MALATO.", "danger");
+    } else {
+      const dmg = 8;
+      player.hp = Math.max(0, player.hp - dmg);
+      log(`Una lamiera arrugginita cede ferendoti al braccio (-${dmg} HP).`, "danger");
+    }
+  }
+
+  /* =========================================================================
+     RENDERING INTERFACCIA
      ========================================================================= */
   function log(msg, type = "normal") {
     const logBox = document.getElementById("log-container");
@@ -1251,7 +1477,6 @@
 
     document.getElementById("val-km").textContent = player.km;
 
-    // Arma equipaggiata
     const weaponNameEl = document.getElementById("val-weapon-name");
     const weaponDurEl = document.getElementById("val-weapon-durability");
     if (player.equippedWeapon) {
@@ -1296,8 +1521,9 @@
       btnSleepHour.style.display = "none";
     }
 
-    const currentSlots = getTotalItemsCount();
-    document.getElementById("val-inventory-slots").textContent = `${currentSlots} / ${player.maxSlots} Slot`;
+    const usedSlots = getTotalUsedSlots();
+    const formattedSlots = Number.isInteger(usedSlots) ? usedSlots : usedSlots.toFixed(1);
+    document.getElementById("val-inventory-slots").textContent = `${formattedSlots} / ${player.maxSlots} Slot`;
 
     const invList = document.getElementById("inventory-list");
     invList.innerHTML = "";
@@ -1324,7 +1550,7 @@
         const actions = document.createElement("div");
         actions.className = "inv-item-actions";
 
-        if (item.type === "food" || item.type === "perishable_food" || item.type === "cure") {
+        if (item.type === "food" || item.type === "perishable_food" || item.type === "cure" || item.type === "cure_minor") {
           const btnUse = document.createElement("button");
           btnUse.textContent = "Usa";
           btnUse.onclick = () => useItem(item.id);
@@ -1339,7 +1565,7 @@
   }
 
   /* =========================================================================
-     CLASSIFICA & MORTE
+     CLASSIFICA & STATO MORTE
      ========================================================================= */
   function recordDeathLeaderboard() {
     let leaderboard = [];
@@ -1422,16 +1648,79 @@
     }
   }
 
+  function saveGame() {
+    player.lastActiveTimestamp = Date.now();
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+    } catch (e) {
+      console.warn("Impossibile salvare", e);
+    }
+  }
+
+  function loadGameAndSimulateOffline() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      log("Ti svegli tra le rovine. Usa le tue risorse con saggezza.");
+      log("Puoi perquisire le zone per trovare nastro adesivo e tessuti da combinare nel menu Fabbrica.");
+      saveGame();
+      return;
+    }
+
+    try {
+      const loaded = JSON.parse(saved);
+      player = Object.assign({}, defaultPlayerState, loaded);
+
+      const now = Date.now();
+      const elapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
+      player.lastActiveTimestamp = now;
+
+      if (!player.isDead && elapsedSeconds > 5) {
+        const mins = Math.floor(elapsedSeconds / 60);
+        log(`Sei rimasto assente per circa ${mins > 0 ? mins + " minuti" : elapsedSeconds + " secondi"}.`, "idle");
+        advanceTime(elapsedSeconds, true);
+      } else if (!player.isDead) {
+        log("Bentornato nelle rovine.");
+      }
+    } catch (e) {
+      console.error("Errore di caricamento salvataggio", e);
+      player = JSON.parse(JSON.stringify(defaultPlayerState));
+    }
+    enforceEnergyCaps();
+  }
+
+  setInterval(() => {
+    if (player.hp <= 0) return;
+    advanceTime(1, true);
+
+    if (!player.sick && player.food > 60 && player.energy > 60 && player.hp < player.maxHp) {
+      player.hp = Math.min(player.maxHp, player.hp + 0.1);
+      updateUI();
+    }
+  }, 1000);
+
+  /* =========================================================================
+     LISTENERS INTERFACCIA
+     ========================================================================= */
   document.getElementById("btn-move").addEventListener("click", move);
   document.getElementById("btn-sleep-toggle").addEventListener("click", toggleSleep);
   document.getElementById("btn-sleep-hour").addEventListener("click", sleepOneHour);
 
   const modalOptions = document.getElementById("modal-options");
   const modalLeaderboard = document.getElementById("modal-leaderboard");
+  const modalCrafting = document.getElementById("modal-crafting");
 
   document.getElementById("btn-options").onclick = () => { modalOptions.style.display = "flex"; };
   document.getElementById("btn-close-options").onclick = () => { modalOptions.style.display = "none"; };
   document.getElementById("btn-reset-game").onclick = resetGame;
+
+  document.getElementById("btn-open-crafting").onclick = () => {
+    if (player.isDead) return;
+    renderCraftingModal();
+    modalCrafting.style.display = "flex";
+  };
+  document.getElementById("btn-close-crafting").onclick = () => {
+    modalCrafting.style.display = "none";
+  };
 
   document.getElementById("btn-open-leaderboard").onclick = () => {
     renderLeaderboard();
