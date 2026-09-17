@@ -890,7 +890,8 @@
     player.energy = Math.min(player.maxEnergy, player.energy + curGains);
 
     if (player.sick) {
-      const sickDmg = secondsToAdd * 0.15;
+      // Modificato da 0.15 a 0.05 HP al secondo
+      const sickDmg = secondsToAdd * 0.05;
       player.hp = Math.max(0, player.hp - sickDmg);
       if (!silent) log(`La malattia ti debilita durante il riposo (-${Math.round(sickDmg)} HP).`, "danger");
     }
@@ -942,7 +943,8 @@
     player.energy = Math.max(0, player.energy - curLoss);
 
     if (player.sick) {
-      const sickDmg = secondsToAdd * 0.2;
+      // Modificato da 0.2 a 0.1 HP al secondo
+      const sickDmg = secondsToAdd * 0.1;
       player.hp = Math.max(0, player.hp - sickDmg);
       if (!silent) log(`L'infezione progredisce (-${Math.round(sickDmg)} HP).`, "danger");
     }
@@ -961,7 +963,7 @@
   }
 
   /* =========================================================================
-     INVENTARIO (CON FIX GESTIONE CURE_MINOR E CAPIENZA)
+     INVENTARIO
      ========================================================================= */
   function getItemSlotWeight(id, type) {
     if (id === "duct_tape" || id === "cloth") return 0.2;
@@ -981,7 +983,6 @@
     return found ? found.qty : 0;
   }
 
-  // FIX: Supporta esplicitamente cure_minor in modo che prenda val e qty corretti
   function addItem(id, name, type, param1, param2) {
     let val = 0, qty = 1;
     if (type === "food" || type === "cure" || type === "cure_minor") {
@@ -1144,7 +1145,7 @@
   }
 
   /* =========================================================================
-     CRAFTING (CON CONSUMO MATERIALI PROTETTO)
+     CRAFTING
      ========================================================================= */
   const CRAFTING_RECIPES = [
     {
@@ -1274,9 +1275,7 @@
       return;
     }
 
-    // Se l'oggetto da creare occupa spazio, verifichiamo lo zaino PRIMA di togliere le risorse
     if (rec.type === "item") {
-      // calcoliamo lo spazio liberato e quello occupato
       let freedSpace = 0;
       for (const [matId, reqQty] of Object.entries(rec.reqs)) {
         freedSpace += getItemSlotWeight(matId, "material") * reqQty;
@@ -1948,7 +1947,7 @@
   }
 
   /* =========================================================================
-     CLASSIFICA & SALVATAGGIO (CON FIX RESISTENTE ALLE RACE CONDITION)
+     CLASSIFICA & SALVATAGGIO
      ========================================================================= */
   function recordDeathLeaderboard() {
     let leaderboard = [];
@@ -2026,7 +2025,7 @@
 
   function resetGame() {
     if (confirm("Vuoi azzerare la partita e ricominciare da capo? La classifica resterà salvata.")) {
-      isResetting = true; // Blocca i salvataggi automatici in background
+      isResetting = true;
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (e) {
@@ -2037,7 +2036,7 @@
   }
 
   function saveGame() {
-    if (isResetting) return; // Non salva nulla se il reset è in corso
+    if (isResetting) return;
     player.lastActiveTimestamp = Date.now();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
