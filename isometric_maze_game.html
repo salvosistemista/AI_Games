@@ -61,9 +61,10 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
+    /* Pulsante Bomba posizionato a sinistra per l'uso a due mani */
     .action-bomb-btn {
       position: absolute;
-      right: 18px;
+      left: 18px;
       bottom: 22px;
       width: 62px;
       height: 62px;
@@ -173,10 +174,16 @@
     <span>Mappa: <b class="text-cyan-400">TAB</b></span>
   </div>
 
-  <!-- Controlli Touch Mobile -->
+  <!-- Controlli Touch Mobile (Invertiti: Bomba a Sinistra, D-Pad a Destra) -->
   <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
-    <!-- D-Pad -->
-    <div class="relative w-[190px] h-[190px] pointer-events-auto">
+    <!-- Pulsante Bomba Mobile a Sinistra -->
+    <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
+      <span class="text-2xl leading-none">💣</span>
+      <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
+    </button>
+
+    <!-- D-Pad Isometrico a Destra -->
+    <div class="relative w-[190px] h-[190px] ml-auto pointer-events-auto">
       <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
         <span class="text-amber-300 text-lg font-black leading-none">↗</span>
         <span class="text-[8px] text-slate-200 font-bold">NORD</span>
@@ -197,12 +204,6 @@
         <span class="text-amber-300 text-lg font-black leading-none">↘</span>
       </button>
     </div>
-
-    <!-- Pulsante Bomba Mobile -->
-    <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
-      <span class="text-2xl leading-none">💣</span>
-      <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
-    </button>
   </footer>
 
   <!-- Modali -->
@@ -735,7 +736,6 @@
           return;
         }
 
-        // Timer impostato a 3.0 secondi esatti
         this.bombs.push({
           gx: targetX,
           gy: targetY,
@@ -897,7 +897,7 @@
             this.particles.spawn(b.gx, b.gy, 0.2, '#fde047', 30, 0.09);
             this.particles.spawn(b.gx, b.gy, 0.6, '#334155', 25, 0.06);
 
-            // Morte del giocatore se rimane troppo vicino alla bomba
+            // Morte del giocatore se rimane vicino alla bomba
             const distPlayer = Math.hypot(this.player.renderX - b.gx, this.player.renderY - b.gy);
             if (distPlayer <= 1.45) {
               this.sound.playPlayerHit();
