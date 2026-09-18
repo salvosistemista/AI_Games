@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D</title>
+  <title>Labyrinthus 3D - Bomb & Enemy Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -61,6 +61,27 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
+    .action-bomb-btn {
+      position: absolute;
+      right: 18px;
+      bottom: 22px;
+      width: 62px;
+      height: 62px;
+      border-radius: 20px;
+      background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4), inset 0 2px 4px rgba(255,255,255,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      cursor: pointer;
+    }
+    .action-bomb-btn:active {
+      transform: scale(0.88);
+      filter: brightness(1.2);
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between text-white">
@@ -110,7 +131,7 @@
     </div>
   </header>
 
-  <!-- Area Canvas -->
+  <!-- Canvas -->
   <main class="absolute inset-0 w-full h-full">
     <canvas id="gameCanvas" class="block w-full h-full" style="touch-action: none;"></canvas>
 
@@ -133,55 +154,55 @@
         <div class="relative w-full flex-1 overflow-hidden my-2">
           <canvas id="mapCanvas" class="block w-full h-full"></canvas>
         </div>
-        <div class="w-full flex items-center justify-around text-[10px] text-slate-300 pt-2 border-t border-slate-800">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Tu</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Inizio</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Uscita</span>
-          <span class="flex items-center gap-1">🗝️ Chiave</span>
+        <div class="w-full flex items-center justify-around text-[9px] text-slate-300 pt-2 border-t border-slate-800">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Tu</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Inizio</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> Uscita</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Nemico</span>
         </div>
       </div>
     </div>
   </main>
 
   <!-- Suggerimenti Desktop -->
-  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
-    <span>Comandi: <b class="text-amber-400">WASD</b> / <b class="text-amber-400">Frecce</b></span>
+  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
+    <span>Comandi: <b class="text-amber-400">WASD / Frecce</b></span>
+    <span class="text-slate-500">•</span>
+    <span>Bomba: <b class="text-rose-400">SPAZIO</b></span>
     <span class="text-slate-500">•</span>
     <span>Mappa: <b class="text-cyan-400">TAB</b></span>
   </div>
 
-  <!-- D-Pad Mobile -->
-  <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex flex-col items-center pointer-events-none">
-    <div class="relative w-[210px] h-[210px] pointer-events-auto">
-      <!-- NORD: Alto-Destra -->
-      <button id="pad-n" class="iso-dpad-btn top-2 right-4" aria-label="Nord">
+  <!-- Controlli Touch Mobile -->
+  <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
+    <!-- D-Pad -->
+    <div class="relative w-[190px] h-[190px] pointer-events-auto">
+      <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
         <span class="text-amber-300 text-lg font-black leading-none">↗</span>
-        <span class="text-[9px] text-slate-200 font-bold mt-0.5">NORD</span>
+        <span class="text-[8px] text-slate-200 font-bold">NORD</span>
       </button>
 
-      <!-- OVEST: Alto-Sinistra -->
-      <button id="pad-w" class="iso-dpad-btn top-2 left-4" aria-label="Ovest">
+      <button id="pad-w" class="iso-dpad-btn top-1 left-2" aria-label="Ovest">
         <span class="text-amber-300 text-lg font-black leading-none">↖</span>
-        <span class="text-[9px] text-slate-200 font-bold mt-0.5">OVEST</span>
+        <span class="text-[8px] text-slate-200 font-bold">OVEST</span>
       </button>
 
-      <!-- SUD: Basso-Sinistra -->
-      <button id="pad-s" class="iso-dpad-btn bottom-2 left-4" aria-label="Sud">
-        <span class="text-[9px] text-slate-200 font-bold mb-0.5">SUD</span>
+      <button id="pad-s" class="iso-dpad-btn bottom-1 left-2" aria-label="Sud">
+        <span class="text-[8px] text-slate-200 font-bold">SUD</span>
         <span class="text-amber-300 text-lg font-black leading-none">↙</span>
       </button>
 
-      <!-- EST: Basso-Destra -->
-      <button id="pad-e" class="iso-dpad-btn bottom-2 right-4" aria-label="Est">
-        <span class="text-[9px] text-slate-200 font-bold mb-0.5">EST</span>
+      <button id="pad-e" class="iso-dpad-btn bottom-1 right-2" aria-label="Est">
+        <span class="text-[8px] text-slate-200 font-bold">EST</span>
         <span class="text-amber-300 text-lg font-black leading-none">↘</span>
       </button>
-
-      <div class="absolute inset-[66px] rounded-full glass-panel flex flex-col items-center justify-center pointer-events-none opacity-50">
-        <span class="text-[9px] text-amber-300 font-bold">SWIPE</span>
-        <span class="text-[7px] text-slate-400">D-PAD</span>
-      </div>
     </div>
+
+    <!-- Pulsante Bomba Mobile -->
+    <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
+      <span class="text-2xl leading-none">💣</span>
+      <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
+    </button>
   </footer>
 
   <!-- Modali -->
@@ -214,7 +235,7 @@
     <div class="glass-panel w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/40 shadow-2xl flex flex-col items-center">
       <div class="text-4xl mb-2 animate-bounce">🏆</div>
       <h2 class="text-xl font-black text-amber-300">VITTORIA TOTALE!</h2>
-      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 10 labirinti procedurali!</p>
+      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 10 labirinti!</p>
 
       <div class="w-full bg-slate-900 rounded-2xl p-3 mb-5 border border-slate-700 flex flex-col gap-2">
         <div class="flex justify-between items-center text-xs">
@@ -238,8 +259,8 @@
       constructor() { this.ctx = null; this.muted = false; }
       init() {
         if (!this.ctx) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) this.ctx = new AudioContext();
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
         }
         if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       }
@@ -260,8 +281,31 @@
           osc.stop(this.ctx.currentTime + duration);
         } catch (e) {}
       }
-      playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.06); }
+      playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.05); }
       playBump() { this.playTone(60, 'sawtooth', 0.12, 0.12); }
+      playBombPlant() {
+        this.playTone(320, 'sine', 0.1, 0.12);
+        setTimeout(() => this.playTone(480, 'sine', 0.12, 0.14), 70);
+      }
+      playTick() { this.playTone(850, 'square', 0.025, 0.04); }
+      playExplosion() {
+        this.playTone(85, 'sawtooth', 0.45, 0.28);
+        setTimeout(() => this.playTone(45, 'triangle', 0.6, 0.35), 40);
+      }
+      playPlayerHit() {
+        this.playTone(110, 'sawtooth', 0.2, 0.25);
+        setTimeout(() => this.playTone(65, 'sawtooth', 0.35, 0.3), 80);
+      }
+      playEnemySpawn() {
+        [220, 180, 140].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.25, 0.15), i * 110);
+        });
+      }
+      playEnemyDefeated() {
+        [300, 450, 600].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.2, 0.16), i * 60);
+        });
+      }
       playKeyPickup() {
         [587, 740, 880, 1174].forEach((f, i) => {
           setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), i * 60);
@@ -404,17 +448,17 @@
 
     class ParticleSystem {
       constructor() { this.particles = []; }
-      spawn(x, y, z, color, count = 1) {
+      spawn(x, y, z, color, count = 1, speed = 0.05) {
         for (let i = 0; i < count; i++) {
           this.particles.push({
             x, y, z,
-            vx: (Math.random() - 0.5) * 0.05,
-            vy: (Math.random() - 0.5) * 0.05,
-            vz: 0.02 + Math.random() * 0.05,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            vz: 0.02 + Math.random() * speed,
             size: 2 + Math.random() * 3,
             color,
             life: 1,
-            decay: 0.025 + Math.random() * 0.02
+            decay: 0.02 + Math.random() * 0.03
           });
         }
       }
@@ -449,6 +493,10 @@
         this.isGameActive = false;
         this.hasKey = false;
         this.toastTimeout = null;
+
+        this.bombs = [];
+        this.enemies = [];
+        this.enemySpawnTimer = 0;
 
         this.mazeData = null;
         this.visitedTiles = null;
@@ -534,6 +582,17 @@
           if (this.isMapVisible) this.hideMap(); else this.showMap();
         });
         bindButton('btn-close-map', () => this.hideMap());
+
+        const btnBomb = document.getElementById('btn-touch-bomb');
+        if (btnBomb) {
+          const triggerBomb = (e) => {
+            e.preventDefault();
+            this.sound.init();
+            this.placeBomb();
+          };
+          btnBomb.addEventListener('touchstart', triggerBomb, { passive: false });
+          btnBomb.addEventListener('click', triggerBomb);
+        }
       }
 
       toggleFullscreen() {
@@ -577,7 +636,6 @@
           const btn = document.getElementById(id);
           if (!btn) return;
 
-          // Gestione touch pulita
           btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             startHold(dx, dy, btn);
@@ -590,7 +648,6 @@
 
           btn.addEventListener('touchcancel', () => stopHold(btn));
 
-          // Gestione mouse desktop fallback
           btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
             startHold(dx, dy, btn);
@@ -604,7 +661,6 @@
         bindPad('pad-s', 0, 1);
         bindPad('pad-w', -1, 0);
 
-        // Swipe su Canvas
         let touchStartX = 0;
         let touchStartY = 0;
         let isSwiping = false;
@@ -635,18 +691,17 @@
           if (dist >= 20) {
             const angle = Math.atan2(dy, dx) * (180 / Math.PI);
             if (angle >= -90 && angle < 0) {
-              this.handleDirectionInput(0, -1); // NORD ↗
+              this.handleDirectionInput(0, -1);
             } else if (angle >= 0 && angle < 90) {
-              this.handleDirectionInput(1, 0);  // EST ↘
+              this.handleDirectionInput(1, 0);
             } else if (angle >= 90 && angle < 180) {
-              this.handleDirectionInput(0, 1);  // SUD ↙
+              this.handleDirectionInput(0, 1);
             } else {
-              this.handleDirectionInput(-1, 0); // OVEST ↖
+              this.handleDirectionInput(-1, 0);
             }
           }
         }, { passive: true });
 
-        // Tastiera desktop
         window.addEventListener('keydown', (e) => {
           if (!this.isGameActive) return;
           const k = e.key.toLowerCase();
@@ -654,7 +709,10 @@
           else if (k === 'd' || k === 'arrowright') this.handleDirectionInput(1, 0);
           else if (k === 's' || k === 'arrowdown') this.handleDirectionInput(0, 1);
           else if (k === 'a' || k === 'arrowleft') this.handleDirectionInput(-1, 0);
-          else if (e.key === 'Tab') {
+          else if (e.code === 'Space') {
+            e.preventDefault();
+            this.placeBomb();
+          } else if (e.key === 'Tab') {
             e.preventDefault();
             this.showMap();
           }
@@ -666,6 +724,209 @@
             this.hideMap();
           }
         });
+      }
+
+      placeBomb() {
+        if (!this.isGameActive) return;
+        const targetX = this.player.gx;
+        const targetY = this.player.gy;
+
+        if (this.bombs.some(b => b.gx === targetX && b.gy === targetY)) {
+          return;
+        }
+
+        // Timer impostato a 3.0 secondi esatti
+        this.bombs.push({
+          gx: targetX,
+          gy: targetY,
+          timeLeft: 3.0,
+          totalTime: 3.0,
+          nextTick: 0.8
+        });
+
+        this.sound.playBombPlant();
+        this.particles.spawn(targetX, targetY, 0.2, '#f87171', 12, 0.04);
+        this.showToast('Bomba innescata! (3s) 💣', '💣');
+      }
+
+      spawnRandomEnemy() {
+        if (!this.mazeData) return;
+        const { gridW, gridH, grid } = this.mazeData;
+        const candidates = [];
+
+        for (let gy = 1; gy < gridH - 1; gy++) {
+          for (let gx = 1; gx < gridW - 1; gx++) {
+            if (grid[gy][gx] === 0) {
+              const distToPlayer = Math.abs(gx - this.player.gx) + Math.abs(gy - this.player.gy);
+              if (distToPlayer >= 4) {
+                candidates.push({ x: gx, y: gy });
+              }
+            }
+          }
+        }
+
+        if (candidates.length === 0) return;
+        const pos = candidates[Math.floor(Math.random() * candidates.length)];
+
+        this.enemies.push({
+          gx: pos.x,
+          gy: pos.y,
+          targetGx: pos.x,
+          targetGy: pos.y,
+          renderX: pos.x,
+          renderY: pos.y,
+          isMoving: false,
+          moveProgress: 0,
+          moveSpeed: 3.5,
+          moveCooldown: 0.2,
+          bob: 0
+        });
+
+        this.sound.playEnemySpawn();
+        this.particles.spawn(pos.x, pos.y, 0.4, '#000000', 30, 0.07);
+        this.showToast('Attento! È apparso un nemico oscuro! 👤', '⚠️', true);
+      }
+
+      findNextStepBFS(start, target) {
+        if (start.x === target.x && start.y === target.y) return null;
+        const { gridW, gridH, grid } = this.mazeData;
+        const queue = [start];
+        const visited = Array.from({ length: gridH }, () => Array(gridW).fill(false));
+        const parent = Array.from({ length: gridH }, () => Array(gridW).fill(null));
+
+        visited[start.y][start.x] = true;
+        let reached = false;
+
+        const dirs = [{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0}];
+
+        while (queue.length > 0) {
+          const cur = queue.shift();
+          if (cur.x === target.x && cur.y === target.y) {
+            reached = true;
+            break;
+          }
+          for (const d of dirs) {
+            const nx = cur.x + d.dx, ny = cur.y + d.dy;
+            if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH && grid[ny][nx] === 0 && !visited[ny][nx]) {
+              visited[ny][nx] = true;
+              parent[ny][nx] = cur;
+              queue.push({ x: nx, y: ny });
+            }
+          }
+        }
+
+        if (!reached) return null;
+
+        let curr = target;
+        let prev = null;
+        while (curr && !(curr.x === start.x && curr.y === start.y)) {
+          prev = curr;
+          curr = parent[curr.y][curr.x];
+        }
+        return prev;
+      }
+
+      updateEnemies(dt) {
+        for (let i = 0; i < this.enemies.length; i++) {
+          const enemy = this.enemies[i];
+          enemy.bob = Math.sin(Date.now() * 0.009 + i) * 3;
+
+          if (enemy.isMoving) {
+            enemy.moveProgress += enemy.moveSpeed * dt;
+            if (enemy.moveProgress >= 1) {
+              enemy.gx = enemy.targetGx;
+              enemy.gy = enemy.targetGy;
+              enemy.renderX = enemy.gx;
+              enemy.renderY = enemy.gy;
+              enemy.isMoving = false;
+              enemy.moveProgress = 0;
+            } else {
+              enemy.renderX = enemy.gx + (enemy.targetGx - enemy.gx) * enemy.moveProgress;
+              enemy.renderY = enemy.gy + (enemy.targetGy - enemy.gy) * enemy.moveProgress;
+            }
+          } else {
+            enemy.moveCooldown -= dt;
+            if (enemy.moveCooldown <= 0) {
+              enemy.moveCooldown = 0.35;
+              const nextStep = this.findNextStepBFS(
+                { x: enemy.gx, y: enemy.gy },
+                { x: this.player.gx, y: this.player.gy }
+              );
+              if (nextStep) {
+                enemy.targetGx = nextStep.x;
+                enemy.targetGy = nextStep.y;
+                enemy.isMoving = true;
+                enemy.moveProgress = 0;
+              }
+            }
+          }
+
+          const distToPlayer = Math.hypot(enemy.renderX - this.player.renderX, enemy.renderY - this.player.renderY);
+          if (distToPlayer < 0.45) {
+            this.sound.playPlayerHit();
+            this.camera.shake = 12;
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            this.showToast('Il nemico ti ha catturato! Ritorno alla partenza!', '☠️', true);
+            this.player.gx = this.mazeData.start.x;
+            this.player.gy = this.mazeData.start.y;
+            this.player.targetGx = this.player.gx;
+            this.player.targetGy = this.player.gy;
+            this.player.renderX = this.player.gx;
+            this.player.renderY = this.player.gy;
+            this.player.isMoving = false;
+          }
+        }
+      }
+
+      updateBombs(dt) {
+        for (let i = this.bombs.length - 1; i >= 0; i--) {
+          const b = this.bombs[i];
+          b.timeLeft -= dt;
+
+          if (b.timeLeft <= b.nextTick && b.timeLeft > 0) {
+            this.sound.playTick();
+            b.nextTick = Math.max(0, b.nextTick - (b.timeLeft < 1.2 ? 0.25 : 0.7));
+          }
+
+          if (b.timeLeft <= 0) {
+            this.sound.playExplosion();
+            this.camera.shake = 16;
+            if (navigator.vibrate) navigator.vibrate([80, 40, 100]);
+
+            this.particles.spawn(b.gx, b.gy, 0.4, '#f97316', 40, 0.13);
+            this.particles.spawn(b.gx, b.gy, 0.2, '#fde047', 30, 0.09);
+            this.particles.spawn(b.gx, b.gy, 0.6, '#334155', 25, 0.06);
+
+            // Morte del giocatore se rimane troppo vicino alla bomba
+            const distPlayer = Math.hypot(this.player.renderX - b.gx, this.player.renderY - b.gy);
+            if (distPlayer <= 1.45) {
+              this.sound.playPlayerHit();
+              this.particles.spawn(this.player.renderX, this.player.renderY, 0.5, '#ef4444', 35, 0.12);
+              this.showToast('Sei rimasto coinvolto nell\'esplosione! 💥 Ritorno allo start!', '💥', true);
+              this.player.gx = this.mazeData.start.x;
+              this.player.gy = this.mazeData.start.y;
+              this.player.targetGx = this.player.gx;
+              this.player.targetGy = this.player.gy;
+              this.player.renderX = this.player.gx;
+              this.player.renderY = this.player.gy;
+              this.player.isMoving = false;
+            }
+
+            // Eliminazione nemici coinvolti nello scoppio
+            for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
+              const enemy = this.enemies[eIdx];
+              const distEnemy = Math.hypot(enemy.renderX - b.gx, enemy.renderY - b.gy);
+              if (distEnemy <= 1.45) {
+                this.sound.playEnemyDefeated();
+                this.particles.spawn(enemy.renderX, enemy.renderY, 0.5, '#38bdf8', 40, 0.14);
+                this.enemies.splice(eIdx, 1);
+                this.showToast('Nemico polverizzato! 💥', '🎯');
+              }
+            }
+
+            this.bombs.splice(i, 1);
+          }
+        }
       }
 
       startNewGame() {
@@ -681,6 +942,9 @@
         this.levelSteps = 0;
         this.levelSeconds = 0;
         this.hasKey = false;
+        this.bombs = [];
+        this.enemies = [];
+        this.enemySpawnTimer = 20;
         this.hideMap();
 
         const formulaDim = 8 + (this.currentLevel * 2);
@@ -758,12 +1022,11 @@
           nextY >= 0 && nextY < this.mazeData.gridH &&
           this.mazeData.grid[nextY][nextX] === 0
         ) {
-          // Blocco se si tenta l'uscita senza chiave
           if (!this.hasKey && nextX === this.mazeData.exit.x && nextY === this.mazeData.exit.y) {
             this.sound.playLockedDoor();
             this.camera.shake = 8;
             if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
-            this.showToast('PORTALE BLOCCATO! Trova prima la chiave dorata 🗝️', '🔒', true);
+            this.showToast('PORTALE BLOCCATO! Trova la chiave dorata 🗝️', '🔒', true);
             return;
           }
 
@@ -929,6 +1192,20 @@
           }
         }
 
+        ctx.fillStyle = '#ef4444';
+        for (const b of this.bombs) {
+          ctx.beginPath();
+          ctx.arc(startX + (b.gx + 0.5) * cellW, startY + (b.gy + 0.5) * cellW, cellW * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = '#e11d48';
+        for (const e of this.enemies) {
+          ctx.beginPath();
+          ctx.arc(startX + (e.renderX + 0.5) * cellW, startY + (e.renderY + 0.5) * cellW, cellW * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
         ctx.fillStyle = '#fbbf24';
         ctx.beginPath();
         ctx.arc(
@@ -989,6 +1266,17 @@
       update(deltaTime) {
         if (this.camera.shake > 0) {
           this.camera.shake = Math.max(0, this.camera.shake - deltaTime * 30);
+        }
+
+        if (this.isGameActive) {
+          this.enemySpawnTimer -= deltaTime;
+          if (this.enemySpawnTimer <= 0) {
+            this.enemySpawnTimer = 20;
+            this.spawnRandomEnemy();
+          }
+
+          this.updateBombs(deltaTime);
+          this.updateEnemies(deltaTime);
         }
 
         if (this.player.isMoving) {
@@ -1056,7 +1344,6 @@
         const wh = this.camera.wallH;
         const { gridW, gridH } = this.mazeData;
 
-        // Disegno pavimenti
         for (let gy = 0; gy < gridH; gy++) {
           for (let gx = 0; gx < gridW; gx++) {
             if (this.mazeData.grid[gy][gx] === 0) {
@@ -1073,7 +1360,6 @@
           }
         }
 
-        // Depth Sorting Unificato
         const maxDepth = (gridW - 1) + (gridH - 1);
         const playerDepth = this.player.renderX + this.player.renderY;
         const keyDepth = this.mazeData.key.x + this.mazeData.key.y;
@@ -1082,8 +1368,26 @@
         let playerDrawn = false;
         let keyDrawn = this.hasKey;
         let exitDrawn = false;
+        const drawnBombs = new Set();
+        const drawnEnemies = new Set();
 
         for (let depth = 0; depth <= maxDepth; depth++) {
+          for (let bIdx = 0; bIdx < this.bombs.length; bIdx++) {
+            const b = this.bombs[bIdx];
+            if (!drawnBombs.has(bIdx) && (b.gx + b.gy) <= depth) {
+              this.drawBomb(ctx, b);
+              drawnBombs.add(bIdx);
+            }
+          }
+
+          for (let eIdx = 0; eIdx < this.enemies.length; eIdx++) {
+            const enemy = this.enemies[eIdx];
+            if (!drawnEnemies.has(eIdx) && (enemy.renderX + enemy.renderY) <= depth + 0.4) {
+              this.drawEnemy(ctx, enemy);
+              drawnEnemies.add(eIdx);
+            }
+          }
+
           if (!exitDrawn && exitDepth <= depth) {
             const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
             this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
@@ -1110,6 +1414,12 @@
           }
         }
 
+        for (let bIdx = 0; bIdx < this.bombs.length; bIdx++) {
+          if (!drawnBombs.has(bIdx)) this.drawBomb(ctx, this.bombs[bIdx]);
+        }
+        for (let eIdx = 0; eIdx < this.enemies.length; eIdx++) {
+          if (!drawnEnemies.has(eIdx)) this.drawEnemy(ctx, this.enemies[eIdx]);
+        }
         if (!exitDrawn) {
           const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
           this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
@@ -1170,6 +1480,89 @@
 
         ctx.strokeStyle = 'rgba(0,0,0,0.3)';
         ctx.stroke();
+      }
+
+      drawBomb(ctx, bomb) {
+        const iso = this.gridToIso(bomb.gx, bomb.gy);
+        const pulse = 1 + (Math.sin(Date.now() * 0.018) * 0.10);
+        const rad = this.camera.tileW * 0.18 * pulse;
+        const cy = iso.y - rad - 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, rad * 1.1, rad * 0.55, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fill();
+
+        const grad = ctx.createRadialGradient(iso.x - rad * 0.3, cy - rad * 0.3, rad * 0.1, iso.x, cy, rad);
+        grad.addColorStop(0, '#64748b');
+        grad.addColorStop(0.4, '#1e293b');
+        grad.addColorStop(1, '#020617');
+
+        ctx.beginPath();
+        ctx.arc(iso.x, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(iso.x, cy - rad);
+        ctx.quadraticCurveTo(iso.x + 6, cy - rad - 8, iso.x + 10, cy - rad - 5);
+        ctx.stroke();
+
+        ctx.fillStyle = (Math.floor(Date.now() / 50) % 2 === 0) ? '#facc15' : '#ef4444';
+        ctx.beginPath();
+        ctx.arc(iso.x + 10, cy - rad - 5, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(Math.ceil(bomb.timeLeft), iso.x, cy);
+
+        ctx.restore();
+      }
+
+      drawEnemy(ctx, enemy) {
+        const iso = this.gridToIso(enemy.renderX, enemy.renderY);
+        const px = iso.x;
+        const py = iso.y - (enemy.isMoving ? Math.abs(Math.sin(enemy.moveProgress * Math.PI) * 4) : enemy.bob);
+        const rad = this.camera.tileW * 0.20;
+        const cy = py - rad - 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fill();
+
+        const grad = ctx.createRadialGradient(px - rad * 0.3, cy - rad * 0.3, rad * 0.1, px, cy, rad);
+        grad.addColorStop(0, '#475569');
+        grad.addColorStop(0.3, '#1e293b');
+        grad.addColorStop(1, '#000000');
+
+        ctx.beginPath();
+        ctx.arc(px, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(px - rad * 0.35, cy - rad * 0.1, rad * 0.16, 0, Math.PI * 2);
+        ctx.arc(px + rad * 0.35, cy - rad * 0.1, rad * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#450a0a';
+        ctx.beginPath();
+        ctx.arc(px - rad * 0.35, cy - rad * 0.1, rad * 0.07, 0, Math.PI * 2);
+        ctx.arc(px + rad * 0.35, cy - rad * 0.1, rad * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
       }
 
       drawKey(ctx, x, y) {
