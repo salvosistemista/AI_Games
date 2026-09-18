@@ -18,9 +18,13 @@
       --hp-bar: #e63946;
       --food-bar: #e76f51;
       --thirst-bar: #3a86ff;
+      --pet-bar: #9d4edd;
       --energy-current: #2a9d8f;
       --energy-max-cap: #7d6b38;
-      --btn-context-bg: #2e3440;
+      --weapon-color: #e9c46a;
+      --caps-color: #f4a261;
+      --context-btn-bg: #3d3d3d;
+      --context-btn-border: #5a5a5a;
     }
 
     * {
@@ -60,7 +64,7 @@
     }
 
     header {
-      padding: 8px 16px;
+      padding: 10px 16px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       display: flex;
       justify-content: space-between;
@@ -68,12 +72,12 @@
     }
 
     header h1 {
-      font-size: 0.95rem;
+      font-size: 1rem;
       letter-spacing: 1px;
       text-transform: uppercase;
     }
 
-    .header-btns {
+    .header-actions {
       display: flex;
       gap: 6px;
     }
@@ -83,13 +87,14 @@
       border: 1px solid var(--border-color);
       color: var(--text-main);
       border-radius: 6px;
-      padding: 4px 8px;
+      padding: 5px 9px;
       font-size: 0.85rem;
       cursor: pointer;
+      line-height: 1;
     }
 
     .status-panel {
-      padding: 6px 16px 8px 16px;
+      padding: 8px 16px 10px 16px;
       display: flex;
       flex-direction: column;
       gap: 5px;
@@ -99,11 +104,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
     }
 
     .stat-label {
-      width: 75px;
+      width: 82px;
       font-weight: 500;
     }
 
@@ -113,7 +118,7 @@
       background: #2b2b2b;
       border-radius: 5px;
       overflow: hidden;
-      margin: 0 8px;
+      margin: 0 10px;
       position: relative;
     }
 
@@ -125,6 +130,7 @@
     .fill-hp { background: var(--hp-bar); width: 100%; }
     .fill-food { background: var(--food-bar); width: 100%; }
     .fill-thirst { background: var(--thirst-bar); width: 100%; }
+    .fill-pet { background: var(--pet-bar); width: 100%; }
 
     .bar-energy-container {
       flex: 1;
@@ -132,7 +138,7 @@
       background: #202020;
       border-radius: 5px;
       overflow: hidden;
-      margin: 0 8px;
+      margin: 0 10px;
       position: relative;
     }
 
@@ -159,7 +165,7 @@
     .stat-val {
       width: 55px;
       text-align: right;
-      font-size: 0.72rem;
+      font-size: 0.74rem;
     }
 
     .condition-badges {
@@ -170,7 +176,7 @@
 
     .condition-tag {
       display: inline-block;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       padding: 2px 6px;
       border-radius: 4px;
       background: #2b2b2b;
@@ -184,7 +190,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.75rem;
+      font-size: 0.76rem;
       color: var(--accent);
       background: rgba(0,0,0,0.25);
       padding: 3px 8px;
@@ -192,7 +198,22 @@
       border: 1px solid rgba(255,255,255,0.04);
     }
 
-    /* Diario di bordo */
+    .slot-row-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 8px;
+      background: #1a1a1a;
+      border: 1px dashed var(--border-color);
+      border-radius: 4px;
+      font-size: 0.76rem;
+      margin-bottom: 5px;
+    }
+
+    .slot-row-card strong {
+      color: var(--weapon-color);
+    }
+
     #log-container {
       flex: 1;
       padding: 12px 16px;
@@ -200,8 +221,8 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      font-size: 0.85rem;
-      line-height: 1.35;
+      font-size: 0.86rem;
+      line-height: 1.4;
       background: var(--bg-color);
       -webkit-overflow-scrolling: touch;
     }
@@ -216,13 +237,16 @@
     .log-entry.success { border-color: var(--success); color: #b7e4c7; }
     .log-entry.idle { border-color: #666; color: var(--text-muted); }
     .log-entry.sleep { border-color: var(--sleep-color); color: #a4c2f4; }
+    .log-entry.combat { border-color: var(--weapon-color); color: #ffe6a7; }
+    .log-entry.water { border-color: var(--thirst-bar); color: #90e0ef; }
+    .log-entry.pet { border-color: var(--pet-bar); color: #e0aaff; }
+    .log-entry.caps { border-color: var(--caps-color); color: #f4a261; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Area Fissa Inferiore */
     .bottom-fixed-section {
       flex-shrink: 0;
       background: var(--card-bg);
@@ -230,36 +254,38 @@
       z-index: 10;
     }
 
-    .companion-banner, .weapon-banner, .water-banner {
-      padding: 4px 16px;
-      font-size: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #282828;
-      background: #181818;
-    }
-
     .inventory-section {
       padding: 8px 16px;
     }
 
     .inventory-header {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       color: var(--accent);
       text-transform: uppercase;
       font-weight: bold;
+    }
+
+    .btn-crafting-open {
+      background: #2b3a42;
+      border: 1px solid #4a6572;
+      color: #b0bec5;
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: normal;
+      text-transform: none;
     }
 
     .inventory-list {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      max-height: 100px;
+      max-height: 88px;
       overflow-y: auto;
     }
 
@@ -267,33 +293,42 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #242424;
-      padding: 4px 8px;
+      background: #262626;
+      padding: 3px 8px;
       border-radius: 4px;
       font-size: 0.78rem;
     }
 
     .inv-item-actions {
       display: flex;
-      align-items: center;
       gap: 4px;
+      align-items: center;
     }
 
     .inv-item-actions button {
-      background: #383838;
+      background: #3a3a3a;
       border: none;
       color: var(--text-main);
-      padding: 2px 6px;
+      padding: 2px 7px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.72rem;
+      font-size: 0.70rem;
     }
 
-    .inv-item-actions button.btn-drop {
-      background: #4a2020;
-      color: #ffb4b4;
+    .inv-item-actions button:hover { background: #505050; }
+
+    .btn-delete-item {
+      background: #4a1e1e !important;
+      color: #ffadad !important;
+      border: 1px solid #7a2d2d !important;
+      padding: 2px 6px !important;
+      font-size: 0.70rem !important;
       font-weight: bold;
-      padding: 2px 6px;
+      line-height: 1;
+    }
+
+    .btn-delete-item:hover {
+      background: #6e2525 !important;
     }
 
     .controls {
@@ -308,16 +343,16 @@
     .main-actions-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 6px;
+      gap: 8px;
     }
 
     .btn-main {
-      background: #262626;
+      background: #2a2a2a;
       border: 1px solid var(--border-color);
       color: var(--text-main);
-      padding: 9px;
-      border-radius: 6px;
-      font-size: 0.85rem;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.88rem;
       font-weight: bold;
       cursor: pointer;
       text-align: center;
@@ -330,44 +365,74 @@
     }
 
     .btn-main:active:not(:disabled) {
-      background: #333333;
+      background: #383838;
+    }
+
+    .btn-context {
+      background: var(--context-btn-bg) !important;
+      border: 1px solid var(--context-btn-border) !important;
+      color: #ffffff !important;
+      text-align: center !important;
+      font-weight: 600;
+    }
+
+    .btn-context:active:not(:disabled) {
+      background: #4f4f4f !important;
     }
 
     .btn-move {
-      background: #1b3831;
+      background: #1f3b34;
       border-color: #2a9d8f;
       color: #b7e4c7;
     }
 
     .btn-sleep {
-      background: #182332;
+      background: #1a2636;
       border-color: var(--sleep-color);
       color: #8da9c4;
     }
 
-    .btn-context-alt {
-      background: var(--btn-context-bg) !important;
-      border-color: #53627a !important;
-      color: #f0f4fc !important;
-      text-align: center !important;
+    .btn-hour-sleep {
+      background: #23344d;
+      border-color: #5c84b8;
+      color: #c0d8f8;
+      margin-bottom: 2px;
     }
 
-    .btn-context-alt:hover {
-      background: #3b4455 !important;
+    .btn-danger-opt {
+      background: #3a1c1c;
+      border-color: var(--danger);
+      color: #ff9999;
     }
 
     .action-sub-grid {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
 
-    /* Modali */
+    .encounter-actions-row, .trade-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .encounter-actions-row button, .trade-row button {
+      flex: 1;
+      text-align: center !important;
+    }
+
+    .action-sub-grid button {
+      font-size: 0.8rem;
+      padding: 7px 10px;
+      text-align: center;
+    }
+
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.78);
       align-items: center;
       justify-content: center;
       z-index: 99;
@@ -377,165 +442,232 @@
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 16px;
-      width: 92%;
-      max-width: 420px;
+      padding: 18px;
+      width: 90%;
+      max-width: 400px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      max-height: 88vh;
-      overflow-y: auto;
+      max-height: 85vh;
     }
 
     .modal-content h2 {
       font-size: 1.05rem;
-      color: var(--accent);
-      border-bottom: 1px solid #333;
-      padding-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      margin-bottom: 2px;
     }
 
-    .modal-actions-bar {
+    .crafting-recipe-list {
       display: flex;
+      flex-direction: column;
       gap: 8px;
-      margin-top: 8px;
+      overflow-y: auto;
+      max-height: 55vh;
+      padding-right: 4px;
     }
 
-    .modal-actions-bar button {
-      flex: 1;
-    }
-
-    /* Stili Finestra Scambio */
-    .trade-row-card {
-      background: #181818;
-      border: 1px solid #2e2e2e;
+    .crafting-card {
+      background: #242424;
+      border: 1px solid #333;
       border-radius: 6px;
       padding: 8px 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
+      font-size: 0.78rem;
     }
 
-    .trade-row-title {
-      font-size: 0.8rem;
-      font-weight: bold;
-      color: #fff;
-    }
-
-    .trade-row-selectors {
+    .crafting-card-header {
       display: flex;
-      gap: 6px;
-    }
-
-    .trade-opt-box {
-      flex: 1;
-      background: #222;
-      border: 1px solid #383838;
-      border-radius: 4px;
-      padding: 6px;
-      display: flex;
-      flex-direction: column;
       justify-content: space-between;
-      gap: 4px;
-      font-size: 0.72rem;
-    }
-
-    .trade-counter {
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      background: #141414;
-      border-radius: 4px;
-      padding: 2px;
     }
 
-    .btn-counter {
-      background: #333;
-      border: none;
-      color: #fff;
-      width: 24px;
-      height: 22px;
-      border-radius: 3px;
+    .crafting-card-title {
       font-weight: bold;
+      color: var(--accent);
+    }
+
+    .crafting-desc {
+      color: var(--text-muted);
+      font-size: 0.74rem;
+    }
+
+    .crafting-reqs {
+      font-size: 0.72rem;
+      color: #aaa;
+    }
+
+    .crafting-card button {
+      align-self: flex-end;
+      background: #2a9d8f;
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
       cursor: pointer;
     }
 
-    /* Stili Finestra Deposito */
-    .storage-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    .crafting-card button:disabled {
+      background: #3a3a3a;
+      color: #666;
+      cursor: not-allowed;
     }
 
-    .storage-box {
-      background: #161616;
-      border: 1px solid #2e2e2e;
+    /* Stili Nuove Finestre (Scambio & Deposito) */
+    .trade-modal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 50vh;
+      padding-right: 4px;
+    }
+
+    .trade-modal-card {
+      background: #222;
+      border: 1px solid #333;
       border-radius: 6px;
       padding: 8px;
       display: flex;
       flex-direction: column;
       gap: 6px;
+    }
+
+    .trade-modal-card-title {
+      font-size: 0.82rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .trade-card-options-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .trade-counter-box {
+      flex: 1;
+      background: #181818;
+      border: 1px solid #2d2d2d;
+      border-radius: 4px;
+      padding: 5px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.72rem;
+    }
+
+    .counter-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #111;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+
+    .btn-step {
+      background: #333;
+      border: none;
+      color: #fff;
+      width: 22px;
+      height: 20px;
+      border-radius: 3px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-step:hover { background: #444; }
+
+    .storage-columns-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .storage-panel-box {
+      background: #191919;
+      border: 1px solid #2d2d2d;
+      border-radius: 6px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
       min-height: 180px;
-      max-height: 240px;
+      max-height: 220px;
       overflow-y: auto;
     }
 
-    .storage-box-title {
-      font-size: 0.74rem;
+    .storage-panel-header {
+      font-size: 0.75rem;
       font-weight: bold;
       color: var(--accent);
-      border-bottom: 1px solid #2b2b2b;
-      padding-bottom: 4px;
+      border-bottom: 1px solid #2d2d2d;
+      padding-bottom: 3px;
       text-align: center;
     }
 
-    .storage-item-row {
+    .storage-item-entry {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #202020;
-      padding: 4px 6px;
+      background: #222;
+      padding: 3px 5px;
       border-radius: 4px;
       font-size: 0.72rem;
     }
 
-    .storage-item-row button {
-      background: #383838;
+    .storage-item-entry button {
+      background: #3a3a3a;
       border: none;
       color: #fff;
-      padding: 2px 6px;
+      padding: 1px 6px;
       border-radius: 3px;
-      font-size: 0.7rem;
       cursor: pointer;
     }
 
-    .storage-item-row button:hover {
-      background: #4a4a4a;
+    .modal-footer-dual-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
     }
 
-    .storage-fee-badge {
-      background: #252219;
-      border: 1px solid #5a4918;
-      color: #f1c40f;
-      padding: 6px 10px;
-      border-radius: 6px;
+    .modal-footer-dual-btns button {
+      flex: 1;
+    }
+
+    .leaderboard-table-container {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: #181818;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 0.75rem;
+      text-align: left;
+    }
+
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #282828;
+    }
+
+    .leaderboard-table th {
+      background: #242424;
+      color: var(--accent);
+      position: sticky;
+      top: 0;
+    }
+
+    .leaderboard-empty {
+      padding: 16px;
       text-align: center;
-      line-height: 1.3;
-    }
-
-    .btn-craft {
-      background: #1d3326;
-      border-color: #2a9d8f;
-      color: #9fe2bf;
-    }
-
-    .btn-danger-opt {
-      background: #3a1c1c;
-      border-color: var(--danger);
-      color: #ff9999;
+      font-size: 0.8rem;
+      color: var(--text-muted);
     }
   </style>
 </head>
@@ -543,20 +675,19 @@
 
 <div id="game-container">
   
-  <!-- SEZIONE FISSA IN ALTO -->
   <div class="top-fixed-section">
     <header>
       <h1>Terra Desolata</h1>
-      <div class="header-btns">
+      <div class="header-actions">
         <button class="btn-icon" id="btn-options" title="Opzioni">⚙</button>
-        <button class="btn-icon" id="btn-fullscreen" title="Schermo Intero">⛶</button>
+        <button class="btn-icon" id="btn-fullscreen-header" title="Schermo Intero">⛶</button>
       </div>
     </header>
 
     <div class="status-panel">
       <div class="time-tracker-row">
-        <span>Tempo: <strong id="val-time-elapsed">0g 0h 0m</strong></span>
-        <span>Tappi: <strong id="val-caps" style="color:#f1c40f;">5 tp</strong></span>
+        <span>Tempo di sopravvivenza:</span>
+        <strong id="val-time-elapsed">0g 0h 0m</strong>
       </div>
 
       <div class="stat-row">
@@ -579,58 +710,60 @@
 
       <div class="stat-row">
         <span class="stat-label">Energia</span>
-        <div class="bar-energy-container">
+        <div class="bar-energy-container" title="Verde: attuale, Ocra: limite massimo">
           <div id="bar-energy-max"></div>
           <div id="bar-energy-cur"></div>
         </div>
         <span id="val-energy" class="stat-val">100/100</span>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="stat-row" id="pet-stat-row" style="display:none;">
+        <span class="stat-label" id="val-pet-name">Compagno</span>
+        <div class="bar-bg"><div id="bar-pet" class="bar-fill fill-pet"></div></div>
+        <span id="val-pet-hp" class="stat-val">100/100</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
         <div class="condition-badges">
           <span id="condition-tag" class="condition-tag">In salute</span>
           <span id="sleep-tag" class="condition-tag sleeping" style="display:none;">Addormentato</span>
         </div>
-        <span style="font-size:0.75rem; color:var(--text-muted);">Km: <strong id="val-km" style="color:var(--text-main);">0</strong></span>
+        <div style="display:flex; gap:10px; align-items:center; font-size:0.8rem;">
+          <span style="color:var(--caps-color); font-weight:bold;">🪙 <span id="val-caps">5</span> tp</span>
+          <span style="color:var(--text-muted);">Km: <strong id="val-km" style="color:var(--text-main);">0</strong></span>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- AREA CENTRALE DIARIO/LOG -->
   <div id="log-container"></div>
 
-  <!-- SEZIONE FISSA IN BASSO -->
   <div class="bottom-fixed-section">
-    <!-- Banner Compagno -->
-    <div id="companion-banner" class="companion-banner" style="display:none;">
-      <span>🐕 <strong id="val-companion-name">Dogmeat</strong></span>
-      <span style="color:#a8dadc;">HP: <strong id="val-companion-hp">100/100</strong></span>
-    </div>
-
-    <!-- Banner Arma & Borracce -->
-    <div class="weapon-banner">
-      <span>Arma: <strong id="val-weapon-name" style="color:var(--accent);">Pugni</strong></span>
-      <span id="val-weapon-durability" style="color:var(--text-muted); font-size:0.72rem;">Usi: ∞</span>
-    </div>
-    <div class="water-banner">
-      <span>💧 Potabile: <strong id="val-drink-water" style="color:#64dfdf;">0.60 L</strong></span>
-      <span>🧴 Raccolta: <strong id="val-scavenge-water" style="color:#d4a373;">0.25 L</strong></span>
-    </div>
-
-    <!-- Zaino -->
     <div class="inventory-section">
+      <div class="slot-row-card" style="border-color:#2a6f97;">
+        <span>💧 Bere: <strong id="val-flask-drink" style="color:#90e0ef;">1.00 / 1.00 L</strong> | Raccolta: <strong id="val-flask-dirty" style="color:#d4a373;">0.00 / 1.00 L</strong></span>
+        <button id="btn-drink-water" class="btn-crafting-open" style="border-color:#3a86ff; color:#90e0ef;">Bevi (-0.2L)</button>
+      </div>
+
+      <div class="slot-row-card">
+        <span>Arma: <strong id="val-weapon-name">Nessuna</strong></span>
+        <span id="val-weapon-durability" style="color:var(--text-muted);">0 usi</span>
+      </div>
+
       <div class="inventory-header">
-        <div>Zaino <span id="val-inventory-slots" style="color:var(--text-main); font-weight:normal; font-size:0.75rem;">(0/10)</span></div>
-        <button id="btn-open-craft" class="btn-icon" style="font-size:0.72rem; padding:2px 8px; border-color:var(--accent); color:var(--accent);">🛠 Fabbrica</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span>Zaino</span>
+          <button id="btn-open-crafting" class="btn-crafting-open">🛠 Fabbrica</button>
+        </div>
+        <span id="val-inventory-slots">0 / 10 Slot</span>
       </div>
       <div class="inventory-list" id="inventory-list"></div>
     </div>
 
-    <!-- Controlli di Azione -->
     <div class="controls">
-      <div id="context-actions" class="action-sub-grid" style="display:none;"></div>
+      <div id="context-actions" class="action-sub-grid" style="display:none; margin-bottom: 2px;"></div>
       
-      <button id="btn-sleep-hour" class="btn-main" style="display:none; background:#202e42; border-color:#4a6fa5;">Dormi 1 Ora (+60 min)</button>
+      <button id="btn-sleep-hour" class="btn-main btn-hour-sleep" style="display:none;">Dormi 1 Ora (+60 min)</button>
 
       <div class="main-actions-grid">
         <button id="btn-sleep-toggle" class="btn-main btn-sleep">Dormi</button>
@@ -641,98 +774,100 @@
 
 </div>
 
-<!-- MODALE: SCAMBIO MERCI (VIANDANTE) -->
+<!-- Modal Fabbricazione -->
+<div id="modal-crafting" class="modal">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>🛠 Fabbrica Oggetti</h2>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Costo: 3 Ene, 6 min</span>
+    </div>
+    <div class="crafting-recipe-list" id="crafting-recipe-list"></div>
+    <button class="btn-main" id="btn-close-crafting">Chiudi</button>
+  </div>
+</div>
+
+<!-- Modal Scambio Merci (Viandante) -->
 <div id="modal-trade" class="modal">
   <div class="modal-content">
     <h2>🤝 Scambio Merci</h2>
     <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.3;">
-      Imposta quanti scambi desideri effettuare. Puoi pagare con le merci richieste o direttamente in tappi (tp).
+      Imposta quanti scambi desideri effettuare. Puoi pagare con le merci richieste o in tappi (tp).
     </div>
 
-    <div id="trade-items-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <div class="trade-modal-list" id="trade-list-container"></div>
 
-    <div style="background:#111; padding:8px; border-radius:6px; font-size:0.75rem; border:1px solid #292929;">
-      <div>Costo totale Tappi: <strong id="trade-summary-caps" style="color:#f1c40f;">0 tp</strong> (Posseduti: <span id="trade-player-caps">5</span>)</div>
-      <div>Spazio previsto: <strong id="trade-summary-slots">0 / 10</strong></div>
-      <div id="trade-missing-warn" style="color:var(--danger); font-size:0.7rem; margin-top:3px; display:none;">Non hai abbastanza risorse o spazio nello zaino!</div>
+    <div style="background:#181818; padding:8px; border-radius:6px; font-size:0.75rem; border:1px solid #282828;">
+      <div>Costo totale Tappi: <strong id="trade-sum-caps" style="color:var(--caps-color);">0 tp</strong> (Posseduti: <span id="trade-owned-caps">0</span>)</div>
+      <div>Spazio previsto zaino: <strong id="trade-sum-slots">0 / 10</strong></div>
+      <div id="trade-warn-msg" style="color:var(--danger); font-size:0.72rem; margin-top:3px; display:none;">Risorse o spazio insufficienti nello zaino!</div>
     </div>
 
-    <div class="modal-actions-bar">
-      <button class="btn-main" id="btn-cancel-trade">Annulla</button>
-      <button class="btn-main btn-craft" id="btn-confirm-trade">Scambia</button>
+    <div class="modal-footer-dual-btns">
+      <button class="btn-main" id="btn-trade-cancel">Annulla</button>
+      <button class="btn-main btn-move" id="btn-trade-confirm" disabled>Scambia</button>
     </div>
   </div>
 </div>
 
-<!-- MODALE: CASSA DEI VIANDANTI (DEPOSITO) -->
+<!-- Modal Cassa dei Viandanti (Deposito) -->
 <div id="modal-storage" class="modal">
   <div class="modal-content">
     <h2>📦 Cassa dei Viandanti</h2>
     <div style="font-size:0.73rem; color:var(--text-muted); line-height:1.3;">
-      La cassa è condivisa fra tutti i viandanti. Il servizio costa <strong>5 tp</strong> per depositare, <strong>5 tp</strong> per ritirare, oppure <strong>10 tp</strong> se depositi e ritiri nella stessa operazione.
+      Cassa comune condivisa fra tutti i viandanti. Il servizio costa <strong>5 tp</strong> per depositare, <strong>5 tp</strong> per ritirare o <strong>10 tp</strong> se depositi e ritiri nella stessa operazione.
     </div>
 
-    <div class="storage-columns">
-      <!-- Zaino -->
-      <div class="storage-box">
-        <div class="storage-box-title">🎒 Nello Zaino</div>
-        <div id="storage-backpack-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+    <div class="storage-columns-grid">
+      <div class="storage-panel-box">
+        <div class="storage-panel-header">🎒 Zaino</div>
+        <div id="storage-backpack-container" style="display:flex; flex-direction:column; gap:4px;"></div>
       </div>
-      <!-- Deposito -->
-      <div class="storage-box">
-        <div class="storage-box-title">📦 Nella Cassa</div>
-        <div id="storage-box-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+      <div class="storage-panel-box">
+        <div class="storage-panel-header">📦 Cassa Comune</div>
+        <div id="storage-chest-container" style="display:flex; flex-direction:column; gap:4px;"></div>
       </div>
     </div>
 
-    <div class="storage-fee-badge">
-      Costo del servizio: <strong id="storage-fee-label">0 tp</strong><br>
-      <span style="font-size:0.7rem; color:#aaa;">I tuoi tappi: <strong id="storage-player-caps" style="color:#f1c40f;">5 tp</strong> | Zaino previsto: <strong id="storage-player-slots">0 / 10</strong></span>
+    <div style="background:#201e16; border:1px solid #4a3e1b; border-radius:6px; padding:6px 8px; font-size:0.74rem; text-align:center;">
+      Costo del servizio: <strong id="storage-fee-label" style="color:var(--caps-color);">0 tp</strong><br>
+      <span style="color:#aaa; font-size:0.7rem;">I tuoi tappi: <strong id="storage-owned-caps" style="color:var(--caps-color);">5 tp</strong> | Zaino previsto: <strong id="storage-sum-slots">0/10</strong></span>
     </div>
 
-    <div class="modal-actions-bar">
-      <button class="btn-main" id="btn-cancel-storage">Annulla</button>
-      <button class="btn-main btn-craft" id="btn-confirm-storage" disabled>Accetta</button>
+    <div class="modal-footer-dual-btns">
+      <button class="btn-main" id="btn-storage-cancel">Annulla</button>
+      <button class="btn-main btn-move" id="btn-storage-confirm" disabled>Accetta</button>
     </div>
   </div>
 </div>
 
-<!-- MODALE: FABBRICA / CRAFTING -->
-<div id="modal-craft" class="modal">
-  <div class="modal-content">
-    <h2>🛠 Fabbrica & Cucina</h2>
-    <div id="craft-recipes-list" style="display:flex; flex-direction:column; gap:8px;"></div>
-    <button class="btn-main" id="btn-close-craft" style="margin-top:6px;">Chiudi</button>
-  </div>
-</div>
-
-<!-- MODALE: OPZIONI & RESET -->
+<!-- Modal Opzioni -->
 <div id="modal-options" class="modal">
   <div class="modal-content">
     <h2>Opzioni</h2>
+    <button class="btn-main" id="btn-toggle-sound">🔊 Effetti Sonori: ON</button>
     <button class="btn-main" id="btn-open-leaderboard">🏆 Classifica</button>
     <button class="btn-main btn-danger-opt" id="btn-reset-game">Ricomincia Partita</button>
     <button class="btn-main" id="btn-close-options">Chiudi</button>
   </div>
 </div>
 
-<!-- MODALE: CLASSIFICA -->
+<!-- Modal Classifica -->
 <div id="modal-leaderboard" class="modal">
   <div class="modal-content">
-    <h2>🏆 Migliori Sopravvissuti</h2>
-    <div style="max-height:220px; overflow-y:auto; border:1px solid #333; border-radius:4px;">
-      <table style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:left;">
+    <h2>🏆 Migliori 10 Sopravvissuti</h2>
+    <div class="leaderboard-table-container">
+      <table class="leaderboard-table">
         <thead>
-          <tr style="background:#222; color:var(--accent);">
-            <th style="padding:6px;">#</th>
-            <th style="padding:6px;">Tempo</th>
-            <th style="padding:6px;">Km</th>
-            <th style="padding:6px;">Data</th>
+          <tr>
+            <th>#</th>
+            <th>Durata</th>
+            <th>Km</th>
+            <th>Data Morte</th>
           </tr>
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
-      <div id="leaderboard-empty" style="padding:12px; text-align:center; font-size:0.75rem; color:var(--text-muted); display:none;">Nessun record registrato.</div>
+      <div id="leaderboard-empty" class="leaderboard-empty" style="display:none;">Nessun decesso registrato.</div>
     </div>
     <button class="btn-main" id="btn-close-leaderboard">Indietro</button>
   </div>
@@ -740,27 +875,272 @@
 
 <script>
   /* =========================================================================
-     CONFIGURAZIONE COSTANTI
+     SINTETIZZATORE EFFETTI SONORI (WEB AUDIO API - ZERO FILE ESTERNI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v10";
-  const LEADERBOARD_KEY = "terra_desolata_leaderboard_v10";
-  const COMMON_CHEST_KEY = "terra_desolata_common_chest_v10";
+  let audioCtx = null;
 
-  const FOOD_TICK_SEC = 480;              // -1 fame ogni 8 min (480s)
-  const THIRST_TICK_SEC = 1296;           // 100% sete consumata in 36h da svegli (1296s per 1%)
-  const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // -1 corr ogni 9 min (540s)
-  const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // -1 max ogni 10 min (600s)
-  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 max ogni 4 min (240s)
-  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 corr ogni 6 min (360s)
-
-  const ITEM_WEIGHTS = {
-    duct_tape: 0.2,
-    cloth: 0.2
-  };
-
-  function getItemWeight(id) {
-    return ITEM_WEIGHTS[id] !== undefined ? ITEM_WEIGHTS[id] : 1.0;
+  function initAudioContext() {
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+      }
+    }
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
   }
+
+  function playSound(type) {
+    if (!player.soundEnabled) return;
+    try {
+      initAudioContext();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+
+      if (type === "move") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.12);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === "drink") {
+        [0, 0.08, 0.16].forEach((delay, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          const freq = 420 + idx * 80;
+          osc.frequency.setValueAtTime(freq, now + delay);
+          osc.frequency.exponentialRampToValueAtTime(freq + 140, now + delay + 0.07);
+          gain.gain.setValueAtTime(0.2, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.07);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.07);
+        });
+      } else if (type === "eat") {
+        [0, 0.07, 0.14].forEach(delay => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(180, now + delay);
+          osc.frequency.exponentialRampToValueAtTime(80, now + delay + 0.05);
+          gain.gain.setValueAtTime(0.25, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.05);
+        });
+      } else if (type === "cure") {
+        [329.63, 440, 554.37].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.18, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.25);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.25);
+        });
+      } else if (type === "craft") {
+        [0, 0.11, 0.22].forEach((delay, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "square";
+          osc.frequency.setValueAtTime(520 + idx * 70, now + delay);
+          gain.gain.setValueAtTime(0.2, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.08);
+        });
+      } else if (type === "sleep") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(65, now + 0.4);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === "wake") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (type === "scavenge") {
+        [0, 0.08, 0.16].forEach((d, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(280 + (i % 2) * 90, now + d);
+          gain.gain.setValueAtTime(0.12, now + d);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + d + 0.06);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + d);
+          osc.stop(now + d + 0.06);
+        });
+      } else if (type === "loot") {
+        [784, 988, 1318].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.22, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.22);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.22);
+        });
+      } else if (type === "discard") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.12);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === "hit") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (type === "dodge") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(350, now);
+        osc.frequency.exponentialRampToValueAtTime(750, now + 0.14);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } else if (type === "parry") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(980, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.18);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } else if (type === "pet") {
+        [0, 0.08].forEach(d => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(380, now + d);
+          osc.frequency.exponentialRampToValueAtTime(620, now + d + 0.06);
+          gain.gain.setValueAtTime(0.25, now + d);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + d + 0.06);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + d);
+          osc.stop(now + d + 0.06);
+        });
+      } else if (type === "flee") {
+        [160, 210, 140, 190].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.25, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.06 + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.05);
+        });
+      } else if (type === "trade") {
+        [523.25, 659.25].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.08);
+          gain.gain.setValueAtTime(0.25, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.15);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.15);
+        });
+      } else if (type === "death") {
+        [220, 174.61, 130.81].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(f, now + i * 0.2);
+          gain.gain.setValueAtTime(0.3, now + i * 0.2);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.4);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.2);
+          osc.stop(now + i * 0.2 + 0.4);
+        });
+      }
+    } catch (e) {
+      console.warn("Riproduzione audio non riuscita", e);
+    }
+  }
+
+  /* =========================================================================
+     CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
+     ========================================================================= */
+  const STORAGE_KEY = "terra_desolata_save_v20";
+  const LEADERBOARD_KEY = "terra_desolata_leaderboard";
+  const COMMON_CHEST_KEY = "terra_desolata_chest_common";
+
+  const FOOD_TICK_SEC = 480;
+  const THIRST_TOTAL_SEC = 36 * 3600;
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100;
+  const AWAKE_CUR_ENERGY_DECAY_SEC = 540;
+  const AWAKE_MAX_ENERGY_DECAY_SEC = 600;
+  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;
+  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;
+  const FOOD_PERISH_LIMIT_SEC = 86400;
+  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600;
+
+  let isResetting = false;
 
   const defaultPlayerState = {
     hp: 100,
@@ -768,16 +1148,18 @@
     food: 80,
     maxFood: 100,
     thirst: 100,
-    maxThirst: 100,
+    caps: 5,
+    soundEnabled: true,
+    drinkFlask: 1.0,
+    dirtyFlask: 0.0,
     energy: 100,
     maxEnergy: 100,
     km: 0,
-    caps: 5,
     sick: false,
     isSleeping: false,
     consecutiveSleepHours: 0,
+    consecutiveSleepSeconds: 0,
     maxSlots: 10,
-    bagUpgradeLevel: 0,
     survivalSeconds: 0,
     isDead: false,
     lastActiveTimestamp: Date.now(),
@@ -787,22 +1169,25 @@
     secAwakeMax: 0,
     secSleepCur: 0,
     secSleepMax: 0,
-    cleanWaterLiters: 0.60,
-    dirtyWaterLiters: 0.25,
+    secPetRegen: 0,
+    backpackTier: 0,
     equippedWeapon: null,
     companion: null,
     inventory: [
-      { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 },
-      { id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 },
-      { id: "scrap", name: "Rottami metallici", type: "material", qty: 3 }
+      { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2, slotWeight: 1 },
+      { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20, qty: 1, acquiredAt: 0, slotWeight: 1 },
+      { id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1, slotWeight: 1 },
+      { id: "scrap", name: "Rottami metallici", type: "material", qty: 3, slotWeight: 1 },
+      { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1, slotWeight: 0.2 },
+      { id: "cloth", name: "Tessuto", type: "material", qty: 2, slotWeight: 0.2 }
     ]
   };
 
   let player = JSON.parse(JSON.stringify(defaultPlayerState));
   let currentLocation = null;
-  let isResetting = false;
+  let currentEncounter = null;
 
-  // Cassa comune dei viandanti condivisa
+  // Cassa dei viandanti (Condivisa e persistente)
   let viandantiChest = [];
 
   function loadViandantiChest() {
@@ -811,10 +1196,7 @@
       if (saved) {
         viandantiChest = JSON.parse(saved);
       } else {
-        viandantiChest = [
-          { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 },
-          { id: "scrap", name: "Rottami metallici", type: "material", qty: 2 }
-        ];
+        viandantiChest = [];
       }
     } catch (e) {
       viandantiChest = [];
@@ -827,9 +1209,6 @@
     } catch (e) {}
   }
 
-  /* =========================================================================
-     FORMATTAZIONE TEMPO E DURATA
-     ========================================================================= */
   function formatDuration(totalSeconds) {
     const d = Math.floor(totalSeconds / 86400);
     const h = Math.floor((totalSeconds % 86400) / 3600);
@@ -839,125 +1218,1807 @@
 
   function enforceEnergyCaps() {
     player.maxEnergy = Math.max(0, Math.min(100, player.maxEnergy));
-    if (player.energy > player.maxEnergy) player.energy = player.maxEnergy;
+    if (player.energy > player.maxEnergy) {
+      player.energy = player.maxEnergy;
+    }
     player.energy = Math.max(0, player.energy);
   }
 
+  function checkPerishableFood() {
+    if (!player.inventory) return;
+    const initialCount = player.inventory.length;
+    player.inventory = player.inventory.filter(item => {
+      if (item.type === "perishable_food") {
+        const age = (player.survivalSeconds || 0) - (item.acquiredAt || 0);
+        if (age >= FOOD_PERISH_LIMIT_SEC) {
+          log(`La confezione di ${item.name} è andata a male. L'hai gettata via.`, "danger");
+          return false;
+        }
+      }
+      return true;
+    });
+    if (player.inventory.length !== initialCount) {
+      updateUI();
+    }
+  }
+
   /* =========================================================================
-     AVANZAMENTO DEL TEMPO
+     COMPAGNO DI VIAGGIO
+     ========================================================================= */
+  function tameAnimal() {
+    const defaultName = "Dogmeat";
+    let chosenName = prompt("L'animale selvatico sembra affezionarsi a te! Come vuoi chiamarlo?", defaultName);
+    if (!chosenName || chosenName.trim() === "") {
+      chosenName = defaultName;
+    } else {
+      chosenName = chosenName.trim();
+    }
+
+    player.companion = {
+      name: chosenName,
+      hp: 100,
+      maxHp: 100
+    };
+
+    playSound("pet");
+    log(`Incredibile! ${chosenName} si è unito a te come fedele compagno di viaggio!`, "pet");
+    saveGame();
+    updateUI();
+  }
+
+  function checkPetStatus() {
+    if (player.companion) {
+      if (player.companion.hp < 1) {
+        log(`Purtroppo ${player.companion.name} non ce l'ha fatta ed è deceduto...`, "danger");
+        player.companion = null;
+        updateUI();
+      }
+    }
+  }
+
+  function healCompanion(amount, isFull = false) {
+    if (!player.companion) return false;
+    playSound("cure");
+    if (isFull) {
+      player.companion.hp = player.companion.maxHp;
+      log(`Hai utilizzato bende e disinfettante su ${player.companion.name}: salute completamente ripristinata!`, "pet");
+    } else {
+      player.companion.hp = Math.min(player.companion.maxHp, player.companion.hp + amount);
+      log(`Hai medicato ${player.companion.name} con bende rudimentali (+${amount} HP).`, "pet");
+    }
+    saveGame();
+    updateUI();
+    return true;
+  }
+
+  function drinkWater() {
+    if (player.isSleeping) {
+      log("Devi svegliarti prima di bere!", "idle");
+      return;
+    }
+    if (player.drinkFlask < 0.19) {
+      log("La borraccia per bere è vuota! Trova e bolli dell'acqua.", "danger");
+      return;
+    }
+    if (player.thirst >= 100) {
+      log("Non hai sete al momento.", "idle");
+      return;
+    }
+
+    player.drinkFlask = Math.max(0, Math.round((player.drinkFlask - 0.20) * 100) / 100);
+    player.thirst = Math.min(100, player.thirst + 20);
+
+    playSound("drink");
+    log("Bevi una generosa sorsata d'acqua fresca (-0.20 L, +20% Idratazione).", "water");
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     AVANZAMENTO TEMPO
      ========================================================================= */
   function advanceTime(secondsToAdd, silent = false) {
     if (player.hp <= 0 || secondsToAdd <= 0) return;
 
-    player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
-
-    // Guarigione passiva compagno di viaggio (+2 HP ogni 3600s)
-    if (player.companion && player.companion.hp > 0 && player.companion.hp < 100) {
-      const companionGains = (secondsToAdd / 3600) * 2;
-      player.companion.hp = Math.min(100, player.companion.hp + companionGains);
+    if (player.companion && player.companion.hp > 0) {
+      const totalPetSec = (player.secPetRegen || 0) + secondsToAdd;
+      const petHealTicks = Math.floor(totalPetSec / 3600);
+      player.secPetRegen = totalPetSec % 3600;
+      if (petHealTicks > 0) {
+        player.companion.hp = Math.min(player.companion.maxHp, player.companion.hp + (petHealTicks * 2));
+      }
     }
 
     if (player.isSleeping) {
-      const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
-      const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
-      player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
-      player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
+      const currentSleepSec = player.consecutiveSleepSeconds || 0;
+      const sleepCapacity = MAX_CONSECUTIVE_SLEEP_SEC - currentSleepSec;
 
-      const totalSleepCurSec = (player.secSleepCur || 0) + secondsToAdd;
-      const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
-      player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
-      player.energy = Math.min(player.maxEnergy, player.energy + curGains);
+      if (secondsToAdd >= sleepCapacity) {
+        applySleepTime(sleepCapacity, silent);
+        player.survivalSeconds = (player.survivalSeconds || 0) + sleepCapacity;
+        player.consecutiveSleepSeconds = MAX_CONSECUTIVE_SLEEP_SEC;
+        player.consecutiveSleepHours = 8;
 
-      if (player.sick) {
-        const sickDmg = secondsToAdd * 0.15;
-        player.hp = Math.max(0, player.hp - sickDmg);
-        if (!silent) log(`La malattia ha peggiorato le tue condizioni durante il sonno (-${Math.round(sickDmg)} HP).`, "danger");
+        player.isSleeping = false;
+        player.consecutiveSleepHours = 0;
+        player.consecutiveSleepSeconds = 0;
+        playSound("wake");
+        log("Hai dormito 8 ore di fila: ti svegli automaticamente ben riposato!", "success");
+
+        const remainingSeconds = secondsToAdd - sleepCapacity;
+        if (remainingSeconds > 0) {
+          advanceTime(remainingSeconds, silent);
+        }
+        return;
+      } else {
+        player.consecutiveSleepSeconds = currentSleepSec + secondsToAdd;
+        player.consecutiveSleepHours = Math.floor(player.consecutiveSleepSeconds / 3600);
+        applySleepTime(secondsToAdd, silent);
+        player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
       }
     } else {
-      // Fame
-      const totalFoodSec = (player.secFood || 0) + secondsToAdd;
-      const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
-      player.secFood = totalFoodSec % FOOD_TICK_SEC;
-
-      if (foodLoss > 0) {
-        const foodBefore = player.food;
-        player.food = Math.max(0, player.food - foodLoss);
-        const actualLoss = foodBefore - player.food;
-        if (player.food <= 0) {
-          const starvedUnits = foodLoss - actualLoss;
-          const starvationDmg = Math.max(1, starvedUnits * 10);
-          player.hp = Math.max(0, player.hp - starvationDmg);
-          if (!silent) log(`Stai morendo di fame! Subisci ${Math.round(starvationDmg)} danni.`, "danger");
-        }
-      }
-
-      // Sete (Idratazione)
-      const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
-      const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
-      player.secThirst = totalThirstSec % THIRST_TICK_SEC;
-
-      if (thirstLoss > 0) {
-        player.thirst = Math.max(0, player.thirst - thirstLoss);
-        if (player.thirst <= 0) {
-          const dehydrationDmg = Math.max(1, thirstLoss * 5);
-          player.hp = Math.max(0, player.hp - dehydrationDmg);
-          if (!silent) log(`Disidratazione severa! Subisci ${Math.round(dehydrationDmg)} danni alla salute.`, "danger");
-        }
-      }
-
-      // Energia
-      const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
-      const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
-      player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
-      player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
-
-      const totalAwakeCurSec = (player.secAwakeCur || 0) + secondsToAdd;
-      const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
-      player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
-      player.energy = Math.max(0, player.energy - curLoss);
-
-      if (player.sick) {
-        const sickDmg = secondsToAdd * 0.2;
-        player.hp = Math.max(0, player.hp - sickDmg);
-        if (!silent) log(`L'infezione si è aggravata (-${Math.round(sickDmg)} HP).`, "danger");
-      }
+      player.survivalSeconds = (player.survivalSeconds || 0) + secondsToAdd;
+      applyAwakeTime(secondsToAdd, silent);
     }
 
-    // Deterioramento cibo deperibile (24 ore = 86400s)
-    player.inventory.forEach(item => {
-      if (item.type === "perishable_food") {
-        item.spoilTimer = (item.spoilTimer || 86400) - secondsToAdd;
-      }
-    });
-
-    const spoiledItems = player.inventory.filter(i => i.type === "perishable_food" && i.spoilTimer <= 0);
-    if (spoiledItems.length > 0) {
-      spoiledItems.forEach(i => log(`La carne fresca è andata a male ed è stata gettata via.`, "idle"));
-      player.inventory = player.inventory.filter(i => !(i.type === "perishable_food" && i.spoilTimer <= 0));
-    }
-
+    checkPerishableFood();
+    checkPetStatus();
     enforceEnergyCaps();
     checkDeath();
     saveGame();
     updateUI();
   }
 
+  function applySleepTime(secondsToAdd, silent) {
+    const totalSleepMaxSec = (player.secSleepMax || 0) + secondsToAdd;
+    const maxGains = Math.floor(totalSleepMaxSec / SLEEP_MAX_ENERGY_GAIN_SEC);
+    player.secSleepMax = totalSleepMaxSec % SLEEP_MAX_ENERGY_GAIN_SEC;
+    player.maxEnergy = Math.min(100, player.maxEnergy + maxGains);
+
+    const totalSleepCurSec = (player.secSleepCur || 0) + secondsToAdd;
+    const curGains = Math.floor(totalSleepCurSec / SLEEP_CUR_ENERGY_GAIN_SEC);
+    player.secSleepCur = totalSleepCurSec % SLEEP_CUR_ENERGY_GAIN_SEC;
+    player.energy = Math.min(player.maxEnergy, player.energy + curGains);
+
+    if (player.sick) {
+      const sickDmg = secondsToAdd * 0.05;
+      player.hp = Math.max(0, player.hp - sickDmg);
+      if (!silent) log(`La malattia ti debilita durante il riposo (-${Math.round(sickDmg)} HP).`, "danger");
+    }
+  }
+
+  function applyAwakeTime(secondsToAdd, silent) {
+    const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
+    const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
+    player.secThirst = totalThirstSec % THIRST_TICK_SEC;
+
+    if (thirstLoss > 0) {
+      const thirstBefore = player.thirst;
+      player.thirst = Math.max(0, player.thirst - thirstLoss);
+      const actualLoss = thirstBefore - player.thirst;
+
+      if (player.thirst <= 0) {
+        const dehydratedUnits = thirstLoss - actualLoss;
+        const dehydrationDamage = Math.max(1, dehydratedUnits * 12);
+        player.hp = Math.max(0, player.hp - dehydrationDamage);
+        if (!silent) log(`Sei completamente disidratato! Subisci ${Math.round(dehydrationDamage)} danni per sete estrema.`, "danger");
+      }
+    }
+
+    const totalFoodSec = (player.secFood || 0) + secondsToAdd;
+    const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
+    player.secFood = totalFoodSec % FOOD_TICK_SEC;
+
+    if (foodLoss > 0) {
+      const foodBefore = player.food;
+      player.food = Math.max(0, player.food - foodLoss);
+      const actualLoss = foodBefore - player.food;
+
+      if (player.food <= 0) {
+        const starvedUnits = foodLoss - actualLoss;
+        const starvationDamage = Math.max(1, starvedUnits * 10);
+        player.hp = Math.max(0, player.hp - starvationDamage);
+        if (!silent) log(`Sei rimasto a digiuno! Subisci ${Math.round(starvationDamage)} danni per inedia.`, "danger");
+      }
+    }
+
+    const totalAwakeMaxSec = (player.secAwakeMax || 0) + secondsToAdd;
+    const maxLoss = Math.floor(totalAwakeMaxSec / AWAKE_MAX_ENERGY_DECAY_SEC);
+    player.secAwakeMax = totalAwakeMaxSec % AWAKE_MAX_ENERGY_DECAY_SEC;
+    player.maxEnergy = Math.max(0, player.maxEnergy - maxLoss);
+
+    const totalAwakeCurSec = (player.secAwakeCur || 0) + secondsToAdd;
+    const curLoss = Math.floor(totalAwakeCurSec / AWAKE_CUR_ENERGY_DECAY_SEC);
+    player.secAwakeCur = totalAwakeCurSec % AWAKE_CUR_ENERGY_DECAY_SEC;
+    player.energy = Math.max(0, player.energy - curLoss);
+
+    if (player.sick) {
+      const sickDmg = secondsToAdd * 0.1;
+      player.hp = Math.max(0, player.hp - sickDmg);
+      if (!silent) log(`L'infezione progredisce (-${Math.round(sickDmg)} HP).`, "danger");
+    }
+  }
+
+  function canAttemptDodge() {
+    return player.hp >= 85 && player.hp <= 100 && player.energy > 70;
+  }
+
+  function tryDodgeAttack(enemyType) {
+    if (canAttemptDodge() && Math.random() < 0.5) {
+      playSound("dodge");
+      log(`Riflessi pronti: schivi l'assalto di ${enemyType}!`, "success");
+      return true;
+    }
+    return false;
+  }
+
   /* =========================================================================
-     PERSISTENZA
+     INVENTARIO
      ========================================================================= */
+  function getItemSlotWeight(id, type) {
+    if (id === "duct_tape" || id === "cloth") return 0.2;
+    return 1;
+  }
+
+  function getTotalUsedSlots(inv = player.inventory) {
+    const rawSum = inv.reduce((sum, item) => {
+      const weight = item.slotWeight || getItemSlotWeight(item.id, item.type);
+      return sum + (weight * item.qty);
+    }, 0);
+    return Math.round(rawSum * 10) / 10;
+  }
+
+  function getItemQty(id, inv = player.inventory) {
+    const found = inv.find(i => i.id === id);
+    return found ? found.qty : 0;
+  }
+
+  function getItemSortPriority(item) {
+    if (item.type === "food" || item.type === "perishable_food") return 1;
+    if (item.type === "cure" || item.type === "cure_minor") return 2;
+    if (item.type === "material") return 3;
+    return 4;
+  }
+
+  function sortInventory(inv = player.inventory) {
+    if (!inv) return;
+    inv.sort((a, b) => {
+      const pA = getItemSortPriority(a);
+      const pB = getItemSortPriority(b);
+      if (pA !== pB) {
+        return pA - pB;
+      }
+      return a.name.localeCompare(b.name, "it");
+    });
+  }
+
+  function addItem(id, name, type, param1, param2, targetInv = player.inventory, maxCapacity = player.maxSlots) {
+    let val = 0, qty = 1;
+    if (type === "food" || type === "cure" || type === "cure_minor") {
+      val = param1;
+      qty = param2 || 1;
+    } else {
+      qty = param1 || 1;
+    }
+
+    const weight = getItemSlotWeight(id, type);
+    const addedSpace = weight * qty;
+
+    if (getTotalUsedSlots(targetInv) + addedSpace > maxCapacity + 0.001) {
+      return false;
+    }
+
+    const existing = targetInv.find(i => i.id === id);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      targetInv.push({ id, name, type, val, qty, slotWeight: weight });
+    }
+    sortInventory(targetInv);
+    return true;
+  }
+
+  function addPerishableFood(id, name, val) {
+    if (getTotalUsedSlots() + 1 > player.maxSlots + 0.001) {
+      log("Zaino colmo! Impossibile raccogliere la risorsa.", "danger");
+      return false;
+    }
+    player.inventory.push({
+      id: id + "_" + Date.now(),
+      name: name,
+      type: "perishable_food",
+      val: val,
+      qty: 1,
+      slotWeight: 1,
+      acquiredAt: player.survivalSeconds || 0
+    });
+    sortInventory();
+    return true;
+  }
+
+  function removeItem(id, qty = 1, targetInv = player.inventory) {
+    const item = targetInv.find(i => i.id === id);
+    if (!item) return false;
+    item.qty -= qty;
+    if (item.qty <= 0) {
+      const idx = targetInv.indexOf(item);
+      if (idx !== -1) targetInv.splice(idx, 1);
+    }
+    sortInventory(targetInv);
+    return true;
+  }
+
+  function discardItem(id) {
+    const item = player.inventory.find(i => i.id === id);
+    if (!item) return;
+
+    playSound("discard");
+    if (item.qty > 1) {
+      item.qty -= 1;
+      log(`Hai gettato 1x ${item.name} per fare spazio (rimasti: x${item.qty}).`, "idle");
+    } else {
+      player.inventory = player.inventory.filter(i => i.id !== id);
+      log(`Hai gettato ${item.name} liberando spazio nello zaino.`, "idle");
+    }
+    sortInventory();
+    saveGame();
+    updateUI();
+  }
+
+  function useItem(id, targetCompanion = false) {
+    if (player.isSleeping) {
+      log("Devi prima svegliarti per usare gli oggetti!", "idle");
+      return;
+    }
+
+    const item = player.inventory.find(i => i.id === id);
+    if (!item) return;
+
+    if (targetCompanion && player.companion) {
+      if (item.type === "cure_minor") {
+        if (player.companion.hp >= player.companion.maxHp) {
+          log(`${player.companion.name} è già al massimo della salute.`, "idle");
+          return;
+        }
+        healCompanion(30, false);
+        removeItem(id, 1);
+      } else if (item.type === "cure") {
+        if (player.companion.hp >= player.companion.maxHp) {
+          log(`${player.companion.name} è già al massimo della salute.`, "idle");
+          return;
+        }
+        healCompanion(100, true);
+        removeItem(id, 1);
+      }
+      saveGame();
+      updateUI();
+      return;
+    }
+
+    if (item.type === "food" || item.type === "perishable_food") {
+      playSound("eat");
+      player.food = Math.min(player.maxFood, player.food + item.val);
+      player.maxEnergy = Math.min(100, player.maxEnergy + (item.type === "perishable_food" ? 2 : 5));
+      player.energy = Math.min(player.maxEnergy, player.energy + (item.type === "perishable_food" ? 15 : 30));
+      enforceEnergyCaps();
+
+      log(`Consumi ${item.name}. Sazietà +${item.val}.`, "success");
+      removeItem(id, 1);
+    } else if (item.type === "cure") {
+      let used = false;
+      if (player.sick) {
+        player.sick = false;
+        used = true;
+        log("Hai usato le medicine: infezione debellata!", "success");
+      }
+      if (player.hp < player.maxHp) {
+        player.hp = Math.min(player.maxHp, player.hp + item.val);
+        used = true;
+        log(`Hai medicato le ferite (+${item.val} HP).`, "success");
+      }
+      if (used) {
+        playSound("cure");
+        removeItem(id, 1);
+      } else {
+        log("Sei già in salute, non serve usarlo adesso.", "idle");
+      }
+    } else if (item.type === "cure_minor") {
+      if (player.hp < player.maxHp) {
+        playSound("cure");
+        player.hp = Math.min(player.maxHp, player.hp + item.val);
+        log(`Applichi le bende rudimentali (+${item.val} HP).`, "success");
+        removeItem(id, 1);
+      } else {
+        log("Sei già al massimo della salute.", "idle");
+      }
+    }
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     GESTIONE ARMA
+     ========================================================================= */
+  function promptEquipWeapon(newWeapon) {
+    const currentName = player.equippedWeapon ? `${player.equippedWeapon.name} (${player.equippedWeapon.uses} usi)` : "Nessuna";
+    log(`Nuova arma: ${newWeapon.name} (${newWeapon.uses} usi, protez. ${Math.round(newWeapon.dmgReduction * 100)}%). Attuale: ${currentName}.`, "combat");
+
+    setContextActions([
+      {
+        label: `Impugna ${newWeapon.name}`,
+        action: () => {
+          player.equippedWeapon = newWeapon;
+          playSound("craft");
+          log(`Hai equipaggiato: ${newWeapon.name}.`, "success");
+          clearContextActions();
+          saveGame();
+          updateUI();
+        }
+      },
+      {
+        label: "Lascia a terra",
+        action: () => {
+          log(`Lasci a terra ${newWeapon.name}.`, "idle");
+          clearContextActions();
+          saveGame();
+          updateUI();
+        }
+      }
+    ]);
+  }
+
+  function useEquippedWeapon() {
+    if (!player.equippedWeapon) return false;
+    player.equippedWeapon.uses -= 1;
+    playSound("parry");
+    log(`Usi ${player.equippedWeapon.name} per parare! Usi rimasti: ${player.equippedWeapon.uses}.`, "combat");
+    if (player.equippedWeapon.uses <= 0) {
+      playSound("discard");
+      log(`CRACK! ${player.equippedWeapon.name} si è frantumata!`, "danger");
+      player.equippedWeapon = null;
+    }
+    return true;
+  }
+
+  /* =========================================================================
+     CRAFTING
+     ========================================================================= */
+  const CRAFTING_RECIPES = [
+    {
+      id: "boil_water",
+      name: "Filtra e bolli acqua",
+      desc: "Scalda l'acqua raccolta purificandola e travasandola nella borraccia da bere.",
+      reqs: {},
+      type: "water",
+      isUnique: false,
+      condition: () => (player.dirtyFlask || 0) > 0.05 && (player.drinkFlask || 0) < 0.99,
+      craft: () => {
+        const availableDirty = player.dirtyFlask || 0;
+        const availableRoom = 1.0 - (player.drinkFlask || 0);
+        const amountToTransfer = Math.min(availableDirty, availableRoom);
+
+        player.dirtyFlask = Math.max(0, Math.round((player.dirtyFlask - amountToTransfer) * 100) / 100);
+        player.drinkFlask = Math.min(1.0, Math.round((player.drinkFlask + amountToTransfer) * 100) / 100);
+
+        playSound("drink");
+        log(`Hai scaldato e purificato ${amountToTransfer.toFixed(2)} L di acqua spostandoli nella borraccia per bere!`, "water");
+        return true;
+      }
+    },
+    {
+      id: "rudimentary_bandage",
+      name: "Bende rudimentali",
+      desc: "Cura parziale (+15 HP a te o +30 HP al compagno).",
+      reqs: { duct_tape: 1, cloth: 2 },
+      type: "item",
+      isUnique: false,
+      craft: () => {
+        if (addItem("rudimentary_bandage", "Bende rudimentali", "cure_minor", 15, 1)) {
+          playSound("craft");
+          log("Hai fabbricato un set di Bende rudimentali.", "success");
+          return true;
+        }
+        return false;
+      }
+    },
+    {
+      id: "backpack_up_1",
+      name: "Potenz. Zaino I",
+      desc: "Aumenta la capienza massima da 10 a 14 slot.",
+      reqs: { duct_tape: 2, cloth: 5 },
+      type: "upgrade",
+      isUnique: true,
+      condition: () => (player.backpackTier || 0) === 0,
+      craft: () => {
+        player.backpackTier = 1;
+        player.maxSlots = 14;
+        playSound("loot");
+        log("Hai rinforzato il tuo zaino! Capienza estesa a 14 Slot!", "success");
+        return true;
+      }
+    },
+    {
+      id: "backpack_up_2",
+      name: "Potenz. Zaino II",
+      desc: "Aumenta la capienza massima da 14 a 18 slot.",
+      reqs: { duct_tape: 4, cloth: 8 },
+      type: "upgrade",
+      isUnique: true,
+      condition: () => (player.backpackTier || 0) === 1,
+      craft: () => {
+        player.backpackTier = 2;
+        player.maxSlots = 18;
+        playSound("loot");
+        log("Hai espanso al massimo lo zaino! Capienza estesa a 18 Slot!", "success");
+        return true;
+      }
+    },
+    {
+      id: "spiked_club",
+      name: "Bastone chiodato",
+      desc: "Arma corpo a corpo: assorbe il 50% dei danni, 4 utilizzi.",
+      reqs: { scrap: 2, duct_tape: 1 },
+      type: "weapon",
+      isUnique: false,
+      craft: () => {
+        playSound("craft");
+        promptEquipWeapon({ name: "Bastone chiodato", maxUses: 4, uses: 4, dmgReduction: 0.5 });
+        return true;
+      }
+    },
+    {
+      id: "reinforced_blade",
+      name: "Lama rinforzata",
+      desc: "Arma tagliente: assorbe il 65% dei danni, 6 utilizzi.",
+      reqs: { scrap: 3, duct_tape: 1 },
+      type: "weapon",
+      isUnique: false,
+      craft: () => {
+        playSound("craft");
+        promptEquipWeapon({ name: "Lama rinforzata", maxUses: 6, uses: 6, dmgReduction: 0.65 });
+        return true;
+      }
+    },
+    {
+      id: "crowbar",
+      name: "Piede di porco",
+      desc: "Attrezzo pesante: assorbe l'80% dei danni, 6 utilizzi.",
+      reqs: { scrap: 3, duct_tape: 2 },
+      type: "weapon",
+      isUnique: false,
+      craft: () => {
+        playSound("craft");
+        promptEquipWeapon({ name: "Piede di porco", maxUses: 6, uses: 6, dmgReduction: 0.8 });
+        return true;
+      }
+    }
+  ];
+
+  function canCraftRecipe(rec) {
+    if (rec.condition && !rec.condition()) return false;
+    for (const [matId, reqQty] of Object.entries(rec.reqs)) {
+      if (getItemQty(matId) < reqQty) return false;
+    }
+    return true;
+  }
+
+  function craftItem(recipeId) {
+    if (player.isSleeping) {
+      log("Devi essere sveglio per fabbricare.", "idle");
+      return;
+    }
+    if (player.energy < 3) {
+      log("Sei troppo esausto per lavorare (richiesti 3 Energia Corrente).", "danger");
+      return;
+    }
+
+    const rec = CRAFTING_RECIPES.find(r => r.id === recipeId);
+    if (!rec || !canCraftRecipe(rec)) {
+      log("Requisiti mancanti per questa azione.", "danger");
+      return;
+    }
+
+    if (rec.type === "item") {
+      let freedSpace = 0;
+      for (const [matId, reqQty] of Object.entries(rec.reqs)) {
+        freedSpace += getItemSlotWeight(matId, "material") * reqQty;
+      }
+      if (getTotalUsedSlots() - freedSpace + 1 > player.maxSlots + 0.001) {
+        log("Zaino colmo! Non hai abbastanza spazio.", "danger");
+        return;
+      }
+    }
+
+    for (const [matId, reqQty] of Object.entries(rec.reqs)) {
+      removeItem(matId, reqQty);
+    }
+
+    player.energy = Math.max(0, player.energy - 3);
+    enforceEnergyCaps();
+    advanceTime(360);
+
+    const success = rec.craft();
+    if (success) {
+      document.getElementById("modal-crafting").style.display = "none";
+    }
+
+    sortInventory();
+    saveGame();
+    updateUI();
+  }
+
+  function renderCraftingModal() {
+    const listEl = document.getElementById("crafting-recipe-list");
+    listEl.innerHTML = "";
+
+    const availableScrap = getItemQty("scrap");
+    const availableTape = getItemQty("duct_tape");
+    const availableCloth = getItemQty("cloth");
+
+    const headerNote = document.createElement("div");
+    headerNote.style.fontSize = "0.74rem";
+    headerNote.style.color = "var(--accent)";
+    headerNote.style.marginBottom = "4px";
+    headerNote.textContent = `Scorte: ${availableScrap}x Rottami, ${availableTape}x Nastro, ${availableCloth}x Tessuto | Tappi: ${player.caps || 0} tp`;
+    listEl.appendChild(headerNote);
+
+    CRAFTING_RECIPES.forEach(rec => {
+      if (rec.condition && !rec.condition()) return;
+
+      const card = document.createElement("div");
+      card.className = "crafting-card";
+
+      const topRow = document.createElement("div");
+      topRow.className = "crafting-card-header";
+
+      const title = document.createElement("span");
+      title.className = "crafting-card-title";
+      title.textContent = rec.name;
+      topRow.appendChild(title);
+
+      const canCraft = canCraftRecipe(rec) && player.energy >= 3 && !player.isSleeping;
+
+      const btn = document.createElement("button");
+      btn.textContent = rec.type === "water" ? "Bolli" : "Crea";
+      btn.disabled = !canCraft;
+      btn.onclick = () => craftItem(rec.id);
+      topRow.appendChild(btn);
+
+      card.appendChild(topRow);
+
+      const desc = document.createElement("div");
+      desc.className = "crafting-desc";
+      desc.textContent = rec.desc;
+      card.appendChild(desc);
+
+      const reqEntries = Object.entries(rec.reqs);
+      if (reqEntries.length > 0) {
+        const reqsText = reqEntries.map(([matId, qty]) => {
+          const matNames = { scrap: "Rottami", duct_tape: "Nastro", cloth: "Tessuto" };
+          const have = getItemQty(matId);
+          return `${qty}x ${matNames[matId]} (hai: ${have})`;
+        }).join(" | ");
+
+        const reqsEl = document.createElement("div");
+        reqsEl.className = "crafting-reqs";
+        reqsEl.textContent = `Richiede: ${reqsText}`;
+        card.appendChild(reqsEl);
+      }
+
+      listEl.appendChild(card);
+    });
+  }
+
+  /* =========================================================================
+     COMANDI BASE & MOVIMENTO
+     ========================================================================= */
+  function toggleSleep() {
+    if (player.hp <= 0) return;
+    if (currentEncounter) {
+      log("Non puoi addormentarti durante un incontro!", "danger");
+      return;
+    }
+
+    if (!player.isSleeping) {
+      if (player.energy > 40) {
+        log("Sei ancora troppo attivo per addormentarti (Energia > 40).", "idle");
+        return;
+      }
+      player.isSleeping = true;
+      player.consecutiveSleepHours = 0;
+      player.consecutiveSleepSeconds = 0;
+      playSound("sleep");
+      log("Ti accovacci in un angolo riparato e ti addormenti.", "sleep");
+      clearContextActions();
+    } else {
+      player.isSleeping = false;
+      player.consecutiveSleepHours = 0;
+      player.consecutiveSleepSeconds = 0;
+      playSound("wake");
+      log("Riapri gli occhi e ti rimetti in piedi.", "idle");
+    }
+
+    saveGame();
+    updateUI();
+  }
+
+  function sleepOneHour() {
+    if (!player.isSleeping || player.hp <= 0) return;
+    playSound("sleep");
+    advanceTime(3600);
+    if (player.isSleeping) {
+      const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
+      log(`Stai dormendo da ${oreTesto}. Energia: ${Math.round(player.energy)}/${Math.round(player.maxEnergy)}.`, "sleep");
+    }
+  }
+
+  function move() {
+    if (player.isSleeping) {
+      log("Non puoi camminare mentre stai dormendo!", "idle");
+      return;
+    }
+    if (currentEncounter) {
+      log("Risolvi prima l'incontro!", "danger");
+      return;
+    }
+    if (player.energy < 5) {
+      log("Non hai abbastanza energia per marciare (minimo 5).", "danger");
+      return;
+    }
+
+    playSound("move");
+    player.km += 1;
+    player.maxEnergy = Math.max(0, player.maxEnergy - 5);
+    player.energy = Math.max(0, player.energy - 5);
+    enforceEnergyCaps();
+
+    currentLocation = null;
+    clearContextActions();
+
+    log(`Avanzi di 1 Km attraverso la desolazione (+12 min).`, "idle");
+    advanceTime(720);
+
+    const dice = Math.random();
+    if (dice < 0.28) {
+      handleLocationDiscovery();
+    } else if (dice < 0.48) {
+      handleAnimalEncounter();
+    } else if (dice < 0.68) {
+      handleHumanEncounter();
+    } else if (dice < 0.80) {
+      handleHazardEncounter();
+    } else {
+      log("Solo silenzi e macerie lungo il cammino.", "idle");
+    }
+
+    checkDeath();
+    saveGame();
+    updateUI();
+  }
+
+  function handleLocationDiscovery() {
+    const locs = [
+      { name: "una vecchia casa abbandonata", type: "casa" },
+      { name: "i resti di un accampamento improvvisato", type: "campo" },
+      { name: "una discarica a cielo aperto", type: "discarica" }
+    ];
+    const loc = locs[Math.floor(Math.random() * locs.length)];
+    loc.searchesDone = 0;
+    loc.maxSearches = Math.random() < 0.5 ? 2 : 1;
+
+    currentLocation = loc;
+    playSound("loot");
+    log(`Scorgi ${loc.name}. Puoi perlustrare la zona.`, "success");
+
+    setContextActions([
+      { label: "Perquisisci zona", action: () => scavengeLocation() }
+    ]);
+  }
+
+  function scavengeLocation() {
+    if (player.isSleeping || !currentLocation) return;
+    if (player.energy < 3) {
+      log("Troppo esausto per cercare con cura (richiesti 3 Energia).", "danger");
+      return;
+    }
+    player.energy = Math.max(0, player.energy - 3);
+
+    playSound("scavenge");
+
+    if (Math.random() < 0.5) {
+      const capsFound = Math.floor(Math.random() * 4) + 2;
+      player.caps = (player.caps || 0) + capsFound;
+      playSound("loot");
+      log(`Hai recuperato ${capsFound} Tappi (tp) tra i detriti!`, "caps");
+    }
+
+    const prevDirty = player.dirtyFlask || 0;
+    player.dirtyFlask = Math.min(1.0, Math.round((prevDirty + 0.25) * 100) / 100);
+    const gatheredWater = Math.round((player.dirtyFlask - prevDirty) * 100) / 100;
+    if (gatheredWater > 0) {
+      log(`Raccogli ${gatheredWater.toFixed(2)} L di acqua non potabile nella borraccia di raccolta (+25%).`, "water");
+    } else {
+      log("La tua borraccia di raccolta è già completamente piena (1.00 L).", "water");
+    }
+
+    const minutesPassed = Math.floor(Math.random() * 16) + 15;
+    log(`Frughi con cura tra le macerie per ${minutesPassed} minuti...`, "idle");
+    advanceTime(minutesPassed * 60);
+
+    const lootRoll = Math.random();
+    if (lootRoll < 0.22) {
+      addItem("scrap", "Rottami metallici", "material", 1);
+      playSound("loot");
+      log("Hai recuperato del metallo utile dai rottami.", "success");
+    } else if (lootRoll < 0.36) {
+      addItem("duct_tape", "Nastro adesivo", "material", 1);
+      playSound("loot");
+      log("Hai trovato un rotolo di nastro adesivo!", "success");
+    } else if (lootRoll < 0.50) {
+      addItem("cloth", "Tessuto", "material", 2);
+      playSound("loot");
+      log("Hai recuperato pezzi di tessuto integro (2x).", "success");
+    } else if (lootRoll < 0.65) {
+      addItem("canned_food", "Cibo in scatola", "food", 35, 1);
+      playSound("loot");
+      log("Hai trovato una latta di cibo intatta!", "success");
+    } else if (lootRoll < 0.78) {
+      addPerishableFood("raw_meat", "Carne cruda", 20);
+      playSound("loot");
+      log("Trovi della carne commestibile (si guasta entro 24 ore!).", "success");
+    } else if (lootRoll < 0.88) {
+      addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
+      playSound("loot");
+      log("Trovi una cassetta medica intatta.", "success");
+    } else {
+      log("Hai frugato ovunque ma non c'era altro di valore.", "idle");
+    }
+
+    currentLocation.searchesDone += 1;
+    if (currentLocation.searchesDone < currentLocation.maxSearches) {
+      log("Un'altra parte dell'area sembra accessibile. Puoi perquisire di nuovo!", "idle");
+      setContextActions([
+        { label: "Perquisisci ancora", action: () => scavengeLocation() }
+      ]);
+    } else {
+      clearContextActions();
+      currentLocation = null;
+    }
+
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     INCONTRI & MICRO-BIVI
+     ========================================================================= */
+  function handleAnimalEncounter() {
+    if (Math.random() < 0.45) {
+      log("Una volpe ti osserva con cautela e svanisce tra i calcinacci.", "idle");
+      return;
+    }
+
+    currentEncounter = "animal";
+    playSound("hit");
+    log("Un predatore selvatico ringhia e ti sbarra la strada con fare feroce!", "danger");
+
+    const combatRow = [];
+
+    if (player.companion && player.companion.hp > 0) {
+      combatRow.push({
+        label: `Aiuto (${player.companion.name})`,
+        action: () => resolvePetCombat("animal", 12, 22, "l'animale selvatico")
+      });
+    }
+
+    combatRow.push({
+      label: "Combatti",
+      action: () => resolveCombat("animal", 12, 22, "l'animale selvatico")
+    });
+
+    const otherActions = [];
+    const perishableItem = player.inventory.find(i => i.type === "perishable_food");
+    if (perishableItem) {
+      otherActions.push({
+        label: `Getta ${perishableItem.name}`,
+        action: () => {
+          removeItem(perishableItem.id, 1);
+          const tameRoll = Math.random();
+          if (!player.companion && tameRoll < 0.08) {
+            log(`Lanci ${perishableItem.name}. L'animale mangia voracemente e si calma, avvicinandosi docile!`, "success");
+            tameAnimal();
+          } else {
+            playSound("eat");
+            log(`Lanci ${perishableItem.name}: la fiera si avventa sulla carne e ti lascia passare!`, "success");
+          }
+          endEncounter();
+        }
+      });
+    }
+
+    otherActions.push({
+      label: "Fuggi",
+      action: () => fleeEncounter("animal")
+    });
+
+    setContextActionsRow(combatRow, otherActions);
+  }
+
+  function handleHumanEncounter() {
+    if (Math.random() < 0.5) {
+      playSound("loot");
+      log("Incontri un viandante pacifico con una grande gerla sulle spalle.", "success");
+      
+      // Due tasti separati: Commercia merci e Cassa dei viandanti
+      setContextActions([
+        {
+          label: "🤝 Commercia merci",
+          action: () => openTradeModal()
+        },
+        {
+          label: "📦 Cassa dei viandanti",
+          action: () => openStorageModal()
+        },
+        {
+          label: "Prosegui per la tua strada",
+          action: () => {
+            log("Saluti il viandante e prosegui il cammino.", "idle");
+            endEncounter();
+          }
+        }
+      ]);
+      return;
+    }
+
+    currentEncounter = "human";
+    playSound("hit");
+    log("Un predone sbuca da un angolo puntandoti contro una spranga!", "danger");
+
+    const combatRow = [];
+
+    if (player.companion && player.companion.hp > 0) {
+      combatRow.push({
+        label: `Aiuto (${player.companion.name})`,
+        action: () => resolvePetCombat("human", 14, 28, "il predone")
+      });
+    }
+
+    combatRow.push({
+      label: "Combatti",
+      action: () => resolveCombat("human", 14, 28, "il predone")
+    });
+
+    const otherActions = [];
+    const foodItem = player.inventory.find(i => i.type === "food" || i.type === "perishable_food");
+    if (foodItem) {
+      otherActions.push({
+        label: `Cedi 1x ${foodItem.name}`,
+        action: () => {
+          playSound("discard");
+          log(`Cedi 1x ${foodItem.name}. Il predone arraffa il cibo e scappa.`, "idle");
+          removeItem(foodItem.id, 1);
+          endEncounter();
+        }
+      });
+    }
+
+    otherActions.push({
+      label: "Fuggi",
+      action: () => fleeEncounter("human")
+    });
+
+    setContextActionsRow(combatRow, otherActions);
+  }
+
+  function lootRaiderItems(count) {
+    const possibleLoot = [
+      { id: "canned_food", name: "Cibo in scatola", type: "food", val: 35 },
+      { id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30 },
+      { id: "scrap", name: "Rottami metallici", type: "material" },
+      { id: "duct_tape", name: "Nastro adesivo", type: "material" },
+      { id: "raw_meat", name: "Carne cruda", type: "perishable_food", val: 20 }
+    ];
+
+    let looted = 0;
+    for (let i = 0; i < count; i++) {
+      const chosen = possibleLoot[Math.floor(Math.random() * possibleLoot.length)];
+      if (chosen.type === "perishable_food") {
+        if (addPerishableFood(chosen.id, chosen.name, chosen.val)) {
+          playSound("loot");
+          log(`Nello scontro, il predone perde dallo zaino: ${chosen.name}! Lo raccogli al volo.`, "combat");
+          looted++;
+        } else {
+          log(`Il predone perde ${chosen.name}, ma il tuo zaino è pieno e non puoi raccoglierlo.`, "idle");
+        }
+      } else {
+        if (addItem(chosen.id, chosen.name, chosen.type, chosen.val || 0, 1)) {
+          playSound("loot");
+          log(`Nello scontro, il predone perde dallo zaino: ${chosen.name}! Lo raccogli al volo.`, "combat");
+          looted++;
+        } else {
+          log(`Il predone perde ${chosen.name}, ma il tuo zaino è pieno e non puoi raccoglierlo.`, "idle");
+        }
+      }
+    }
+  }
+
+  function resolveCombat(type, minDmg, maxDmg, enemyName) {
+    if (tryDodgeAttack(enemyName)) {
+      if (type === "human") {
+        lootRaiderItems(2);
+      }
+      endEncounter();
+      return;
+    }
+
+    let baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+    if (player.equippedWeapon) {
+      const reduction = player.equippedWeapon.dmgReduction || 0.5;
+      const absorbedDmg = Math.round(baseDmg * reduction);
+      baseDmg = Math.max(2, baseDmg - absorbedDmg);
+      useEquippedWeapon();
+      log(`Ti difendi con la tua arma assorbendo il colpo!`, "combat");
+    } else {
+      playSound("hit");
+    }
+
+    player.hp = Math.max(0, player.hp - baseDmg);
+    log(`Nello scontro contro ${enemyName} subisci ${baseDmg} danni.`, "danger");
+
+    if (type === "human") {
+      if (baseDmg < 10) {
+        lootRaiderItems(2);
+      } else if (baseDmg < 20) {
+        lootRaiderItems(1);
+      }
+    }
+
+    endEncounter();
+    checkDeath();
+  }
+
+  function resolvePetCombat(type, minDmg, maxDmg, enemyName) {
+    if (!player.companion) return;
+
+    if (Math.random() < 0.35) {
+      playSound("dodge");
+      log(`${player.companion.name} balza con agilità e svia l'attacco di ${enemyName} senza subire ferite!`, "pet");
+      if (type === "human") {
+        lootRaiderItems(2);
+      }
+      endEncounter();
+      return;
+    }
+
+    playSound("pet");
+    const baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+    player.companion.hp = Math.max(0, player.companion.hp - baseDmg);
+    log(`${player.companion.name} si scaglia con coraggio contro ${enemyName} subendo ${baseDmg} danni al posto tuo!`, "danger");
+
+    if (type === "human") {
+      lootRaiderItems(2);
+    }
+
+    checkPetStatus();
+    endEncounter();
+  }
+
+  function fleeEncounter(type) {
+    playSound("flee");
+    if (type === "human") {
+      if (player.energy < 20) {
+        log("Non hai abbastanza energia corrente per sfuggire al predone (richiesti 20)! Sei costretto a combattere!", "danger");
+        return;
+      }
+      player.energy = Math.max(0, player.energy - 20);
+      player.maxEnergy = Math.max(0, player.maxEnergy - 10);
+      player.thirst = Math.max(0, player.thirst - 10);
+      player.food = Math.max(0, player.food - 10);
+      player.hp = Math.max(0, player.hp - 5);
+      enforceEnergyCaps();
+      log("Fuggi disperatamente dal predone! Subisci lo sforzo estremo (-20 Ene corr, -10 Ene max, -10 Idratazione, -10 Sazietà, -5 HP).", "idle");
+    } else {
+      if (player.energy < 15) {
+        log("Non hai abbastanza energia corrente per scappare dalla fiera (richiesti 15)! Devi combattere!", "danger");
+        return;
+      }
+      player.energy = Math.max(0, player.energy - 15);
+      player.maxEnergy = Math.max(0, player.maxEnergy - 8);
+      player.thirst = Math.max(0, player.thirst - 5);
+      player.food = Math.max(0, player.food - 5);
+      player.hp = Math.max(0, player.hp - 3);
+      enforceEnergyCaps();
+      log("Scatti e semini il predatore selvatico tra le macerie (-15 Ene corr, -8 Ene max, -5 Idratazione, -5 Sazietà, -3 HP).", "idle");
+    }
+    endEncounter();
+    checkDeath();
+  }
+
+  function endEncounter() {
+    currentEncounter = null;
+    clearContextActions();
+    saveGame();
+    updateUI();
+  }
+
+  /* =========================================================================
+     NUOVA FINESTRA: SCAMBIO MERCI
+     ========================================================================= */
+  const TRADE_OFFERS = [
+    {
+      id: "to_food_1",
+      title: "1x Cibo in scatola",
+      barterName: "2x Rottami",
+      costItem: { id: "scrap", qty: 2 },
+      costCaps: 10,
+      rewardItems: [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 1 }]
+    },
+    {
+      id: "to_med_1",
+      title: "1x Bende e disinfettante",
+      barterName: "3x Rottami",
+      costItem: { id: "scrap", qty: 3 },
+      costCaps: 15,
+      rewardItems: [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }]
+    },
+    {
+      id: "to_mats_1",
+      title: "1x Nastro + 1x Tessuto",
+      barterName: "1x Rottame",
+      costItem: { id: "scrap", qty: 1 },
+      costCaps: 8,
+      rewardItems: [
+        { id: "duct_tape", name: "Nastro adesivo", type: "material", qty: 1 },
+        { id: "cloth", name: "Tessuto", type: "material", qty: 1 }
+      ]
+    },
+    {
+      id: "to_med_2",
+      title: "1x Bende e disinfettante",
+      barterName: "2x Cibo",
+      costItem: { id: "canned_food", qty: 2 },
+      costCaps: 15,
+      rewardItems: [{ id: "medkit", name: "Bende e disinfettante", type: "cure", val: 30, qty: 1 }]
+    },
+    {
+      id: "to_food_2",
+      title: "2x Cibo in scatola",
+      barterName: "1x Bende/Disinf.",
+      costItem: { id: "medkit", qty: 1 },
+      costCaps: 15,
+      rewardItems: [{ id: "canned_food", name: "Cibo in scatola", type: "food", val: 35, qty: 2 }]
+    }
+  ];
+
+  let currentTradeSelections = {};
+
+  function openTradeModal() {
+    currentTradeSelections = {};
+    TRADE_OFFERS.forEach(o => {
+      currentTradeSelections[o.id] = { barter: 0, caps: 0 };
+    });
+    renderTradeModal();
+    document.getElementById("modal-trade").style.display = "flex";
+  }
+
+  function adjustTradeSelection(offerId, mode, delta) {
+    const cur = currentTradeSelections[offerId][mode];
+    if (cur + delta < 0) return;
+
+    currentTradeSelections[offerId][mode] += delta;
+
+    // Se si eccedono i limiti con un incremento, si ripristina
+    if (delta > 0) {
+      const check = validateTradeSelections();
+      if (!check.valid) {
+        currentTradeSelections[offerId][mode] -= delta;
+      }
+    }
+    renderTradeModal();
+  }
+
+  function validateTradeSelections() {
+    let totalCaps = 0;
+    const requiredItems = {};
+    let spaceDelta = 0;
+
+    TRADE_OFFERS.forEach(o => {
+      const sel = currentTradeSelections[o.id];
+      if (sel.caps > 0) {
+        totalCaps += o.costCaps * sel.caps;
+      }
+      if (sel.barter > 0) {
+        requiredItems[o.costItem.id] = (requiredItems[o.costItem.id] || 0) + (o.costItem.qty * sel.barter);
+        const wCost = getItemSlotWeight(o.costItem.id, "material") * (o.costItem.qty * sel.barter);
+        spaceDelta -= wCost;
+      }
+
+      const totalCount = sel.barter + sel.caps;
+      if (totalCount > 0) {
+        o.rewardItems.forEach(r => {
+          const wReward = getItemSlotWeight(r.id, r.type) * (r.qty * totalCount);
+          spaceDelta += wReward;
+        });
+      }
+    });
+
+    let itemsOk = true;
+    for (const itemId in requiredItems) {
+      if (getItemQty(itemId) < requiredItems[itemId]) {
+        itemsOk = false;
+        break;
+      }
+    }
+
+    const capsOk = (player.caps || 0) >= totalCaps;
+    const projectedSlots = Math.round((getTotalUsedSlots() + spaceDelta) * 10) / 10;
+    const slotsOk = projectedSlots <= player.maxSlots + 0.001;
+    const hasSelection = Object.values(currentTradeSelections).some(s => s.barter > 0 || s.caps > 0);
+
+    return {
+      valid: itemsOk && capsOk && slotsOk,
+      hasSelection,
+      totalCaps,
+      projectedSlots: Math.max(0, projectedSlots),
+      itemsOk,
+      capsOk,
+      slotsOk
+    };
+  }
+
+  function renderTradeModal() {
+    const container = document.getElementById("trade-list-container");
+    container.innerHTML = "";
+
+    TRADE_OFFERS.forEach(o => {
+      const sel = currentTradeSelections[o.id];
+      const card = document.createElement("div");
+      card.className = "trade-modal-card";
+
+      card.innerHTML = `
+        <div class="trade-modal-card-title">Ottieni: ${o.title}</div>
+        <div class="trade-card-options-row">
+          <div class="trade-counter-box">
+            <span>Baratta (${o.barterName})</span>
+            <div class="counter-controls">
+              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'barter', -1)">-</button>
+              <span style="font-weight:bold;">${sel.barter}</span>
+              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'barter', 1)">+</button>
+            </div>
+          </div>
+          <div class="trade-counter-box">
+            <span style="color:var(--caps-color);">Paga (${o.costCaps} tp)</span>
+            <div class="counter-controls">
+              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', -1)">-</button>
+              <span style="font-weight:bold;">${sel.caps}</span>
+              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', 1)">+</button>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    const check = validateTradeSelections();
+    document.getElementById("trade-sum-caps").textContent = `${check.totalCaps} tp`;
+    document.getElementById("trade-owned-caps").textContent = `${player.caps || 0} tp`;
+    document.getElementById("trade-sum-slots").textContent = `${check.projectedSlots} / ${player.maxSlots}`;
+
+    const warn = document.getElementById("trade-warn-msg");
+    warn.style.display = (!check.valid && check.hasSelection) ? "block" : "none";
+
+    document.getElementById("btn-trade-confirm").disabled = !check.valid || !check.hasSelection;
+  }
+
+  function executeBatchTradeModal() {
+    const check = validateTradeSelections();
+    if (!check.valid || !check.hasSelection) return;
+
+    player.caps = (player.caps || 0) - check.totalCaps;
+
+    TRADE_OFFERS.forEach(o => {
+      const sel = currentTradeSelections[o.id];
+      if (sel.barter > 0) {
+        removeItem(o.costItem.id, o.costItem.qty * sel.barter);
+      }
+      const totalCount = sel.barter + sel.caps;
+      if (totalCount > 0) {
+        o.rewardItems.forEach(r => {
+          addItem(r.id, r.name, r.type, r.val || 0, r.qty * totalCount);
+        });
+      }
+    });
+
+    playSound("trade");
+    log("Hai completato con successo gli scambi concordati con il viandante!", "success");
+    document.getElementById("modal-trade").style.display = "none";
+    endEncounter();
+  }
+
+  /* =========================================================================
+     NUOVA FINESTRA: CASSA DEI VIANDANTI (DEPOSITO)
+     ========================================================================= */
+  let draftBackpack = [];
+  let draftChest = [];
+  let storageDepositedCount = 0;
+  let storageRetrievedCount = 0;
+
+  function openStorageModal() {
+    loadViandantiChest();
+    draftBackpack = JSON.parse(JSON.stringify(player.inventory));
+    draftChest = JSON.parse(JSON.stringify(viandantiChest));
+    storageDepositedCount = 0;
+    storageRetrievedCount = 0;
+    renderStorageModal();
+    document.getElementById("modal-storage").style.display = "flex";
+  }
+
+  function transferItemToChest(id) {
+    const item = draftBackpack.find(i => i.id === id);
+    if (!item || item.qty <= 0) return;
+
+    removeItem(id, 1, draftBackpack);
+    addItem(item.id, item.name, item.type, item.val || 1, 1, draftChest, 9999);
+    storageDepositedCount++;
+    renderStorageModal();
+  }
+
+  function transferItemToBackpack(id) {
+    const item = draftChest.find(i => i.id === id);
+    if (!item || item.qty <= 0) return;
+
+    const weight = getItemSlotWeight(id, item.type);
+    if (getTotalUsedSlots(draftBackpack) + weight > player.maxSlots + 0.001) {
+      return;
+    }
+
+    removeItem(id, 1, draftChest);
+    addItem(item.id, item.name, item.type, item.val || 1, 1, draftBackpack, player.maxSlots);
+    storageRetrievedCount++;
+    renderStorageModal();
+  }
+
+  function calculateStorageFee() {
+    if (storageDepositedCount > 0 && storageRetrievedCount > 0) {
+      return 10;
+    }
+    if (storageDepositedCount > 0 || storageRetrievedCount > 0) {
+      return 5;
+    }
+    return 0;
+  }
+
+  function renderStorageModal() {
+    const bContainer = document.getElementById("storage-backpack-container");
+    const cContainer = document.getElementById("storage-chest-container");
+    bContainer.innerHTML = "";
+    cContainer.innerHTML = "";
+
+    if (draftBackpack.length === 0) {
+      bContainer.innerHTML = `<span style="font-size:0.7rem; color:#666; text-align:center;">Vuoto</span>`;
+    } else {
+      draftBackpack.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "storage-item-entry";
+        row.innerHTML = `
+          <span>${item.name} x${item.qty}</span>
+          <button onclick="transferItemToChest('${item.id}')" title="Deposita nella cassa">➔</button>
+        `;
+        bContainer.appendChild(row);
+      });
+    }
+
+    if (draftChest.length === 0) {
+      cContainer.innerHTML = `<span style="font-size:0.7rem; color:#666; text-align:center;">Cassa vuota</span>`;
+    } else {
+      draftChest.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "storage-item-entry";
+        row.innerHTML = `
+          <button onclick="transferItemToBackpack('${item.id}')" title="Riprendi nello zaino">⬅</button>
+          <span>${item.name} x${item.qty}</span>
+        `;
+        cContainer.appendChild(row);
+      });
+    }
+
+    const fee = calculateStorageFee();
+    const usedSlots = getTotalUsedSlots(draftBackpack);
+
+    document.getElementById("storage-fee-label").textContent = `${fee} tp`;
+    document.getElementById("storage-owned-caps").textContent = `${player.caps || 0} tp`;
+    document.getElementById("storage-sum-slots").textContent = `${usedSlots} / ${player.maxSlots}`;
+
+    const hasAnyMove = (storageDepositedCount > 0 || storageRetrievedCount > 0);
+    const hasEnoughCaps = (player.caps || 0) >= fee;
+    const hasEnoughSpace = usedSlots <= player.maxSlots + 0.001;
+
+    document.getElementById("btn-storage-confirm").disabled = !hasAnyMove || !hasEnoughCaps || !hasEnoughSpace;
+  }
+
+  function confirmStorageTransaction() {
+    const fee = calculateStorageFee();
+    if (fee <= 0 || (player.caps || 0) < fee) return;
+
+    player.caps -= fee;
+    player.inventory = JSON.parse(JSON.stringify(draftBackpack));
+    viandantiChest = JSON.parse(JSON.stringify(draftChest));
+
+    saveViandantiChest();
+    saveGame();
+    updateUI();
+
+    playSound("trade");
+    log(`Operazione nella Cassa dei Viandanti completata: pagati ${fee} Tappi (tp) per il servizio.`, "success");
+    document.getElementById("modal-storage").style.display = "none";
+    endEncounter();
+  }
+
+  function handleHazardEncounter() {
+    playSound("hit");
+    if (!player.sick && Math.random() < 0.5) {
+      player.sick = true;
+      log("Inali esalazioni tossiche: sei MALATO.", "danger");
+    } else {
+      const dmg = 8;
+      player.hp = Math.max(0, player.hp - dmg);
+      log(`Una lastra arrugginita cede ferendoti al polpaccio (-${dmg} HP).`, "danger");
+    }
+  }
+
+  /* =========================================================================
+     RENDERING
+     ========================================================================= */
+  function log(msg, type = "normal") {
+    const logBox = document.getElementById("log-container");
+    const entry = document.createElement("div");
+    entry.className = `log-entry ${type}`;
+    entry.textContent = msg;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function setContextActions(actions) {
+    const box = document.getElementById("context-actions");
+    box.innerHTML = "";
+    if (!actions || actions.length === 0 || player.isSleeping) {
+      box.style.display = "none";
+      return;
+    }
+    actions.forEach(a => {
+      const btn = document.createElement("button");
+      btn.className = "btn-main btn-context";
+      btn.textContent = a.label;
+      btn.onclick = a.action;
+      box.appendChild(btn);
+    });
+    box.style.display = "flex";
+  }
+
+  function setContextActionsRow(combatRowActions, otherActions) {
+    const box = document.getElementById("context-actions");
+    box.innerHTML = "";
+    if (player.isSleeping) {
+      box.style.display = "none";
+      return;
+    }
+
+    if (combatRowActions && combatRowActions.length > 0) {
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "encounter-actions-row";
+      combatRowActions.forEach(a => {
+        const btn = document.createElement("button");
+        btn.className = "btn-main btn-context";
+        btn.textContent = a.label;
+        btn.onclick = a.action;
+        rowDiv.appendChild(btn);
+      });
+      box.appendChild(rowDiv);
+    }
+
+    if (otherActions && otherActions.length > 0) {
+      otherActions.forEach(a => {
+        const btn = document.createElement("button");
+        btn.className = "btn-main btn-context";
+        btn.textContent = a.label;
+        btn.onclick = a.action;
+        box.appendChild(btn);
+      });
+    }
+
+    box.style.display = "flex";
+  }
+
+  function clearContextActions() {
+    const box = document.getElementById("context-actions");
+    box.innerHTML = "";
+    box.style.display = "none";
+  }
+
+  function updateSoundButton() {
+    const btnSound = document.getElementById("btn-toggle-sound");
+    if (player.soundEnabled) {
+      btnSound.textContent = "🔊 Effetti Sonori: ON";
+      btnSound.style.color = "var(--text-main)";
+    } else {
+      btnSound.textContent = "🔇 Effetti Sonori: OFF";
+      btnSound.style.color = "var(--text-muted)";
+    }
+  }
+
+  function updateUI() {
+    document.getElementById("val-time-elapsed").textContent = formatDuration(player.survivalSeconds || 0);
+
+    document.getElementById("bar-hp").style.width = `${(player.hp / player.maxHp) * 100}%`;
+    document.getElementById("val-hp").textContent = `${Math.round(player.hp)}/${player.maxHp}`;
+
+    document.getElementById("bar-food").style.width = `${(player.food / player.maxFood) * 100}%`;
+    document.getElementById("val-food").textContent = `${Math.round(player.food)}/${player.maxFood}`;
+
+    document.getElementById("bar-thirst").style.width = `${player.thirst}%`;
+    document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
+
+    document.getElementById("val-caps").textContent = player.caps !== undefined ? player.caps : 0;
+
+    const petRow = document.getElementById("pet-stat-row");
+    if (player.companion && player.companion.hp > 0) {
+      petRow.style.display = "flex";
+      document.getElementById("val-pet-name").textContent = player.companion.name;
+      const petPct = (player.companion.hp / player.companion.maxHp) * 100;
+      document.getElementById("bar-pet").style.width = `${petPct}%`;
+      document.getElementById("val-pet-hp").textContent = `${Math.round(player.companion.hp)}/${player.companion.maxHp}`;
+    } else {
+      petRow.style.display = "none";
+    }
+
+    const dFlask = (player.drinkFlask || 0).toFixed(2);
+    const rFlask = (player.dirtyFlask || 0).toFixed(2);
+    document.getElementById("val-flask-drink").textContent = `${dFlask} / 1.00 L`;
+    document.getElementById("val-flask-dirty").textContent = `${rFlask} / 1.00 L`;
+
+    document.getElementById("bar-energy-max").style.width = `${player.maxEnergy}%`;
+    document.getElementById("bar-energy-cur").style.width = `${player.energy}%`;
+    document.getElementById("val-energy").textContent = `${Math.round(player.energy)}/${Math.round(player.maxEnergy)}`;
+
+    document.getElementById("val-km").textContent = player.km;
+
+    const weaponNameEl = document.getElementById("val-weapon-name");
+    const weaponDurEl = document.getElementById("val-weapon-durability");
+    if (player.equippedWeapon) {
+      weaponNameEl.textContent = player.equippedWeapon.name;
+      weaponDurEl.textContent = `${player.equippedWeapon.uses}/${player.equippedWeapon.maxUses} usi`;
+    } else {
+      weaponNameEl.textContent = "Nessuna";
+      weaponDurEl.textContent = "0 usi";
+    }
+
+    const condTag = document.getElementById("condition-tag");
+    if (player.sick) {
+      condTag.textContent = "Malato";
+      condTag.className = "condition-tag sick";
+    } else {
+      condTag.textContent = "In salute";
+      condTag.className = "condition-tag";
+    }
+
+    const sleepTag = document.getElementById("sleep-tag");
+    sleepTag.style.display = player.isSleeping ? "inline-block" : "none";
+
+    const btnMove = document.getElementById("btn-move");
+    const btnSleep = document.getElementById("btn-sleep-toggle");
+    const btnSleepHour = document.getElementById("btn-sleep-hour");
+    const btnDrink = document.getElementById("btn-drink-water");
+
+    if (player.isDead) {
+      btnMove.disabled = true;
+      btnSleep.disabled = true;
+      btnSleepHour.style.display = "none";
+      btnDrink.disabled = true;
+      btnMove.textContent = "Deceduto";
+    } else if (player.isSleeping) {
+      btnMove.disabled = true;
+      btnDrink.disabled = true;
+      btnSleep.disabled = false;
+      btnSleep.textContent = "Svegliati";
+      btnSleep.title = "";
+      btnSleep.style.background = "#2b3d54";
+      btnSleepHour.style.display = "block";
+    } else {
+      btnMove.disabled = player.energy < 5 || currentEncounter !== null;
+      btnDrink.disabled = player.drinkFlask < 0.19 || player.thirst >= 100;
+      btnSleepHour.style.display = "none";
+
+      if (player.energy > 40 || currentEncounter !== null) {
+        btnSleep.disabled = true;
+        btnSleep.textContent = player.energy > 40 ? "Dormi (Ene > 40)" : "Dormi";
+        btnSleep.title = player.energy > 40 ? "Hai troppa energia per dormire (richiesti ≤ 40)" : "";
+      } else {
+        btnSleep.disabled = false;
+        btnSleep.textContent = "Dormi";
+        btnSleep.title = "";
+      }
+      btnSleep.style.background = "#1a2636";
+    }
+
+    const usedSlots = getTotalUsedSlots();
+    const formattedSlots = Number.isInteger(usedSlots) ? usedSlots : usedSlots.toFixed(1);
+    document.getElementById("val-inventory-slots").textContent = `${formattedSlots} / ${player.maxSlots} Slot`;
+
+    sortInventory();
+
+    const invList = document.getElementById("inventory-list");
+    invList.innerHTML = "";
+
+    if (player.inventory.length === 0) {
+      invList.innerHTML = `<span style="font-size:0.8rem; color:var(--text-muted); padding:4px;">Lo zaino è vuoto.</span>`;
+    } else {
+      player.inventory.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "inv-item";
+
+        let labelText = `${item.name} x${item.qty}`;
+        if (item.type === "perishable_food") {
+          const age = (player.survivalSeconds || 0) - (item.acquiredAt || 0);
+          const remainSec = Math.max(0, FOOD_PERISH_LIMIT_SEC - age);
+          const remainH = Math.floor(remainSec / 3600);
+          labelText += ` (${remainH}h rimaste)`;
+        }
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = labelText;
+        row.appendChild(nameSpan);
+
+        const actions = document.createElement("div");
+        actions.className = "inv-item-actions";
+
+        if (item.type === "food" || item.type === "perishable_food" || item.type === "cure" || item.type === "cure_minor") {
+          const btnUse = document.createElement("button");
+          btnUse.textContent = "Usa";
+          btnUse.onclick = () => useItem(item.id, false);
+          if (player.isSleeping || player.isDead) btnUse.disabled = true;
+          actions.appendChild(btnUse);
+        }
+
+        if (player.companion && player.companion.hp > 0) {
+          if (item.type === "cure_minor") {
+            const btnHealPet = document.createElement("button");
+            btnHealPet.textContent = `Cura ${player.companion.name}`;
+            btnHealPet.style.borderColor = "var(--pet-bar)";
+            btnHealPet.onclick = () => useItem(item.id, true);
+            if (player.isSleeping || player.isDead || player.companion.hp >= player.companion.maxHp) btnHealPet.disabled = true;
+            actions.appendChild(btnHealPet);
+          } else if (item.type === "cure") {
+            const btnFullPet = document.createElement("button");
+            btnFullPet.textContent = `Full ${player.companion.name}`;
+            btnFullPet.style.borderColor = "var(--pet-bar)";
+            btnFullPet.onclick = () => useItem(item.id, true);
+            if (player.isSleeping || player.isDead || player.companion.hp >= player.companion.maxHp) btnFullPet.disabled = true;
+            actions.appendChild(btnFullPet);
+          }
+        }
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-delete-item";
+        btnDel.textContent = "✕";
+        btnDel.title = item.qty > 1 ? `Getta 1x ${item.name}` : `Getta ${item.name}`;
+        btnDel.onclick = () => discardItem(item.id);
+        if (player.isDead) btnDel.disabled = true;
+        actions.appendChild(btnDel);
+
+        row.appendChild(actions);
+        invList.appendChild(row);
+      });
+    }
+
+    updateSoundButton();
+  }
+
+  /* =========================================================================
+     CLASSIFICA & SALVATAGGIO
+     ========================================================================= */
+  function recordDeathLeaderboard() {
+    let leaderboard = [];
+    try {
+      const stored = localStorage.getItem(LEADERBOARD_KEY);
+      if (stored) leaderboard = JSON.parse(stored);
+    } catch (e) {
+      leaderboard = [];
+    }
+
+    const deathDate = new Date().toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    leaderboard.push({
+      duration: player.survivalSeconds || 0,
+      km: player.km || 0,
+      date: deathDate
+    });
+
+    leaderboard.sort((a, b) => b.duration - a.duration);
+    leaderboard = leaderboard.slice(0, 10);
+
+    try {
+      localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
+    } catch (e) {
+      console.warn("Impossibile salvare classifica", e);
+    }
+  }
+
+  function checkDeath() {
+    if (player.hp <= 0 && !player.isDead) {
+      player.isDead = true;
+      playSound("death");
+      log("SEI MORTO. Il tuo cammino nella desolazione finisce qui.", "danger");
+      recordDeathLeaderboard();
+      clearContextActions();
+      saveGame();
+      updateUI();
+    }
+  }
+
+  function renderLeaderboard() {
+    let leaderboard = [];
+    try {
+      const stored = localStorage.getItem(LEADERBOARD_KEY);
+      if (stored) leaderboard = JSON.parse(stored);
+    } catch (e) {
+      leaderboard = [];
+    }
+
+    const tbody = document.getElementById("leaderboard-body");
+    const emptyMsg = document.getElementById("leaderboard-empty");
+    tbody.innerHTML = "";
+
+    if (leaderboard.length === 0) {
+      emptyMsg.style.display = "block";
+    } else {
+      emptyMsg.style.display = "none";
+      leaderboard.forEach((run, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>#${idx + 1}</strong></td>
+          <td>${formatDuration(run.duration)}</td>
+          <td>${run.km} km</td>
+          <td>${run.date}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  function resetGame() {
+    if (confirm("Vuoi azzerare la partita e ricominciare da capo? La classifica resterà salvata.")) {
+      isResetting = true;
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.error("Errore cancellazione salvataggio", e);
+      }
+      window.location.href = window.location.pathname + "?reset=" + Date.now();
+    }
+  }
+
   function saveGame() {
     if (isResetting) return;
     player.lastActiveTimestamp = Date.now();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Impossibile salvare", e);
+    }
   }
 
   function loadGameAndSimulateOffline() {
     loadViandantiChest();
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) {
-      log("Ti trovi in una landa desolata. La sopravvivenza dipenderà dalle tue scelte.");
+      log("Ti svegli tra le rovine. Ricorda di bere e controllare le borracce.");
+      sortInventory();
       saveGame();
       return;
     }
@@ -965,17 +3026,26 @@
     try {
       const loaded = JSON.parse(saved);
       player = Object.assign({}, defaultPlayerState, loaded);
+
+      if (player.caps === undefined) player.caps = 5;
+      if (player.soundEnabled === undefined) player.soundEnabled = true;
+
       const now = Date.now();
-      const elapsed = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
+      const elapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
       player.lastActiveTimestamp = now;
 
-      if (!player.isDead && elapsed > 5) {
-        log(`Sei rimasto via per circa ${Math.floor(elapsed/60)} minuti.`, "idle");
-        advanceTime(elapsed, true);
+      if (!player.isDead && elapsedSeconds > 5) {
+        const mins = Math.floor(elapsedSeconds / 60);
+        log(`Sei rimasto assente per circa ${mins > 0 ? mins + " minuti" : elapsedSeconds + " secondi"}.`, "idle");
+        advanceTime(elapsedSeconds, true);
+      } else if (!player.isDead) {
+        log("Bentornato nelle rovine.");
       }
     } catch (e) {
+      console.error("Errore caricamento", e);
       player = JSON.parse(JSON.stringify(defaultPlayerState));
     }
+    sortInventory();
     enforceEnergyCaps();
   }
 
@@ -990,1268 +3060,62 @@
   }, 1000);
 
   /* =========================================================================
-     INVENTARIO & CALCOLO SLOT
-     ========================================================================= */
-  function getTotalSlotsUsed(inv = player.inventory) {
-    let total = 0;
-    inv.forEach(item => {
-      total += (getItemWeight(item.id) * item.qty);
-    });
-    return Math.round(total * 10) / 10;
-  }
-
-  function sortInventory(inv = player.inventory) {
-    const typePriority = {
-      perishable_food: 1,
-      food: 2,
-      cure: 3,
-      cure_minor: 4,
-      material: 5
-    };
-    inv.sort((a, b) => {
-      const pA = typePriority[a.type] || 99;
-      const pB = typePriority[b.type] || 99;
-      if (pA !== pB) return pA - pB;
-      return a.name.localeCompare(b.name);
-    });
-  }
-
-  function addItem(id, name, type, param1, param2, targetInv = player.inventory, maxCapacity = player.maxSlots) {
-    let val = 0, qty = 1;
-    if (type === "food" || type === "cure" || type === "cure_minor" || type === "perishable_food") {
-      val = param1;
-      qty = param2 || 1;
-    } else {
-      qty = param1 || 1;
-    }
-
-    const addedWeight = getItemWeight(id) * qty;
-    if (getTotalSlotsUsed(targetInv) + addedWeight > maxCapacity + 0.001) {
-      return false;
-    }
-
-    const existing = targetInv.find(i => i.id === id);
-    if (existing) {
-      existing.qty += qty;
-    } else {
-      const newItem = { id, name, type, qty };
-      if (val) newItem.val = val;
-      if (type === "perishable_food") newItem.spoilTimer = 86400;
-      targetInv.push(newItem);
-    }
-    sortInventory(targetInv);
-    return true;
-  }
-
-  function removeItem(id, qty = 1, targetInv = player.inventory) {
-    const item = targetInv.find(i => i.id === id);
-    if (!item) return false;
-    item.qty -= qty;
-    if (item.qty <= 0) {
-      const idx = targetInv.indexOf(item);
-      if (idx !== -1) targetInv.splice(idx, 1);
-    }
-    return true;
-  }
-
-  function dropItemSingle(id) {
-    const item = player.inventory.find(i => i.id === id);
-    if (!item) return;
-    removeItem(id, 1);
-    log(`Hai gettato via 1x ${item.name} per fare spazio.`, "idle");
-    saveGame();
-    updateUI();
-  }
-
-  function useItem(id) {
-    if (player.isSleeping) return;
-    const item = player.inventory.find(i => i.id === id);
-    if (!item) return;
-
-    if (item.type === "food" || item.type === "perishable_food") {
-      player.food = Math.min(player.maxFood, player.food + item.val);
-      player.maxEnergy = Math.min(100, player.maxEnergy + 5);
-      player.energy = Math.min(player.maxEnergy, player.energy + 30);
-      enforceEnergyCaps();
-      log(`Mangi ${item.name}. Sazietà +${item.val}, Energia +30.`, "success");
-      removeItem(id, 1);
-    } else if (item.type === "cure") {
-      let used = false;
-      if (player.sick) { player.sick = false; used = true; }
-      if (player.hp < player.maxHp) { player.hp = Math.min(player.maxHp, player.hp + item.val); used = true; }
-      if (used) {
-        log(`Hai usato ${item.name}: ferite fasciate e salute ripristinata.`, "success");
-        removeItem(id, 1);
-      }
-    } else if (item.type === "cure_minor") {
-      if (player.hp < player.maxHp) {
-        player.hp = Math.min(player.maxHp, player.hp + item.val);
-        log(`Hai applicato ${item.name} (+${item.val} HP).`, "success");
-        removeItem(id, 1);
-      }
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function healCompanion(type) {
-    if (!player.companion || player.companion.hp <= 0) return;
-    if (type === "minor") {
-      const med = player.inventory.find(i => i.id === "rudimentary_bandage");
-      if (med) {
-        player.companion.hp = Math.min(100, player.companion.hp + 30);
-        removeItem("rudimentary_bandage", 1);
-        log(`Hai curato ${player.companion.name} con le bende rudimentali (+30 HP).`, "success");
-      }
-    } else if (type === "full") {
-      const med = player.inventory.find(i => i.id === "medkit");
-      if (med) {
-        player.companion.hp = 100;
-        removeItem("medkit", 1);
-        log(`Hai curato completamente ${player.companion.name} col kit medico!`, "success");
-      }
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function drinkWater() {
-    if (player.isSleeping || player.cleanWaterLiters < 0.20 || player.thirst >= 100) return;
-    player.cleanWaterLiters = Math.max(0, Math.round((player.cleanWaterLiters - 0.20) * 100) / 100);
-    player.thirst = Math.min(100, player.thirst + 20);
-    log("Bevi un lungo sorso d'acqua potabile fresca (+20% Idratazione).", "success");
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     SONNO & MOVIMENTO
-     ========================================================================= */
-  function toggleSleep() {
-    if (player.hp <= 0) return;
-    player.isSleeping = !player.isSleeping;
-    if (player.isSleeping) {
-      player.consecutiveSleepHours = 0;
-      log("Ti corichi al riparo. Entri in un sonno profondo.", "sleep");
-      clearContextActions();
-    } else {
-      player.consecutiveSleepHours = 0;
-      log("Ti svegli e torni all'avventura.", "idle");
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function sleepOneHour() {
-    if (!player.isSleeping || player.hp <= 0) return;
-    player.consecutiveSleepHours = (player.consecutiveSleepHours || 0) + 1;
-    advanceTime(3600);
-    const hTxt = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
-    log(`Stai riposando da ${hTxt}.`, "sleep");
-  }
-
-  function move() {
-    if (player.isSleeping) return;
-    if (player.energy < 5) {
-      log("Sei troppo debole per camminare (richiesti 5 Energia).", "danger");
-      return;
-    }
-
-    player.km += 1;
-    player.maxEnergy = Math.max(0, player.maxEnergy - 5);
-    player.energy = Math.max(0, player.energy - 5);
-    enforceEnergyCaps();
-
-    currentLocation = null;
-    clearContextActions();
-
-    log(`Avanzi di 1 Km. L'orologio interno avanza di 12 minuti.`, "idle");
-    advanceTime(720);
-
-    const dice = Math.random();
-    if (dice < 0.28) {
-      handleLocationDiscovery();
-    } else if (dice < 0.48) {
-      handleAnimalEncounter();
-    } else if (dice < 0.68) {
-      handleHumanEncounter();
-    } else if (dice < 0.80) {
-      handleHazardEncounter();
-    } else {
-      log("Percorri sentieri deserti e silenziosi.", "idle");
-    }
-
-    checkDeath();
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     PERLUSTRATURA
-     ========================================================================= */
-  function handleLocationDiscovery() {
-    const locs = ["una vecchia casa abbandonata", "i resti di un accampamento", "una discarica a cielo aperto"];
-    const name = locs[Math.floor(Math.random() * locs.length)];
-    currentLocation = { name, searches: 0, maxSearches: Math.random() < 0.5 ? 2 : 1 };
-
-    log(`Scorgi ${name}. Puoi iniziare a perlustrare.`, "success");
-    setContextActions([
-      { label: "Perquisisci zona", className: "btn-context-alt", action: () => scavenge() }
-    ]);
-  }
-
-  function scavenge() {
-    if (player.isSleeping || !currentLocation) return;
-    if (player.energy < 3) {
-      log("Sei troppo spossato per cercare accuratamente.", "danger");
-      return;
-    }
-    player.energy = Math.max(0, player.energy - 3);
-
-    const minutes = Math.floor(Math.random() * 16) + 15;
-    log(`Frughi con cautela per ${minutes} minuti...`, "idle");
-    advanceTime(minutes * 60);
-
-    // Riempimento 25% borraccia di raccolta (+0.25 L)
-    player.dirtyWaterLiters = Math.min(1.0, Math.round((player.dirtyWaterLiters + 0.25) * 100) / 100);
-
-    // Tappi: 50% probabilità di trovare da 2 a 5 tappi
-    if (Math.random() < 0.5) {
-      const capsFound = Math.floor(Math.random() * 4) + 2;
-      player.caps += capsFound;
-      log(`Hai scovato ${capsFound} Tappi (tp) tra le macerie!`, "success");
-    }
-
-    const lootRoll = Math.random();
-    if (lootRoll < 0.25) {
-      addItem("scrap", "Rottami metallici", "material", 1);
-      log("Hai recuperato del metallo utile dai rottami.", "success");
-    } else if (lootRoll < 0.45) {
-      addItem("canned_food", "Cibo in scatola", "food", 35, 1);
-      log("Hai trovato una confezione di cibo intatta!", "success");
-    } else if (lootRoll < 0.60) {
-      addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
-      log("Trovi una cassetta medica intatta.", "success");
-    } else if (lootRoll < 0.75) {
-      addItem("duct_tape", "Nastro adesivo", "material", 1);
-      log("Hai trovato un rotolo di nastro adesivo resistente.", "success");
-    } else if (lootRoll < 0.90) {
-      addItem("cloth", "Tessuto", "material", 1);
-      log("Hai raccolto pezzi di tessuto pulito.", "success");
-    } else {
-      log("Non c'era altro di valore in questo settore.", "idle");
-    }
-
-    currentLocation.searches++;
-    if (currentLocation.searches < currentLocation.maxSearches) {
-      log("Un'altra stanza sembra ancora perlustrabile!", "idle");
-      setContextActions([
-        { label: "Perquisisci ancora", className: "btn-context-alt", action: () => scavenge() }
-      ]);
-    } else {
-      clearContextActions();
-      currentLocation = null;
-    }
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     INCONTRO UMANO & MERCANTI PACIFICI
-     ========================================================================= */
-  function handleHumanEncounter() {
-    if (Math.random() < 0.5) {
-      // Predone ostile
-      log("Un predone armato ti sbarra la strada ed estrae un'arma!", "danger");
-      renderRaiderEncounter();
-    } else {
-      // Viandante pacifico
-      log("Incontri un viandante pacifico con un pesante zaino da mercante.", "success");
-      setContextActions([
-        { label: "🤝 Commercia Merci", className: "btn-context-alt", action: () => openTradeModal() },
-        { label: "📦 Cassa dei Viandanti", className: "btn-context-alt", action: () => openStorageModal() },
-        { label: "Saluta e prosegui", action: () => { log("Saluti il viandante e riprendi la marcia.", "idle"); clearContextActions(); } }
-      ]);
-    }
-  }
-
-  function renderRaiderEncounter() {
-    const actions = [];
-    if (player.companion && player.companion.hp > 0) {
-      actions.push({
-        label: `Aiuto (${player.companion.name})`,
-        className: "btn-context-alt",
-        action: () => companionFightRaider()
-      });
-    }
-    actions.push({
-      label: "Combatti",
-      className: "btn-context-alt",
-      action: () => playerFightRaider()
-    });
-
-    const hasFood = player.inventory.some(i => i.id === "canned_food" || i.type === "perishable_food");
-    if (hasFood) {
-      actions.push({
-        label: "Cedi provviste",
-        className: "btn-context-alt",
-        action: () => giveFoodToRaider()
-      });
-    }
-
-    actions.push({
-      label: "Fuggi",
-      className: "btn-context-alt",
-      action: () => escapeRaider()
-    });
-
-    setContextActions(actions);
-  }
-
-  function companionFightRaider() {
-    clearContextActions();
-    const rawDmg = Math.floor(Math.random() * 20) + 12;
-    player.companion.hp -= rawDmg;
-    log(`${player.companion.name} si scaglia sul predone incassando il colpo (-${rawDmg} HP al compagno) e mettendolo in fuga!`, "success");
-    if (player.companion.hp <= 0) {
-      player.companion.hp = 0;
-      log(`Purtroppo ${player.companion.name} ha riportato ferite fatali ed è morto.`, "danger");
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function playerFightRaider() {
-    clearContextActions();
-    let rawDmg = Math.floor(Math.random() * 20) + 10;
-    let absorb = 0;
-
-    if (player.equippedWeapon) {
-      absorb = player.equippedWeapon.absorb || 0.4;
-      player.equippedWeapon.uses--;
-      if (player.equippedWeapon.uses <= 0) {
-        log(`La tua arma (${player.equippedWeapon.name}) si è spezzata durante lo scontro!`, "danger");
-        player.equippedWeapon = null;
-      }
-    }
-
-    const actualDmg = Math.max(1, Math.round(rawDmg * (1 - absorb)));
-    player.hp = Math.max(0, player.hp - actualDmg);
-    log(`Affronti il predone subendo ${actualDmg} danni prima di farlo scappare.`, "danger");
-
-    if (actualDmg < 10) {
-      log("Hai dominato il combattimento: il predone fa cadere 2 oggetti dal suo carico!", "success");
-      giveRaiderLoot(2);
-    } else if (actualDmg < 20) {
-      log("Nello scontro il predone perde un oggetto prima di dileguarsi.", "success");
-      giveRaiderLoot(1);
-    }
-
-    checkDeath();
-    saveGame();
-    updateUI();
-  }
-
-  function giveRaiderLoot(count) {
-    const table = [
-      { id: "scrap", name: "Rottami metallici", type: "material", p1: 1 },
-      { id: "canned_food", name: "Cibo in scatola", type: "food", p1: 35, p2: 1 },
-      { id: "duct_tape", name: "Nastro adesivo", type: "material", p1: 1 },
-      { id: "cloth", name: "Tessuto", type: "material", p1: 1 },
-      { id: "medkit", name: "Bende e disinfettante", type: "cure", p1: 30, p2: 1 }
-    ];
-    for (let i = 0; i < count; i++) {
-      const pick = table[Math.floor(Math.random() * table.length)];
-      if (addItem(pick.id, pick.name, pick.type, pick.p1, pick.p2)) {
-        log(`Raccogli da terra: ${pick.name}.`, "success");
-      } else {
-        log(`C'era ${pick.name} a terra ma il tuo zaino è pieno!`, "idle");
-      }
-    }
-  }
-
-  function giveFoodToRaider() {
-    clearContextActions();
-    const item = player.inventory.find(i => i.id === "canned_food" || i.type === "perishable_food");
-    if (item) {
-      removeItem(item.id, 1);
-      log(`Consegni 1x ${item.name} al predone, che si accontenta e ti lascia passare.`, "idle");
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function escapeRaider() {
-    clearContextActions();
-    player.energy = Math.max(0, player.energy - 20);
-    player.maxEnergy = Math.max(0, player.maxEnergy - 10);
-    player.thirst = Math.max(0, player.thirst - 10);
-    player.food = Math.max(0, player.food - 10);
-    player.hp = Math.max(0, player.hp - 5);
-    enforceEnergyCaps();
-    log("Fuggi disperatamente dal predone consumando grandi energie e subendo escoriazioni (-5 HP).", "danger");
-    checkDeath();
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     INCONTRO ANIMALE SELVATICO
-     ========================================================================= */
-  function handleAnimalEncounter() {
-    if (Math.random() < 0.5) {
-      log("Un lupo rabbioso ti ringhia contro pronto ad azzannarti!", "danger");
-      renderAnimalEncounter();
-    } else {
-      log("Un daino selvatico si abbevera in lontananza e si allontana con grazia.", "idle");
-    }
-  }
-
-  function renderAnimalEncounter() {
-    const actions = [];
-    if (player.companion && player.companion.hp > 0) {
-      actions.push({
-        label: `Aiuto (${player.companion.name})`,
-        className: "btn-context-alt",
-        action: () => companionFightAnimal()
-      });
-    }
-    actions.push({
-      label: "Combatti",
-      className: "btn-context-alt",
-      action: () => playerFightAnimal()
-    });
-
-    const hasRawMeat = player.inventory.some(i => i.id === "raw_meat");
-    if (hasRawMeat) {
-      actions.push({
-        label: "Getta cibo fresco",
-        className: "btn-context-alt",
-        action: () => throwMeatToAnimal()
-      });
-    }
-
-    actions.push({
-      label: "Fuggi",
-      className: "btn-context-alt",
-      action: () => escapeAnimal()
-    });
-
-    setContextActions(actions);
-  }
-
-  function companionFightAnimal() {
-    clearContextActions();
-    const rawDmg = Math.floor(Math.random() * 15) + 8;
-    player.companion.hp -= rawDmg;
-    log(`${player.companion.name} intercetta la fiera difendendoti (-${rawDmg} HP al compagno) e la scaccia via!`, "success");
-    if (player.companion.hp <= 0) {
-      player.companion.hp = 0;
-      log(`${player.companion.name} è morto sul colpo.`, "danger");
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function playerFightAnimal() {
-    clearContextActions();
-    let rawDmg = Math.floor(Math.random() * 15) + 8;
-    let absorb = 0;
-
-    if (player.equippedWeapon) {
-      absorb = player.equippedWeapon.absorb || 0.4;
-      player.equippedWeapon.uses--;
-      if (player.equippedWeapon.uses <= 0) {
-        log(`La tua arma (${player.equippedWeapon.name}) si è distrutta!`, "danger");
-        player.equippedWeapon = null;
-      }
-    }
-
-    const actualDmg = Math.max(1, Math.round(rawDmg * (1 - absorb)));
-    player.hp = Math.max(0, player.hp - actualDmg);
-    log(`Combatti la fiera subendo ${actualDmg} ferite prima di metterla in fuga.`, "danger");
-    checkDeath();
-    saveGame();
-    updateUI();
-  }
-
-  function throwMeatToAnimal() {
-    clearContextActions();
-    removeItem("raw_meat", 1);
-    log("Lanci della carne cruda all'animale che si ferma a divorarla affamato.", "idle");
-
-    if (!player.companion && Math.random() < 0.08) {
-      const dogName = prompt("L'animale sembra docile e decide di seguirti! Come vuoi chiamarlo?", "Dogmeat") || "Dogmeat";
-      player.companion = { name: dogName, hp: 100 };
-      log(`Incredibile! ${dogName} è ora il tuo fedele compagno di viaggio!`, "success");
-    }
-    saveGame();
-    updateUI();
-  }
-
-  function escapeAnimal() {
-    clearContextActions();
-    player.energy = Math.max(0, player.energy - 15);
-    player.maxEnergy = Math.max(0, player.maxEnergy - 8);
-    player.thirst = Math.max(0, player.thirst - 5);
-    player.food = Math.max(0, player.food - 5);
-    player.hp = Math.max(0, player.hp - 3);
-    enforceEnergyCaps();
-    log("Scappi rapidamente seminando l'animale (-3 HP, spesa stamina).", "danger");
-    checkDeath();
-    saveGame();
-    updateUI();
-  }
-
-  function handleHazardEncounter() {
-    if (!player.sick && Math.random() < 0.5) {
-      player.sick = true;
-      log("Inali esalazioni tossiche tra i rottami: sei MALATO.", "danger");
-    } else {
-      player.hp = Math.max(0, player.hp - 8);
-      log("Cadi contro lamiere arrugginite e detriti taglienti (-8 HP).", "danger");
-    }
-  }
-
-  /* =========================================================================
-     MODALE SCAMBIO MERCI
-     ========================================================================= */
-  // Definizione scambi disponibili
-  const TRADE_DEFS = [
-    {
-      id: "trade_food_1",
-      title: "1 Cibo in scatola",
-      giveItem: { id: "scrap", name: "Rottami", qty: 2 },
-      capsCost: 10,
-      receiveItem: { id: "canned_food", name: "Cibo in scatola", type: "food", p1: 35, qty: 1 }
-    },
-    {
-      id: "trade_medkit_1",
-      title: "1 Bende e disinfettante (Opz A)",
-      giveItem: { id: "scrap", name: "Rottami", qty: 3 },
-      capsCost: 15,
-      receiveItem: { id: "medkit", name: "Bende e disinfettante", type: "cure", p1: 30, qty: 1 }
-    },
-    {
-      id: "trade_medkit_2",
-      title: "1 Bende e disinfettante (Opz B)",
-      giveItem: { id: "canned_food", name: "Cibo", qty: 2 },
-      capsCost: 15,
-      receiveItem: { id: "medkit", name: "Bende e disinfettante", type: "cure", p1: 30, qty: 1 }
-    },
-    {
-      id: "trade_bundle_1",
-      title: "1 Nastro + 1 Tessuto",
-      giveItem: { id: "scrap", name: "Rottami", qty: 1 },
-      capsCost: 8,
-      receiveItem: { bundle: true, items: [{ id: "duct_tape", name: "Nastro", type: "material", qty: 1 }, { id: "cloth", name: "Tessuto", type: "material", qty: 1 }] }
-    },
-    {
-      id: "trade_food_2",
-      title: "2 Cibo in scatola",
-      giveItem: { id: "medkit", name: "Bende/Disinf.", qty: 1 },
-      capsCost: 15,
-      receiveItem: { id: "canned_food", name: "Cibo in scatola", type: "food", p1: 35, qty: 2 }
-    }
-  ];
-
-  // Stato temporaneo della schermata di scambio
-  let tradeDraft = {};
-
-  function openTradeModal() {
-    tradeDraft = {};
-    TRADE_DEFS.forEach(t => {
-      tradeDraft[t.id] = { barterCount: 0, capsCount: 0 };
-    });
-    renderTradeModal();
-    document.getElementById("modal-trade").style.display = "flex";
-  }
-
-  function changeTradeCount(tradeId, mode, delta) {
-    const current = tradeDraft[tradeId][mode];
-    if (current + delta < 0) return;
-
-    // Test simulato per verificare se ci sono abbastanza risorse/tappi/spazio
-    tradeDraft[tradeId][mode] += delta;
-    const validation = evaluateTradeDraft();
-    if (!validation.valid && delta > 0) {
-      tradeDraft[tradeId][mode] -= delta; // Revert se supera i limiti
-    }
-    renderTradeModal();
-  }
-
-  function evaluateTradeDraft() {
-    let totalCapsNeeded = 0;
-    const itemsNeeded = {};
-    let spaceDelta = 0;
-
-    TRADE_DEFS.forEach(t => {
-      const state = tradeDraft[t.id];
-      const barterN = state.barterCount;
-      const capsN = state.capsCount;
-
-      if (capsN > 0) {
-        totalCapsNeeded += (t.capsCost * capsN);
-      }
-      if (barterN > 0) {
-        itemsNeeded[t.giveItem.id] = (itemsNeeded[t.giveItem.id] || 0) + (t.giveItem.qty * barterN);
-        spaceDelta -= (getItemWeight(t.giveItem.id) * t.giveItem.qty * barterN);
-      }
-
-      const totalReceives = barterN + capsN;
-      if (totalReceives > 0) {
-        if (t.receiveItem.bundle) {
-          t.receiveItem.items.forEach(bItem => {
-            spaceDelta += (getItemWeight(bItem.id) * bItem.qty * totalReceives);
-          });
-        } else {
-          spaceDelta += (getItemWeight(t.receiveItem.id) * t.receiveItem.qty * totalReceives);
-        }
-      }
-    });
-
-    let hasEnoughItems = true;
-    for (const id in itemsNeeded) {
-      const pItem = player.inventory.find(i => i.id === id);
-      const owned = pItem ? pItem.qty : 0;
-      if (owned < itemsNeeded[id]) {
-        hasEnoughItems = false;
-        break;
-      }
-    }
-
-    const hasEnoughCaps = (player.caps >= totalCapsNeeded);
-    const finalSlots = Math.round((getTotalSlotsUsed() + spaceDelta) * 10) / 10;
-    const hasEnoughSlots = finalSlots <= player.maxSlots + 0.001;
-    const hasAnySelection = Object.values(tradeDraft).some(v => v.barterCount > 0 || v.capsCount > 0);
-
-    return {
-      valid: hasEnoughItems && hasEnoughCaps && hasEnoughSlots,
-      hasAnySelection,
-      totalCapsNeeded,
-      finalSlots,
-      hasEnoughSlots,
-      hasEnoughCaps,
-      hasEnoughItems
-    };
-  }
-
-  function renderTradeModal() {
-    const container = document.getElementById("trade-items-container");
-    container.innerHTML = "";
-
-    TRADE_DEFS.forEach(t => {
-      const draft = tradeDraft[t.id];
-      const card = document.createElement("div");
-      card.className = "trade-row-card";
-
-      card.innerHTML = `
-        <div class="trade-row-title">Ottieni: ${t.title}</div>
-        <div class="trade-row-selectors">
-          <!-- Scelta Baratto -->
-          <div class="trade-opt-box">
-            <span>Baratta (${t.giveItem.qty}x ${t.giveItem.name})</span>
-            <div class="trade-counter">
-              <button class="btn-counter" onclick="changeTradeCount('${t.id}', 'barterCount', -1)">-</button>
-              <span style="font-weight:bold;">${draft.barterCount}</span>
-              <button class="btn-counter" onclick="changeTradeCount('${t.id}', 'barterCount', 1)">+</button>
-            </div>
-          </div>
-          <!-- Scelta Tappi -->
-          <div class="trade-opt-box">
-            <span style="color:#f1c40f;">Compra (${t.capsCost} tp)</span>
-            <div class="trade-counter">
-              <button class="btn-counter" onclick="changeTradeCount('${t.id}', 'capsCount', -1)">-</button>
-              <span style="font-weight:bold;">${draft.capsCount}</span>
-              <button class="btn-counter" onclick="changeTradeCount('${t.id}', 'capsCount', 1)">+</button>
-            </div>
-          </div>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-
-    const evalRes = evaluateTradeDraft();
-    document.getElementById("trade-summary-caps").textContent = `${evalRes.totalCapsNeeded} tp`;
-    document.getElementById("trade-player-caps").textContent = `${player.caps} tp`;
-    document.getElementById("trade-summary-slots").textContent = `${Math.max(0, evalRes.finalSlots)} / ${player.maxSlots}`;
-
-    const warnBox = document.getElementById("trade-missing-warn");
-    if (!evalRes.valid && evalRes.hasAnySelection) {
-      warnBox.style.display = "block";
-    } else {
-      warnBox.style.display = "none";
-    }
-
-    document.getElementById("btn-confirm-trade").disabled = !evalRes.valid || !evalRes.hasAnySelection;
-  }
-
-  function executeBatchTrade() {
-    const evalRes = evaluateTradeDraft();
-    if (!evalRes.valid || !evalRes.hasAnySelection) return;
-
-    // Consuma tappi
-    player.caps -= evalRes.totalCapsNeeded;
-
-    // Esegui scambi
-    TRADE_DEFS.forEach(t => {
-      const draft = tradeDraft[t.id];
-      if (draft.barterCount > 0) {
-        removeItem(t.giveItem.id, t.giveItem.qty * draft.barterCount);
-      }
-      const totalUnits = draft.barterCount + draft.capsCount;
-      if (totalUnits > 0) {
-        if (t.receiveItem.bundle) {
-          t.receiveItem.items.forEach(bItem => {
-            addItem(bItem.id, bItem.name, bItem.type, bItem.qty * totalUnits);
-          });
-        } else {
-          addItem(t.receiveItem.id, t.receiveItem.name, t.receiveItem.type, t.receiveItem.p1, t.receiveItem.qty * totalUnits);
-        }
-      }
-    });
-
-    log(`Scambio completato con successo col viandante!`, "success");
-    document.getElementById("modal-trade").style.display = "none";
-    clearContextActions();
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     MODALE CASSA DEI VIANDANTI (DEPOSITO)
-     ========================================================================= */
-  let tempBackpack = [];
-  let tempChest = [];
-  let movedToChestCount = 0;
-  let movedToBackpackCount = 0;
-
-  function openStorageModal() {
-    tempBackpack = JSON.parse(JSON.stringify(player.inventory));
-    tempChest = JSON.parse(JSON.stringify(viandantiChest));
-    movedToChestCount = 0;
-    movedToBackpackCount = 0;
-    renderStorageModal();
-    document.getElementById("modal-storage").style.display = "flex";
-  }
-
-  function moveItemToChest(id) {
-    const item = tempBackpack.find(i => i.id === id);
-    if (!item || item.qty <= 0) return;
-
-    removeItem(id, 1, tempBackpack);
-    addItem(item.id, item.name, item.type, item.val || 1, 1, tempChest, 9999);
-    movedToChestCount++;
-    renderStorageModal();
-  }
-
-  function moveItemToBackpack(id) {
-    const item = tempChest.find(i => i.id === id);
-    if (!item || item.qty <= 0) return;
-
-    // Controllo capienza teorica nello zaino
-    if (getTotalSlotsUsed(tempBackpack) + getItemWeight(id) > player.maxSlots + 0.001) {
-      return;
-    }
-
-    removeItem(id, 1, tempChest);
-    addItem(item.id, item.name, item.type, item.val || 1, 1, tempBackpack, player.maxSlots);
-    movedToBackpackCount++;
-    renderStorageModal();
-  }
-
-  function renderStorageModal() {
-    const bList = document.getElementById("storage-backpack-list");
-    const cList = document.getElementById("storage-box-list");
-    bList.innerHTML = "";
-    cList.innerHTML = "";
-
-    // Rendering zaino provvisorio
-    if (tempBackpack.length === 0) {
-      bList.innerHTML = `<span style="font-size:0.7rem; color:#666; text-align:center;">Vuoto</span>`;
-    } else {
-      tempBackpack.forEach(i => {
-        const row = document.createElement("div");
-        row.className = "storage-item-row";
-        row.innerHTML = `
-          <span>${i.name} x${i.qty}</span>
-          <button onclick="moveItemToChest('${i.id}')" title="Deposita nella cassa">➔</button>
-        `;
-        bList.appendChild(row);
-      });
-    }
-
-    // Rendering cassa comune provvisoria
-    if (tempChest.length === 0) {
-      cList.innerHTML = `<span style="font-size:0.7rem; color:#666; text-align:center;">Cassa vuota</span>`;
-    } else {
-      tempChest.forEach(i => {
-        const row = document.createElement("div");
-        row.className = "storage-item-row";
-        row.innerHTML = `
-          <button onclick="moveItemToBackpack('${i.id}')" title="Riprendi nello zaino">⬅</button>
-          <span>${i.name} x${i.qty}</span>
-        `;
-        cList.appendChild(row);
-      });
-    }
-
-    // Calcolo costo del servizio (5 tp, 10 tp o 0 tp)
-    let fee = 0;
-    if (movedToChestCount > 0 && movedToBackpackCount > 0) {
-      fee = 10;
-    } else if (movedToChestCount > 0 || movedToBackpackCount > 0) {
-      fee = 5;
-    }
-
-    const slotsUsed = getTotalSlotsUsed(tempBackpack);
-    document.getElementById("storage-fee-label").textContent = `${fee} tp`;
-    document.getElementById("storage-player-caps").textContent = `${player.caps} tp`;
-    document.getElementById("storage-player-slots").textContent = `${slotsUsed} / ${player.maxSlots}`;
-
-    const btnConfirm = document.getElementById("btn-confirm-storage");
-    const hasEnoughCaps = (player.caps >= fee);
-    const hasSpace = (slotsUsed <= player.maxSlots + 0.001);
-    const hasAnyMovement = (movedToChestCount > 0 || movedToBackpackCount > 0);
-
-    btnConfirm.disabled = !hasAnyMovement || !hasEnoughCaps || !hasSpace;
-  }
-
-  function confirmStorageTransaction() {
-    let fee = 0;
-    if (movedToChestCount > 0 && movedToBackpackCount > 0) {
-      fee = 10;
-    } else if (movedToChestCount > 0 || movedToBackpackCount > 0) {
-      fee = 5;
-    }
-
-    if (player.caps < fee) return;
-
-    player.caps -= fee;
-    player.inventory = JSON.parse(JSON.stringify(tempBackpack));
-    viandantiChest = JSON.parse(JSON.stringify(tempChest));
-
-    saveViandantiChest();
-    saveGame();
-    updateUI();
-
-    log(`Operazione cassa completata: pagati ${fee} Tappi (tp) per il servizio.`, "success");
-    document.getElementById("modal-storage").style.display = "none";
-    clearContextActions();
-  }
-
-  /* =========================================================================
-     CRAFTING & FABBRICA
-     ========================================================================= */
-  const CRAFT_RECIPES = [
-    {
-      id: "craft_water",
-      name: "Filtra e bolli acqua",
-      desc: "Scalda 0.25L di acqua sporca e la rende potabile.",
-      req: "0.25L acqua raccolta",
-      canCraft: () => player.dirtyWaterLiters >= 0.25 && player.cleanWaterLiters < 1.0,
-      craft: () => {
-        const transfer = Math.min(0.25, 1.0 - player.cleanWaterLiters);
-        player.dirtyWaterLiters = Math.max(0, Math.round((player.dirtyWaterLiters - transfer) * 100) / 100);
-        player.cleanWaterLiters = Math.min(1.0, Math.round((player.cleanWaterLiters + transfer) * 100) / 100);
-        log(`Hai bollito e versato ${transfer}L di acqua potabile nella borraccia.`, "success");
-      }
-    },
-    {
-      id: "craft_bandage",
-      name: "Bende rudimentali",
-      desc: "Cura parziale (+15 HP, non guarisce malattie).",
-      req: "1x Nastro + 2x Tessuto",
-      canCraft: () => getInvQty("duct_tape") >= 1 && getInvQty("cloth") >= 2,
-      craft: () => {
-        removeItem("duct_tape", 1);
-        removeItem("cloth", 2);
-        addItem("rudimentary_bandage", "Bende rudimentali", "cure_minor", 15, 1);
-        log("Hai fabbricato Bende rudimentali.", "success");
-      }
-    },
-    {
-      id: "craft_bag_1",
-      name: "Potenz. Zaino I",
-      desc: "Aumenta capienza da 10 a 14 slot.",
-      req: "2x Nastro + 5x Tessuto",
-      canCraft: () => player.bagUpgradeLevel === 0 && getInvQty("duct_tape") >= 2 && getInvQty("cloth") >= 5,
-      craft: () => {
-        removeItem("duct_tape", 2);
-        removeItem("cloth", 5);
-        player.maxSlots = 14;
-        player.bagUpgradeLevel = 1;
-        log("Hai potenziato lo zaino: ora ha 14 slot!", "success");
-      }
-    },
-    {
-      id: "craft_bag_2",
-      name: "Potenz. Zaino II",
-      desc: "Aumenta capienza da 14 a 18 slot.",
-      req: "4x Nastro + 8x Tessuto",
-      canCraft: () => player.bagUpgradeLevel === 1 && getInvQty("duct_tape") >= 4 && getInvQty("cloth") >= 8,
-      craft: () => {
-        removeItem("duct_tape", 4);
-        removeItem("cloth", 8);
-        player.maxSlots = 18;
-        player.bagUpgradeLevel = 2;
-        log("Hai potenziato lo zaino al massimo: 18 slot totali!", "success");
-      }
-    },
-    {
-      id: "craft_spiked_club",
-      name: "Bastone chiodato",
-      desc: "Arma (50% assorbimento danno, 4 utilizzi).",
-      req: "2x Rottami + 1x Nastro",
-      canCraft: () => getInvQty("scrap") >= 2 && getInvQty("duct_tape") >= 1,
-      craft: () => {
-        removeItem("scrap", 2);
-        removeItem("duct_tape", 1);
-        player.equippedWeapon = { name: "Bastone chiodato", absorb: 0.50, uses: 4 };
-        log("Hai costruito ed equipaggiato un Bastone chiodato.", "success");
-      }
-    },
-    {
-      id: "craft_knife",
-      name: "Lama rinforzata",
-      desc: "Arma (65% assorbimento danno, 6 utilizzi).",
-      req: "3x Rottami + 1x Nastro",
-      canCraft: () => getInvQty("scrap") >= 3 && getInvQty("duct_tape") >= 1,
-      craft: () => {
-        removeItem("scrap", 3);
-        removeItem("duct_tape", 1);
-        player.equippedWeapon = { name: "Lama rinforzata", absorb: 0.65, uses: 6 };
-        log("Hai costruito ed equipaggiato una Lama rinforzata.", "success");
-      }
-    },
-    {
-      id: "craft_crowbar",
-      name: "Piede di porco",
-      desc: "Arma (80% assorbimento danno, 6 utilizzi).",
-      req: "3x Rottami + 2x Nastro",
-      canCraft: () => getInvQty("scrap") >= 3 && getInvQty("duct_tape") >= 2,
-      craft: () => {
-        removeItem("scrap", 3);
-        removeItem("duct_tape", 2);
-        player.equippedWeapon = { name: "Piede di porco", absorb: 0.80, uses: 6 };
-        log("Hai costruito ed equipaggiato un Piede di porco.", "success");
-      }
-    }
-  ];
-
-  function getInvQty(id) {
-    const item = player.inventory.find(i => i.id === id);
-    return item ? item.qty : 0;
-  }
-
-  function renderCraftingModal() {
-    const list = document.getElementById("craft-recipes-list");
-    list.innerHTML = "";
-
-    CRAFT_RECIPES.forEach(r => {
-      if (r.id === "craft_bag_1" && player.bagUpgradeLevel >= 1) return;
-      if (r.id === "craft_bag_2" && (player.bagUpgradeLevel < 1 || player.bagUpgradeLevel >= 2)) return;
-
-      const card = document.createElement("div");
-      card.className = "trade-row-card";
-
-      const available = r.canCraft() && player.energy >= 3 && !player.isSleeping;
-
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong style="font-size:0.8rem; color:var(--text-main);">${r.name}</strong>
-          <span style="font-size:0.7rem; color:var(--accent);">${r.req}</span>
-        </div>
-        <div style="font-size:0.72rem; color:var(--text-muted);">${r.desc}</div>
-        <button class="btn-main btn-craft" style="font-size:0.75rem; padding:5px;" ${available ? "" : "disabled"} onclick="executeCraft('${r.id}')">Fabbrica (3 En, 6 min)</button>
-      `;
-      list.appendChild(card);
-    });
-  }
-
-  function executeCraft(recipeId) {
-    if (player.isSleeping || player.energy < 3) return;
-    const r = CRAFT_RECIPES.find(x => x.id === recipeId);
-    if (!r || !r.canCraft()) return;
-
-    player.energy = Math.max(0, player.energy - 3);
-    advanceTime(360);
-    r.craft();
-    renderCraftingModal();
-    saveGame();
-    updateUI();
-  }
-
-  /* =========================================================================
-     RENDERING INTERFACCIA
-     ========================================================================= */
-  function log(msg, type = "normal") {
-    const box = document.getElementById("log-container");
-    const entry = document.createElement("div");
-    entry.className = `log-entry ${type}`;
-    entry.textContent = msg;
-    box.appendChild(entry);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function setContextActions(actions) {
-    const box = document.getElementById("context-actions");
-    box.innerHTML = "";
-    if (!actions || actions.length === 0 || player.isSleeping) {
-      box.style.display = "none";
-      return;
-    }
-    actions.forEach(a => {
-      const btn = document.createElement("button");
-      btn.className = `btn-main ${a.className || ""}`;
-      btn.textContent = a.label;
-      btn.onclick = a.action;
-      box.appendChild(btn);
-    });
-    box.style.display = "flex";
-  }
-
-  function clearContextActions() {
-    setContextActions([]);
-  }
-
-  function updateUI() {
-    document.getElementById("val-time-elapsed").textContent = formatDuration(player.survivalSeconds || 0);
-    document.getElementById("val-caps").textContent = `${player.caps} tp`;
-
-    document.getElementById("bar-hp").style.width = `${(player.hp / player.maxHp) * 100}%`;
-    document.getElementById("val-hp").textContent = `${Math.round(player.hp)}/${player.maxHp}`;
-
-    document.getElementById("bar-food").style.width = `${(player.food / player.maxFood) * 100}%`;
-    document.getElementById("val-food").textContent = `${Math.round(player.food)}/${player.maxFood}`;
-
-    document.getElementById("bar-thirst").style.width = `${(player.thirst / player.maxThirst) * 100}%`;
-    document.getElementById("val-thirst").textContent = `${Math.round(player.thirst)}%`;
-
-    document.getElementById("bar-energy-max").style.width = `${player.maxEnergy}%`;
-    document.getElementById("bar-energy-cur").style.width = `${player.energy}%`;
-    document.getElementById("val-energy").textContent = `${Math.round(player.energy)}/${Math.round(player.maxEnergy)}`;
-
-    document.getElementById("val-km").textContent = player.km;
-
-    // Condizione
-    const condTag = document.getElementById("condition-tag");
-    condTag.textContent = player.sick ? "Malato" : "In salute";
-    condTag.className = player.sick ? "condition-tag sick" : "condition-tag";
-
-    document.getElementById("sleep-tag").style.display = player.isSleeping ? "inline-block" : "none";
-
-    // Compagno
-    const compBanner = document.getElementById("companion-banner");
-    if (player.companion && player.companion.hp > 0) {
-      compBanner.style.display = "flex";
-      document.getElementById("val-companion-name").textContent = player.companion.name;
-      document.getElementById("val-companion-hp").textContent = `${Math.round(player.companion.hp)}/100`;
-    } else {
-      compBanner.style.display = "none";
-    }
-
-    // Arma & Borracce
-    if (player.equippedWeapon) {
-      document.getElementById("val-weapon-name").textContent = player.equippedWeapon.name;
-      document.getElementById("val-weapon-durability").textContent = `Usi: ${player.equippedWeapon.uses}`;
-    } else {
-      document.getElementById("val-weapon-name").textContent = "Pugni";
-      document.getElementById("val-weapon-durability").textContent = "Usi: ∞";
-    }
-
-    document.getElementById("val-drink-water").textContent = `${player.cleanWaterLiters.toFixed(2)} L`;
-    document.getElementById("val-scavenge-water").textContent = `${player.dirtyWaterLiters.toFixed(2)} L`;
-
-    // Tasti fissa
-    const btnMove = document.getElementById("btn-move");
-    const btnSleep = document.getElementById("btn-sleep-toggle");
-    const btnSleepHour = document.getElementById("btn-sleep-hour");
-
-    if (player.isDead) {
-      btnMove.disabled = true;
-      btnSleep.disabled = true;
-      btnSleepHour.style.display = "none";
-      btnMove.textContent = "Deceduto";
-    } else if (player.isSleeping) {
-      btnMove.disabled = true;
-      btnSleep.textContent = "Svegliati";
-      btnSleepHour.style.display = "block";
-    } else {
-      btnMove.disabled = player.energy < 5;
-      btnSleep.textContent = "Dormi";
-      btnSleepHour.style.display = "none";
-    }
-
-    // Ordinamento ed Inventario
-    sortInventory();
-    const usedSlots = getTotalSlotsUsed();
-    document.getElementById("val-inventory-slots").textContent = `(${usedSlots} / ${player.maxSlots} Slot)`;
-
-    const invList = document.getElementById("inventory-list");
-    invList.innerHTML = "";
-
-    // Borraccia bevi
-    if (player.cleanWaterLiters >= 0.20 && player.thirst < 100 && !player.isSleeping) {
-      const wRow = document.createElement("div");
-      wRow.className = "inv-item";
-      wRow.innerHTML = `
-        <span>Acqua potabile pronta (${player.cleanWaterLiters.toFixed(2)} L)</span>
-        <div class="inv-item-actions">
-          <button onclick="drinkWater()">Bevi 0.2L</button>
-        </div>
-      `;
-      invList.appendChild(wRow);
-    }
-
-    if (player.inventory.length === 0 && player.cleanWaterLiters < 0.20) {
-      invList.innerHTML = `<span style="font-size:0.75rem; color:var(--text-muted); padding:4px;">Lo zaino è vuoto.</span>`;
-    } else {
-      player.inventory.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "inv-item";
-
-        const nameSpan = document.createElement("span");
-        let extraInfo = "";
-        if (item.type === "perishable_food") {
-          const hoursLeft = Math.max(0, Math.floor((item.spoilTimer || 0) / 3600));
-          extraInfo = ` (${hoursLeft}h)`;
-        }
-        nameSpan.textContent = `${item.name} x${item.qty}${extraInfo}`;
-        row.appendChild(nameSpan);
-
-        const actions = document.createElement("div");
-        actions.className = "inv-item-actions";
-
-        if (item.type === "food" || item.type === "perishable_food" || item.type === "cure" || item.type === "cure_minor") {
-          const btnUse = document.createElement("button");
-          btnUse.textContent = "Usa";
-          btnUse.onclick = () => useItem(item.id);
-          if (player.isSleeping || player.isDead) btnUse.disabled = true;
-          actions.appendChild(btnUse);
-        }
-
-        // Cura compagno
-        if (player.companion && player.companion.hp > 0 && player.companion.hp < 100) {
-          if (item.id === "rudimentary_bandage") {
-            const btnDog = document.createElement("button");
-            btnDog.textContent = `Cura ${player.companion.name}`;
-            btnDog.onclick = () => healCompanion("minor");
-            actions.appendChild(btnDog);
-          } else if (item.id === "medkit") {
-            const btnDog = document.createElement("button");
-            btnDog.textContent = `Cura ${player.companion.name}`;
-            btnDog.onclick = () => healCompanion("full");
-            actions.appendChild(btnDog);
-          }
-        }
-
-        // Tasto di cancellazione/decremento (x)
-        const btnDrop = document.createElement("button");
-        btnDrop.className = "btn-drop";
-        btnDrop.textContent = "✕";
-        btnDrop.title = "Getta 1 unità";
-        btnDrop.onclick = () => dropItemSingle(item.id);
-        actions.appendChild(btnDrop);
-
-        row.appendChild(actions);
-        invList.appendChild(row);
-      });
-    }
-  }
-
-  /* =========================================================================
-     GESTIONE MORTE & CLASSIFICA
-     ========================================================================= */
-  function recordDeathLeaderboard() {
-    let lb = [];
-    try {
-      const s = localStorage.getItem(LEADERBOARD_KEY);
-      if (s) lb = JSON.parse(s);
-    } catch (e) {}
-
-    const d = new Date().toLocaleDateString("it-IT", { day:"2-digit", month:"2-digit", year:"2-digit", hour:"2-digit", minute:"2-digit" });
-    lb.push({ duration: player.survivalSeconds || 0, km: player.km || 0, date: d });
-    lb.sort((a,b) => b.duration - a.duration);
-    lb = lb.slice(0, 10);
-    try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(lb)); } catch (e) {}
-  }
-
-  function checkDeath() {
-    if (player.hp <= 0 && !player.isDead) {
-      player.isDead = true;
-      log("SEI MORTO. Le tue spoglie rimangono tra la polvere.", "danger");
-      recordDeathLeaderboard();
-      clearContextActions();
-      saveGame();
-      updateUI();
-    }
-  }
-
-  function renderLeaderboard() {
-    let lb = [];
-    try {
-      const s = localStorage.getItem(LEADERBOARD_KEY);
-      if (s) lb = JSON.parse(s);
-    } catch (e) {}
-
-    const tbody = document.getElementById("leaderboard-body");
-    const empty = document.getElementById("leaderboard-empty");
-    tbody.innerHTML = "";
-
-    if (lb.length === 0) {
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      lb.forEach((r, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td style="padding:6px;">#${idx + 1}</td>
-          <td style="padding:6px;">${formatDuration(r.duration)}</td>
-          <td style="padding:6px;">${r.km} km</td>
-          <td style="padding:6px;">${r.date}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-  }
-
-  function resetGame() {
-    if (confirm("Vuoi azzerare la partita e ricominciare da capo? La classifica resterà salvata.")) {
-      isResetting = true;
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch (e) {}
-      window.location.href = window.location.pathname + "?reset=" + Date.now();
-    }
-  }
-
-  /* =========================================================================
-     LISTENERS ED EVENTI
+     LISTENERS
      ========================================================================= */
   document.getElementById("btn-move").addEventListener("click", move);
   document.getElementById("btn-sleep-toggle").addEventListener("click", toggleSleep);
   document.getElementById("btn-sleep-hour").addEventListener("click", sleepOneHour);
+  document.getElementById("btn-drink-water").addEventListener("click", drinkWater);
 
-  // Modale Opzioni & Reset
-  const mOpt = document.getElementById("modal-options");
-  const mLb = document.getElementById("modal-leaderboard");
-  document.getElementById("btn-options").onclick = () => { mOpt.style.display = "flex"; };
-  document.getElementById("btn-close-options").onclick = () => { mOpt.style.display = "none"; };
+  const modalOptions = document.getElementById("modal-options");
+  const modalLeaderboard = document.getElementById("modal-leaderboard");
+  const modalCrafting = document.getElementById("modal-crafting");
+  const modalTrade = document.getElementById("modal-trade");
+  const modalStorage = document.getElementById("modal-storage");
+
+  document.getElementById("btn-options").onclick = () => { modalOptions.style.display = "flex"; };
+  document.getElementById("btn-close-options").onclick = () => { modalOptions.style.display = "none"; };
   document.getElementById("btn-reset-game").onclick = resetGame;
+
+  document.getElementById("btn-toggle-sound").onclick = () => {
+    player.soundEnabled = !player.soundEnabled;
+    if (player.soundEnabled) playSound("loot");
+    saveGame();
+    updateUI();
+  };
+
+  document.getElementById("btn-open-crafting").onclick = () => {
+    if (player.isDead) return;
+    renderCraftingModal();
+    modalCrafting.style.display = "flex";
+  };
+  document.getElementById("btn-close-crafting").onclick = () => {
+    modalCrafting.style.display = "none";
+  };
+
+  // Finestra Scambio Merci
+  document.getElementById("btn-trade-cancel").onclick = () => {
+    modalTrade.style.display = "none";
+  };
+  document.getElementById("btn-trade-confirm").onclick = executeBatchTradeModal;
+
+  // Finestra Deposito Cassa
+  document.getElementById("btn-storage-cancel").onclick = () => {
+    modalStorage.style.display = "none";
+  };
+  document.getElementById("btn-storage-confirm").onclick = confirmStorageTransaction;
 
   document.getElementById("btn-open-leaderboard").onclick = () => {
     renderLeaderboard();
-    mOpt.style.display = "none";
-    mLb.style.display = "flex";
+    modalOptions.style.display = "none";
+    modalLeaderboard.style.display = "flex";
   };
   document.getElementById("btn-close-leaderboard").onclick = () => {
-    mLb.style.display = "none";
-    mOpt.style.display = "flex";
+    modalLeaderboard.style.display = "none";
+    modalOptions.style.display = "flex";
   };
 
-  // Fullscreen
-  document.getElementById("btn-fullscreen").onclick = () => {
+  const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
@@ -2259,27 +3123,8 @@
     }
   };
 
-  // Modale Fabbrica
-  const mCraft = document.getElementById("modal-craft");
-  document.getElementById("btn-open-craft").onclick = () => {
-    renderCraftingModal();
-    mCraft.style.display = "flex";
-  };
-  document.getElementById("btn-close-craft").onclick = () => { mCraft.style.display = "none"; };
+  document.getElementById("btn-fullscreen-header").onclick = toggleFullscreen;
 
-  // Modale Scambio Merci
-  document.getElementById("btn-cancel-trade").onclick = () => {
-    document.getElementById("modal-trade").style.display = "none";
-  };
-  document.getElementById("btn-confirm-trade").onclick = executeBatchTrade;
-
-  // Modale Cassa dei Viandanti
-  document.getElementById("btn-cancel-storage").onclick = () => {
-    document.getElementById("modal-storage").style.display = "none";
-  };
-  document.getElementById("btn-confirm-storage").onclick = confirmStorageTransaction;
-
-  // Inizializzazione
   loadGameAndSimulateOffline();
   updateUI();
 </script>
