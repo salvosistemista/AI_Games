@@ -3,10 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Labyrinthus 3D - Isometric Maze</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Canvas Confetti CDN -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     :root {
@@ -15,319 +13,236 @@
       --sal: env(safe-area-inset-left, 0px);
       --sar: env(safe-area-inset-right, 0px);
     }
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
-    }
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #030712;
-      color: #f3f4f6;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      background: #04080e;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-
-    .glass-bar {
-      background: rgba(15, 23, 42, 0.85);
+    .glass-panel {
+      background: rgba(13, 20, 36, 0.88);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.14);
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
     }
-
     .glass-btn {
-      background: rgba(30, 41, 59, 0.88);
+      background: rgba(26, 36, 56, 0.9);
+      backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.16);
-      transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
+      transition: transform 0.08s ease, background-color 0.08s ease;
       touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
-    .glass-btn:active, .glass-btn.active {
-      transform: scale(0.91);
+    .glass-btn:active {
+      transform: scale(0.92);
       background: rgba(99, 102, 241, 0.9);
-      border-color: rgba(165, 180, 252, 0.7);
-      box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
     }
-
-    /* D-PAD Isometrico Diamante calibrato per smartphone touch */
-    .iso-pad-btn {
+    .iso-dpad-btn {
       position: absolute;
-      width: 54px;
-      height: 54px;
+      width: 58px;
+      height: 58px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(30, 41, 59, 0.92);
+      background: rgba(22, 32, 50, 0.92);
       border: 1.5px solid rgba(255, 255, 255, 0.22);
-      border-radius: 16px;
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      border-radius: 18px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.55), inset 0 1px 1px rgba(255,255,255,0.25);
       touch-action: none;
-      transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: transform 0.06s ease, background-color 0.06s ease, border-color 0.06s ease;
     }
-    .iso-pad-btn:active, .iso-pad-btn.pressed {
+    .iso-dpad-btn:active, .iso-dpad-btn.active {
       transform: scale(0.90);
       background: rgba(79, 70, 229, 0.95);
-      border-color: rgba(251, 191, 36, 0.9);
-      box-shadow: 0 0 14px rgba(99, 102, 241, 0.8);
-    }
-
-    @keyframes keyGlow {
-      0%, 100% { filter: drop-shadow(0 0 4px #fbbf24); }
-      50% { filter: drop-shadow(0 0 12px #f59e0b); }
-    }
-    .key-pulse {
-      animation: keyGlow 2s infinite ease-in-out;
-    }
-
-    /* Suggerimenti tasti desktop in basso */
-    .desktop-key-hint {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(8px);
+      border-color: rgba(251, 191, 36, 0.8);
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.7);
     }
   </style>
 </head>
-<body class="relative w-full h-full flex flex-col justify-between overflow-hidden">
+<body class="relative w-full h-full flex flex-col justify-between text-white overflow-hidden select-none">
 
-  <!-- Top HUD Bar con layout ultra-compatto a prova di schermi stretti (360-390px) -->
-  <header class="w-full z-30 px-2 sm:px-4 pt-[calc(var(--sat)+4px)] pb-1 pointer-events-auto select-none">
-    <div class="w-full max-w-4xl mx-auto flex items-center justify-between gap-1 sm:gap-2">
-      
-      <!-- Blocco Sinistro: Livello, Nome Tema e Dimensioni con Troncatura Flessibile -->
-      <div class="glass-bar px-2 py-1 rounded-xl flex items-center gap-1.5 min-w-0 shrink">
-        <div id="hud-theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_#34d399]"></div>
-        <div class="flex flex-col min-w-0">
-          <div id="hud-theme-name" class="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 truncate leading-tight">Foresta</div>
-          <div class="text-[11px] sm:text-xs font-black text-slate-100 flex items-center gap-1 leading-none">
-            <span id="hud-level-tag">L.1/10</span>
-            <span id="hud-dim-tag" class="text-[9px] sm:text-[10px] text-amber-400 font-mono font-semibold truncate">(10x10)</span>
-          </div>
+  <!-- Header compatto anti-overflow -->
+  <header class="w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between pointer-events-auto gap-1">
+    <div class="glass-panel px-2 py-1 rounded-xl shadow-lg flex items-center gap-1.5 shrink-0 max-w-[125px]">
+      <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
+      <div class="flex flex-col min-w-0">
+        <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta</div>
+        <div class="text-[11px] font-black text-slate-100 flex items-center gap-1 leading-none">
+          <span id="level-text">L.1/10</span>
+          <span class="text-[9px] text-slate-400" id="grid-size">(10x10)</span>
         </div>
       </div>
+    </div>
 
-      <!-- Blocco Centrale: Statistiche compatte (Passi, Tempo, Chiave) -->
-      <div class="glass-bar px-2 py-1 rounded-xl flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
-        <div class="flex flex-col items-center min-w-[24px]">
-          <span class="text-[7px] sm:text-[8px] uppercase font-bold text-slate-400 leading-none">Passi</span>
-          <span id="hud-steps" class="font-bold text-amber-300 text-[11px] sm:text-xs font-mono leading-tight">0</span>
-        </div>
-        <div class="h-3.5 w-[1px] bg-slate-700"></div>
-        <div class="flex flex-col items-center min-w-[28px]">
-          <span class="text-[7px] sm:text-[8px] uppercase font-bold text-slate-400 leading-none">Tempo</span>
-          <span id="hud-time" class="font-bold text-cyan-300 text-[11px] sm:text-xs font-mono leading-tight">00:00</span>
-        </div>
-        <div class="h-3.5 w-[1px] bg-slate-700"></div>
-        <!-- Pill Chiave Dorata -->
-        <div id="hud-key-pill" class="flex items-center gap-1 px-1 py-0.5 rounded bg-slate-800/90 border border-slate-700">
-          <span id="hud-key-icon" class="text-[10px] sm:text-xs grayscale opacity-40 leading-none">🗝️</span>
-          <span id="hud-key-status" class="text-[9px] sm:text-[10px] font-black text-slate-400 leading-none">0/1</span>
-        </div>
+    <div class="glass-panel px-2 py-1 rounded-xl shadow-lg flex items-center gap-1.5 shrink-0">
+      <div class="flex flex-col items-center">
+        <span class="text-[7px] uppercase tracking-wider text-slate-400">Passi</span>
+        <span id="stat-steps" class="font-bold text-amber-400 text-[11px] leading-none">0</span>
       </div>
-
-      <!-- Blocco Destro: Azioni (Mappa, Audio, Riavvia, Fullscreen) - Garantito entro lo schermo -->
-      <div class="flex items-center gap-1 shrink-0">
-        <!-- Tasto Mappa (Hold per Radar) -->
-        <button id="btn-map" class="glass-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm text-amber-300 shadow" title="Mappa Esplorata (Tieni premuto o TAB)" aria-label="Mappa">
-          🗺️
-        </button>
-        <!-- Toggle Audio -->
-        <button id="btn-audio" class="glass-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-300 shadow" title="Audio On/Off" aria-label="Audio">
-          <svg id="icon-sound-on" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-          </svg>
-          <svg id="icon-sound-off" class="w-3.5 h-3.5 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-          </svg>
-        </button>
-        <!-- Riavvia Livello -->
-        <button id="btn-restart" class="glass-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-300 shadow" title="Riavvia Livello" aria-label="Riavvia">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
-        <!-- Fullscreen Compatto e Sicuro -->
-        <button id="btn-fullscreen" class="glass-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-300 shadow" title="Schermo Intero" aria-label="Schermo Intero">
-          <svg id="icon-fs-enter" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
-          <svg id="icon-fs-exit" class="w-3.5 h-3.5 hidden text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+      <div class="h-3.5 w-[1px] bg-slate-700"></div>
+      <div class="flex flex-col items-center min-w-[28px]">
+        <span class="text-[7px] uppercase tracking-wider text-slate-400">Tempo</span>
+        <span id="stat-time" class="font-bold text-cyan-400 text-[11px] leading-none">00:00</span>
       </div>
+      <div class="h-3.5 w-[1px] bg-slate-700"></div>
+      <div id="key-badge" class="flex items-center gap-0.5 px-1 py-0.5 rounded bg-slate-800 border border-slate-700">
+        <span id="key-badge-icon" class="text-[10px] grayscale opacity-40">🗝️</span>
+        <span id="key-badge-text" class="text-[9px] font-black text-slate-400 leading-none">0/1</span>
+      </div>
+    </div>
 
+    <div class="flex items-center gap-1 shrink-0">
+      <button id="btn-map" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center text-xs shadow" aria-label="Mappa">🗺️</button>
+      <button id="btn-audio" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Audio">
+        <svg id="icon-sound-on" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+        <svg id="icon-sound-off" class="w-3.5 h-3.5 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+      </button>
+      <button id="btn-restart" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Riavvia">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+      <button id="btn-fullscreen" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center" aria-label="Schermo Intero">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+      </button>
     </div>
   </header>
 
-  <!-- Contenitore Gioco Principale -->
-  <main id="game-canvas-container" class="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden">
+  <!-- Area Canvas Principale -->
+  <main id="game-container" class="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden">
     <canvas id="gameCanvas" class="block w-full h-full touch-none"></canvas>
 
-    <!-- Toast fluttuante notifiche in-game -->
-    <div id="game-toast" class="absolute top-16 sm:top-20 z-40 px-3.5 py-1.5 rounded-2xl glass-bar text-xs text-amber-200 border border-amber-400/40 shadow-2xl opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw]">
+    <!-- Toast fluttuante avvisi -->
+    <div id="game-toast" class="absolute top-16 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/40 shadow-xl opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw] text-center">
       <span id="toast-icon">🗝️</span>
       <span id="toast-msg">Trova prima la chiave dorata!</span>
     </div>
 
-    <!-- Overlay Mappa Isometrica Trasparente (Fog of War) -->
-    <div id="map-radar-overlay" class="absolute inset-0 z-30 pointer-events-none opacity-0 transition-opacity duration-200 flex items-center justify-center p-3">
-      <div id="map-frame" class="relative pointer-events-auto rounded-3xl border border-amber-400/35 bg-slate-950/80 backdrop-blur-md shadow-[0_0_35px_rgba(0,0,0,0.85)] flex flex-col items-center justify-between p-3.5 transition-all duration-200 w-[92vw] h-[62vh] sm:w-[500px] sm:h-[500px]">
-        <div class="w-full flex items-center justify-between pb-1.5 border-b border-slate-700/60 text-xs">
+    <!-- Overlay Mappa Radar Isometrica Trasparente (Fog of War) -->
+    <div id="map-overlay" class="absolute inset-0 z-40 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200">
+      <div id="map-backdrop" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm pointer-events-auto"></div>
+      <div class="relative z-10 bg-slate-950/85 backdrop-blur-md rounded-3xl p-4 flex flex-col items-center justify-between border border-amber-400/30 shadow-2xl w-[92vw] max-w-[480px] h-[68vh] max-h-[520px] pointer-events-auto">
+        <div class="w-full flex items-center justify-between pb-2 border-b border-slate-700/60">
           <div class="flex items-center gap-2">
-            <span class="text-amber-300 font-black tracking-wider flex items-center gap-1">
-              <span>🧭</span> <span>MAPPA ESPLORATA (ISOMETRICA)</span>
+            <span class="text-amber-400 font-bold text-xs flex items-center gap-1">
+              <span>🗺️</span> <span>MAPPA ESPLORATA (TAB)</span>
             </span>
-            <span id="map-explored-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-mono border border-slate-700">0%</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono" id="map-explored-pct">0%</span>
           </div>
-          <button id="btn-close-map-modal" class="text-slate-400 hover:text-white px-2 py-0.5 rounded-lg bg-slate-800/60 text-xs font-bold sm:hidden">✕</button>
+          <button id="btn-close-map" class="glass-btn px-2.5 py-1 rounded-lg text-slate-300 text-xs font-bold">Chiudi ✕</button>
         </div>
-        
-        <div class="relative w-full flex-1 overflow-hidden my-1 flex items-center justify-center">
-          <canvas id="radarCanvas" class="block w-full h-full"></canvas>
+        <div class="relative w-full flex-1 overflow-hidden my-2">
+          <canvas id="mapCanvas" class="block w-full h-full"></canvas>
         </div>
-
-        <div class="w-full flex items-center justify-around text-[10px] font-semibold text-slate-300 pt-1.5 border-t border-slate-800/80">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]"></span> Tu</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]"></span> Start</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]"></span> Portale</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span> Nebbia</span>
+        <div class="w-full flex items-center justify-around text-[10px] text-slate-300 pt-2 border-t border-slate-800">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Tu</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Inizio</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Uscita</span>
+          <span class="flex items-center gap-1"><span class="text-xs">🗝️</span> Chiave</span>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- Suggerimenti comandi tastiera Desktop (Mostrati SOLO su Desktop, nascosti su mobile) -->
-  <aside id="desktop-controls-hint" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden select-none transition-opacity duration-300">
-    <div class="desktop-key-hint px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2.5 text-[11px] text-slate-300">
-      <span class="flex items-center gap-1 font-mono font-bold text-amber-300">
-        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">W</kbd>
-        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">A</kbd>
-        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">S</kbd>
-        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">D</kbd>
-        <span class="text-slate-400 text-[10px] font-normal font-sans ml-0.5">o Frecce</span>
-      </span>
-      <span class="w-[1px] h-3 bg-slate-700"></span>
-      <span class="flex items-center gap-1 text-[10px] text-slate-300">
-        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-cyan-300">TAB</kbd>
-        <span class="text-slate-400">Mappa Radar</span>
-      </span>
-    </div>
-  </aside>
+  <!-- Suggerimenti Desktop -->
+  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700/60 pointer-events-none items-center gap-2">
+    <span>Comandi: <b class="text-amber-400">WASD</b> o <b class="text-amber-400">Frecce</b></span>
+    <span class="text-slate-500">•</span>
+    <span>Mappa: Tieni premuto <b class="text-cyan-400">TAB</b></span>
+  </div>
 
-  <!-- D-Pad Isometrico Diamante calibrato per smartphone touch:
-       - Riconoscimento Desktop vs Mobile: se si è su desktop, questo intero blocco <footer>
-         viene nascosto impostando display: none (classe hidden), lasciando lo schermo libero!
-       - Su Mobile Portrait rimane visibile ed ergonomico con zero latency e auto-repeat.
-  -->
-  <footer id="touch-controls-container" class="w-full z-30 pb-[calc(var(--sab)+10px)] flex flex-col items-center pointer-events-none select-none">
-    <div id="virtual-dpad" class="relative w-[210px] h-[210px] pointer-events-auto transition-opacity duration-200 opacity-95">
-      
-      <!-- NORD: In Alto a Destra a schermo (↗) -> dx = 0, dy = -1 -->
-      <button id="pad-nord" class="iso-pad-btn top-2 right-6" aria-label="Nord">
+  <!-- D-Pad Isometrico Mobile -->
+  <footer id="touch-controls" class="w-full z-30 pb-[calc(var(--sab)+12px)] flex flex-col items-center pointer-events-none select-none">
+    <div class="relative w-[210px] h-[210px] pointer-events-auto">
+      <button id="pad-n" class="iso-dpad-btn top-2 right-4" aria-label="Nord">
         <span class="text-amber-300 text-lg font-black leading-none">↗</span>
-        <span class="text-[8px] font-bold text-slate-200 mt-0.5">NORD (-Y)</span>
+        <span class="text-[9px] text-slate-200 font-bold mt-0.5">NORD</span>
       </button>
-
-      <!-- EST: In Basso a Destra a schermo (↘) -> dx = 1, dy = 0 -->
-      <button id="pad-est" class="iso-pad-btn bottom-2 right-6" aria-label="Est">
-        <span class="text-[8px] font-bold text-slate-200 mb-0.5">EST (+X)</span>
-        <span class="text-amber-300 text-lg font-black leading-none">↘</span>
+      <button id="pad-w" class="iso-dpad-btn top-2 left-4" aria-label="Ovest">
+        <span class="text-amber-300 text-lg font-black leading-none">↖</span>
+        <span class="text-[9px] text-slate-200 font-bold mt-0.5">OVEST</span>
       </button>
-
-      <!-- SUD: In Basso a Sinistra a schermo (↙) -> dx = 0, dy = 1 -->
-      <button id="pad-sud" class="iso-pad-btn bottom-2 left-6" aria-label="Sud">
-        <span class="text-[8px] font-bold text-slate-200 mb-0.5">SUD (+Y)</span>
+      <button id="pad-s" class="iso-dpad-btn bottom-2 left-4" aria-label="Sud">
+        <span class="text-[9px] text-slate-200 font-bold mb-0.5">SUD</span>
         <span class="text-amber-300 text-lg font-black leading-none">↙</span>
       </button>
-
-      <!-- OVEST: In Alto a Sinistra a schermo (↖) -> dx = -1, dy = 0 -->
-      <button id="pad-ovest" class="iso-pad-btn top-2 left-6" aria-label="Ovest">
-        <span class="text-amber-300 text-lg font-black leading-none">↖</span>
-        <span class="text-[8px] font-bold text-slate-200 mt-0.5">OVEST (-X)</span>
+      <button id="pad-e" class="iso-dpad-btn bottom-2 right-4" aria-label="Est">
+        <span class="text-[9px] text-slate-200 font-bold mb-0.5">EST</span>
+        <span class="text-amber-300 text-lg font-black leading-none">↘</span>
       </button>
-
-      <!-- Centro Touchpad decorativo con indicatore swipe -->
-      <div class="absolute inset-[64px] rounded-2xl glass-bar flex flex-col items-center justify-center pointer-events-none opacity-65 border border-slate-600/40">
-        <span class="text-[9px] font-black text-amber-300 tracking-tighter leading-none">SWIPE</span>
-        <span class="text-[7px] text-slate-400 font-semibold mt-0.5">D-PAD</span>
+      <div class="absolute inset-[66px] rounded-full glass-panel flex flex-col items-center justify-center pointer-events-none opacity-50 border border-slate-600/40">
+        <span class="text-[9px] text-amber-300 font-bold tracking-tight">SWIPE</span>
+        <span class="text-[7px] text-slate-400">D-PAD</span>
       </div>
     </div>
   </footer>
 
-  <!-- Modal Fine Livello -->
-  <div id="modal-level-win" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden pointer-events-auto p-4">
-    <div class="glass-bar w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/40 shadow-2xl flex flex-col items-center">
-      <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-3xl mb-2 shadow-[0_0_20px_rgba(251,191,36,0.3)]">✨</div>
-      <h3 class="text-lg font-black text-white">Labirinto Superato!</h3>
-      <p class="text-xs text-slate-300 mt-1 mb-3" id="modal-level-subtitle">Chiave raccolta e portale attraversato!</p>
+  <!-- Modal Livello Completato -->
+  <div id="modal-level-cleared" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden pointer-events-auto p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/40 shadow-2xl flex flex-col items-center">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl mb-2.5">✨</div>
+      <h3 class="text-lg font-black text-white">Livello Completato!</h3>
+      <p class="text-xs text-slate-300 mt-0.5 mb-3">Chiave raccolta e portale sbloccato.</p>
       
-      <div class="w-full bg-slate-900/80 rounded-2xl p-2.5 mb-4 text-xs text-slate-300 flex justify-around border border-slate-700/60">
+      <div class="w-full bg-slate-900/80 rounded-2xl p-2.5 mb-4 text-xs text-slate-300 flex justify-around border border-slate-700/50">
         <div>
-          <div class="text-[9px] text-slate-400 uppercase font-bold">Passi</div>
-          <div class="text-sm font-bold text-amber-400 font-mono" id="modal-step-val">0</div>
+          <div class="text-[9px] text-slate-400 uppercase">Passi</div>
+          <div class="text-sm font-bold text-amber-400" id="modal-step-count">0</div>
         </div>
         <div class="w-[1px] bg-slate-700"></div>
         <div>
-          <div class="text-[9px] text-slate-400 uppercase font-bold">Tempo</div>
-          <div class="text-sm font-bold text-cyan-400 font-mono" id="modal-time-val">00:00</div>
+          <div class="text-[9px] text-slate-400 uppercase">Tempo</div>
+          <div class="text-sm font-bold text-cyan-400" id="modal-time-count">00:00</div>
         </div>
       </div>
 
-      <button id="btn-next-level" class="w-full min-h-[46px] bg-gradient-to-r from-emerald-500 to-teal-500 active:scale-95 text-white font-black rounded-xl shadow-xl transition-transform text-xs flex items-center justify-center gap-2">
+      <button id="btn-next-level" class="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 active:scale-95 text-white font-black rounded-xl shadow-lg transition-transform text-xs flex items-center justify-center gap-2">
         <span>Prossimo Livello</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
       </button>
     </div>
   </div>
 
-  <!-- Modal Vittoria Finale Campagna (Livello 10) -->
-  <div id="modal-game-win" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden pointer-events-auto p-4">
-    <div class="glass-bar w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/50 shadow-2xl flex flex-col items-center">
-      <div class="text-5xl mb-2 animate-bounce">👑</div>
+  <!-- Modal Vittoria Finale -->
+  <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden pointer-events-auto p-4">
+    <div class="glass-panel w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/40 shadow-2xl flex flex-col items-center">
+      <div class="text-4xl mb-2 animate-bounce">🏆</div>
       <h2 class="text-xl font-black text-amber-300">VITTORIA TOTALE!</h2>
-      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 10 regni isometrici!</p>
+      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 10 labirinti procedurali!</p>
 
-      <div class="w-full bg-slate-900/90 rounded-2xl p-3 mb-5 border border-slate-700/70 flex flex-col gap-2">
+      <div class="w-full bg-slate-900/90 rounded-2xl p-3 mb-5 border border-slate-700/60 flex flex-col gap-2">
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Passi Complessivi:</span>
-          <span id="final-total-steps" class="font-bold text-amber-400 text-sm font-mono">0</span>
+          <span class="text-slate-400">Passi totali:</span>
+          <span id="victory-total-steps" class="font-bold text-amber-400">0</span>
         </div>
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Tempo Totale:</span>
-          <span id="final-total-time" class="font-bold text-cyan-400 text-sm font-mono">00:00</span>
-        </div>
-        <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Labirinti Conquistati:</span>
-          <span class="font-bold text-emerald-400 text-sm font-mono">10 / 10</span>
+          <span class="text-slate-400">Tempo totale:</span>
+          <span id="victory-total-time" class="font-bold text-cyan-400">00:00</span>
         </div>
       </div>
 
-      <button id="btn-restart-game" class="w-full min-h-[48px] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 active:scale-95 text-slate-950 font-black rounded-xl shadow-xl text-xs flex items-center justify-center gap-2">
+      <button id="btn-new-game-win" class="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 active:scale-95 text-slate-950 font-black rounded-xl shadow-xl text-xs flex items-center justify-center">
         Nuova Partita
       </button>
     </div>
   </div>
 
   <script>
-    class AudioSynthesizer {
-      constructor() {
-        this.ctx = null;
-        this.muted = false;
-      }
+    class SoundEngine {
+      constructor() { this.ctx = null; this.muted = false; }
       init() {
         if (!this.ctx) {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) this.ctx = new AudioCtx();
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
         }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
-        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       }
       playTone(freq, type, duration, vol = 0.08) {
         if (this.muted) return;
@@ -346,59 +261,56 @@
           osc.stop(this.ctx.currentTime + duration);
         } catch (e) {}
       }
-      playStep() { this.playTone(210 + Math.random() * 25, 'triangle', 0.05, 0.06); }
-      playBump() { this.playTone(80, 'sawtooth', 0.08, 0.12); }
+      playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.06); }
+      playBump() { this.playTone(60, 'sawtooth', 0.12, 0.12); }
       playKeyPickup() {
-        [587.33, 739.99, 880.00, 1174.66].forEach((f, idx) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), idx * 60);
+        [587, 740, 880, 1174].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), i * 60);
         });
       }
-      playLockedGate() {
-        this.playTone(130, 'square', 0.07, 0.14);
-        setTimeout(() => this.playTone(90, 'square', 0.09, 0.14), 70);
+      playLockedDoor() {
+        this.playTone(130, 'sawtooth', 0.07, 0.14);
+        setTimeout(() => this.playTone(85, 'sawtooth', 0.09, 0.14), 60);
       }
       playLevelWin() {
-        [392, 523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.26, 0.15), i * 75);
+        [392, 523, 659, 784].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.15), i * 80);
         });
       }
-      playGameVictory() {
-        [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.18), i * 95);
+      playGameWin() {
+        [440, 554, 659, 880, 1108].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.18), i * 100);
         });
       }
     }
-  </script>
 
-  <script>
     const LEVEL_THEMES = [
-      { id: 1, name: "Foresta", accent: "#34d399", bgTop: "#03140e", bgBottom: "#0b2b1e", floorTop: "#1e4d3b", floorStroke: "#16382b", wallTop: "#48bb78", wallLeft: "#2f855a", wallRight: "#22543d", portal: "#5eead4", playerBody: "#facc15", playerAcc: "#ea580c" },
-      { id: 2, name: "Neon", accent: "#06b6d4", bgTop: "#051622", bgBottom: "#0a283e", floorTop: "#0e4454", floorStroke: "#082f3b", wallTop: "#38bdf8", wallLeft: "#0284c7", wallRight: "#0369a1", portal: "#a855f7", playerBody: "#f43f5e", playerAcc: "#fb7185" },
-      { id: 3, name: "Oro Solare", accent: "#fbbf24", bgTop: "#201602", bgBottom: "#3d2b07", floorTop: "#92400e", floorStroke: "#78350f", wallTop: "#fcd34d", wallLeft: "#d97706", wallRight: "#b45309", portal: "#38bdf8", playerBody: "#38bdf8", playerAcc: "#4f46e5" },
-      { id: 4, name: "Ametista", accent: "#c084fc", bgTop: "#170a24", bgBottom: "#2c1245", floorTop: "#581c87", floorStroke: "#3b0764", wallTop: "#e879f9", wallLeft: "#a855f7", wallRight: "#7e22ce", portal: "#4ade80", playerBody: "#fde047", playerAcc: "#f97316" },
-      { id: 5, name: "Magma", accent: "#f87171", bgTop: "#210707", bgBottom: "#400f0f", floorTop: "#881337", floorStroke: "#5b0d23", wallTop: "#fb7185", wallLeft: "#e11d48", wallRight: "#be123c", portal: "#38bdf8", playerBody: "#34d399", playerAcc: "#059669" },
-      { id: 6, name: "Ghiaccio", accent: "#38bdf8", bgTop: "#061828", bgBottom: "#0f3654", floorTop: "#0369a1", floorStroke: "#075985", wallTop: "#e0f2fe", wallLeft: "#7dd3fc", wallRight: "#38bdf8", portal: "#f472b6", playerBody: "#fb923c", playerAcc: "#dc2626" },
-      { id: 7, name: "Dune", accent: "#f59e0b", bgTop: "#241302", bgBottom: "#472403", floorTop: "#b45309", floorStroke: "#78350f", wallTop: "#fde68a", wallLeft: "#f59e0b", wallRight: "#b45309", portal: "#06b6d4", playerBody: "#ec4899", playerAcc: "#9333ea" },
-      { id: 8, name: "Ossidiana", accent: "#a78bfa", bgTop: "#0e0d16", bgBottom: "#1b192c", floorTop: "#312e81", floorStroke: "#1e1b4b", wallTop: "#c4b5fd", wallLeft: "#6366f1", wallRight: "#4338ca", portal: "#2dd4bf", playerBody: "#34d399", playerAcc: "#fbbf24" },
-      { id: 9, name: "Corallo", accent: "#fb7185", bgTop: "#180814", bgBottom: "#34102c", floorTop: "#9d174d", floorStroke: "#700f36", wallTop: "#fda4af", wallLeft: "#f43f5e", wallRight: "#be123c", portal: "#a3e635", playerBody: "#38bdf8", playerAcc: "#a855f7" },
-      { id: 10, name: "Astrale", accent: "#e879f9", bgTop: "#0b0314", bgBottom: "#1a082c", floorTop: "#4a044e", floorStroke: "#300234", wallTop: "#f0abfc", wallLeft: "#c026d3", wallRight: "#86198f", portal: "#fde047", playerBody: "#4ade80", playerAcc: "#38bdf8" }
+      { name: "Foresta Antica", accent: "#34d399", bgTop: "#051610", bgBottom: "#0b2b20", floorTop: "#2d6a4f", floorEdge: "#1b4332", wallTop: "#74c69d", wallLeft: "#40916c", wallRight: "#2d6a4f", portal: "#5eead4", playerBody: "#fbbf24", playerHat: "#f97316" },
+      { name: "Cripta al Neon", accent: "#06b6d4", bgTop: "#071724", bgBottom: "#0e2e47", floorTop: "#155e75", floorEdge: "#0e4454", wallTop: "#38bdf8", wallLeft: "#0284c7", wallRight: "#0369a1", portal: "#a855f7", playerBody: "#ec4899", playerHat: "#f43f5e" },
+      { name: "Tempio Dorato", accent: "#fbbf24", bgTop: "#1e1605", bgBottom: "#38290c", floorTop: "#b45309", floorEdge: "#78350f", wallTop: "#fcd34d", wallLeft: "#d97706", wallRight: "#b45309", portal: "#38bdf8", playerBody: "#38bdf8", playerHat: "#6366f1" },
+      { name: "Grotte Cristallo", accent: "#c084fc", bgTop: "#1a0b26", bgBottom: "#2c0e42", floorTop: "#6b21a8", floorEdge: "#4a1473", wallTop: "#e879f9", wallLeft: "#a855f7", wallRight: "#7e22ce", portal: "#4ade80", playerBody: "#facc15", playerHat: "#fb923c" },
+      { name: "Nucleo Lava", accent: "#f87171", bgTop: "#210909", bgBottom: "#3d0e0e", floorTop: "#991b1b", floorEdge: "#701313", wallTop: "#fb7185", wallLeft: "#e11d48", wallRight: "#be123c", portal: "#38bdf8", playerBody: "#34d399", playerHat: "#10b981" },
+      { name: "Tundra Glaciale", accent: "#38bdf8", bgTop: "#061b29", bgBottom: "#0d314a", floorTop: "#0284c7", floorEdge: "#0369a1", wallTop: "#bae6fd", wallLeft: "#7dd3fc", wallRight: "#38bdf8", portal: "#f472b6", playerBody: "#f59e0b", playerHat: "#ef4444" },
+      { name: "Dune del Sole", accent: "#f59e0b", bgTop: "#261603", bgBottom: "#422405", floorTop: "#d97706", floorEdge: "#92400e", wallTop: "#fde68a", wallLeft: "#f59e0b", wallRight: "#b45309", portal: "#06b6d4", playerBody: "#ec4899", playerHat: "#8b5cf6" },
+      { name: "Ossidiana", accent: "#a78bfa", bgTop: "#0f0e16", bgBottom: "#1d1a2d", floorTop: "#312e81", floorEdge: "#1e1b4b", wallTop: "#c4b5fd", wallLeft: "#6366f1", wallRight: "#4338ca", portal: "#2dd4bf", playerBody: "#34d399", playerHat: "#fbbf24" },
+      { name: "Corallo Abisso", accent: "#fb7185", bgTop: "#1c0a15", bgBottom: "#350f26", floorTop: "#be185d", floorEdge: "#831843", wallTop: "#fda4af", wallLeft: "#f43f5e", wallRight: "#be123c", portal: "#a3e635", playerBody: "#38bdf8", playerHat: "#a855f7" },
+      { name: "Vuoto Astrale", accent: "#e879f9", bgTop: "#0b0314", bgBottom: "#18072b", floorTop: "#581c87", floorEdge: "#3b0764", wallTop: "#f0abfc", wallLeft: "#c026d3", wallRight: "#86198f", portal: "#fde047", playerBody: "#4ade80", playerHat: "#38bdf8" }
     ];
-  </script>
 
-  <script>
-    class ProceduralMazeEngine {
+    class MazeGenerator {
       static generate(dim) {
-        // Formula dimensione: (8 + (livello * 2)) celle interne
-        const cellCount = Math.max(10, dim);
-        const cells = Array.from({ length: cellCount }, (_, y) =>
-          Array.from({ length: cellCount }, (_, x) => ({
+        // Formula richiesta: (8 + (livello * 2))
+        const width = dim;
+        const height = dim;
+
+        const cells = Array.from({ length: height }, (_, y) =>
+          Array.from({ length: width }, (_, x) => ({
             x, y,
-            visited: false,
-            walls: { top: true, right: true, bottom: true, left: true }
+            walls: { top: true, right: true, bottom: true, left: true },
+            visited: false
           }))
         );
 
-        // DFS con Recursive Backtracker
         const stack = [cells[0][0]];
         cells[0][0].visited = true;
 
@@ -410,62 +322,53 @@
         ];
 
         while (stack.length > 0) {
-          const current = stack[stack.length - 1];
-          const unvisitedNeighbors = [];
-
+          const curr = stack[stack.length - 1];
+          const unvisited = [];
           for (const d of dirs) {
-            const nx = current.x + d.dx;
-            const ny = current.y + d.dy;
-            if (nx >= 0 && nx < cellCount && ny >= 0 && ny < cellCount && !cells[ny][nx].visited) {
-              unvisitedNeighbors.push({ cell: cells[ny][nx], dir: d });
+            const nx = curr.x + d.dx, ny = curr.y + d.dy;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height && !cells[ny][nx].visited) {
+              unvisited.push({ cell: cells[ny][nx], dir: d });
             }
           }
-
-          if (unvisitedNeighbors.length > 0) {
-            const chosen = unvisitedNeighbors[Math.floor(Math.random() * unvisitedNeighbors.length)];
-            current.walls[chosen.dir.wall] = false;
-            chosen.cell.walls[chosen.dir.opp] = false;
-            chosen.cell.visited = true;
-            stack.push(chosen.cell);
+          if (unvisited.length > 0) {
+            const pick = unvisited[Math.floor(Math.random() * unvisited.length)];
+            curr.walls[pick.dir.wall] = false;
+            pick.cell.walls[pick.dir.opp] = false;
+            pick.cell.visited = true;
+            stack.push(pick.cell);
           } else {
             stack.pop();
           }
         }
 
-        // Griglia con pareti (0 = cammino, 1 = muro)
-        const gridW = cellCount * 2 + 1;
-        const gridH = cellCount * 2 + 1;
+        const gridW = width * 2 + 1;
+        const gridH = height * 2 + 1;
         const grid = Array.from({ length: gridH }, () => Array(gridW).fill(1));
 
-        for (let cy = 0; cy < cellCount; cy++) {
-          for (let cx = 0; cx < cellCount; cx++) {
-            const gx = cx * 2 + 1;
-            const gy = cy * 2 + 1;
+        for (let cy = 0; cy < height; cy++) {
+          for (let cx = 0; cx < width; cx++) {
+            const gx = cx * 2 + 1, gy = cy * 2 + 1;
             grid[gy][gx] = 0;
-
-            if (!cells[cy][cx].walls.bottom && cy < cellCount - 1) grid[gy + 1][gx] = 0;
-            if (!cells[cy][cx].walls.right && cx < cellCount - 1) grid[gy][gx + 1] = 0;
+            if (!cells[cy][cx].walls.bottom && cy < height - 1) grid[gy + 1][gx] = 0;
+            if (!cells[cy][cx].walls.right && cx < width - 1) grid[gy][gx + 1] = 0;
           }
         }
 
         const start = { x: 1, y: 1 };
         const exit = { x: gridW - 2, y: gridH - 2 };
-        grid[exit.y][exit.x] = 0;
 
-        // BFS: Calcolo distanze da Start e da Exit
-        const bfsDistances = (origin) => {
+        // BFS Distanze
+        const computeDist = (origin) => {
           const dist = Array.from({ length: gridH }, () => Array(gridW).fill(-1));
           const queue = [origin];
           dist[origin.y][origin.x] = 0;
           let head = 0;
-
           while (head < queue.length) {
-            const curr = queue[head++];
+            const c = queue[head++];
             for (const d of [{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0}]) {
-              const nx = curr.x + d.dx;
-              const ny = curr.y + d.dy;
+              const nx = c.x + d.dx, ny = c.y + d.dy;
               if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH && grid[ny][nx] === 0 && dist[ny][nx] === -1) {
-                dist[ny][nx] = dist[curr.y][curr.x] + 1;
+                dist[ny][nx] = dist[c.y][c.x] + 1;
                 queue.push({ x: nx, y: ny });
               }
             }
@@ -473,490 +376,425 @@
           return dist;
         };
 
-        const distFromStart = bfsDistances(start);
-        const distFromExit = bfsDistances(exit);
+        const distStart = computeDist(start);
+        const distExit = computeDist(exit);
 
-        // Collocazione della chiave dorata lontana sia da Start che da Exit (privilegiando vicoli ciechi)
-        const candidates = [];
-        for (let gy = 1; gy < gridH - 1; gy++) {
-          for (let gx = 1; gx < gridW - 1; gx++) {
-            if (grid[gy][gx] === 0 && !(gx === start.x && gy === start.y) && !(gx === exit.x && gy === exit.y)) {
-              let wallCount = 0;
-              if (grid[gy - 1][gx] === 1) wallCount++;
-              if (grid[gy + 1][gx] === 1) wallCount++;
-              if (grid[gy][gx - 1] === 1) wallCount++;
-              if (grid[gy][gx + 1] === 1) wallCount++;
-
-              const isDeadEnd = (wallCount === 3);
-              const dStart = distFromStart[gy][gx];
-              const dExit = distFromExit[gy][gx];
-
-              if (dStart > 0 && dExit > 0) {
-                const score = Math.min(dStart, dExit) * 1.6 + (isDeadEnd ? 28 : 0) + (dStart + dExit) * 0.4;
-                candidates.push({ x: gx, y: gy, score });
-              }
+        // Selezione rigorosa della chiave su celle valide (gx, gy dispari)
+        let candidates = [];
+        for (let cy = 0; cy < height; cy++) {
+          for (let cx = 0; cx < width; cx++) {
+            const gx = cx * 2 + 1;
+            const gy = cy * 2 + 1;
+            if (!(gx === start.x && gy === start.y) && !(gx === exit.x && gy === exit.y)) {
+              let walls = 0;
+              if (grid[gy - 1][gx] === 1) walls++;
+              if (grid[gy + 1][gx] === 1) walls++;
+              if (grid[gy][gx - 1] === 1) walls++;
+              if (grid[gy][gx + 1] === 1) walls++;
+              const isDeadEnd = (walls === 3);
+              const minDistance = Math.min(distStart[gy][gx], distExit[gy][gx]);
+              const score = minDistance + (isDeadEnd ? 30 : 0);
+              candidates.push({ x: gx, y: gy, score });
             }
           }
         }
 
         candidates.sort((a, b) => b.score - a.score);
-        const chosenKey = candidates.length > 0 
-          ? candidates[Math.floor(Math.random() * Math.min(4, candidates.length))] 
-          : { x: 1, y: 3 };
+        const key = candidates.length > 0 ? candidates[Math.floor(Math.random() * Math.min(3, candidates.length))] : { x: 1, y: 3 };
 
-        return {
-          dimCellCount: cellCount,
-          grid,
-          gridW,
-          gridH,
-          start,
-          exit,
-          key: { x: chosenKey.x, y: chosenKey.y }
-        };
+        return { grid, gridW, gridH, start, exit, key: { x: key.x, y: key.y } };
       }
     }
-  </script>
 
-  <script>
-    class LabyrinthusGame {
+    class ParticleSystem {
+      constructor() { this.particles = []; }
+      spawn(x, y, z, color, count = 1) {
+        for (let i = 0; i < count; i++) {
+          this.particles.push({
+            x, y, z,
+            vx: (Math.random() - 0.5) * 0.05,
+            vy: (Math.random() - 0.5) * 0.05,
+            vz: 0.02 + Math.random() * 0.05,
+            size: 2 + Math.random() * 3,
+            color,
+            life: 1,
+            decay: 0.025 + Math.random() * 0.02
+          });
+        }
+      }
+      update() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx; p.y += p.vy; p.z += p.vz;
+          p.life -= p.decay;
+          if (p.life <= 0) this.particles.splice(i, 1);
+        }
+      }
+    }
+
+    class IsometricGame {
       constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        this.sound = new SoundEngine();
+        this.particles = new ParticleSystem();
 
-        this.radarCanvas = document.getElementById('radarCanvas');
-        this.radarCtx = this.radarCanvas.getContext('2d');
+        this.mapCanvas = document.getElementById('mapCanvas');
+        this.mapCtx = this.mapCanvas.getContext('2d');
         this.isMapVisible = false;
 
-        this.audio = new AudioSynthesizer();
-
-        // Riconoscimento Desktop vs Mobile Touch
-        this.isDesktop = false;
-
-        // Stato Gioco
         this.currentLevel = 1;
-        this.maxLevels = 10;
-        this.levelSteps = 0;
+        this.maxLevel = 10;
         this.totalSteps = 0;
-        this.levelSeconds = 0;
+        this.levelSteps = 0;
         this.totalSeconds = 0;
-        this.hasKey = false;
+        this.levelSeconds = 0;
+        this.timerInterval = null;
         this.isGameActive = false;
-        this.timerId = null;
-        this.toastTimer = null;
+        this.hasKey = false;
+        this.toastTimeout = null;
 
-        // Mappa & Fog of War
-        this.maze = null;
-        this.exploredGrid = null;
-        this.totalExplorable = 0;
-
-        // Personaggio 3D
+        this.mazeData = null;
+        this.visitedTiles = null;
         this.player = {
           gx: 1, gy: 1,
           targetGx: 1, targetGy: 1,
           renderX: 1, renderY: 1,
           isMoving: false,
-          progress: 0,
-          speed: 7.2,
-          dir: 'SE',
-          bobPhase: 0
+          moveProgress: 0,
+          moveSpeed: 7.5,
+          bob: 0
         };
 
-        // Telecamera Dinamica
         this.camera = {
           x: 0, y: 0,
           tileW: 52,
           tileH: 26,
-          wallH: 28
+          wallH: 28,
+          shake: 0
         };
 
-        // Gestione Pressione Continua (Auto-repeat D-Pad)
-        this.heldDir = null;
-        this.heldInterval = null;
+        this.heldDirection = null;
+        this.holdInterval = null;
+        this.isDesktop = false;
 
-        this.bindEvents();
+        this.resize = this.resize.bind(this);
+        this.gameLoop = this.gameLoop.bind(this);
+
+        window.addEventListener('resize', this.resize);
         this.detectDeviceMode();
+        this.initControls();
+        this.initUI();
+        this.setupAudioUnlock();
       }
 
       detectDeviceMode() {
-        // Riconoscimento accurato Desktop vs Mobile Touch:
-        // Verifica se l'ambiente dispone di hover fine con mouse/trackpad o assenza di touch screen primario
-        const hasFinePointer = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-        const hasTouchSupport = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
-        const isDesktopDimensions = window.innerWidth >= 1024;
+        const hasFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+        const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        this.isDesktop = hasFinePointer && (!hasTouch || window.innerWidth > 1024);
 
-        // Si considera desktop se c'è mouse/pointer fine E non siamo in orientamento portrait tipico da telefono con touch primario
-        this.isDesktop = hasFinePointer && (!hasTouchSupport || isDesktopDimensions);
-
-        const touchContainer = document.getElementById('touch-controls-container');
-        const desktopHint = document.getElementById('desktop-controls-hint');
+        const touchFooter = document.getElementById('touch-controls');
+        const desktopHint = document.getElementById('desktop-hint');
 
         if (this.isDesktop) {
-          // Nascondi completamente il D-Pad e l'area swipe su desktop
-          touchContainer.classList.add('hidden');
-          touchContainer.style.display = 'none';
+          touchFooter.classList.add('hidden');
           desktopHint.classList.remove('hidden');
+          desktopHint.classList.add('flex');
         } else {
-          // Mostra D-Pad e controlli touch su smartphone / tablet portrait
-          touchContainer.classList.remove('hidden');
-          touchContainer.style.display = 'flex';
+          touchFooter.classList.remove('hidden');
           desktopHint.classList.add('hidden');
+          desktopHint.classList.remove('flex');
         }
-
-        this.updateCameraMetrics();
       }
 
-      bindEvents() {
-        window.addEventListener('resize', () => {
-          this.detectDeviceMode();
-          this.handleResize();
-        });
-
-        // Gestione Audio
-        const audioBtn = document.getElementById('btn-audio');
-        audioBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.audio.init();
-          this.audio.muted = !this.audio.muted;
-          document.getElementById('icon-sound-on').classList.toggle('hidden', this.audio.muted);
-          document.getElementById('icon-sound-off').classList.toggle('hidden', !this.audio.muted);
-        });
-
-        // Restart & Modals
-        document.getElementById('btn-restart').addEventListener('click', (e) => {
-          e.preventDefault();
-          this.audio.init();
-          this.restartCurrentLevel();
-        });
-        document.getElementById('btn-next-level').addEventListener('click', () => this.goToNextLevel());
-        document.getElementById('btn-restart-game').addEventListener('click', () => this.startNewCampaign());
-        document.getElementById('btn-close-map-modal').addEventListener('click', () => this.showTransparentMap(false));
-
-        // Fullscreen con compatibilità cross-browser e fallback iOS Safari
-        const fsBtn = document.getElementById('btn-fullscreen');
-        fsBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.toggleFullscreen();
-        });
-        document.addEventListener('fullscreenchange', () => this.updateFullscreenIcons());
-        document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenIcons());
-
-        // Controllo Mappa Radar (TAB su Desktop, Hold o Click su Mobile)
-        const mapBtn = document.getElementById('btn-map');
-
-        const onMapPressStart = (e) => {
-          if (e) e.preventDefault();
-          this.audio.init();
-          this.showTransparentMap(true);
+      setupAudioUnlock() {
+        const unlock = () => {
+          this.sound.init();
+          window.removeEventListener('touchstart', unlock);
+          window.removeEventListener('pointerdown', unlock);
         };
-        const onMapPressEnd = (e) => {
-          if (e) e.preventDefault();
-          if (e && e.pointerType === 'mouse') {
-            this.showTransparentMap(false);
+        window.addEventListener('touchstart', unlock, { passive: true });
+        window.addEventListener('pointerdown', unlock, { passive: true });
+      }
+
+      initUI() {
+        const bind = (id, fn) => {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener('click', (e) => { e.preventDefault(); this.sound.init(); fn(); });
+        };
+
+        bind('btn-audio', () => {
+          this.sound.muted = !this.sound.muted;
+          document.getElementById('icon-sound-on').classList.toggle('hidden', this.sound.muted);
+          document.getElementById('icon-sound-off').classList.toggle('hidden', !this.sound.muted);
+        });
+
+        bind('btn-fullscreen', () => this.toggleFullscreen());
+        bind('btn-restart', () => this.restartLevel());
+        bind('btn-next-level', () => this.advanceNextLevel());
+        bind('btn-new-game-win', () => this.startNewGame());
+        bind('btn-map', () => {
+          if (this.isMapVisible) this.hideMap(); else this.showMap();
+        });
+        bind('btn-close-map', () => this.hideMap());
+        document.getElementById('map-backdrop').addEventListener('click', () => this.hideMap());
+      }
+
+      toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+            else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+          } else {
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          }
+        } catch (err) {}
+      }
+
+      initControls() {
+        // Mappatura:
+        // NORD (Alto-Destra): dx = 0, dy = -1
+        // EST  (Basso-Destra): dx = 1, dy = 0
+        // SUD  (Basso-Sinistra): dx = 0, dy = 1
+        // OVEST (Alto-Sinistra): dx = -1, dy = 0
+
+        const startHold = (dx, dy, btnEl) => {
+          this.sound.init();
+          this.heldDirection = { dx, dy };
+          if (btnEl) btnEl.classList.add('active');
+          this.handleDirectionInput(dx, dy);
+
+          if (this.holdInterval) clearInterval(this.holdInterval);
+          this.holdInterval = setInterval(() => {
+            if (this.heldDirection && !this.player.isMoving) {
+              this.handleDirectionInput(this.heldDirection.dx, this.heldDirection.dy);
+            }
+          }, 130);
+        };
+
+        const stopHold = (btnEl) => {
+          this.heldDirection = null;
+          if (btnEl) btnEl.classList.remove('active');
+          if (this.holdInterval) {
+            clearInterval(this.holdInterval);
+            this.holdInterval = null;
           }
         };
 
-        mapBtn.addEventListener('pointerdown', onMapPressStart);
-        mapBtn.addEventListener('pointerup', onMapPressEnd);
-        mapBtn.addEventListener('pointerleave', onMapPressEnd);
-
-        // Tastiera Desktop (WASD, Frecce, TAB) sincronizzata coi 4 assi dello schermo:
-        // W / Freccia Su: NORD (↗ Alto-Destra a schermo) -> dx = 0, dy = -1
-        // D / Freccia Destra: EST (↘ Basso-Destra a schermo) -> dx = 1, dy = 0
-        // S / Freccia Giù: SUD (↙ Basso-Sinistra a schermo) -> dx = 0, dy = 1
-        // A / Freccia Sinistra: OVEST (↖ Alto-Sinistra a schermo) -> dx = -1, dy = 0
-        window.addEventListener('keydown', (e) => {
-          if (e.key === 'Tab') {
+        const bindPad = (id, dx, dy) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          btn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            this.showTransparentMap(true);
-            return;
-          }
-          if (!this.isGameActive) return;
+            btn.setPointerCapture(e.pointerId);
+            startHold(dx, dy, btn);
+          });
+          const end = (e) => {
+            e.preventDefault();
+            try { btn.releasePointerCapture(e.pointerId); } catch(err){}
+            stopHold(btn);
+          };
+          btn.addEventListener('pointerup', end);
+          btn.addEventListener('pointercancel', end);
+        };
 
-          const key = e.key.toLowerCase();
-          if (key === 'w' || key === 'arrowup') this.tryMove(0, -1, 'NE');     // NORD (↗)
-          else if (key === 'd' || key === 'arrowright') this.tryMove(1, 0, 'SE'); // EST (↘)
-          else if (key === 's' || key === 'arrowdown') this.tryMove(0, 1, 'SW');  // SUD (↙)
-          else if (key === 'a' || key === 'arrowleft') this.tryMove(-1, 0, 'NW');  // OVEST (↖)
+        bindPad('pad-n', 0, -1);
+        bindPad('pad-e', 1, 0);
+        bindPad('pad-s', 0, 1);
+        bindPad('pad-w', -1, 0);
+
+        let touchStart = null;
+        this.canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            this.sound.init();
+            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+          if (touchStart) e.preventDefault();
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', (e) => {
+          if (!touchStart || !this.isGameActive) return;
+          const end = e.changedTouches[0];
+          const dx = end.clientX - touchStart.x;
+          const dy = end.clientY - touchStart.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist >= 20) {
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            if (angle >= -90 && angle < 0) {
+              this.handleDirectionInput(0, -1); // NORD
+            } else if (angle >= 0 && angle < 90) {
+              this.handleDirectionInput(1, 0);  // EST
+            } else if (angle >= 90 && angle < 180) {
+              this.handleDirectionInput(0, 1);  // SUD
+            } else {
+              this.handleDirectionInput(-1, 0); // OVEST
+            }
+          }
+          touchStart = null;
+        }, { passive: false });
+
+        window.addEventListener('keydown', (e) => {
+          if (!this.isGameActive) return;
+          const k = e.key.toLowerCase();
+          if (k === 'w' || k === 'arrowup') this.handleDirectionInput(0, -1);
+          else if (k === 'd' || k === 'arrowright') this.handleDirectionInput(1, 0);
+          else if (k === 's' || k === 'arrowdown') this.handleDirectionInput(0, 1);
+          else if (k === 'a' || k === 'arrowleft') this.handleDirectionInput(-1, 0);
+          else if (e.key === 'Tab') {
+            e.preventDefault();
+            this.showMap();
+          }
         });
 
         window.addEventListener('keyup', (e) => {
           if (e.key === 'Tab') {
             e.preventDefault();
-            this.showTransparentMap(false);
+            this.hideMap();
           }
         });
-
-        // Configurazione D-PAD per smartphone touch con cattura pointer e auto-ripetizione:
-        // - pad-nord  (In alto a destra ↗):  dx = 0,  dy = -1
-        // - pad-est   (In basso a destra ↘): dx = 1,  dy = 0
-        // - pad-sud   (In basso a sinistra ↙): dx = 0, dy = 1
-        // - pad-ovest (In alto a sinistra ↖): dx = -1, dy = 0
-        const setupPadBtn = (id, dx, dy, dir) => {
-          const btn = document.getElementById(id);
-          if (!btn) return;
-
-          const startPress = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.audio.init();
-            btn.classList.add('pressed');
-            try { btn.setPointerCapture(e.pointerId); } catch(err){}
-            this.heldDir = { dx, dy, dir };
-            this.tryMove(dx, dy, dir);
-
-            if (this.heldInterval) clearInterval(this.heldInterval);
-            this.heldInterval = setInterval(() => {
-              if (this.heldDir && !this.player.isMoving) {
-                this.tryMove(this.heldDir.dx, this.heldDir.dy, this.heldDir.dir);
-              }
-            }, 140);
-          };
-
-          const stopPress = (e) => {
-            e.preventDefault();
-            btn.classList.remove('pressed');
-            try { btn.releasePointerCapture(e.pointerId); } catch(err){}
-            this.heldDir = null;
-            if (this.heldInterval) {
-              clearInterval(this.heldInterval);
-              this.heldInterval = null;
-            }
-          };
-
-          btn.addEventListener('pointerdown', startPress);
-          btn.addEventListener('pointerup', stopPress);
-          btn.addEventListener('pointercancel', stopPress);
-        };
-
-        setupPadBtn('pad-nord', 0, -1, 'NE'); // NORD (Top-Right ↗)
-        setupPadBtn('pad-est', 1, 0, 'SE');   // EST (Bottom-Right ↘)
-        setupPadBtn('pad-sud', 0, 1, 'SW');   // SUD (Bottom-Left ↙)
-        setupPadBtn('pad-ovest', -1, 0, 'NW'); // OVEST (Top-Left ↖)
-
-        // Swipe Touch a 45 gradi su Canvas per smartphone touch:
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let isTouching = false;
-
-        this.canvas.addEventListener('touchstart', (e) => {
-          if (this.isDesktop) return; // Disattiva swipe su mouse desktop
-          if (e.touches.length === 1) {
-            this.audio.init();
-            isTouching = true;
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-          }
-        }, { passive: false });
-
-        this.canvas.addEventListener('touchmove', (e) => {
-          if (isTouching) {
-            e.preventDefault();
-          }
-        }, { passive: false });
-
-        this.canvas.addEventListener('touchend', (e) => {
-          if (!isTouching || !this.isGameActive || this.isDesktop) {
-            isTouching = false;
-            return;
-          }
-          isTouching = false;
-
-          const endTouch = e.changedTouches[0];
-          const dx = endTouch.clientX - touchStartX;
-          const dy = endTouch.clientY - touchStartY;
-          const distance = Math.hypot(dx, dy);
-
-          if (distance >= 20) {
-            const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
-
-            if (angleDeg >= -90 && angleDeg < 0) {
-              this.tryMove(0, -1, 'NE');  // NORD (↗)
-            } else if (angleDeg >= 0 && angleDeg < 90) {
-              this.tryMove(1, 0, 'SE');   // EST (↘)
-            } else if (angleDeg >= 90 && angleDeg <= 180) {
-              this.tryMove(0, 1, 'SW');   // SUD (↙)
-            } else {
-              this.tryMove(-1, 0, 'NW');  // OVEST (↖)
-            }
-          }
-        }, { passive: false });
       }
 
-      toggleFullscreen() {
-        const doc = document;
-        const elem = doc.documentElement;
-        const isFS = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
-
-        try {
-          if (!isFS) {
-            if (elem.requestFullscreen) elem.requestFullscreen();
-            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-            else if (elem.webkitEnterFullscreen) elem.webkitEnterFullscreen();
-          } else {
-            if (doc.exitFullscreen) doc.exitFullscreen();
-            else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
-          }
-        } catch (err) {
-          console.warn("Fullscreen non supportato direttamente dal browser corrente.", err);
-        }
-      }
-
-      updateFullscreenIcons() {
-        const isFS = document.fullscreenElement || document.webkitFullscreenElement;
-        document.getElementById('icon-fs-enter').classList.toggle('hidden', !!isFS);
-        document.getElementById('icon-fs-exit').classList.toggle('hidden', !isFS);
-      }
-
-      startNewCampaign() {
+      startNewGame() {
         this.currentLevel = 1;
         this.totalSteps = 0;
         this.totalSeconds = 0;
         this.closeModals();
-        this.loadLevel(1);
+        this.startLevel(1);
       }
 
-      restartCurrentLevel() {
-        this.closeModals();
-        this.loadLevel(this.currentLevel);
-      }
-
-      goToNextLevel() {
-        this.closeModals();
-        if (this.currentLevel < this.maxLevels) {
-          this.loadLevel(this.currentLevel + 1);
-        } else {
-          this.showGameVictory();
-        }
-      }
-
-      loadLevel(levelNumber) {
-        this.currentLevel = levelNumber;
+      startLevel(lvl) {
+        this.currentLevel = lvl;
         this.levelSteps = 0;
         this.levelSeconds = 0;
         this.hasKey = false;
-        this.showTransparentMap(false);
+        this.hideMap();
 
-        // Formula richiesta: (8 + (livello * 2))
         const formulaDim = 8 + (this.currentLevel * 2);
-        this.maze = ProceduralMazeEngine.generate(formulaDim);
+        this.mazeData = MazeGenerator.generate(formulaDim);
 
-        this.exploredGrid = Array.from({ length: this.maze.gridH }, () =>
-          Array(this.maze.gridW).fill(false)
+        this.visitedTiles = Array.from({ length: this.mazeData.gridH }, () => 
+          Array(this.mazeData.gridW).fill(false)
         );
 
-        this.totalExplorable = 0;
-        for (let y = 0; y < this.maze.gridH; y++) {
-          for (let x = 0; x < this.maze.gridW; x++) {
-            if (this.maze.grid[y][x] === 0) this.totalExplorable++;
-          }
-        }
-
-        // Setup Giocatore
-        this.player.gx = this.maze.start.x;
-        this.player.gy = this.maze.start.y;
+        this.player.gx = this.mazeData.start.x;
+        this.player.gy = this.mazeData.start.y;
         this.player.targetGx = this.player.gx;
         this.player.targetGy = this.player.gy;
         this.player.renderX = this.player.gx;
         this.player.renderY = this.player.gy;
         this.player.isMoving = false;
-        this.player.progress = 0;
-        this.player.dir = 'SE';
 
-        this.discoverAround(this.player.gx, this.player.gy);
-        this.updateHUDLabels();
-        this.updateKeyHUD();
-        this.updateStatsHUD();
-        this.updateCameraMetrics();
+        this.markExplored(this.player.gx, this.player.gy);
+        this.updateThemeUI();
+        this.updateStatsUI();
+        this.updateKeyUI();
 
-        // Avvio Cronometro
-        if (this.timerId) clearInterval(this.timerId);
-        this.timerId = setInterval(() => {
+        this.adjustCameraForMaze();
+
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => {
           if (this.isGameActive) {
             this.levelSeconds++;
             this.totalSeconds++;
-            this.updateStatsHUD();
+            this.updateStatsUI();
           }
         }, 1000);
 
         this.isGameActive = true;
       }
 
-      discoverAround(gx, gy) {
-        if (!this.exploredGrid || !this.maze) return;
+      markExplored(gx, gy) {
+        if (!this.visitedTiles || !this.mazeData) return;
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
-            const nx = gx + dx;
-            const ny = gy + dy;
-            if (nx >= 0 && nx < this.maze.gridW && ny >= 0 && ny < this.maze.gridH) {
-              this.exploredGrid[ny][nx] = true;
+            const nx = gx + dx, ny = gy + dy;
+            if (nx >= 0 && nx < this.mazeData.gridW && ny >= 0 && ny < this.mazeData.gridH) {
+              this.visitedTiles[ny][nx] = true;
             }
           }
         }
-
-        let count = 0;
-        for (let y = 0; y < this.maze.gridH; y++) {
-          for (let x = 0; x < this.maze.gridW; x++) {
-            if (this.maze.grid[y][x] === 0 && this.exploredGrid[y][x]) count++;
-          }
-        }
-        const pct = Math.min(100, Math.round((count / Math.max(1, this.totalExplorable)) * 100));
-        document.getElementById('map-explored-badge').textContent = `${pct}%`;
       }
 
-      tryMove(dx, dy, dir) {
+      adjustCameraForMaze() {
+        const w = this.canvas.clientWidth;
+        const h = this.canvas.clientHeight;
+        const isPortrait = h > w;
+
+        const baseTileW = isPortrait ? 56 : 48;
+        this.camera.tileW = baseTileW;
+        this.camera.tileH = baseTileW * 0.5;
+        this.camera.wallH = baseTileW * 0.52;
+      }
+
+      gridToIso(gx, gy) {
+        return {
+          x: (gx - gy) * (this.camera.tileW / 2),
+          y: (gx + gy) * (this.camera.tileH / 2)
+        };
+      }
+
+      handleDirectionInput(dx, dy) {
         if (!this.isGameActive || this.player.isMoving) return;
 
-        const nx = this.player.gx + dx;
-        const ny = this.player.gy + dy;
+        const nextX = this.player.gx + dx;
+        const nextY = this.player.gy + dy;
 
         if (
-          nx >= 0 && nx < this.maze.gridW &&
-          ny >= 0 && ny < this.maze.gridH &&
-          this.maze.grid[ny][nx] === 0
+          nextX >= 0 && nextX < this.mazeData.gridW &&
+          nextY >= 0 && nextY < this.mazeData.gridH &&
+          this.mazeData.grid[nextY][nextX] === 0
         ) {
-          this.player.targetGx = nx;
-          this.player.targetGy = ny;
+          // Blocco uscita se non in possesso della chiave
+          if (!this.hasKey && nextX === this.mazeData.exit.x && nextY === this.mazeData.exit.y) {
+            this.sound.playLockedDoor();
+            this.camera.shake = 8;
+            if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+            this.showToast('PORTALE BLOCCATO! Trova la chiave dorata 🗝️', '🔒', true);
+            return;
+          }
+
+          this.player.targetGx = nextX;
+          this.player.targetGy = nextY;
           this.player.isMoving = true;
-          this.player.progress = 0;
-          this.player.dir = dir;
+          this.player.moveProgress = 0;
 
           this.levelSteps++;
           this.totalSteps++;
-          this.updateStatsHUD();
-          this.audio.playStep();
+          this.updateStatsUI();
+          this.sound.playStep();
         } else {
-          this.audio.playBump();
-          if (navigator.vibrate) navigator.vibrate(25);
-          this.camera.x += (Math.random() - 0.5) * 4;
-          this.camera.y += (Math.random() - 0.5) * 4;
+          this.sound.playBump();
+          this.camera.shake = 5;
+          if (navigator.vibrate) navigator.vibrate(15);
         }
       }
 
       checkTileInteractions() {
-        // Raccolta Chiave
-        if (!this.hasKey && this.player.gx === this.maze.key.x && this.player.gy === this.maze.key.y) {
+        // Raccolta chiave dorata
+        if (!this.hasKey && this.player.gx === this.mazeData.key.x && this.player.gy === this.mazeData.key.y) {
           this.hasKey = true;
-          this.updateKeyHUD();
-          this.audio.playKeyPickup();
-          if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
-          this.showToast('Chiave dorata raccolta! Il portale è aperto! ✨', '🗝️');
+          this.updateKeyUI();
+          this.sound.playKeyPickup();
+          if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
+          this.particles.spawn(this.mazeData.key.x, this.mazeData.key.y, 0.4, '#fbbf24', 30);
+          this.showToast('Chiave raccolta! Il portale è aperto 🗝️✨', '✨');
         }
 
-        // Portale Uscita
-        if (this.player.gx === this.maze.exit.x && this.player.gy === this.maze.exit.y) {
-          if (!this.hasKey) {
-            this.audio.playLockedGate();
-            if (navigator.vibrate) navigator.vibrate(75);
-            this.showToast('Uscita bloccata! Trova prima la chiave dorata!', '🔒', true);
-            return;
-          }
+        // Portale raggiunto con chiave
+        if (this.player.gx === this.mazeData.exit.x && this.player.gy === this.mazeData.exit.y) {
+          if (!this.hasKey) return;
 
           this.isGameActive = false;
-          this.audio.playLevelWin();
-          if (this.currentLevel >= this.maxLevels) {
-            setTimeout(() => this.showGameVictory(), 300);
+          if (this.currentLevel >= this.maxLevel) {
+            setTimeout(() => this.showVictoryModal(), 300);
           } else {
-            setTimeout(() => this.showLevelCompleteModal(), 300);
+            setTimeout(() => this.showLevelClearedModal(), 300);
           }
         }
       }
@@ -965,245 +803,201 @@
         const toast = document.getElementById('game-toast');
         document.getElementById('toast-msg').textContent = msg;
         document.getElementById('toast-icon').textContent = icon;
+        toast.className = isWarning 
+          ? 'absolute top-16 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-rose-300 border border-rose-500/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center'
+          : 'absolute top-16 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center';
 
-        if (isWarning) {
-          toast.className = 'absolute top-16 sm:top-20 z-40 px-3.5 py-1.5 rounded-2xl glass-bar text-xs text-rose-300 border border-rose-500/60 shadow-2xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw]';
-        } else {
-          toast.className = 'absolute top-16 sm:top-20 z-40 px-3.5 py-1.5 rounded-2xl glass-bar text-xs text-amber-200 border border-amber-400/60 shadow-2xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw]';
-        }
-
-        if (this.toastTimer) clearTimeout(this.toastTimer);
-        this.toastTimer = setTimeout(() => {
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(() => {
           toast.classList.remove('opacity-100', 'translate-y-0');
           toast.classList.add('opacity-0', '-translate-y-2');
-        }, 2400);
+        }, 2200);
       }
 
-      updateHUDLabels() {
-        const theme = LEVEL_THEMES[this.currentLevel - 1];
-        document.getElementById('hud-theme-dot').style.backgroundColor = theme.accent;
-        document.getElementById('hud-theme-dot').style.boxShadow = `0 0 10px ${theme.accent}`;
-        document.getElementById('hud-theme-name').textContent = theme.name;
-        document.getElementById('hud-level-tag').textContent = `L.${this.currentLevel}/${this.maxLevels}`;
+      updateThemeUI() {
+        const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
+        document.getElementById('theme-name').textContent = theme.name;
+        document.getElementById('theme-dot').style.backgroundColor = theme.accent;
+        document.getElementById('level-text').textContent = `L.${this.currentLevel}/${this.maxLevel}`;
         const formulaDim = 8 + (this.currentLevel * 2);
-        document.getElementById('hud-dim-tag').textContent = `(${formulaDim}x${formulaDim})`;
+        document.getElementById('grid-size').textContent = `(${formulaDim}x${formulaDim})`;
       }
 
-      updateStatsHUD() {
-        document.getElementById('hud-steps').textContent = this.levelSteps;
-        const m = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
-        const s = (this.levelSeconds % 60).toString().padStart(2, '0');
-        document.getElementById('hud-time').textContent = `${m}:${s}`;
+      updateStatsUI() {
+        document.getElementById('stat-steps').textContent = this.levelSteps;
+        const mins = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
+        const secs = (this.levelSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('stat-time').textContent = `${mins}:${secs}`;
       }
 
-      updateKeyHUD() {
-        const pill = document.getElementById('hud-key-pill');
-        const icon = document.getElementById('hud-key-icon');
-        const status = document.getElementById('hud-key-status');
-
+      updateKeyUI() {
+        const badge = document.getElementById('key-badge');
+        const icon = document.getElementById('key-badge-icon');
+        const text = document.getElementById('key-badge-text');
         if (this.hasKey) {
-          pill.className = 'flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/30 border border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)]';
-          icon.className = 'text-[11px] sm:text-xs grayscale-0 opacity-100 scale-125 key-pulse leading-none';
-          status.className = 'text-[9px] sm:text-[10px] font-black text-amber-300 leading-none';
-          status.textContent = '1/1';
+          badge.className = 'flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-500/25 border border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]';
+          icon.className = 'text-[10px] grayscale-0 opacity-100 scale-110';
+          text.className = 'text-[9px] font-black text-amber-300 leading-none';
+          text.textContent = '1/1';
         } else {
-          pill.className = 'flex items-center gap-1 px-1 py-0.5 rounded bg-slate-800/90 border border-slate-700';
-          icon.className = 'text-[10px] sm:text-xs grayscale opacity-40 leading-none';
-          status.className = 'text-[9px] sm:text-[10px] font-black text-slate-400 leading-none';
-          status.textContent = '0/1';
+          badge.className = 'flex items-center gap-0.5 px-1 py-0.5 rounded bg-slate-800 border border-slate-700';
+          icon.className = 'text-[10px] grayscale opacity-40';
+          text.className = 'text-[9px] font-black text-slate-400 leading-none';
+          text.textContent = '0/1';
         }
       }
 
-      showLevelCompleteModal() {
-        document.getElementById('modal-step-val').textContent = this.levelSteps;
-        const m = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
-        const s = (this.levelSeconds % 60).toString().padStart(2, '0');
-        document.getElementById('modal-time-val').textContent = `${m}:${s}`;
-        document.getElementById('modal-level-win').classList.remove('hidden');
+      showMap() {
+        this.isMapVisible = true;
+        const overlay = document.getElementById('map-overlay');
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        overlay.classList.add('opacity-100');
+        this.renderMap();
       }
 
-      showGameVictory() {
-        this.audio.playGameVictory();
-        document.getElementById('final-total-steps').textContent = this.totalSteps;
-        const m = Math.floor(this.totalSeconds / 60).toString().padStart(2, '0');
-        const s = (this.totalSeconds % 60).toString().padStart(2, '0');
-        document.getElementById('final-total-time').textContent = `${m}:${s}`;
-        document.getElementById('modal-game-win').classList.remove('hidden');
-
-        if (typeof confetti === 'function') {
-          confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 } });
-        }
+      hideMap() {
+        this.isMapVisible = false;
+        const overlay = document.getElementById('map-overlay');
+        overlay.classList.remove('opacity-100');
+        overlay.classList.add('opacity-0', 'pointer-events-none');
       }
 
-      closeModals() {
-        document.getElementById('modal-level-win').classList.add('hidden');
-        document.getElementById('modal-game-win').classList.add('hidden');
-      }
-
-      showTransparentMap(show) {
-        this.isMapVisible = show;
-        const overlay = document.getElementById('map-radar-overlay');
-        const frame = document.getElementById('map-frame');
-
-        if (show) {
-          overlay.classList.remove('opacity-0', 'pointer-events-none');
-          overlay.classList.add('opacity-100');
-
-          const isPortrait = window.innerHeight > window.innerWidth;
-          if (isPortrait) {
-            frame.style.width = '92vw';
-            frame.style.height = '60vh';
-          } else {
-            frame.style.width = '520px';
-            frame.style.height = '500px';
-          }
-
-          this.renderTransparentRadar();
-        } else {
-          overlay.classList.remove('opacity-100');
-          overlay.classList.add('opacity-0', 'pointer-events-none');
-        }
-      }
-
-      renderTransparentRadar() {
-        if (!this.maze || !this.exploredGrid) return;
-        const rect = this.radarCanvas.parentElement.getBoundingClientRect();
+      renderMap() {
+        if (!this.mazeData || !this.visitedTiles) return;
+        const rect = this.mapCanvas.parentElement.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
-        const w = rect.width;
-        const h = rect.height;
+        const w = rect.width, h = rect.height;
+        this.mapCanvas.width = w * dpr;
+        this.mapCanvas.height = h * dpr;
 
-        this.radarCanvas.width = Math.round(w * dpr);
-        this.radarCanvas.height = Math.round(h * dpr);
-
-        const ctx = this.radarCtx;
+        const ctx = this.mapCtx;
         ctx.resetTransform();
         ctx.scale(dpr, dpr);
         ctx.clearRect(0, 0, w, h);
 
         const theme = LEVEL_THEMES[this.currentLevel - 1];
-        const { gridW, gridH } = this.maze;
+        const { gridW, gridH } = this.mazeData;
 
-        const marginFactor = 0.86;
-        const isoW_units = gridW + gridH;
-        const mapTileW = Math.min((w * marginFactor) / isoW_units * 2, (h * marginFactor) / isoW_units * 4);
-        const mapTileH = mapTileW * 0.5;
+        const cellW = Math.min((w * 0.9) / gridW, (h * 0.9) / gridH);
+        const startX = (w - gridW * cellW) / 2;
+        const startY = (h - gridH * cellW) / 2;
 
-        const originX = w / 2;
-        const originY = h / 2 - ((gridW - gridH) * (mapTileH / 4));
-
-        const toRadarIso = (gx, gy) => ({
-          x: originX + (gx - gy) * (mapTileW / 2),
-          y: originY + (gx + gy) * (mapTileH / 2) - ((gridW + gridH) * mapTileH * 0.25)
-        });
-
-        // Silhouette complessiva + svelamento SOLO delle parti esplorate
+        let total = 0, exp = 0;
         for (let gy = 0; gy < gridH; gy++) {
           for (let gx = 0; gx < gridW; gx++) {
-            const isExplored = this.exploredGrid[gy][gx];
-            const isPath = (this.maze.grid[gy][gx] === 0);
-            const pt = toRadarIso(gx, gy);
+            if (this.mazeData.grid[gy][gx] === 0) {
+              total++;
+              if (this.visitedTiles[gy][gx]) exp++;
+            }
+          }
+        }
+        document.getElementById('map-explored-pct').textContent = `${Math.round((exp / total) * 100)}%`;
 
-            ctx.beginPath();
-            ctx.moveTo(pt.x, pt.y - mapTileH / 2);
-            ctx.lineTo(pt.x + mapTileW / 2, pt.y);
-            ctx.lineTo(pt.x, pt.y + mapTileH / 2);
-            ctx.lineTo(pt.x - mapTileW / 2, pt.y);
-            ctx.closePath();
+        for (let gy = 0; gy < gridH; gy++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            if (!this.visitedTiles[gy][gx]) {
+              ctx.fillStyle = 'rgba(10, 15, 26, 0.7)';
+              ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW - 0.5, cellW - 0.5);
+              continue;
+            }
+            if (this.mazeData.grid[gy][gx] === 0) {
+              ctx.fillStyle = theme.floorTop;
+              ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW - 0.5, cellW - 0.5);
 
-            if (!isExplored) {
-              ctx.fillStyle = 'rgba(15, 23, 42, 0.42)';
-              ctx.fill();
-              ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            } else {
-              if (isPath) {
-                ctx.fillStyle = theme.wallTop;
-                ctx.globalAlpha = 0.88;
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-
-                if (gx === this.maze.start.x && gy === this.maze.start.y) {
-                  ctx.fillStyle = '#34d399';
-                  ctx.beginPath();
-                  ctx.arc(pt.x, pt.y, mapTileW * 0.35, 0, Math.PI * 2);
-                  ctx.fill();
-                }
-                if (gx === this.maze.exit.x && gy === this.maze.exit.y) {
-                  ctx.fillStyle = this.hasKey ? theme.portal : '#f43f5e';
-                  ctx.beginPath();
-                  ctx.arc(pt.x, pt.y, mapTileW * 0.35, 0, Math.PI * 2);
-                  ctx.fill();
-                }
-                if (!this.hasKey && gx === this.maze.key.x && gy === this.maze.key.y) {
-                  ctx.fillStyle = '#fbbf24';
-                  ctx.beginPath();
-                  ctx.arc(pt.x, pt.y, mapTileW * 0.35, 0, Math.PI * 2);
-                  ctx.fill();
-                }
-              } else {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.fill();
+              if (gx === this.mazeData.start.x && gy === this.mazeData.start.y) {
+                ctx.fillStyle = '#34d399';
+                ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
               }
+              if (gx === this.mazeData.exit.x && gy === this.mazeData.exit.y) {
+                ctx.fillStyle = this.hasKey ? theme.portal : '#f43f5e';
+                ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
+              }
+              if (!this.hasKey && gx === this.mazeData.key.x && gy === this.mazeData.key.y) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
+              }
+            } else {
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+              ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW - 0.5, cellW - 0.5);
             }
           }
         }
 
-        // Posizione Giocatore
-        const pPt = toRadarIso(this.player.renderX, this.player.renderY);
-        ctx.save();
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = '#fde047';
+        ctx.fillStyle = '#fbbf24';
         ctx.beginPath();
-        ctx.arc(pPt.x, pPt.y, Math.max(3.5, mapTileW * 0.45), 0, Math.PI * 2);
+        ctx.arc(
+          startX + (this.player.renderX + 0.5) * cellW,
+          startY + (this.player.renderY + 0.5) * cellW,
+          cellW * 0.45, 0, Math.PI * 2
+        );
         ctx.fill();
-        ctx.restore();
       }
 
-      handleResize() {
+      showLevelClearedModal() {
+        this.sound.playLevelWin();
+        document.getElementById('modal-step-count').textContent = this.levelSteps;
+        const m = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
+        const s = (this.levelSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('modal-time-count').textContent = `${m}:${s}`;
+        document.getElementById('modal-level-cleared').classList.remove('hidden');
+      }
+
+      advanceNextLevel() {
+        this.closeModals();
+        this.startLevel(this.currentLevel + 1);
+      }
+
+      restartLevel() {
+        this.closeModals();
+        this.startLevel(this.currentLevel);
+      }
+
+      showVictoryModal() {
+        this.sound.playGameWin();
+        document.getElementById('victory-total-steps').textContent = this.totalSteps;
+        const m = Math.floor(this.totalSeconds / 60).toString().padStart(2, '0');
+        const s = (this.totalSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('victory-total-time').textContent = `${m}:${s}`;
+        document.getElementById('modal-victory').classList.remove('hidden');
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        }
+      }
+
+      closeModals() {
+        document.getElementById('modal-level-cleared').classList.add('hidden');
+        document.getElementById('modal-victory').classList.add('hidden');
+      }
+
+      resize() {
+        this.detectDeviceMode();
         const dpr = window.devicePixelRatio || 1;
         const rect = this.canvas.parentElement.getBoundingClientRect();
         this.canvas.width = Math.round(rect.width * dpr);
         this.canvas.height = Math.round(rect.height * dpr);
         this.ctx.resetTransform();
         this.ctx.scale(dpr, dpr);
-        this.updateCameraMetrics();
+        this.adjustCameraForMaze();
       }
 
-      updateCameraMetrics() {
-        const w = this.canvas.clientWidth;
-        const h = this.canvas.clientHeight;
-        const isPortrait = h > w;
+      update(deltaTime) {
+        if (this.camera.shake > 0) {
+          this.camera.shake = Math.max(0, this.camera.shake - deltaTime * 30);
+        }
 
-        // Dimensione bilanciata: 56 in mobile portrait per facile lettura corridoi, 52 su desktop
-        const baseW = (isPortrait && !this.isDesktop) ? 56 : 52;
-        this.camera.tileW = baseW;
-        this.camera.tileH = baseW * 0.5;
-        this.camera.wallH = baseW * 0.52;
-      }
-
-      gridToScreen(gx, gy) {
-        return {
-          x: (gx - gy) * (this.camera.tileW / 2),
-          y: (gx + gy) * (this.camera.tileH / 2)
-        };
-      }
-
-      update(dt) {
         if (this.player.isMoving) {
-          this.player.progress += this.player.speed * dt;
-          if (this.player.progress >= 1.0) {
+          this.player.moveProgress += this.player.moveSpeed * deltaTime;
+          if (this.player.moveProgress >= 1) {
             this.player.gx = this.player.targetGx;
             this.player.gy = this.player.targetGy;
             this.player.renderX = this.player.gx;
             this.player.renderY = this.player.gy;
             this.player.isMoving = false;
-            this.player.progress = 0;
-            this.discoverAround(this.player.gx, this.player.gy);
+            this.player.moveProgress = 0;
+            this.markExplored(this.player.gx, this.player.gy);
             this.checkTileInteractions();
           } else {
-            const t = this.player.progress;
+            const t = this.player.moveProgress;
             this.player.renderX = this.player.gx + (this.player.targetGx - this.player.gx) * t;
             this.player.renderY = this.player.gy + (this.player.targetGy - this.player.gy) * t;
           }
@@ -1212,28 +1006,24 @@
           this.player.renderY = this.player.gy;
         }
 
-        this.player.bobPhase += dt * 6;
+        this.player.bob = Math.sin(Date.now() * 0.008) * (this.player.isMoving ? 4 : 2);
 
-        // Camera follow dinamica:
-        // - Su smartphone portrait: solleva il target dell'11% per non coprire il corridoio col d-pad
-        // - Su desktop: centratura fluida perfetta al centro dello schermo
-        if (this.maze) {
-          const pIso = this.gridToScreen(this.player.renderX, this.player.renderY);
+        if (this.mazeData) {
+          const focusIso = this.gridToIso(this.player.renderX, this.player.renderY);
           const vw = this.canvas.clientWidth;
           const vh = this.canvas.clientHeight;
           const isPortrait = vh > vw;
 
-          const portraitShift = (!this.isDesktop && isPortrait) ? (vh * 0.11) : 0;
-          const targetCamX = vw / 2 - pIso.x;
-          const targetCamY = (vh / 2 - pIso.y) - portraitShift;
+          const portraitYShift = (!this.isDesktop && isPortrait) ? (vh * 0.11) : 0;
+          const desiredCamX = vw / 2 - focusIso.x;
+          const desiredCamY = (vh / 2 - focusIso.y) - portraitYShift;
 
-          this.camera.x += (targetCamX - this.camera.x) * Math.min(1, dt * 9);
-          this.camera.y += (targetCamY - this.camera.y) * Math.min(1, dt * 9);
+          this.camera.x += (desiredCamX - this.camera.x) * Math.min(1, deltaTime * 8);
+          this.camera.y += (desiredCamY - this.camera.y) * Math.min(1, deltaTime * 8);
         }
 
-        if (this.isMapVisible) {
-          this.renderTransparentRadar();
-        }
+        if (this.isMapVisible) this.renderMap();
+        this.particles.update();
       }
 
       render() {
@@ -1242,76 +1032,97 @@
         const h = this.canvas.clientHeight;
         const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
 
-        // Sfondo dinamico
-        const grad = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, Math.max(w, h));
-        grad.addColorStop(0, theme.bgBottom);
-        grad.addColorStop(1, theme.bgTop);
-        ctx.fillStyle = grad;
+        const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, Math.max(w, h));
+        bgGrad.addColorStop(0, theme.bgBottom);
+        bgGrad.addColorStop(1, theme.bgTop);
+        ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, w, h);
 
-        if (!this.maze) return;
+        if (!this.mazeData) return;
 
         ctx.save();
-        ctx.translate(this.camera.x, this.camera.y);
+        const shakeX = (Math.random() - 0.5) * this.camera.shake;
+        const shakeY = (Math.random() - 0.5) * this.camera.shake;
+        ctx.translate(this.camera.x + shakeX, this.camera.y + shakeY);
 
         const tw = this.camera.tileW;
         const th = this.camera.tileH;
         const wh = this.camera.wallH;
-        const { gridW, gridH } = this.maze;
+        const { gridW, gridH } = this.mazeData;
 
-        // 1. Pavimenti
+        // FASE 1: Disegno di tutti i pavimenti (piano calpestabile)
         for (let gy = 0; gy < gridH; gy++) {
           for (let gx = 0; gx < gridW; gx++) {
-            if (this.maze.grid[gy][gx] === 0) {
-              const pt = this.gridToScreen(gx, gy);
-              this.drawFloorDiamond(ctx, pt.x, pt.y, tw, th, theme.floorTop, theme.floorStroke);
+            if (this.mazeData.grid[gy][gx] === 0) {
+              const iso = this.gridToIso(gx, gy);
+              this.drawIsoDiamond(ctx, iso.x, iso.y, tw, th, theme.floorTop, theme.floorEdge);
 
-              if (gx === this.maze.start.x && gy === this.maze.start.y) {
+              if (gx === this.mazeData.start.x && gy === this.mazeData.start.y) {
                 ctx.beginPath();
-                ctx.ellipse(pt.x, pt.y, tw * 0.3, th * 0.3, 0, 0, Math.PI * 2);
+                ctx.ellipse(iso.x, iso.y, tw * 0.28, th * 0.28, 0, 0, Math.PI * 2);
                 ctx.fillStyle = '#34d399';
                 ctx.fill();
               }
-
-              if (gx === this.maze.exit.x && gy === this.maze.exit.y) {
-                this.drawExitPortal(ctx, pt.x, pt.y, tw, th, theme.portal, this.hasKey);
-              }
-
-              if (!this.hasKey && gx === this.maze.key.x && gy === this.maze.key.y) {
-                this.drawFloatingGoldKey(ctx, pt.x, pt.y, tw, th);
-              }
             }
           }
         }
 
-        // 2. Depth sorting Muri 3D & Personaggio
+        // FASE 2: Depth Sorting unificato per muri, chiave dorata, uscita e giocatore
         const maxDepth = (gridW - 1) + (gridH - 1);
         const playerDepth = this.player.renderX + this.player.renderY;
-        let playerRendered = false;
+        const keyDepth = this.mazeData.key.x + this.mazeData.key.y;
+        const exitDepth = this.mazeData.exit.x + this.mazeData.exit.y;
+
+        let playerDrawn = false;
+        let keyDrawn = this.hasKey; // Non disegnare se già raccolta
+        let exitDrawn = false;
 
         for (let depth = 0; depth <= maxDepth; depth++) {
-          if (!playerRendered && playerDepth <= depth + 0.5) {
-            this.drawPlayerCharacter(ctx, theme);
-            playerRendered = true;
+          // Disegno Uscita/Portale all'altezza corretta di profondità
+          if (!exitDrawn && exitDepth <= depth) {
+            const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
+            this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
+            exitDrawn = true;
           }
 
+          // Disegno Chiave Dorata Fluttuante all'altezza corretta di profondità
+          if (!keyDrawn && keyDepth <= depth) {
+            const iso = this.gridToIso(this.mazeData.key.x, this.mazeData.key.y);
+            this.drawKey(ctx, iso.x, iso.y);
+            keyDrawn = true;
+          }
+
+          // Disegno Giocatore
+          if (!playerDrawn && playerDepth <= depth + 0.5) {
+            this.drawPlayer(ctx, theme);
+            playerDrawn = true;
+          }
+
+          // Disegno Muri 3D su questo layer di profondità
           for (let gy = 0; gy < gridH; gy++) {
             const gx = depth - gy;
-            if (gx >= 0 && gx < gridW && this.maze.grid[gy][gx] === 1) {
-              const pt = this.gridToScreen(gx, gy);
-              this.draw3DWall(ctx, pt.x, pt.y, tw, th, wh, theme);
+            if (gx >= 0 && gx < gridW && this.mazeData.grid[gy][gx] === 1) {
+              const iso = this.gridToIso(gx, gy);
+              this.draw3DWallBlock(ctx, iso.x, iso.y, tw, th, wh, theme);
             }
           }
         }
 
-        if (!playerRendered) {
-          this.drawPlayerCharacter(ctx, theme);
+        if (!exitDrawn) {
+          const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
+          this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
         }
+        if (!keyDrawn) {
+          const iso = this.gridToIso(this.mazeData.key.x, this.mazeData.key.y);
+          this.drawKey(ctx, iso.x, iso.y);
+        }
+        if (!playerDrawn) this.drawPlayer(ctx, theme);
 
+        this.drawParticles(ctx);
         ctx.restore();
       }
 
-      drawFloorDiamond(ctx, x, y, tw, th, fill, stroke) {
+      drawIsoDiamond(ctx, x, y, tw, th, fill, stroke) {
         ctx.beginPath();
         ctx.moveTo(x, y - th / 2);
         ctx.lineTo(x + tw / 2, y);
@@ -1325,7 +1136,7 @@
         ctx.stroke();
       }
 
-      draw3DWall(ctx, x, y, tw, th, wh, theme) {
+      draw3DWallBlock(ctx, x, y, tw, th, wh, theme) {
         ctx.beginPath();
         ctx.moveTo(x, y - th / 2 - wh);
         ctx.lineTo(x + tw / 2, y - wh);
@@ -1334,8 +1145,7 @@
         ctx.closePath();
         ctx.fillStyle = theme.wallTop;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
         ctx.stroke();
 
         ctx.beginPath();
@@ -1356,20 +1166,14 @@
         ctx.fillStyle = theme.wallRight;
         ctx.fill();
 
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
         ctx.stroke();
       }
 
-      drawFloatingGoldKey(ctx, x, y, tw, th) {
-        const floatOffset = Math.sin(this.player.bobPhase * 0.8) * 5;
-        const ky = y - 18 + floatOffset;
-
+      drawKey(ctx, x, y) {
+        const floatY = Math.sin(Date.now() * 0.006) * 5;
+        const ky = y - 16 + floatY;
         ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(x, y, tw * 0.18, th * 0.18, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fill();
-
         ctx.shadowColor = '#fbbf24';
         ctx.shadowBlur = 14;
         ctx.font = 'bold 20px system-ui';
@@ -1379,105 +1183,94 @@
         ctx.restore();
       }
 
-      drawExitPortal(ctx, x, y, tw, th, portalColor, isUnlocked) {
+      drawExitPortal(ctx, x, y, tw, th, portalCol, isUnlocked) {
         ctx.save();
-        const pulse = Math.sin(this.player.bobPhase) * 2.5;
-        const color = isUnlocked ? portalColor : '#f43f5e';
-
+        const pulse = Math.sin(Date.now() * 0.006) * 2;
+        const col = isUnlocked ? portalCol : '#f43f5e';
         ctx.beginPath();
-        ctx.ellipse(x, y, tw * 0.36 + pulse, th * 0.36 + pulse * 0.5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = color;
+        ctx.ellipse(x, y, tw * 0.35 + pulse, th * 0.35 + pulse * 0.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = col;
         ctx.globalAlpha = 0.55;
         ctx.fill();
 
-        ctx.globalAlpha = 1.0;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 10;
-        ctx.font = 'bold 15px system-ui';
+        ctx.globalAlpha = 1;
+        ctx.font = 'bold 16px system-ui';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(isUnlocked ? '🚪✨' : '🔒', x, y - 18 + pulse);
+        ctx.fillText(isUnlocked ? '🚪✨' : '🔒', x, y - 22 + pulse);
         ctx.restore();
       }
 
-      drawPlayerCharacter(ctx, theme) {
-        const pt = this.gridToScreen(this.player.renderX, this.player.renderY);
-        const px = pt.x;
-        const bounce = this.player.isMoving 
-          ? Math.abs(Math.sin(this.player.progress * Math.PI)) * 7 
-          : Math.sin(this.player.bobPhase) * 2;
-        const py = pt.y - bounce;
+      drawPlayer(ctx, theme) {
+        const iso = this.gridToIso(this.player.renderX, this.player.renderY);
+        const px = iso.x;
+        const py = iso.y - (this.player.isMoving ? Math.abs(Math.sin(this.player.moveProgress * Math.PI) * 5) : this.player.bob);
 
         ctx.save();
         ctx.beginPath();
-        ctx.ellipse(pt.x, pt.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.fill();
 
-        const radius = this.camera.tileW * 0.23;
-        const centerY = py - radius - 2;
+        const rad = this.camera.tileW * 0.21;
+        const cy = py - rad - 2;
 
-        const bodyGrad = ctx.createRadialGradient(
-          px - radius * 0.3, centerY - radius * 0.3, radius * 0.1,
-          px, centerY, radius
-        );
-        bodyGrad.addColorStop(0, '#ffffff');
-        bodyGrad.addColorStop(0.35, theme.playerBody);
-        bodyGrad.addColorStop(1, '#78350f');
+        const grad = ctx.createRadialGradient(px - rad * 0.3, cy - rad * 0.3, rad * 0.1, px, cy, rad);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.35, theme.playerBody);
+        grad.addColorStop(1, '#78350f');
 
         ctx.beginPath();
-        ctx.arc(px, centerY, radius, 0, Math.PI * 2);
-        ctx.fillStyle = bodyGrad;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = theme.playerAcc;
-        ctx.beginPath();
-        ctx.arc(px, centerY - radius * 0.55, radius * 0.55, 0, Math.PI * 2);
+        ctx.arc(px, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
         ctx.fill();
 
-        let eyeDx = 0, eyeDy = 0;
-        if (this.player.dir === 'NE') { eyeDx = radius * 0.4; eyeDy = -radius * 0.2; }
-        else if (this.player.dir === 'NW') { eyeDx = -radius * 0.4; eyeDy = -radius * 0.2; }
-        else if (this.player.dir === 'SE') { eyeDx = radius * 0.4; eyeDy = radius * 0.2; }
-        else if (this.player.dir === 'SW') { eyeDx = -radius * 0.4; eyeDy = radius * 0.2; }
-
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = theme.playerHat;
         ctx.beginPath();
-        ctx.arc(px + eyeDx, centerY + eyeDy, radius * 0.16, 0, Math.PI * 2);
+        ctx.arc(px, cy - rad * 0.58, rad * 0.52, 0, Math.PI * 2);
         ctx.fill();
 
         if (this.hasKey) {
           ctx.font = '11px system-ui';
-          ctx.fillText('🗝️', px + radius * 0.8, centerY - radius * 0.7);
+          ctx.fillText('🗝️', px + rad * 0.8, cy - rad * 0.8);
         }
 
         ctx.restore();
       }
 
+      drawParticles(ctx) {
+        ctx.save();
+        for (const p of this.particles.particles) {
+          const iso = this.gridToIso(p.x, p.y);
+          ctx.beginPath();
+          ctx.arc(iso.x, iso.y - (p.z * this.camera.wallH * 1.5), p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.life;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      gameLoop(time) {
+        if (!this.lastTime) this.lastTime = time;
+        const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+        this.lastTime = time;
+
+        this.update(dt);
+        this.render();
+        requestAnimationFrame(this.gameLoop);
+      }
+
       start() {
-        this.detectDeviceMode();
-        this.handleResize();
-        this.startNewCampaign();
-
-        let lastTime = performance.now();
-        const loop = (time) => {
-          const dt = Math.min((time - lastTime) / 1000, 0.1);
-          lastTime = time;
-
-          this.update(dt);
-          this.render();
-          requestAnimationFrame(loop);
-        };
-        requestAnimationFrame(loop);
+        this.resize();
+        this.startNewGame();
+        requestAnimationFrame(this.gameLoop);
       }
     }
 
     window.onload = () => {
-      const app = new LabyrinthusGame();
-      app.start();
+      const game = new IsometricGame();
+      game.start();
     };
   </script>
 </body>
