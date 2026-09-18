@@ -3,300 +3,295 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus Iso - Fuga dal Labirinto</title>
+  <title>Labyrinthus 3D - Isometric Maze Adventure</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Canvas Confetti CDN for victory celebration -->
+  <!-- Canvas Confetti for celebrations -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    /* Prevent bouncing and scrolling on mobile devices */
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background-color: #030712;
+      color: #f3f4f6;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       touch-action: none;
-      -webkit-user-select: none;
-      user-select: none;
-      background: #0f172a;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    
-    /* Custom glassmorphism styles */
-    .glass-panel {
+
+    .glass-bar {
       background: rgba(15, 23, 42, 0.78);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
-    
+
     .glass-btn {
       background: rgba(30, 41, 59, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      transition: all 0.15s ease-in-out;
-    }
-    
-    .glass-btn:active {
-      transform: scale(0.92);
-      background: rgba(51, 65, 85, 0.95);
-    }
-
-    /* Glow animations */
-    @keyframes pulseGlow {
-      0%, 100% { filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8)); }
-      50% { filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.9)); }
-    }
-    .portal-glow {
-      animation: pulseGlow 2.5s infinite;
-    }
-
-    /* Key floating animation */
-    @keyframes keyFloat {
-      0%, 100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.8)); }
-      50% { transform: translateY(-8px) scale(1.1); filter: drop-shadow(0 0 16px rgba(250, 204, 21, 1)); }
-    }
-    .animate-key {
-      animation: keyFloat 2s ease-in-out infinite;
-    }
-
-    /* Isometric D-Pad button geometry */
-    .dpad-btn {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      transition: all 0.12s ease;
       touch-action: manipulation;
-      transition: transform 0.1s, background-color 0.1s;
     }
-    .dpad-btn:active {
-      transform: scale(0.88);
-      background-color: rgba(99, 102, 241, 0.5);
+    .glass-btn:active, .glass-btn.active {
+      transform: scale(0.92);
+      background: rgba(99, 102, 241, 0.85);
+      border-color: rgba(165, 180, 252, 0.6);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+    }
+
+    /* Pulsante D-PAD isometrico ergonomico */
+    .iso-pad-btn {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(30, 41, 59, 0.88);
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      touch-action: none;
+      transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
+    }
+    .iso-pad-btn:active, .iso-pad-btn.pressed {
+      transform: scale(0.90);
+      background: rgba(79, 70, 229, 0.95);
+      border-color: rgba(251, 191, 36, 0.8);
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.7);
+    }
+
+    /* Animazione fluttuante della chiave */
+    @keyframes keyGlow {
+      0%, 100% { filter: drop-shadow(0 0 4px #fbbf24); }
+      50% { filter: drop-shadow(0 0 10px #f59e0b); }
+    }
+    .key-pulse {
+      animation: keyGlow 2s infinite ease-in-out;
     }
   </style>
 </head>
-<body class="relative w-full h-full flex flex-col items-center justify-between text-white select-none">
+<body class="relative w-full h-full flex flex-col justify-between overflow-hidden">
 
-  <header class="w-full max-w-lg z-20 px-3 pt-3 flex items-center justify-between gap-1.5 pointer-events-auto">
-    <!-- Level Badge & Dimensions -->
-    <div class="glass-panel px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2">
-      <div id="theme-dot" class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></div>
-      <div>
-        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400" id="theme-name">Foresta Antica</div>
-        <div class="text-sm font-black text-slate-100 flex items-center gap-1.5">
-          <span id="level-text">Livello 1 / 10</span>
-          <span class="text-xs font-normal text-slate-400" id="grid-size">(10x10)</span>
+  <header class="w-full z-30 px-2 sm:px-4 pt-[calc(var(--sat)+6px)] flex items-center justify-between pointer-events-auto select-none gap-1 sm:gap-2">
+    <!-- Blocco Livello e Tema -->
+    <div class="glass-bar px-2.5 py-1 sm:py-1.5 rounded-2xl flex items-center gap-2 max-w-[34vw] sm:max-w-xs shrink">
+      <div id="hud-theme-dot" class="w-3 h-3 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_8px_#34d399]"></div>
+      <div class="flex flex-col min-w-0">
+        <div id="hud-theme-name" class="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 truncate leading-tight">Foresta Smeraldo</div>
+        <div class="text-[11px] sm:text-xs font-black text-slate-100 flex items-center gap-1 leading-none">
+          <span id="hud-level-tag">L.1/10</span>
+          <span id="hud-dim-tag" class="text-[10px] text-amber-400 font-mono font-semibold">(10x10)</span>
         </div>
       </div>
     </div>
 
-    <!-- Stats & Key status indicator -->
-    <div class="glass-panel px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2.5 text-xs">
+    <!-- Blocco Statistiche: Passi, Tempo, Chiave Dorata -->
+    <div class="glass-bar px-2 sm:px-3 py-1 sm:py-1.5 rounded-2xl flex items-center gap-2 sm:gap-3 text-xs shrink-0">
       <div class="flex flex-col items-center">
-        <span class="text-[9px] uppercase tracking-wider text-slate-400">Passi</span>
-        <span id="stat-steps" class="font-bold text-amber-400 text-sm">0</span>
+        <span class="text-[8px] uppercase font-bold tracking-wider text-slate-400">Passi</span>
+        <span id="hud-steps" class="font-bold text-amber-300 text-xs sm:text-sm font-mono leading-none">0</span>
       </div>
-      <div class="h-5 w-[1px] bg-slate-700"></div>
-      <div class="flex flex-col items-center">
-        <span class="text-[9px] uppercase tracking-wider text-slate-400">Tempo</span>
-        <span id="stat-time" class="font-bold text-cyan-400 text-sm">00:00</span>
+      <div class="h-4 w-[1px] bg-slate-700"></div>
+      <div class="flex flex-col items-center min-w-[34px]">
+        <span class="text-[8px] uppercase font-bold tracking-wider text-slate-400">Tempo</span>
+        <span id="hud-time" class="font-bold text-cyan-300 text-xs sm:text-sm font-mono leading-none">00:00</span>
       </div>
-      <div class="h-5 w-[1px] bg-slate-700"></div>
-      <!-- Golden Key HUD badge -->
-      <div id="key-badge" class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700 transition-all duration-300" title="Chiave necessaria per aprire il portale">
-        <span id="key-badge-icon" class="text-xs grayscale opacity-40 transition-all duration-300">🗝️</span>
-        <span id="key-badge-text" class="text-[10px] font-black text-slate-400">0/1</span>
+      <div class="h-4 w-[1px] bg-slate-700"></div>
+      <!-- Indicatore Chiave Dorata fluttuante -->
+      <div id="hud-key-pill" class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700 transition-all duration-300">
+        <span id="hud-key-icon" class="text-xs grayscale opacity-40 transition-all">🗝️</span>
+        <span id="hud-key-status" class="text-[10px] font-black text-slate-400">0/1</span>
       </div>
     </div>
 
-    <!-- Quick Action Icons (Audio, Restart, Fullscreen) -->
-    <div class="flex items-center gap-1.5">
-      <!-- Hold-to-view Map Button (Mobile & Desktop) -->
-      <button id="btn-map" title="Tieni premuto per visualizzare la mappa (o tasto TAB)" class="glass-btn px-2.5 py-2 rounded-xl text-amber-300 hover:text-amber-100 flex items-center gap-1 text-xs font-bold select-none cursor-pointer" aria-label="Mappa">
-        <span>🗺️</span>
-        <span class="hidden sm:inline text-[10px]">Mappa (TAB)</span>
+    <!-- Blocco Controlli Rapidi (Mappa, DPad Toggle, Audio, Riavvio, Fullscreen) -->
+    <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <!-- Pulsante Mappa (con indicatore "Tieni premuto / TAB") -->
+      <button id="btn-map" class="glass-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-sm text-amber-300 shadow" title="Tieni premuto Mappa (o tasto TAB)" aria-label="Mappa">
+        🗺️
       </button>
-
-      <button id="btn-audio" title="Attiva/Disattiva Audio" class="glass-btn p-2 rounded-xl text-slate-300 hover:text-white" aria-label="Audio">
+      <!-- Toggle D-Pad virtuale per mobile -->
+      <button id="btn-toggle-dpad" class="glass-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs text-indigo-300 shadow" title="Attiva/Disattiva D-Pad" aria-label="Mostra D-Pad">
+        🕹️
+      </button>
+      <!-- Audio Toggle -->
+      <button id="btn-audio" class="glass-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-300 shadow" aria-label="Attiva o disattiva audio">
         <svg id="icon-sound-on" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
         </svg>
         <svg id="icon-sound-off" class="w-4 h-4 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
         </svg>
       </button>
-
-      <button id="btn-restart" title="Riavvia Livello" class="glass-btn p-2 rounded-xl text-slate-300 hover:text-white" aria-label="Riavvia">
+      <!-- Restart Livello -->
+      <button id="btn-restart" class="glass-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-300 shadow" aria-label="Riavvia livello">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       </button>
-
-      <!-- Fullscreen Button requested in top-right corner -->
-      <button id="btn-fullscreen" title="Schermo Intero" class="glass-btn p-2 rounded-xl text-amber-300 hover:text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.2)]" aria-label="Schermo intero">
+      <!-- Fullscreen Toggle con compatibilità mobile/desktop -->
+      <button id="btn-fullscreen" class="glass-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-300 shadow" aria-label="Schermo intero">
         <svg id="icon-fs-enter" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
         </svg>
-        <svg id="icon-fs-exit" class="w-4 h-4 hidden text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 4v4m0 0H5m4 0L4 3m11 5h4m-4 0V4m0 4l5-5M9 20v-4m0 0H5m4 0l-5 5m11-5l5 5m-5-5v4m0-4h4" />
+        <svg id="icon-fs-exit" class="w-4 h-4 hidden text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
   </header>
 
-  <!-- Interactive game canvas container and in-game alert toast -->
-  <main id="game-container" class="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden">
+  <main id="game-canvas-container" class="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden">
     <canvas id="gameCanvas" class="block w-full h-full touch-none"></canvas>
 
-    <!-- Floating toast for key pickup & locked portal notification -->
-    <div id="game-toast" class="absolute top-16 z-30 px-4 py-2 rounded-2xl glass-panel text-xs text-amber-200 border border-amber-400/40 shadow-xl opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2">
+    <!-- Notifiche Toast in-game fluttuanti -->
+    <div id="game-toast" class="absolute top-16 sm:top-20 z-40 px-4 py-2 rounded-2xl glass-bar text-xs text-amber-200 border border-amber-400/40 shadow-2xl opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw]">
       <span id="toast-icon">🗝️</span>
-      <span id="toast-msg">Trova prima la chiave!</span>
+      <span id="toast-msg">Trova prima la chiave dorata!</span>
     </div>
 
-    <!-- Isometric Exploration Map Overlay (Hold to View) -->
-    <div id="map-overlay" class="absolute inset-0 z-40 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200">
-      <!-- Backdrop Dimmer: lightweight, semi-transparent blur allowing the game to be seen underneath -->
-      <div class="absolute inset-0 bg-slate-950/25 backdrop-blur-[3px]"></div>
-      
-      <!-- Responsive Isometric Map Box: airy glassmorphism with high transparency -->
-      <div class="relative z-10 bg-slate-950/45 backdrop-blur-md rounded-3xl p-3.5 flex flex-col items-center justify-between border border-amber-400/30 shadow-[0_8px_32px_rgba(0,0,0,0.37)] w-[92vw] h-[54vh] max-h-[520px] sm:w-[70vw] sm:max-w-2xl sm:h-[68vh]">
-        <!-- Header -->
-        <div class="w-full flex items-center justify-between px-2 pb-2 border-b border-slate-700/40 text-xs">
+    <!-- Overlay Mappa Trasparente "Fog of War / Percorso Imparato" -->
+    <!-- Proporzionata in modo differenziato tra Mobile Portrait e Desktop -->
+    <div id="map-radar-overlay" class="absolute inset-0 z-30 pointer-events-none opacity-0 transition-opacity duration-200 flex items-center justify-center p-3">
+      <div id="map-frame" class="relative pointer-events-auto rounded-3xl border border-amber-400/30 bg-slate-950/75 backdrop-blur-md shadow-[0_0_35px_rgba(0,0,0,0.85)] flex flex-col items-center justify-between p-3 transition-all duration-200 w-[92vw] h-[60vh] sm:w-[480px] sm:h-[480px]">
+        <div class="w-full flex items-center justify-between pb-1.5 border-b border-slate-700/60 text-xs">
           <div class="flex items-center gap-2">
-            <span class="text-amber-400 font-black flex items-center gap-1.5 text-sm">
-              <span>🗺️</span>
-              <span>MEMORIA DEL LABIRINTO</span>
+            <span class="text-amber-300 font-black tracking-wider flex items-center gap-1">
+              <span>🧭</span> <span>MAPPA ISOMETRICA (MEMORIA)</span>
             </span>
-            <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 font-mono" id="map-explored-pct">0%</span>
+            <span id="map-explored-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-mono border border-slate-700">0%</span>
           </div>
-          <span class="text-[10px] text-slate-400 font-medium">Rilascia per chiudere</span>
+          <span class="text-[10px] text-slate-400 font-sans hidden sm:inline">[Rilascia TAB o Chiudi]</span>
+        </div>
+        
+        <!-- Canvas dell'overlay isometrico -->
+        <div class="relative w-full flex-1 overflow-hidden my-1 flex items-center justify-center">
+          <canvas id="radarCanvas" class="block w-full h-full"></canvas>
         </div>
 
-        <!-- Canvas Container -->
-        <div class="relative w-full flex-1 flex items-center justify-center overflow-hidden my-1">
-          <canvas id="mapCanvas" class="block w-full h-full"></canvas>
-        </div>
-
-        <!-- Legend -->
-        <div class="w-full flex items-center justify-around px-2 pt-1 text-[10px] text-slate-300 border-t border-slate-800/60">
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]"></span> Tu</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]"></span> Partenza</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]"></span> Uscita</span>
-          <span class="flex items-center gap-1.5 text-slate-400"><span>⬛</span> Ignoto</span>
+        <div class="w-full flex items-center justify-around text-[10px] font-semibold text-slate-300 pt-1.5 border-t border-slate-800/80">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]"></span> Tu</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]"></span> Start</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]"></span> Portale</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span> Non Esplorato</span>
         </div>
       </div>
     </div>
   </main>
 
-  <footer class="w-full max-w-md z-20 px-4 pb-4 flex flex-col items-center gap-2 pointer-events-none">
-    <!-- Swipe / Key guidance tip -->
-    <div class="glass-panel px-3 py-1 rounded-full text-[11px] text-slate-300 flex items-center gap-2 shadow pointer-events-auto">
-      <span>📱 <b>Swipe</b> / 🗺️ Tieni Mappa</span>
-      <span class="text-slate-500">•</span>
-      <span>💻 <b>W,A,S,D</b> / <b>TAB</b></span>
-      <button id="btn-toggle-dpad" class="ml-1 text-[10px] text-indigo-300 underline font-semibold focus:outline-none">Mostra D-Pad</button>
-    </div>
+  <!-- D-Pad isometrico sagomato a diamante con 4 direzioni allineate (NW, NE, SW, SE) -->
+  <footer id="touch-controls-container" class="w-full z-30 pb-[calc(var(--sab)+12px)] flex flex-col items-center pointer-events-none select-none transition-all duration-300">
+    <div id="virtual-dpad" class="relative w-[210px] h-[210px] pointer-events-auto transition-opacity duration-300 opacity-95">
+      <!-- Nord-Est: +X isometrico (in alto a destra) -->
+      <button id="pad-ne" class="iso-pad-btn top-2 right-6" aria-label="Nord-Est">
+        <span class="text-amber-300 text-lg font-black leading-none">↗</span>
+        <span class="text-[8px] font-bold text-slate-300 mt-0.5">Est (+X)</span>
+      </button>
 
-    <!-- Optional On-Screen Isometric Touch Pad for precision taps on mobile -->
-    <div id="touch-dpad" class="hidden pointer-events-auto mt-1 flex flex-col items-center">
-      <div class="flex justify-center">
-        <!-- Up-Left (North: W / Up) -->
-        <button id="pad-w" class="dpad-btn glass-btn w-12 h-12 rounded-xl flex flex-col items-center justify-center text-slate-200 shadow-md">
-          <span class="text-xs font-black">▲</span>
-          <span class="text-[8px] text-indigo-300 font-bold">W / Nord</span>
-        </button>
-      </div>
-      <div class="flex justify-center gap-4 -mt-1">
-        <!-- Down-Left (West: A / Left) -->
-        <button id="pad-a" class="dpad-btn glass-btn w-12 h-12 rounded-xl flex flex-col items-center justify-center text-slate-200 shadow-md">
-          <span class="text-xs font-black">◀</span>
-          <span class="text-[8px] text-indigo-300 font-bold">A / Ovest</span>
-        </button>
-        <!-- Down-Right (East: D / Right) -->
-        <button id="pad-d" class="dpad-btn glass-btn w-12 h-12 rounded-xl flex flex-col items-center justify-center text-slate-200 shadow-md">
-          <span class="text-xs font-black">▶</span>
-          <span class="text-[8px] text-indigo-300 font-bold">D / Est</span>
-        </button>
-      </div>
-      <div class="flex justify-center -mt-1">
-        <!-- Down-Right (South: S / Down) -->
-        <button id="pad-s" class="dpad-btn glass-btn w-12 h-12 rounded-xl flex flex-col items-center justify-center text-slate-200 shadow-md">
-          <span class="text-[8px] text-indigo-300 font-bold">S / Sud</span>
-          <span class="text-xs font-black">▼</span>
-        </button>
+      <!-- Nord-Ovest: -Y isometrico (in alto a sinistra) -->
+      <button id="pad-nw" class="iso-pad-btn top-2 left-6" aria-label="Nord-Ovest">
+        <span class="text-amber-300 text-lg font-black leading-none">↖</span>
+        <span class="text-[8px] font-bold text-slate-300 mt-0.5">Nord (-Y)</span>
+      </button>
+
+      <!-- Sud-Ovest: -X isometrico (in basso a sinistra) -->
+      <button id="pad-sw" class="iso-pad-btn bottom-2 left-6" aria-label="Sud-Ovest">
+        <span class="text-[8px] font-bold text-slate-300 mb-0.5">Ovest (-X)</span>
+        <span class="text-amber-300 text-lg font-black leading-none">↙</span>
+      </button>
+
+      <!-- Sud-Est: +Y isometrico (in basso a destra) -->
+      <button id="pad-se" class="iso-pad-btn bottom-2 right-6" aria-label="Sud-Est">
+        <span class="text-[8px] font-bold text-slate-300 mb-0.5">Sud (+Y)</span>
+        <span class="text-amber-300 text-lg font-black leading-none">↘</span>
+      </button>
+
+      <!-- Centro Touchpad decorativo & guida swipe -->
+      <div class="absolute inset-[64px] rounded-2xl glass-bar flex flex-col items-center justify-center pointer-events-none opacity-60 border border-slate-600/40">
+        <span class="text-[10px] font-black text-amber-300 tracking-tighter leading-none">SWIPE</span>
+        <span class="text-[8px] text-slate-400 font-semibold">/ D-PAD</span>
       </div>
     </div>
   </footer>
 
-  <!-- Modal Level Cleared -->
-  <div id="modal-level-cleared" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
-    <div class="glass-panel mx-4 max-w-xs w-full p-6 rounded-2xl text-center border-amber-400/30 shadow-2xl flex flex-col items-center transform transition-all scale-95 opacity-0 duration-200" id="modal-level-content">
-      <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(251,191,36,0.3)]">
-        ✨
-      </div>
+  <!-- Modal Livello Completato -->
+  <div id="modal-level-win" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden pointer-events-auto p-4">
+    <div class="glass-bar w-full max-w-xs p-6 rounded-3xl text-center border-amber-400/40 shadow-2xl flex flex-col items-center">
+      <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-3xl mb-3 shadow-[0_0_20px_rgba(251,191,36,0.3)]">✨</div>
       <h3 class="text-xl font-black text-white">Labirinto Superato!</h3>
-      <p class="text-xs text-slate-300 mt-1 mb-4" id="level-cleared-sub">Chiave raccolta e portale attraversato!</p>
+      <p class="text-xs text-slate-300 mt-1 mb-4" id="modal-level-subtitle">Chiave raccolta e varco temporale aperto!</p>
       
-      <div class="w-full bg-slate-800/80 rounded-xl p-3 mb-5 text-xs text-slate-300 flex justify-around">
+      <div class="w-full bg-slate-900/80 rounded-2xl p-3 mb-5 text-xs text-slate-300 flex justify-around border border-slate-700/60">
         <div>
-          <div class="text-[10px] text-slate-400 uppercase">Passi livello</div>
-          <div class="text-base font-bold text-amber-400" id="modal-step-count">0</div>
+          <div class="text-[9px] text-slate-400 uppercase font-bold">Passi Livello</div>
+          <div class="text-base font-bold text-amber-400 font-mono" id="modal-step-val">0</div>
         </div>
         <div class="w-[1px] bg-slate-700"></div>
         <div>
-          <div class="text-[10px] text-slate-400 uppercase">Tempo livello</div>
-          <div class="text-base font-bold text-cyan-400" id="modal-time-count">00:00</div>
+          <div class="text-[9px] text-slate-400 uppercase font-bold">Tempo</div>
+          <div class="text-base font-bold text-cyan-400 font-mono" id="modal-time-val">00:00</div>
         </div>
       </div>
 
-      <button id="btn-next-level" class="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-95 text-white font-black rounded-xl shadow-lg transition-all tracking-wide text-sm flex items-center justify-center gap-2">
+      <button id="btn-next-level" class="w-full min-h-[48px] bg-gradient-to-r from-emerald-500 to-teal-500 active:scale-95 text-white font-black rounded-2xl shadow-xl transition-transform text-sm flex items-center justify-center gap-2">
         <span>Prossimo Livello</span>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
       </button>
     </div>
   </div>
 
-  <!-- Modal Victory Final (10/10 levels) -->
-  <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
-    <div class="glass-panel mx-4 max-w-sm w-full p-6 rounded-3xl text-center border-amber-300/40 shadow-2xl flex flex-col items-center">
-      <div class="text-5xl mb-2 animate-bounce">🏆</div>
-      <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-orange-400">
-        VITTORIA ASSOLUTA!
-      </h2>
-      <p class="text-xs text-slate-300 mt-1 mb-5">
-        Hai conquistato tutte le 10 chiavi e superato i labirinti dimensionali!
-      </p>
+  <!-- Modal Vittoria Finale Livello 10 -->
+  <div id="modal-game-win" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden pointer-events-auto p-4">
+    <div class="glass-bar w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/50 shadow-2xl flex flex-col items-center">
+      <div class="text-5xl mb-2 animate-bounce">👑</div>
+      <h2 class="text-2xl font-black text-amber-300">VITTORIA SUPREMA!</h2>
+      <p class="text-xs text-slate-300 mt-1 mb-4">Sei fuggito con successo da tutti i 10 regni isometrici!</p>
 
-      <div class="w-full bg-slate-900/90 rounded-2xl p-4 mb-6 border border-slate-700/60 flex flex-col gap-2.5">
+      <div class="w-full bg-slate-900/90 rounded-2xl p-4 mb-6 border border-slate-700/70 flex flex-col gap-2">
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Labirinti completati:</span>
-          <span class="font-bold text-white">10 / 10</span>
+          <span class="text-slate-400">Passi Complessivi:</span>
+          <span id="final-total-steps" class="font-bold text-amber-400 text-sm font-mono">0</span>
         </div>
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Passi totali:</span>
-          <span id="victory-total-steps" class="font-bold text-amber-400 text-sm">0</span>
+          <span class="text-slate-400">Tempo Totale Impiegato:</span>
+          <span id="final-total-time" class="font-bold text-cyan-400 text-sm font-mono">00:00</span>
         </div>
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Tempo totale di fuga:</span>
-          <span id="victory-total-time" class="font-bold text-cyan-400 text-sm">00:00</span>
+          <span class="text-slate-400">Labirinti Conquistati:</span>
+          <span class="font-bold text-emerald-400 text-sm font-mono">10 / 10</span>
         </div>
       </div>
 
-      <button id="btn-new-game-win" class="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 hover:brightness-110 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg transition-all tracking-wide text-sm flex items-center justify-center gap-2">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
-        <span>Nuova Partita</span>
+      <button id="btn-restart-game" class="w-full min-h-[48px] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl text-sm flex items-center justify-center gap-2">
+        Rigioca Nuova Partita
       </button>
     </div>
   </div>
 
-  <!-- Synthesizer Script -->
   <script>
-    /* Web Audio Sound Synthesizer (Zero external audio files) */
-    class RetroSoundSystem {
+    /* Sintetizzatore Web Audio API leggero, reattivo e autonomo */
+    class AudioEngine {
       constructor() {
         this.ctx = null;
         this.muted = false;
       }
-      
       init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -305,335 +300,244 @@
           }
         }
         if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
+          this.ctx.resume().catch(() => {});
         }
       }
-
+      playTone(freq, type, duration, vol = 0.08) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
       playStep() {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'triangle';
-          const startFreq = 180 + Math.random() * 40;
-          osc.frequency.setValueAtTime(startFreq, this.ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.08);
-
-          gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
-
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.08);
-        } catch (e) { /* ignore audio error */ }
+        this.playTone(220 + Math.random() * 25, 'triangle', 0.06, 0.07);
       }
-
       playBump() {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(90, this.ctx.currentTime);
-          osc.frequency.linearRampToValueAtTime(45, this.ctx.currentTime + 0.12);
-
-          gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
-
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + 0.12);
-        } catch (e) {}
+        this.playTone(85, 'sawtooth', 0.09, 0.12);
       }
-
       playKeyPickup() {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          // Magical sparkling chime: E5, G#5, B5, E6
-          const freqs = [659.25, 830.61, 987.77, 1318.51];
-          freqs.forEach((freq, idx) => {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            const t = this.ctx.currentTime + idx * 0.07;
-            osc.frequency.setValueAtTime(freq, t);
-
-            gain.gain.setValueAtTime(0.18, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.36);
-          });
-        } catch (e) {}
+        const notes = [587.33, 739.99, 880.00, 1174.66]; // D5, F#5, A5, D6
+        notes.forEach((freq, idx) => {
+          setTimeout(() => this.playTone(freq, 'sine', 0.22, 0.14), idx * 60);
+        });
       }
-
-      playLockedDoor() {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          // Double low rattle/buzz when touching a locked portal
-          const times = [0, 0.08];
-          times.forEach(dt => {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sawtooth';
-            const t = this.ctx.currentTime + dt;
-            osc.frequency.setValueAtTime(120, t);
-            osc.frequency.exponentialRampToValueAtTime(60, t + 0.06);
-
-            gain.gain.setValueAtTime(0.15, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.07);
-          });
-        } catch (e) {}
+      playLockedGate() {
+        this.playTone(130, 'square', 0.07, 0.15);
+        setTimeout(() => this.playTone(90, 'square', 0.09, 0.15), 75);
       }
-
       playLevelWin() {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
-          notes.forEach((freq, idx) => {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.09);
-
-            gain.gain.setValueAtTime(0, this.ctx.currentTime + idx * 0.09);
-            gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + idx * 0.09 + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.09 + 0.28);
-
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(this.ctx.currentTime + idx * 0.09);
-            osc.stop(this.ctx.currentTime + idx * 0.09 + 0.3);
-          });
-        } catch (e) {}
+        const arpeggio = [392, 523.25, 659.25, 783.99, 1046.50];
+        arpeggio.forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.28, 0.15), i * 75);
+        });
       }
-
-      playGameWin() {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          const melody = [
-            { f: 392.00, d: 0.15 }, // G4
-            { f: 523.25, d: 0.15 }, // C5
-            { f: 659.25, d: 0.15 }, // E5
-            { f: 783.99, d: 0.35 }, // G5
-            { f: 659.25, d: 0.15 }, // E5
-            { f: 783.99, d: 0.5 }   // G5 long
-          ];
-          let time = this.ctx.currentTime;
-          melody.forEach(item => {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(item.f, time);
-
-            gain.gain.setValueAtTime(0.22, time);
-            gain.gain.exponentialRampToValueAtTime(0.001, time + item.d);
-
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(time);
-            osc.stop(time + item.d);
-            time += item.d * 0.9;
-          });
-        } catch (e) {}
+      playGameVictory() {
+        const fanfara = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.5];
+        fanfara.forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.2), i * 100);
+        });
       }
     }
   </script>
 
-  <!-- Level Themes Configuration -->
   <script>
-    // Visual themes for the 10 progression levels
+    /* 10 Temi visivi ricchi con sfaccettature per illuminazione isometrica */
     const LEVEL_THEMES = [
       {
-        name: "Foresta Antica",
+        id: 1,
+        name: "Foresta Smeraldo",
         accent: "#34d399",
-        bgTop: "#061a14",
-        bgBottom: "#0b2e23",
-        floorTop: "#2d6a4f",
-        floorEdge: "#1b4332",
-        wallTop: "#74c69d",
-        wallLeft: "#40916c",
-        wallRight: "#2d6a4f",
+        bgTop: "#03140e",
+        bgBottom: "#0b2b1e",
+        floorTop: "#1e4d3b",
+        floorStroke: "#16382b",
+        wallTop: "#48bb78",
+        wallLeft: "#2f855a",
+        wallRight: "#22543d",
         portal: "#5eead4",
-        playerBody: "#fbbf24",
-        playerHat: "#f97316"
+        playerBody: "#facc15",
+        playerAcc: "#ea580c",
+        particle: "#6ee7b7"
       },
       {
-        name: "Cripta al Neon",
+        id: 2,
+        name: "Catacomba al Neon",
         accent: "#06b6d4",
-        bgTop: "#081b29",
-        bgBottom: "#0e2f47",
-        floorTop: "#155e75",
-        floorEdge: "#0e4454",
+        bgTop: "#051622",
+        bgBottom: "#0a283e",
+        floorTop: "#0e4454",
+        floorStroke: "#082f3b",
         wallTop: "#38bdf8",
         wallLeft: "#0284c7",
         wallRight: "#0369a1",
         portal: "#a855f7",
-        playerBody: "#ec4899",
-        playerHat: "#f43f5e"
+        playerBody: "#f43f5e",
+        playerAcc: "#fb7185",
+        particle: "#38bdf8"
       },
       {
-        name: "Tempio Dorato",
+        id: 3,
+        name: "Tempio d'Oro Solare",
         accent: "#fbbf24",
-        bgTop: "#201705",
-        bgBottom: "#38290c",
-        floorTop: "#b45309",
-        floorEdge: "#78350f",
+        bgTop: "#201602",
+        bgBottom: "#3d2b07",
+        floorTop: "#92400e",
+        floorStroke: "#78350f",
         wallTop: "#fcd34d",
         wallLeft: "#d97706",
         wallRight: "#b45309",
         portal: "#38bdf8",
         playerBody: "#38bdf8",
-        playerHat: "#6366f1"
+        playerAcc: "#4f46e5",
+        particle: "#fde68a"
       },
       {
-        name: "Grotte di Cristallo",
+        id: 4,
+        name: "Caverna d'Ametista",
         accent: "#c084fc",
-        bgTop: "#1c0d29",
-        bgBottom: "#2e1045",
-        floorTop: "#6b21a8",
-        floorEdge: "#4a1473",
+        bgTop: "#170a24",
+        bgBottom: "#2c1245",
+        floorTop: "#581c87",
+        floorStroke: "#3b0764",
         wallTop: "#e879f9",
         wallLeft: "#a855f7",
         wallRight: "#7e22ce",
         portal: "#4ade80",
-        playerBody: "#facc15",
-        playerHat: "#fb923c"
+        playerBody: "#fde047",
+        playerAcc: "#f97316",
+        particle: "#d8b4fe"
       },
       {
-        name: "Nucleo Vulcanico",
+        id: 5,
+        name: "Nucleo Magmatico",
         accent: "#f87171",
-        bgTop: "#240a0a",
-        bgBottom: "#3d0f0f",
-        floorTop: "#991b1b",
-        floorEdge: "#701313",
+        bgTop: "#210707",
+        bgBottom: "#400f0f",
+        floorTop: "#881337",
+        floorStroke: "#5b0d23",
         wallTop: "#fb7185",
         wallLeft: "#e11d48",
         wallRight: "#be123c",
         portal: "#38bdf8",
         playerBody: "#34d399",
-        playerHat: "#10b981"
+        playerAcc: "#059669",
+        particle: "#fda4af"
       },
       {
-        name: "Tundra Glaciale",
+        id: 6,
+        name: "Ghiacciaio Polare",
         accent: "#38bdf8",
-        bgTop: "#071e2e",
-        bgBottom: "#0f344d",
-        floorTop: "#0284c7",
-        floorEdge: "#0369a1",
-        wallTop: "#bae6fd",
+        bgTop: "#061828",
+        bgBottom: "#0f3654",
+        floorTop: "#0369a1",
+        floorStroke: "#075985",
+        wallTop: "#e0f2fe",
         wallLeft: "#7dd3fc",
         wallRight: "#38bdf8",
         portal: "#f472b6",
-        playerBody: "#f59e0b",
-        playerHat: "#ef4444"
+        playerBody: "#fb923c",
+        playerAcc: "#dc2626",
+        particle: "#bae6fd"
       },
       {
-        name: "Dune del Sole",
+        id: 7,
+        name: "Dune del Tramonto",
         accent: "#f59e0b",
-        bgTop: "#2b1904",
-        bgBottom: "#452605",
-        floorTop: "#d97706",
-        floorEdge: "#92400e",
+        bgTop: "#241302",
+        bgBottom: "#472403",
+        floorTop: "#b45309",
+        floorStroke: "#78350f",
         wallTop: "#fde68a",
         wallLeft: "#f59e0b",
         wallRight: "#b45309",
         portal: "#06b6d4",
         playerBody: "#ec4899",
-        playerHat: "#8b5cf6"
+        playerAcc: "#9333ea",
+        particle: "#fcd34d"
       },
       {
-        name: "Rovine di Ossidiana",
+        id: 8,
+        name: "Fortezza d'Ossidiana",
         accent: "#a78bfa",
-        bgTop: "#111019",
-        bgBottom: "#1f1c30",
+        bgTop: "#0e0d16",
+        bgBottom: "#1b192c",
         floorTop: "#312e81",
-        floorEdge: "#1e1b4b",
+        floorStroke: "#1e1b4b",
         wallTop: "#c4b5fd",
         wallLeft: "#6366f1",
         wallRight: "#4338ca",
         portal: "#2dd4bf",
         playerBody: "#34d399",
-        playerHat: "#fbbf24"
+        playerAcc: "#fbbf24",
+        particle: "#a78bfa"
       },
       {
-        name: "Oasi di Corallo",
+        id: 9,
+        name: "Abisso Corallino",
         accent: "#fb7185",
-        bgTop: "#1e0b16",
-        bgBottom: "#381028",
-        floorTop: "#be185d",
-        floorEdge: "#831843",
+        bgTop: "#180814",
+        bgBottom: "#34102c",
+        floorTop: "#9d174d",
+        floorStroke: "#700f36",
         wallTop: "#fda4af",
         wallLeft: "#f43f5e",
         wallRight: "#be123c",
         portal: "#a3e635",
         playerBody: "#38bdf8",
-        playerHat: "#a855f7"
+        playerAcc: "#a855f7",
+        particle: "#f472b6"
       },
       {
-        name: "Vuoto Astrale",
+        id: 10,
+        name: "Dimensione Astrale",
         accent: "#e879f9",
-        bgTop: "#0d0417",
-        bgBottom: "#19082c",
-        floorTop: "#581c87",
-        floorEdge: "#3b0764",
+        bgTop: "#0b0314",
+        bgBottom: "#1a082c",
+        floorTop: "#4a044e",
+        floorStroke: "#300234",
         wallTop: "#f0abfc",
         wallLeft: "#c026d3",
         wallRight: "#86198f",
         portal: "#fde047",
         playerBody: "#4ade80",
-        playerHat: "#38bdf8"
+        playerAcc: "#38bdf8",
+        particle: "#e879f9"
       }
     ];
+  </script>
 
-    /**
-     * Procedural Maze Generator using Recursive Backtracking Algorithm
-     * Guarantees a fully connected, solvable labyrinth with no isolated loops.
-     * Dimensions are (8 + (level * 2)) x (8 + (level * 2)).
-     * Also selects a distinct golden key location distant from start and exit.
-     */
-    class MazeGenerator {
-      static generate(width, height) {
-        // Cells: each cell has top, right, bottom, left walls
-        const cells = [];
-        for (let y = 0; y < height; y++) {
-          cells[y] = [];
-          for (let x = 0; x < width; x++) {
-            cells[y][x] = {
-              x, y,
-              walls: { top: true, right: true, bottom: true, left: true },
-              visited: false
-            };
-          }
-        }
+  <script>
+    /* Generatore Procedurale con algoritmo DFS e collocazione ottimale della chiave via BFS */
+    class ProceduralMazeGenerator {
+      static generate(dim) {
+        // Formula richiesta: dim = 8 + (n.livello * 2)
+        // La griglia per i corridoi e le pareti DFS avrà dimensioni (cells * 2 + 1)
+        // Per rispettare precisamente la formula delle celle del labirinto, consideriamo cellCount = dim
+        const cellCount = Math.max(10, dim);
+        const cells = Array.from({ length: cellCount }, (_, y) =>
+          Array.from({ length: cellCount }, (_, x) => ({
+            x, y,
+            visited: false,
+            walls: { top: true, right: true, bottom: true, left: true }
+          }))
+        );
 
-        const stack = [];
-        const startCell = cells[0][0];
-        startCell.visited = true;
-        stack.push(startCell);
+        // DFS con Recursive Backtracking
+        const stack = [cells[0][0]];
+        cells[0][0].visited = true;
 
-        const directions = [
+        const dirs = [
           { dx: 0, dy: -1, wall: 'top', opp: 'bottom' },
           { dx: 1, dy: 0, wall: 'right', opp: 'left' },
           { dx: 0, dy: 1, wall: 'bottom', opp: 'top' },
@@ -644,18 +548,15 @@
           const current = stack[stack.length - 1];
           const unvisitedNeighbors = [];
 
-          for (const dir of directions) {
-            const nx = current.x + dir.dx;
-            const ny = current.y + dir.dy;
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              if (!cells[ny][nx].visited) {
-                unvisitedNeighbors.push({ cell: cells[ny][nx], dir });
-              }
+          for (const d of dirs) {
+            const nx = current.x + d.dx;
+            const ny = current.y + d.dy;
+            if (nx >= 0 && nx < cellCount && ny >= 0 && ny < cellCount && !cells[ny][nx].visited) {
+              unvisitedNeighbors.push({ cell: cells[ny][nx], dir: d });
             }
           }
 
           if (unvisitedNeighbors.length > 0) {
-            // Pick a random unvisited neighbor
             const chosen = unvisitedNeighbors[Math.floor(Math.random() * unvisitedNeighbors.length)];
             current.walls[chosen.dir.wall] = false;
             chosen.cell.walls[chosen.dir.opp] = false;
@@ -666,22 +567,21 @@
           }
         }
 
-        // Convert the wall representation to an expanded grid for crisp isometric 3D block rendering
-        // Grid size: (width * 2 + 1) x (height * 2 + 1)
-        const gridW = width * 2 + 1;
-        const gridH = height * 2 + 1;
-        const grid = Array.from({ length: gridH }, () => Array(gridW).fill(1)); // 1 = Wall, 0 = Passage
+        // Conversione in matrice binaria (0 = corridoio calpestabile, 1 = muro solido)
+        const gridW = cellCount * 2 + 1;
+        const gridH = cellCount * 2 + 1;
+        const grid = Array.from({ length: gridH }, () => Array(gridW).fill(1));
 
-        for (let cy = 0; cy < height; cy++) {
-          for (let cx = 0; cx < width; cx++) {
+        for (let cy = 0; cy < cellCount; cy++) {
+          for (let cx = 0; cx < cellCount; cx++) {
             const gx = cx * 2 + 1;
             const gy = cy * 2 + 1;
-            grid[gy][gx] = 0; // Cell center is always open
+            grid[gy][gx] = 0; // Stanza cella
 
-            if (!cells[cy][cx].walls.bottom && cy < height - 1) {
+            if (!cells[cy][cx].walls.bottom && cy < cellCount - 1) {
               grid[gy + 1][gx] = 0;
             }
-            if (!cells[cy][cx].walls.right && cx < width - 1) {
+            if (!cells[cy][cx].walls.right && cx < cellCount - 1) {
               grid[gy][gx + 1] = 0;
             }
           }
@@ -689,138 +589,100 @@
 
         const start = { x: 1, y: 1 };
         const exit = { x: gridW - 2, y: gridH - 2 };
+        grid[exit.y][exit.x] = 0;
 
-        // Calculate true topological walking distances from Start and Exit using BFS
-        const computeWalkingDistances = (origin) => {
+        // BFS: Calcolo distanze da Start e da Exit per piazzare la chiave in un vicolo cieco
+        const bfsDistances = (origin) => {
           const dist = Array.from({ length: gridH }, () => Array(gridW).fill(-1));
           const queue = [origin];
           dist[origin.y][origin.x] = 0;
           let head = 0;
 
-          const dirs = [
-            { dx: 0, dy: -1 },
-            { dx: 1, dy: 0 },
-            { dx: 0, dy: 1 },
-            { dx: -1, dy: 0 }
-          ];
-
           while (head < queue.length) {
             const curr = queue[head++];
-            for (const d of dirs) {
+            for (const d of [{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0}]) {
               const nx = curr.x + d.dx;
               const ny = curr.y + d.dy;
-              if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH) {
-                if (grid[ny][nx] === 0 && dist[ny][nx] === -1) {
-                  dist[ny][nx] = dist[curr.y][curr.x] + 1;
-                  queue.push({ x: nx, y: ny });
-                }
+              if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH && grid[ny][nx] === 0 && dist[ny][nx] === -1) {
+                dist[ny][nx] = dist[curr.y][curr.x] + 1;
+                queue.push({ x: nx, y: ny });
               }
             }
           }
           return dist;
         };
 
-        const distStart = computeWalkingDistances(start);
-        const distExit = computeWalkingDistances(exit);
-        const exitTotalDist = distStart[exit.y][exit.x] || 1;
+        const distFromStart = bfsDistances(start);
+        const distFromExit = bfsDistances(exit);
 
-        // Minimum required steps away from both start and exit
-        const minDistanceRatio = 0.35; // Must be at least 35% of total maze length away from both
-        const minSteps = Math.max(4, Math.floor(exitTotalDist * minDistanceRatio));
-
+        // Ricerca candidati chiave: celle distanti sia da start che da exit (e preferibilmente vicoli ciechi)
         const candidates = [];
         for (let gy = 1; gy < gridH - 1; gy++) {
           for (let gx = 1; gx < gridW - 1; gx++) {
-            if (grid[gy][gx] === 0) {
-              // Exclude start and exit tiles
-              if ((gx === start.x && gy === start.y) || (gx === exit.x && gy === exit.y)) continue;
+            if (grid[gy][gx] === 0 && !(gx === start.x && gy === start.y) && !(gx === exit.x && gy === exit.y)) {
+              let wallCount = 0;
+              if (grid[gy - 1][gx] === 1) wallCount++;
+              if (grid[gy + 1][gx] === 1) wallCount++;
+              if (grid[gy][gx - 1] === 1) wallCount++;
+              if (grid[gy][gx + 1] === 1) wallCount++;
 
-              const dStart = distStart[gy][gx];
-              const dExit = distExit[gy][gx];
+              const isDeadEnd = (wallCount === 3);
+              const dStart = distFromStart[gy][gx];
+              const dExit = distFromExit[gy][gx];
 
-              if (dStart <= 0 || dExit <= 0) continue;
-
-              // Check if it's a dead-end corridor (only 1 open neighbor)
-              let openNeighbors = 0;
-              if (grid[gy - 1][gx] === 0) openNeighbors++;
-              if (grid[gy + 1][gx] === 0) openNeighbors++;
-              if (grid[gy][gx - 1] === 0) openNeighbors++;
-              if (grid[gy][gx + 1] === 0) openNeighbors++;
-              const isDeadEnd = openNeighbors === 1;
-
-              // Distance score: maximizes the minimum distance to either start or exit
-              // This strictly prevents the key from spawning close to either end
-              const minBuffer = Math.min(dStart, dExit);
-              const score = minBuffer * 2 + (dStart + dExit) + (isDeadEnd ? 15 : 0);
-
-              if (dStart >= minSteps && dExit >= minSteps) {
-                candidates.push({ x: gx, y: gy, score, dStart, dExit, isDeadEnd });
+              if (dStart > 0 && dExit > 0) {
+                // Punteggio: bilanciamento della distanza + bonus se vicolo cieco profondo
+                const score = Math.min(dStart, dExit) * 1.5 + (isDeadEnd ? 25 : 0) + (dStart + dExit) * 0.5;
+                candidates.push({ x: gx, y: gy, score });
               }
             }
           }
         }
 
-        // Fallback if the maze layout is unusually tight
-        if (candidates.length === 0) {
-          for (let gy = 1; gy < gridH - 1; gy++) {
-            for (let gx = 1; gx < gridW - 1; gx++) {
-              if (grid[gy][gx] === 0 && !(gx === start.x && gy === start.y) && !(gx === exit.x && gy === exit.y)) {
-                const dStart = distStart[gy][gx];
-                const dExit = distExit[gy][gx];
-                candidates.push({ x: gx, y: gy, score: Math.min(dStart, dExit) });
-              }
-            }
-          }
-        }
-
-        // Sort descending by score (prioritizing tiles furthest from both ends and dead-end nooks)
         candidates.sort((a, b) => b.score - a.score);
-        const topPool = Math.max(1, Math.min(candidates.length, 4));
-        const key = candidates[Math.floor(Math.random() * topPool)];
+        const chosenKey = candidates.length > 0 
+          ? candidates[Math.floor(Math.random() * Math.min(3, candidates.length))] 
+          : { x: 1, y: 3 };
 
         return {
+          dimCellCount: cellCount,
           grid,
           gridW,
           gridH,
           start,
           exit,
-          key: { x: key.x, y: key.y }
+          key: { x: chosenKey.x, y: chosenKey.y }
         };
       }
     }
   </script>
 
-  <!-- Particle System -->
   <script>
-    class ParticleSystem {
+    class ParticleManager {
       constructor() {
         this.particles = [];
       }
-
-      spawn(x, y, z, color, count = 1) {
+      emit(x, y, z, color, count = 1, speed = 0.03) {
         for (let i = 0; i < count; i++) {
           this.particles.push({
             x, y, z,
-            vx: (Math.random() - 0.5) * 0.05,
-            vy: (Math.random() - 0.5) * 0.05,
-            vz: 0.03 + Math.random() * 0.05,
-            size: 2 + Math.random() * 3,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            vz: 0.015 + Math.random() * speed,
             color,
-            alpha: 1,
-            life: 1,
+            size: 2 + Math.random() * 2.5,
+            life: 1.0,
             decay: 0.02 + Math.random() * 0.02
           });
         }
       }
-
-      update() {
+      update(dt) {
         for (let i = this.particles.length - 1; i >= 0; i--) {
           const p = this.particles[i];
           p.x += p.vx;
           p.y += p.vy;
           p.z += p.vz;
           p.life -= p.decay;
-          p.alpha = Math.max(0, p.life);
           if (p.life <= 0) {
             this.particles.splice(i, 1);
           }
@@ -829,176 +691,197 @@
     }
   </script>
 
-  <!-- Main Game Engine Class -->
   <script>
-    class IsometricGame {
+    class IsometricMazeGame {
       constructor() {
+        // Canvases
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.sound = new RetroSoundSystem();
-        this.particles = new ParticleSystem();
 
-        // Exploration Map Canvas and State
-        this.mapCanvas = document.getElementById('mapCanvas');
-        this.mapCtx = this.mapCanvas.getContext('2d');
+        this.radarCanvas = document.getElementById('radarCanvas');
+        this.radarCtx = this.radarCanvas.getContext('2d');
         this.isMapVisible = false;
-        this.visitedTiles = null; // 2D array tracking discovered tiles
 
-        // Progression State
+        // Sistemi accessori
+        this.audio = new AudioEngine();
+        this.particles = new ParticleManager();
+
+        // Stato Gioco
         this.currentLevel = 1;
-        this.maxLevel = 10;
-        this.totalSteps = 0;
+        this.maxLevels = 10;
         this.levelSteps = 0;
-        this.totalSeconds = 0;
+        this.totalSteps = 0;
         this.levelSeconds = 0;
-        this.timerInterval = null;
-        this.isGameActive = false;
-
-        // Key Mechanic state
+        this.totalSeconds = 0;
         this.hasKey = false;
-        this.toastTimeout = null;
+        this.isGameActive = false;
+        this.timerId = null;
+        this.toastTimer = null;
 
-        // Player & Map state
-        this.mazeData = null;
+        // Dati Labirinto Corrente
+        this.maze = null;
+        this.exploredGrid = null; // Memoria percorso per Fog of War
+        this.totalExplorable = 0;
+        this.currentExploredCount = 0;
+
+        // Personaggio 3D
         this.player = {
-          gx: 1,
-          gy: 1,
-          targetGx: 1,
-          targetGy: 1,
-          // Interpolated visual coordinates for fluid movement
-          renderX: 1,
-          renderY: 1,
+          gx: 1, gy: 1,
+          targetGx: 1, targetGy: 1,
+          renderX: 1, renderY: 1,
           isMoving: false,
-          moveProgress: 0,
-          moveSpeed: 6.5, // units per second
-          dir: 'S',
-          bob: 0
+          progress: 0,
+          speed: 7.0, // Tile per secondo
+          dir: 'SE',  // NE, NW, SE, SW
+          bobPhase: 0
         };
 
-        // Camera settings
+        // Telecamera Dinamica
         this.camera = {
-          x: 0,
-          y: 0,
-          targetX: 0,
-          targetY: 0,
-          tileW: 46,
-          tileH: 23,
+          x: 0, y: 0,
+          tileW: 52,
+          tileH: 26,
           wallH: 28,
           scale: 1
         };
 
-        // Touch gesture tracking
-        this.touchStartPoint = null;
-        this.minSwipeDistance = 25; // px
+        // Gestione Pressione Continua (Holding / Auto-repeat DPad)
+        this.heldDir = null;
+        this.heldInterval = null;
+        this.dpadVisible = true;
 
-        // Bindings & Setup
-        this.resize = this.resize.bind(this);
-        this.gameLoop = this.gameLoop.bind(this);
-        
-        window.addEventListener('resize', this.resize);
-        this.initControls();
-        this.initUI();
+        this.bindEvents();
+        this.setupAudioAutoplayUnlock();
       }
 
-      initUI() {
-        // UI Buttons
-        document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
-        document.getElementById('btn-audio').addEventListener('click', () => this.toggleAudio());
-        document.getElementById('btn-restart').addEventListener('click', () => this.restartLevel());
-        document.getElementById('btn-next-level').addEventListener('click', () => this.advanceNextLevel());
-        document.getElementById('btn-new-game-win').addEventListener('click', () => this.startNewGame());
+      bindEvents() {
+        window.addEventListener('resize', () => this.handleResize());
 
-        // Map Button Press-and-Hold controls (Mouse & Touch)
-        const mapBtn = document.getElementById('btn-map');
-        const startMap = (e) => {
-          e.preventDefault();
-          this.showMap();
-        };
-        const endMap = (e) => {
-          e.preventDefault();
-          this.hideMap();
-        };
+        // Gestione Audio Toggle
+        const audioBtn = document.getElementById('btn-audio');
+        audioBtn.addEventListener('click', () => {
+          this.audio.muted = !this.audio.muted;
+          document.getElementById('icon-sound-on').classList.toggle('hidden', this.audio.muted);
+          document.getElementById('icon-sound-off').classList.toggle('hidden', !this.audio.muted);
+        });
 
-        mapBtn.addEventListener('mousedown', startMap);
-        mapBtn.addEventListener('touchstart', startMap, { passive: false });
-        window.addEventListener('mouseup', endMap);
-        window.addEventListener('touchend', endMap);
-        window.addEventListener('touchcancel', endMap);
-
-        // Toggle virtual D-Pad visibility
-        const dpad = document.getElementById('touch-dpad');
-        const toggleBtn = document.getElementById('btn-toggle-dpad');
-        toggleBtn.addEventListener('click', () => {
-          if (dpad.classList.contains('hidden')) {
-            dpad.classList.remove('hidden');
-            toggleBtn.textContent = 'Nascondi D-Pad';
+        // Toggle visibilità D-Pad virtuale
+        const toggleDpadBtn = document.getElementById('btn-toggle-dpad');
+        toggleDpadBtn.addEventListener('click', () => {
+          this.dpadVisible = !this.dpadVisible;
+          const container = document.getElementById('virtual-dpad');
+          if (this.dpadVisible) {
+            container.classList.remove('opacity-0', 'pointer-events-none');
+            container.classList.add('opacity-95');
           } else {
-            dpad.classList.add('hidden');
-            toggleBtn.textContent = 'Mostra D-Pad';
+            container.classList.add('opacity-0', 'pointer-events-none');
+            container.classList.remove('opacity-95');
           }
         });
 
-        // Virtual D-Pad buttons
-        document.getElementById('pad-w').addEventListener('click', () => this.handleDirectionInput(0, -1, 'W'));
-        document.getElementById('pad-s').addEventListener('click', () => this.handleDirectionInput(0, 1, 'S'));
-        document.getElementById('pad-a').addEventListener('click', () => this.handleDirectionInput(-1, 0, 'A'));
-        document.getElementById('pad-d').addEventListener('click', () => this.handleDirectionInput(1, 0, 'D'));
-      }
+        // Restart & Modals
+        document.getElementById('btn-restart').addEventListener('click', () => this.restartCurrentLevel());
+        document.getElementById('btn-next-level').addEventListener('click', () => this.goToNextLevel());
+        document.getElementById('btn-restart-game').addEventListener('click', () => this.startNewCampaign());
 
-      initControls() {
-        // Desktop Keyboard Controls: WASD, Arrows & TAB for Map
+        // Gestione Tasto Fullscreen robusta
+        const fsBtn = document.getElementById('btn-fullscreen');
+        fsBtn.addEventListener('click', () => this.toggleFullscreen());
+        document.addEventListener('fullscreenchange', () => this.updateFullscreenIcons());
+        document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenIcons());
+
+        // Gestione Mappa: Bottone HUD (sia click che tieni premuto per mobile)
+        const mapBtn = document.getElementById('btn-map');
+        const showMapFn = (e) => {
+          if (e) e.preventDefault();
+          this.showTransparentMap(true);
+        };
+        const hideMapFn = (e) => {
+          if (e) e.preventDefault();
+          this.showTransparentMap(false);
+        };
+
+        mapBtn.addEventListener('pointerdown', showMapFn);
+        mapBtn.addEventListener('pointerup', hideMapFn);
+        mapBtn.addEventListener('pointerleave', hideMapFn);
+        mapBtn.addEventListener('pointercancel', hideMapFn);
+
+        // Gestione Tastiera Desktop (WASD, Frecce, Tasto TAB per Mappa)
         window.addEventListener('keydown', (e) => {
-          if (!this.isGameActive) return;
-
-          // TAB key held down opens exploration map
           if (e.key === 'Tab') {
             e.preventDefault();
-            if (!this.isMapVisible) {
-              this.showMap();
-            }
+            this.showTransparentMap(true);
             return;
           }
+          if (!this.isGameActive) return;
 
           const key = e.key.toLowerCase();
-
-          let dx = 0, dy = 0;
-          let dirKey = '';
-
-          if (key === 'w' || key === 'arrowup') {
-            dy = -1;
-            dirKey = 'W';
-          } else if (key === 's' || key === 'arrowdown') {
-            dy = 1;
-            dirKey = 'S';
-          } else if (key === 'a' || key === 'arrowleft') {
-            dx = -1;
-            dirKey = 'A';
-          } else if (key === 'd' || key === 'arrowright') {
-            dx = 1;
-            dirKey = 'D';
-          }
-
-          if (dx !== 0 || dy !== 0) {
-            e.preventDefault();
-            this.handleDirectionInput(dx, dy, dirKey);
-          }
+          // Mappatura Isometrica naturale:
+          // W / Freccia Su: Nord-Ovest (in alto a sinistra su schermo) -> dy = -1
+          // S / Freccia Giù: Sud-Est (in basso a destra su schermo) -> dy = +1
+          // A / Freccia Sinistra: Sud-Ovest (in basso a sinistra su schermo) -> dx = -1
+          // D / Freccia Destra: Nord-Est (in alto a destra su schermo) -> dx = +1
+          if (key === 'w' || key === 'arrowup') this.tryMove(0, -1, 'NW');
+          else if (key === 's' || key === 'arrowdown') this.tryMove(0, 1, 'SE');
+          else if (key === 'a' || key === 'arrowleft') this.tryMove(-1, 0, 'SW');
+          else if (key === 'd' || key === 'arrowright') this.tryMove(1, 0, 'NE');
         });
 
         window.addEventListener('keyup', (e) => {
           if (e.key === 'Tab') {
             e.preventDefault();
-            this.hideMap();
+            this.showTransparentMap(false);
           }
         });
 
-        window.addEventListener('blur', () => {
-          this.hideMap();
-        });
+        // Gestione Controlli D-Pad Virtuale (Zero Latency con PointerEvents & Auto-repeat)
+        const setupPadBtn = (id, dx, dy, dir) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
 
-        // Mobile Swipe Controls on Canvas
+          const startPress = (e) => {
+            e.preventDefault();
+            this.audio.init();
+            btn.classList.add('pressed');
+            try { btn.setPointerCapture(e.pointerId); } catch(err){}
+            this.heldDir = { dx, dy, dir };
+            this.tryMove(dx, dy, dir);
+
+            if (this.heldInterval) clearInterval(this.heldInterval);
+            this.heldInterval = setInterval(() => {
+              if (this.heldDir && !this.player.isMoving) {
+                this.tryMove(this.heldDir.dx, this.heldDir.dy, this.heldDir.dir);
+              }
+            }, 140);
+          };
+
+          const stopPress = (e) => {
+            e.preventDefault();
+            btn.classList.remove('pressed');
+            try { btn.releasePointerCapture(e.pointerId); } catch(err){}
+            this.heldDir = null;
+            if (this.heldInterval) {
+              clearInterval(this.heldInterval);
+              this.heldInterval = null;
+            }
+          };
+
+          btn.addEventListener('pointerdown', startPress);
+          btn.addEventListener('pointerup', stopPress);
+          btn.addEventListener('pointercancel', stopPress);
+        };
+
+        setupPadBtn('pad-ne', 1, 0, 'NE');
+        setupPadBtn('pad-nw', 0, -1, 'NW');
+        setupPadBtn('pad-se', 0, 1, 'SE');
+        setupPadBtn('pad-sw', -1, 0, 'SW');
+
+        // Gesto Swipe su Schermo (Rotazione 45° isometrica fluida)
+        let touchOrigin = null;
         this.canvas.addEventListener('touchstart', (e) => {
           if (e.touches.length === 1) {
-            this.touchStartPoint = {
+            this.audio.init();
+            touchOrigin = {
               x: e.touches[0].clientX,
               y: e.touches[0].clientY,
               time: Date.now()
@@ -1007,297 +890,236 @@
         }, { passive: true });
 
         this.canvas.addEventListener('touchend', (e) => {
-          if (!this.touchStartPoint || !this.isGameActive) return;
-          const touchEnd = e.changedTouches[0];
-          const deltaX = touchEnd.clientX - this.touchStartPoint.x;
-          const deltaY = touchEnd.clientY - this.touchStartPoint.y;
-          const dist = Math.hypot(deltaX, deltaY);
+          if (!touchOrigin || !this.isGameActive) return;
+          const endTouch = e.changedTouches[0];
+          const dx = endTouch.clientX - touchOrigin.x;
+          const dy = endTouch.clientY - touchOrigin.y;
+          const dist = Math.hypot(dx, dy);
 
-          if (dist >= this.minSwipeDistance) {
-            const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI); // -180 to 180
+          if (dist >= 22) {
+            // Angolo polare in gradi (-180 a +180)
+            const deg = Math.atan2(dy, dx) * (180 / Math.PI);
 
-            let dx = 0, dy = 0, dir = '';
-
-            if (angle >= -135 && angle < -45) {
-              dy = -1; dir = 'W'; // Swipe Up -> North
-            } else if (angle >= -45 && angle < 45) {
-              dx = 1; dir = 'D'; // Swipe Right -> East
-            } else if (angle >= 45 && angle < 135) {
-              dy = 1; dir = 'S'; // Swipe Down -> South
+            // Quadranti inclinati a 45 gradi:
+            // Verso Alto-Destra (-90 a 0 deg): NE (+X, dy=0)
+            // Verso Alto-Sinistra (-180 a -90 deg): NW (dx=0, -Y)
+            // Verso Basso-Destra (0 a 90 deg): SE (dx=0, +Y)
+            // Verso Basso-Sinistra (90 a 180 deg): SW (-X, dy=0)
+            if (deg >= -90 && deg < 0) {
+              this.tryMove(1, 0, 'NE');
+            } else if (deg >= -180 && deg < -90) {
+              this.tryMove(0, -1, 'NW');
+            } else if (deg >= 0 && deg < 90) {
+              this.tryMove(0, 1, 'SE');
             } else {
-              dx = -1; dir = 'A'; // Swipe Left -> West
+              this.tryMove(-1, 0, 'SW');
             }
-
-            this.handleDirectionInput(dx, dy, dir);
           }
-          this.touchStartPoint = null;
+          touchOrigin = null;
         }, { passive: true });
       }
 
-      startNewGame() {
+      setupAudioAutoplayUnlock() {
+        const unlock = () => {
+          this.audio.init();
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('touchstart', unlock);
+        };
+        window.addEventListener('pointerdown', unlock, { passive: true });
+        window.addEventListener('touchstart', unlock, { passive: true });
+      }
+
+      toggleFullscreen() {
+        const doc = document;
+        const elem = doc.documentElement;
+        const isFS = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+
+        if (!isFS) {
+          if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(() => {});
+          } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+          }
+        } else {
+          if (doc.exitFullscreen) {
+            doc.exitFullscreen().catch(() => {});
+          } else if (doc.webkitExitFullscreen) {
+            doc.webkitExitFullscreen();
+          }
+        }
+      }
+
+      updateFullscreenIcons() {
+        const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+        document.getElementById('icon-fs-enter').classList.toggle('hidden', !!isFS);
+        document.getElementById('icon-fs-exit').classList.toggle('hidden', !isFS);
+      }
+
+      startNewCampaign() {
         this.currentLevel = 1;
         this.totalSteps = 0;
         this.totalSeconds = 0;
         this.closeModals();
-        this.startLevel(this.currentLevel);
+        this.loadLevel(1);
       }
 
-      startLevel(lvl) {
-        this.currentLevel = lvl;
+      restartCurrentLevel() {
+        this.closeModals();
+        this.loadLevel(this.currentLevel);
+      }
+
+      goToNextLevel() {
+        this.closeModals();
+        if (this.currentLevel < this.maxLevels) {
+          this.loadLevel(this.currentLevel + 1);
+        } else {
+          this.showGameVictory();
+        }
+      }
+
+      loadLevel(levelNumber) {
+        this.currentLevel = levelNumber;
         this.levelSteps = 0;
         this.levelSeconds = 0;
-        this.hasKey = false; // Reset key collection for new level
-        this.hideMap();
+        this.hasKey = false;
+        this.showTransparentMap(false);
 
-        // Formula: dimension is (8 + (n.livello x 2)) x (8 + (n.livello x 2))
-        const mazeDim = 8 + (this.currentLevel * 2);
-        this.mazeData = MazeGenerator.generate(mazeDim, mazeDim);
+        // Formula richiesta: (8 + (livello * 2))
+        const mazeFormulaDimension = 8 + (this.currentLevel * 2);
+        this.maze = ProceduralMazeGenerator.generate(mazeFormulaDimension);
 
-        // Initialize Exploration / Fog of War memory grid
-        this.visitedTiles = Array.from({ length: this.mazeData.gridH }, () => 
-          Array(this.mazeData.gridW).fill(false)
+        // Inizializza Fog of War (griglia di celle scoperte)
+        this.exploredGrid = Array.from({ length: this.maze.gridH }, () =>
+          Array(this.maze.gridW).fill(false)
         );
 
-        // Player positioning
-        this.player.gx = this.mazeData.start.x;
-        this.player.gy = this.mazeData.start.y;
+        // Calcolo totale calpestabili per la percentuale mappa
+        this.totalExplorable = 0;
+        for (let y = 0; y < this.maze.gridH; y++) {
+          for (let x = 0; x < this.maze.gridW; x++) {
+            if (this.maze.grid[y][x] === 0) this.totalExplorable++;
+          }
+        }
+
+        // Posizionamento Giocatore
+        this.player.gx = this.maze.start.x;
+        this.player.gy = this.maze.start.y;
         this.player.targetGx = this.player.gx;
         this.player.targetGy = this.player.gy;
         this.player.renderX = this.player.gx;
         this.player.renderY = this.player.gy;
         this.player.isMoving = false;
-        this.player.dir = 'S';
+        this.player.progress = 0;
+        this.player.dir = 'SE';
 
-        // Reveal starting area
-        this.markExplored(this.player.gx, this.player.gy);
+        // Esplora area di partenza
+        this.discoverAround(this.player.gx, this.player.gy);
 
-        // Update Theme & Header UI
-        this.updateThemeUI();
-        this.updateStatsUI();
-        this.updateKeyUI();
+        this.updateHUDLabels();
+        this.updateKeyHUD();
+        this.updateStatsHUD();
+        this.updateCameraMetrics();
 
-        // Auto-scale camera to fit neatly in portrait viewport
-        this.adjustCameraForMaze();
-
-        // Center camera immediately on player start position
-        const startIso = this.gridToIso(this.player.gx, this.player.gy);
-        this.camera.x = this.canvas.clientWidth / 2 - startIso.x;
-        this.camera.y = (this.canvas.clientHeight / 2 - startIso.y) + (this.camera.tileH * 0.8);
-
-        // Start Level Timer
-        if (this.timerInterval) clearInterval(this.timerInterval);
-        this.timerInterval = setInterval(() => {
+        // Avvio Cronometro
+        if (this.timerId) clearInterval(this.timerId);
+        this.timerId = setInterval(() => {
           if (this.isGameActive) {
             this.levelSeconds++;
             this.totalSeconds++;
-            this.updateStatsUI();
+            this.updateStatsHUD();
           }
         }, 1000);
 
         this.isGameActive = true;
       }
 
-      /* Discover neighboring cells along player path */
-      markExplored(gx, gy) {
-        if (!this.visitedTiles || !this.mazeData) return;
-        const radius = 1;
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
+      discoverAround(gx, gy) {
+        if (!this.exploredGrid || !this.maze) return;
+        // Raggio di esplorazione attorno al giocatore
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
             const nx = gx + dx;
             const ny = gy + dy;
-            if (nx >= 0 && nx < this.mazeData.gridW && ny >= 0 && ny < this.mazeData.gridH) {
-              this.visitedTiles[ny][nx] = true;
+            if (nx >= 0 && nx < this.maze.gridW && ny >= 0 && ny < this.maze.gridH) {
+              this.exploredGrid[ny][nx] = true;
             }
           }
         }
-      }
 
-      showMap() {
-        if (!this.mazeData) return;
-        this.isMapVisible = true;
-        const overlay = document.getElementById('map-overlay');
-        overlay.classList.remove('opacity-0', 'pointer-events-none');
-        overlay.classList.add('opacity-100');
-        this.renderMap();
-      }
-
-      hideMap() {
-        this.isMapVisible = false;
-        const overlay = document.getElementById('map-overlay');
-        if (overlay) {
-          overlay.classList.remove('opacity-100');
-          overlay.classList.add('opacity-0', 'pointer-events-none');
-        }
-      }
-
-      renderMap() {
-        if (!this.isMapVisible || !this.mazeData || !this.visitedTiles) return;
-
-        // Resize overlay canvas to matched container display pixels
-        const rect = this.mapCanvas.parentElement.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const w = rect.width;
-        const h = rect.height;
-
-        if (this.mapCanvas.width !== w * dpr || this.mapCanvas.height !== h * dpr) {
-          this.mapCanvas.width = w * dpr;
-          this.mapCanvas.height = h * dpr;
-        }
-
-        const ctx = this.mapCtx;
-        ctx.resetTransform();
-        ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, w, h);
-
-        const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
-        const gridW = this.mazeData.gridW;
-        const gridH = this.mazeData.gridH;
-
-        // Determine isometric scale to fit the entire labyrinth on screen
-        const maxIsoX = (gridW + gridH) * 0.5;
-        const maxIsoY = (gridW + gridH) * 0.25;
-
-        const tileW = Math.min((w * 0.88) / maxIsoX, (h * 0.85) / maxIsoY);
-        const tileH = tileW * 0.5;
-
-        // Center the isometric projection in the map window
-        const originX = w / 2;
-        const originY = h * 0.12;
-
-        const toMapIso = (gx, gy) => {
-          return {
-            x: originX + (gx - gy) * (tileW / 2),
-            y: originY + (gx + gy) * (tileH / 2)
-          };
-        };
-
-        // Calculate explored percentage of walkable passages
-        let totalPassages = 0;
-        let exploredPassages = 0;
-        for (let gy = 0; gy < gridH; gy++) {
-          for (let gx = 0; gx < gridW; gx++) {
-            if (this.mazeData.grid[gy][gx] === 0) {
-              totalPassages++;
-              if (this.visitedTiles[gy][gx]) exploredPassages++;
-            }
+        // Calcola percentuale
+        let count = 0;
+        for (let y = 0; y < this.maze.gridH; y++) {
+          for (let x = 0; x < this.maze.gridW; x++) {
+            if (this.maze.grid[y][x] === 0 && this.exploredGrid[y][x]) count++;
           }
         }
-        const pct = Math.round((exploredPassages / Math.max(1, totalPassages)) * 100);
-        document.getElementById('map-explored-pct').textContent = `${pct}%`;
-
-        // 1. Draw Explored Passage Floors with subtle translucency
-        ctx.globalAlpha = 0.85;
-        for (let gy = 0; gy < gridH; gy++) {
-          for (let gx = 0; gx < gridW; gx++) {
-            if (!this.visitedTiles[gy][gx]) continue;
-
-            const isPassage = this.mazeData.grid[gy][gx] === 0;
-            const pt = toMapIso(gx, gy);
-
-            if (isPassage) {
-              // Explored Corridor tile
-              ctx.beginPath();
-              ctx.moveTo(pt.x, pt.y - tileH / 2);
-              ctx.lineTo(pt.x + tileW / 2, pt.y);
-              ctx.lineTo(pt.x, pt.y + tileH / 2);
-              ctx.lineTo(pt.x - tileW / 2, pt.y);
-              ctx.closePath();
-
-              ctx.fillStyle = theme.floorTop;
-              ctx.fill();
-              ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-
-              // Start Tile Indicator
-              if (gx === this.mazeData.start.x && gy === this.mazeData.start.y) {
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, tileW * 0.22, 0, Math.PI * 2);
-                ctx.fillStyle = '#34d399';
-                ctx.fill();
-              }
-
-              // Exit Portal Indicator (Only visible if the player has reached/discovered it!)
-              if (gx === this.mazeData.exit.x && gy === this.mazeData.exit.y) {
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, tileW * 0.24, 0, Math.PI * 2);
-                ctx.fillStyle = this.hasKey ? theme.portal : '#f43f5e';
-                ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-              }
-
-              // NOTE: The Golden Key is NEVER drawn on the transparent map per game rule!
-            } else {
-              // Discovered wall top facet
-              ctx.beginPath();
-              ctx.moveTo(pt.x, pt.y - tileH / 2);
-              ctx.lineTo(pt.x + tileW / 2, pt.y);
-              ctx.lineTo(pt.x, pt.y + tileH / 2);
-              ctx.lineTo(pt.x - tileW / 2, pt.y);
-              ctx.closePath();
-              ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-              ctx.fill();
-            }
-          }
-        }
-        ctx.globalAlpha = 1.0;
-
-        // 2. Draw Current Player Location Marker
-        const playerPt = toMapIso(this.player.renderX, this.player.renderY);
-        const pulse = Math.sin(Date.now() * 0.008) * 1.5;
-
-        ctx.save();
-        // Pulsing glow aura
-        ctx.beginPath();
-        ctx.arc(playerPt.x, playerPt.y, Math.max(4, tileW * 0.35 + pulse), 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.35)';
-        ctx.fill();
-
-        // Player pin
-        ctx.beginPath();
-        ctx.arc(playerPt.x, playerPt.y, Math.max(3, tileW * 0.22), 0, Math.PI * 2);
-        ctx.fillStyle = '#fbbf24';
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-        ctx.restore();
+        this.currentExploredCount = count;
+        const pct = Math.min(100, Math.round((count / Math.max(1, this.totalExplorable)) * 100));
+        document.getElementById('map-explored-badge').textContent = `${pct}%`;
       }
 
-      updateThemeUI() {
-        const theme = LEVEL_THEMES[this.currentLevel - 1];
-        document.getElementById('theme-name').textContent = theme.name;
-        document.getElementById('theme-dot').style.backgroundColor = theme.accent;
-        document.getElementById('theme-dot').style.boxShadow = `0 0 10px ${theme.accent}`;
-        document.getElementById('level-text').textContent = `Livello ${this.currentLevel} / ${this.maxLevel}`;
-        const mazeDim = 8 + (this.currentLevel * 2);
-        document.getElementById('grid-size').textContent = `(${mazeDim}x${mazeDim})`;
-      }
+      tryMove(dx, dy, dir) {
+        if (!this.isGameActive || this.player.isMoving) return;
 
-      updateStatsUI() {
-        document.getElementById('stat-steps').textContent = this.levelSteps;
-        const mins = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
-        const secs = (this.levelSeconds % 60).toString().padStart(2, '0');
-        document.getElementById('stat-time').textContent = `${mins}:${secs}`;
-      }
+        const nx = this.player.gx + dx;
+        const ny = this.player.gy + dy;
 
-      updateKeyUI() {
-        const keyBadge = document.getElementById('key-badge');
-        const keyIcon = document.getElementById('key-badge-icon');
-        const keyText = document.getElementById('key-badge-text');
+        // Controllo limiti e pareti
+        if (
+          nx >= 0 && nx < this.maze.gridW &&
+          ny >= 0 && ny < this.maze.gridH &&
+          this.maze.grid[ny][nx] === 0
+        ) {
+          this.player.targetGx = nx;
+          this.player.targetGy = ny;
+          this.player.isMoving = true;
+          this.player.progress = 0;
+          this.player.dir = dir;
 
-        if (this.hasKey) {
-          keyBadge.className = 'flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)] transition-all duration-300';
-          keyIcon.className = 'text-xs transition-all duration-300 transform scale-110 drop-shadow-[0_0_6px_#fbbf24]';
-          keyText.className = 'text-[10px] font-black text-amber-300';
-          keyText.textContent = '1/1';
+          this.levelSteps++;
+          this.totalSteps++;
+          this.updateStatsHUD();
+          this.audio.playStep();
         } else {
-          keyBadge.className = 'flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700 transition-all duration-300';
-          keyIcon.className = 'text-xs grayscale opacity-40 transition-all duration-300';
-          keyText.className = 'text-[10px] font-black text-slate-400';
-          keyText.textContent = '0/1';
+          // Collisione con muro
+          this.audio.playBump();
+          if (navigator.vibrate) navigator.vibrate(25);
+          // Leggera scossa camera
+          this.camera.x += (Math.random() - 0.5) * 5;
+          this.camera.y += (Math.random() - 0.5) * 5;
+        }
+      }
+
+      checkTileInteractions() {
+        const theme = LEVEL_THEMES[this.currentLevel - 1];
+
+        // Raccolta chiave dorata
+        if (!this.hasKey && this.player.gx === this.maze.key.x && this.player.gy === this.maze.key.y) {
+          this.hasKey = true;
+          this.updateKeyHUD();
+          this.audio.playKeyPickup();
+          if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+          this.particles.emit(this.maze.key.x, this.maze.key.y, 0.5, '#fbbf24', 25, 0.05);
+          this.showToast('Chiave d\'oro raccolta! Il portale è aperto! ✨', '🗝️');
+        }
+
+        // Portale di Uscita
+        if (this.player.gx === this.maze.exit.x && this.player.gy === this.maze.exit.y) {
+          if (!this.hasKey) {
+            this.audio.playLockedGate();
+            if (navigator.vibrate) navigator.vibrate(80);
+            this.showToast('Il portale è sbarrato! Devi prima trovare la chiave!', '🔒', true);
+            return;
+          }
+
+          // Livello Completato!
+          this.isGameActive = false;
+          this.audio.playLevelWin();
+          if (this.currentLevel >= this.maxLevels) {
+            setTimeout(() => this.showGameVictory(), 300);
+          } else {
+            setTimeout(() => this.showLevelCompleteModal(), 300);
+          }
         }
       }
 
@@ -1307,240 +1129,257 @@
         document.getElementById('toast-icon').textContent = icon;
 
         if (isWarning) {
-          toast.className = 'absolute top-16 z-30 px-4 py-2 rounded-2xl glass-panel text-xs text-rose-300 border border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.4)] opacity-100 pointer-events-none transition-all duration-300 translate-y-0 flex items-center gap-2';
+          toast.className = 'absolute top-16 sm:top-20 z-40 px-4 py-2 rounded-2xl glass-bar text-xs text-rose-300 border border-rose-500/60 shadow-2xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw]';
         } else {
-          toast.className = 'absolute top-16 z-30 px-4 py-2 rounded-2xl glass-panel text-xs text-amber-200 border border-amber-400/60 shadow-[0_0_20px_rgba(251,191,36,0.4)] opacity-100 pointer-events-none transition-all duration-300 translate-y-0 flex items-center gap-2';
+          toast.className = 'absolute top-16 sm:top-20 z-40 px-4 py-2 rounded-2xl glass-bar text-xs text-amber-200 border border-amber-400/60 shadow-2xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw]';
         }
 
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
-        this.toastTimeout = setTimeout(() => {
+        if (this.toastTimer) clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => {
           toast.classList.remove('opacity-100', 'translate-y-0');
           toast.classList.add('opacity-0', '-translate-y-2');
-        }, 2600);
+        }, 2400);
       }
 
-      adjustCameraForMaze() {
-        if (!this.mazeData) return;
-        const width = this.canvas.clientWidth;
-        const height = this.canvas.clientHeight;
-
-        const baseW = 44;
-        const baseH = 22;
-        const totalSpanX = (this.mazeData.gridW + this.mazeData.gridH) * (baseW / 2);
-        const totalSpanY = (this.mazeData.gridW + this.mazeData.gridH) * (baseH / 2) + 70;
-
-        const scaleX = (width * 0.88) / totalSpanX;
-        const scaleY = (height * 0.65) / totalSpanY;
-        let fitScale = Math.min(scaleX, scaleY) * 1.8;
-        
-        fitScale = Math.max(1.15, Math.min(2.5, fitScale));
-
-        this.camera.scale = fitScale;
-        this.camera.tileW = baseW * fitScale;
-        this.camera.tileH = baseH * fitScale;
-        this.camera.wallH = 24 * fitScale;
+      updateHUDLabels() {
+        const theme = LEVEL_THEMES[this.currentLevel - 1];
+        document.getElementById('hud-theme-dot').style.backgroundColor = theme.accent;
+        document.getElementById('hud-theme-dot').style.boxShadow = `0 0 10px ${theme.accent}`;
+        document.getElementById('hud-theme-name').textContent = theme.name;
+        document.getElementById('hud-level-tag').textContent = `L.${this.currentLevel}/${this.maxLevels}`;
+        const formulaDim = 8 + (this.currentLevel * 2);
+        document.getElementById('hud-dim-tag').textContent = `(${formulaDim}x${formulaDim})`;
       }
 
-      handleDirectionInput(dx, dy, dir) {
-        if (!this.isGameActive || this.player.isMoving) return;
-
-        const nextX = this.player.gx + dx;
-        const nextY = this.player.gy + dy;
-
-        // Check bounds & wall collision
-        if (
-          nextX >= 0 && nextX < this.mazeData.gridW &&
-          nextY >= 0 && nextY < this.mazeData.gridH &&
-          this.mazeData.grid[nextY][nextX] === 0
-        ) {
-          // Valid step
-          this.player.targetGx = nextX;
-          this.player.targetGy = nextY;
-          this.player.isMoving = true;
-          this.player.moveProgress = 0;
-          this.player.dir = dir;
-
-          this.levelSteps++;
-          this.totalSteps++;
-          this.updateStatsUI();
-          this.sound.playStep();
-        } else {
-          // Wall bump feedback
-          this.sound.playBump();
-          this.camera.x += (Math.random() - 0.5) * 6;
-          this.camera.y += (Math.random() - 0.5) * 6;
-        }
-      }
-
-      checkTileInteractions() {
-        // 1. Check Key Collection
-        if (
-          !this.hasKey &&
-          this.player.gx === this.mazeData.key.x &&
-          this.player.gy === this.mazeData.key.y
-        ) {
-          this.hasKey = true;
-          this.updateKeyUI();
-          this.sound.playKeyPickup();
-          // Sparkle burst around the key tile
-          this.particles.spawn(this.mazeData.key.x, this.mazeData.key.y, 0.4, '#fbbf24', 25);
-          this.showToast('Chiave dorata raccolta! Il portale è sbloccato 🗝️✨', '✨', false);
-        }
-
-        // 2. Check Exit Portal
-        if (
-          this.player.gx === this.mazeData.exit.x &&
-          this.player.gy === this.mazeData.exit.y
-        ) {
-          if (!this.hasKey) {
-            // Door is locked!
-            this.sound.playLockedDoor();
-            this.showToast('Il portale è chiuso! Trova prima la chiave dorata 🗝️', '🔒', true);
-            // Camera shake feedback for locked gate
-            this.camera.x += (Math.random() - 0.5) * 10;
-            this.camera.y += (Math.random() - 0.5) * 10;
-            return;
-          }
-
-          // Player has key -> exit unlocked!
-          this.isGameActive = false;
-
-          const theme = LEVEL_THEMES[this.currentLevel - 1];
-          this.particles.spawn(this.player.gx, this.player.gy, 1, theme.portal, 30);
-          this.particles.spawn(this.player.gx, this.player.gy, 0.8, '#fbbf24', 20);
-
-          if (this.currentLevel >= this.maxLevel) {
-            setTimeout(() => this.showVictoryModal(), 300);
-          } else {
-            setTimeout(() => this.showLevelClearedModal(), 300);
-          }
-        }
-      }
-
-      showLevelClearedModal() {
-        this.sound.playLevelWin();
-        const modal = document.getElementById('modal-level-cleared');
-        const content = document.getElementById('modal-level-content');
-        document.getElementById('modal-step-count').textContent = this.levelSteps;
-
+      updateStatsHUD() {
+        document.getElementById('hud-steps').textContent = this.levelSteps;
         const m = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
         const s = (this.levelSeconds % 60).toString().padStart(2, '0');
-        document.getElementById('modal-time-count').textContent = `${m}:${s}`;
-
-        modal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-          content.classList.remove('scale-95', 'opacity-0');
-          content.classList.add('scale-100', 'opacity-100');
-        });
+        document.getElementById('hud-time').textContent = `${m}:${s}`;
       }
 
-      advanceNextLevel() {
-        this.closeModals();
-        this.startLevel(this.currentLevel + 1);
+      updateKeyHUD() {
+        const pill = document.getElementById('hud-key-pill');
+        const icon = document.getElementById('hud-key-icon');
+        const status = document.getElementById('hud-key-status');
+
+        if (this.hasKey) {
+          pill.className = 'flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-amber-500/30 border border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)] transition-all';
+          icon.className = 'text-xs grayscale-0 opacity-100 scale-125 key-pulse';
+          status.className = 'text-[10px] font-black text-amber-300';
+          status.textContent = '1/1';
+        } else {
+          pill.className = 'flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700 transition-all';
+          icon.className = 'text-xs grayscale opacity-40';
+          status.className = 'text-[10px] font-black text-slate-400';
+          status.textContent = '0/1';
+        }
       }
 
-      restartLevel() {
-        this.closeModals();
-        this.startLevel(this.currentLevel);
+      showLevelCompleteModal() {
+        document.getElementById('modal-step-val').textContent = this.levelSteps;
+        const m = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
+        const s = (this.levelSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('modal-time-val').textContent = `${m}:${s}`;
+        document.getElementById('modal-level-win').classList.remove('hidden');
       }
 
-      showVictoryModal() {
-        this.sound.playGameWin();
-        const modal = document.getElementById('modal-victory');
-        document.getElementById('victory-total-steps').textContent = this.totalSteps;
-
+      showGameVictory() {
+        this.audio.playGameVictory();
+        document.getElementById('final-total-steps').textContent = this.totalSteps;
         const m = Math.floor(this.totalSeconds / 60).toString().padStart(2, '0');
         const s = (this.totalSeconds % 60).toString().padStart(2, '0');
-        document.getElementById('victory-total-time').textContent = `${m}:${s}`;
-
-        modal.classList.remove('hidden');
+        document.getElementById('final-total-time').textContent = `${m}:${s}`;
+        document.getElementById('modal-game-win').classList.remove('hidden');
 
         if (typeof confetti === 'function') {
-          confetti({
-            particleCount: 120,
-            spread: 80,
-            origin: { y: 0.6 }
-          });
-          setTimeout(() => {
-            confetti({
-              particleCount: 80,
-              angle: 60,
-              spread: 65,
-              origin: { x: 0 }
-            });
-            confetti({
-              particleCount: 80,
-              angle: 120,
-              spread: 65,
-              origin: { x: 1 }
-            });
-          }, 350);
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
         }
       }
 
       closeModals() {
-        const lvlModal = document.getElementById('modal-level-cleared');
-        const lvlContent = document.getElementById('modal-level-content');
-        lvlContent.classList.remove('scale-100', 'opacity-100');
-        lvlContent.classList.add('scale-95', 'opacity-0');
-        lvlModal.classList.add('hidden');
-
-        document.getElementById('modal-victory').classList.add('hidden');
+        document.getElementById('modal-level-win').classList.add('hidden');
+        document.getElementById('modal-game-win').classList.add('hidden');
       }
 
-      toggleAudio() {
-        this.sound.muted = !this.sound.muted;
-        document.getElementById('icon-sound-on').classList.toggle('hidden', this.sound.muted);
-        document.getElementById('icon-sound-off').classList.toggle('hidden', !this.sound.muted);
-      }
+      showTransparentMap(show) {
+        this.isMapVisible = show;
+        const overlay = document.getElementById('map-radar-overlay');
+        const frame = document.getElementById('map-frame');
 
-      toggleFullscreen() {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
-          document.getElementById('icon-fs-enter').classList.add('hidden');
-          document.getElementById('icon-fs-exit').classList.remove('hidden');
-        } else {
-          if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
+        if (show) {
+          overlay.classList.remove('opacity-0', 'pointer-events-none');
+          overlay.classList.add('opacity-100');
+
+          // Regola proporzioni Desktop vs Mobile Portrait
+          const isMobilePortrait = window.innerHeight > window.innerWidth;
+          if (isMobilePortrait) {
+            frame.style.width = '92vw';
+            frame.style.height = '62vh';
+          } else {
+            frame.style.width = '480px';
+            frame.style.height = '480px';
           }
-          document.getElementById('icon-fs-enter').classList.remove('hidden');
-          document.getElementById('icon-fs-exit').classList.add('hidden');
+
+          this.renderTransparentRadar();
+        } else {
+          overlay.classList.remove('opacity-100');
+          overlay.classList.add('opacity-0', 'pointer-events-none');
         }
       }
 
-      resize() {
+      renderTransparentRadar() {
+        if (!this.maze || !this.exploredGrid) return;
+        const rect = this.radarCanvas.parentElement.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
-        this.ctx.resetTransform();
-        this.ctx.scale(dpr, dpr);
-        this.adjustCameraForMaze();
+        const w = rect.width;
+        const h = rect.height;
+
+        this.radarCanvas.width = Math.round(w * dpr);
+        this.radarCanvas.height = Math.round(h * dpr);
+
+        const ctx = this.radarCtx;
+        ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, w, h);
+
+        const theme = LEVEL_THEMES[this.currentLevel - 1];
+        const { gridW, gridH } = this.maze;
+
+        // Proiezione Isometrica in scala per visualizzare l'INTERA mappa
+        // Estensione isometrica totale della griglia:
+        // Larghezza max iso = (gridW + gridH) * (tileW / 2)
+        // Altezza max iso = (gridW + gridH) * (tileH / 2)
+        const marginFactor = 0.85;
+        const isoW_units = gridW + gridH;
+        const mapTileW = Math.min((w * marginFactor) / isoW_units * 2, (h * marginFactor) / isoW_units * 4);
+        const mapTileH = mapTileW * 0.5;
+
+        // Calcola centro isometrico
+        const originX = w / 2;
+        const originY = h / 2 - ((gridW - gridH) * (mapTileH / 4));
+
+        const toRadarIso = (gx, gy) => {
+          return {
+            x: originX + (gx - gy) * (mapTileW / 2),
+            y: originY + (gx + gy) * (mapTileH / 2) - ((gridW + gridH) * mapTileH * 0.25)
+          };
+        };
+
+        // Disegna tutte le celle (mostrando la silhouette globale e illuminando SOLO ciò che è già esplorato)
+        for (let gy = 0; gy < gridH; gy++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            const isExplored = this.exploredGrid[gy][gx];
+            const isPath = (this.maze.grid[gy][gx] === 0);
+            const pt = toRadarIso(gx, gy);
+
+            ctx.beginPath();
+            ctx.moveTo(pt.x, pt.y - mapTileH / 2);
+            ctx.lineTo(pt.x + mapTileW / 2, pt.y);
+            ctx.lineTo(pt.x, pt.y + mapTileH / 2);
+            ctx.lineTo(pt.x - mapTileW / 2, pt.y);
+            ctx.closePath();
+
+            if (!isExplored) {
+              // Fog of War (non esplorato): appena accennato in trasparenza per dare la sagoma
+              ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+              ctx.fill();
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            } else {
+              // Esplorato dal giocatore:
+              if (isPath) {
+                ctx.fillStyle = theme.wallTop;
+                ctx.globalAlpha = 0.85;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+
+                // Segnaposto Speciali Start / Uscita
+                if (gx === this.maze.start.x && gy === this.maze.start.y) {
+                  ctx.fillStyle = '#34d399';
+                  ctx.beginPath();
+                  ctx.arc(pt.x, pt.y, mapTileW * 0.35, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                if (gx === this.maze.exit.x && gy === this.maze.exit.y) {
+                  ctx.fillStyle = this.hasKey ? theme.portal : '#f43f5e';
+                  ctx.beginPath();
+                  ctx.arc(pt.x, pt.y, mapTileW * 0.35, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                // Chiave se scoperta ed ancora presente
+                if (!this.hasKey && gx === this.maze.key.x && gy === this.maze.key.y) {
+                  ctx.fillStyle = '#fbbf24';
+                  ctx.beginPath();
+                  ctx.arc(pt.x, pt.y, mapTileW * 0.35, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+              } else {
+                // Muro esplorato
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fill();
+              }
+            }
+          }
+        }
+
+        // Indicatore Giocatore sul Radar
+        const pPt = toRadarIso(this.player.renderX, this.player.renderY);
+        ctx.save();
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(pPt.x, pPt.y, Math.max(3, mapTileW * 0.45), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
 
-      // Isometric mathematical coordinate conversion
-      gridToIso(gx, gy) {
+      handleResize() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = Math.round(rect.width * dpr);
+        this.canvas.height = Math.round(rect.height * dpr);
+        this.ctx.resetTransform();
+        this.ctx.scale(dpr, dpr);
+        this.updateCameraMetrics();
+      }
+
+      updateCameraMetrics() {
+        const w = this.canvas.clientWidth;
+        const h = this.canvas.clientHeight;
+        const isPortrait = h > w;
+
+        // In portrait mode garantiamo una dimensione generosa dei corridoi per un'eccellente leggibilità touch
+        const baseW = isPortrait ? 58 : 50;
+        this.camera.tileW = baseW;
+        this.camera.tileH = baseW * 0.5;
+        this.camera.wallH = baseW * 0.54;
+      }
+
+      gridToScreen(gx, gy) {
         return {
           x: (gx - gy) * (this.camera.tileW / 2),
           y: (gx + gy) * (this.camera.tileH / 2)
         };
       }
 
-      update(deltaTime) {
-        // Smooth player position interpolation
+      update(dt) {
+        // Interpolazione del movimento del personaggio
         if (this.player.isMoving) {
-          this.player.moveProgress += this.player.moveSpeed * deltaTime;
-          if (this.player.moveProgress >= 1) {
+          this.player.progress += this.player.speed * dt;
+          if (this.player.progress >= 1.0) {
             this.player.gx = this.player.targetGx;
             this.player.gy = this.player.targetGy;
             this.player.renderX = this.player.gx;
             this.player.renderY = this.player.gy;
             this.player.isMoving = false;
-            this.player.moveProgress = 0;
-            this.markExplored(this.player.gx, this.player.gy);
+            this.player.progress = 0;
+            this.discoverAround(this.player.gx, this.player.gy);
             this.checkTileInteractions();
           } else {
-            const t = this.player.moveProgress;
+            const t = this.player.progress;
             this.player.renderX = this.player.gx + (this.player.targetGx - this.player.gx) * t;
             this.player.renderY = this.player.gy + (this.player.targetGy - this.player.gy) * t;
           }
@@ -1549,52 +1388,31 @@
           this.player.renderY = this.player.gy;
         }
 
-        // Animated idle / walk bobbing
-        this.player.bob = Math.sin(Date.now() * 0.007) * (this.player.isMoving ? 4 : 2);
+        this.player.bobPhase += dt * 6;
 
-        // Smooth camera follow (closely tracks the 3D player)
-        if (this.mazeData) {
-          const focusIso = this.gridToIso(this.player.renderX, this.player.renderY);
-          const viewWidth = this.canvas.clientWidth;
-          const viewHeight = this.canvas.clientHeight;
+        // Camera Follow dinamico:
+        // In modalità portrait, alziamo l'inquadratura del 12% rispetto al centro dello schermo,
+        // così il personaggio e il corridoio davanti non sono coperti dai pollici o dal D-Pad.
+        if (this.maze) {
+          const pIso = this.gridToScreen(this.player.renderX, this.player.renderY);
+          const vw = this.canvas.clientWidth;
+          const vh = this.canvas.clientHeight;
+          const isPortrait = vh > vw;
 
-          const desiredCamX = viewWidth / 2 - focusIso.x;
-          const desiredCamY = (viewHeight / 2 - focusIso.y) + (this.camera.tileH * 0.8);
+          const portraitShift = isPortrait ? (vh * 0.11) : 0;
+          const targetCamX = vw / 2 - pIso.x;
+          const targetCamY = (vh / 2 - pIso.y) - portraitShift;
 
-          this.camera.x += (desiredCamX - this.camera.x) * Math.min(1, deltaTime * 9);
-          this.camera.y += (desiredCamY - this.camera.y) * Math.min(1, deltaTime * 9);
+          this.camera.x += (targetCamX - this.camera.x) * Math.min(1, dt * 9);
+          this.camera.y += (targetCamY - this.camera.y) * Math.min(1, dt * 9);
         }
 
-        // If map is held open, re-render frame for pulsing player pin
+        this.particles.update(dt);
+
+        // Se la mappa overlay è visibile, rinfrescala
         if (this.isMapVisible) {
-          this.renderMap();
+          this.renderTransparentRadar();
         }
-
-        // Update Exit Portal Particles & Floating Key sparkles
-        if (this.mazeData && this.isGameActive) {
-          const theme = LEVEL_THEMES[this.currentLevel - 1];
-          // Portal particles (color changes if locked vs unlocked)
-          if (Math.random() < 0.35) {
-            this.particles.spawn(
-              this.mazeData.exit.x + (Math.random() - 0.5) * 0.5,
-              this.mazeData.exit.y + (Math.random() - 0.5) * 0.5,
-              0.1,
-              this.hasKey ? theme.portal : '#f43f5e',
-              1
-            );
-          }
-          // Key sparkle particles
-          if (!this.hasKey && Math.random() < 0.25) {
-            this.particles.spawn(
-              this.mazeData.key.x + (Math.random() - 0.5) * 0.35,
-              this.mazeData.key.y + (Math.random() - 0.5) * 0.35,
-              0.2,
-              '#fbbf24',
-              1
-            );
-          }
-        }
-        this.particles.update();
       }
 
       render() {
@@ -1603,14 +1421,14 @@
         const h = this.canvas.clientHeight;
         const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
 
-        // 1. Dynamic Background gradient
-        const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, Math.max(w, h));
-        bgGrad.addColorStop(0, theme.bgBottom);
-        bgGrad.addColorStop(1, theme.bgTop);
-        ctx.fillStyle = bgGrad;
+        // Sfondo con sfumatura radiale a tema
+        const grad = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, Math.max(w, h));
+        grad.addColorStop(0, theme.bgBottom);
+        grad.addColorStop(1, theme.bgTop);
+        ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        if (!this.mazeData) return;
+        if (!this.maze) return;
 
         ctx.save();
         ctx.translate(this.camera.x, this.camera.y);
@@ -1618,87 +1436,82 @@
         const tw = this.camera.tileW;
         const th = this.camera.tileH;
         const wh = this.camera.wallH;
+        const { gridW, gridH } = this.maze;
 
-        const gridW = this.mazeData.gridW;
-        const gridH = this.mazeData.gridH;
-
-        // 2. Render Floor Tiles & Path Shadows
+        // 1. Pavimenti e portali a terra
         for (let gy = 0; gy < gridH; gy++) {
           for (let gx = 0; gx < gridW; gx++) {
-            const isWall = this.mazeData.grid[gy][gx] === 1;
-            const iso = this.gridToIso(gx, gy);
+            if (this.maze.grid[gy][gx] === 0) {
+              const pt = this.gridToScreen(gx, gy);
+              this.drawFloorDiamond(ctx, pt.x, pt.y, tw, th, theme.floorTop, theme.floorStroke);
 
-            if (!isWall) {
-              // Passage Floor Diamond
-              this.drawIsoDiamond(ctx, iso.x, iso.y, tw, th, theme.floorTop, theme.floorEdge);
-
-              // Start tile plate
-              if (gx === this.mazeData.start.x && gy === this.mazeData.start.y) {
-                this.drawStartPlate(ctx, iso.x, iso.y, tw, th);
+              // Indicatore Partenza
+              if (gx === this.maze.start.x && gy === this.maze.start.y) {
+                ctx.beginPath();
+                ctx.ellipse(pt.x, pt.y, tw * 0.32, th * 0.32, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#34d399';
+                ctx.fill();
               }
 
-              // Exit Portal (locked or unlocked)
-              if (gx === this.mazeData.exit.x && gy === this.mazeData.exit.y) {
-                this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
+              // Portale Uscita
+              if (gx === this.maze.exit.x && gy === this.maze.exit.y) {
+                this.drawExitPortal(ctx, pt.x, pt.y, tw, th, theme.portal, this.hasKey);
               }
 
-              // Golden Key (if not yet collected)
-              if (!this.hasKey && gx === this.mazeData.key.x && gy === this.mazeData.key.y) {
-                this.drawGoldenKey(ctx, iso.x, iso.y, tw, th);
+              // Chiave d'Oro Fluttuante
+              if (!this.hasKey && gx === this.maze.key.x && gy === this.maze.key.y) {
+                this.drawFloatingGoldKey(ctx, pt.x, pt.y, tw, th);
               }
             }
           }
         }
 
-        // 3. Render 3D Walls & Entity (Player) sorted in correct isometric depth order
+        // 2. Depth sorting rigoroso per muri 3D e personaggio (algoritmo del pittore x + y)
         const maxDepth = (gridW - 1) + (gridH - 1);
         const playerDepth = this.player.renderX + this.player.renderY;
-        let playerDrawn = false;
+        let playerRendered = false;
 
         for (let depth = 0; depth <= maxDepth; depth++) {
-          if (!playerDrawn && playerDepth <= depth + 0.5) {
-            this.drawPlayer(ctx, theme);
-            playerDrawn = true;
+          if (!playerRendered && playerDepth <= depth + 0.5) {
+            this.drawPlayerCharacter(ctx, theme);
+            playerRendered = true;
           }
 
           for (let gy = 0; gy < gridH; gy++) {
             const gx = depth - gy;
-            if (gx >= 0 && gx < gridW) {
-              if (this.mazeData.grid[gy][gx] === 1) {
-                const iso = this.gridToIso(gx, gy);
-                this.draw3DWallBlock(ctx, iso.x, iso.y, tw, th, wh, theme);
-              }
+            if (gx >= 0 && gx < gridW && this.maze.grid[gy][gx] === 1) {
+              const pt = this.gridToScreen(gx, gy);
+              this.draw3DWall(ctx, pt.x, pt.y, tw, th, wh, theme);
             }
           }
         }
 
-        if (!playerDrawn) {
-          this.drawPlayer(ctx, theme);
+        if (!playerRendered) {
+          this.drawPlayerCharacter(ctx, theme);
         }
 
-        // 4. Render particles
+        // 3. Particelle ed effetti ambientali
         this.drawParticles(ctx);
 
         ctx.restore();
       }
 
-      drawIsoDiamond(ctx, x, y, tw, th, fillCol, strokeCol) {
+      drawFloorDiamond(ctx, x, y, tw, th, fill, stroke) {
         ctx.beginPath();
         ctx.moveTo(x, y - th / 2);
         ctx.lineTo(x + tw / 2, y);
         ctx.lineTo(x, y + th / 2);
         ctx.lineTo(x - tw / 2, y);
         ctx.closePath();
-
-        ctx.fillStyle = fillCol;
+        ctx.fillStyle = fill;
         ctx.fill();
-        ctx.strokeStyle = strokeCol;
+        ctx.strokeStyle = stroke;
         ctx.lineWidth = 1;
         ctx.stroke();
       }
 
-      draw3DWallBlock(ctx, x, y, tw, th, wh, theme) {
-        // Wall Top Face (Diamond)
+      draw3DWall(ctx, x, y, tw, th, wh, theme) {
+        // Tetto del blocco
         ctx.beginPath();
         ctx.moveTo(x, y - th / 2 - wh);
         ctx.lineTo(x + tw / 2, y - wh);
@@ -1707,11 +1520,11 @@
         ctx.closePath();
         ctx.fillStyle = theme.wallTop;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.lineWidth = 0.8;
         ctx.stroke();
 
-        // Left Face (Parallelogram)
+        // Faccia Sinistra (Luce Media)
         ctx.beginPath();
         ctx.moveTo(x - tw / 2, y - wh);
         ctx.lineTo(x, y + th / 2 - wh);
@@ -1721,7 +1534,7 @@
         ctx.fillStyle = theme.wallLeft;
         ctx.fill();
 
-        // Right Face (Parallelogram)
+        // Faccia Destra (Ombra più scura)
         ctx.beginPath();
         ctx.moveTo(x, y + th / 2 - wh);
         ctx.lineTo(x + tw / 2, y - wh);
@@ -1731,197 +1544,112 @@
         ctx.fillStyle = theme.wallRight;
         ctx.fill();
 
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.lineWidth = 1;
+        // Bordo ombra inferiore
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.stroke();
       }
 
-      drawStartPlate(ctx, x, y, tw, th) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(x, y, tw * 0.32, th * 0.32, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(52, 211, 153, 0.4)';
-        ctx.fill();
-        ctx.strokeStyle = '#34d399';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      drawGoldenKey(ctx, x, y, tw, th) {
-        ctx.save();
-        const time = Date.now() * 0.005;
-        const floatY = Math.sin(time) * 4;
-        const pulse = Math.sin(time * 1.5) * 2;
-
-        // Glowing floor aura
-        ctx.beginPath();
-        ctx.ellipse(x, y, tw * 0.28 + pulse, th * 0.28 + pulse * 0.5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.35)';
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 10;
-        ctx.fill();
-
-        // Key drawing at elevated position
-        const ky = y - 16 + floatY;
-
-        // Golden Key 3D Rendering
-        ctx.shadowColor = '#f59e0b';
-        ctx.shadowBlur = 12;
-
-        // Key head loop
-        ctx.beginPath();
-        ctx.arc(x, ky - 6, 6.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#fde047';
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#d97706';
-        ctx.stroke();
-
-        // Inner loop cutout
-        ctx.beginPath();
-        ctx.arc(x, ky - 6, 2.8, 0, Math.PI * 2);
-        ctx.fillStyle = '#78350f';
-        ctx.fill();
-
-        // Key stem
-        ctx.beginPath();
-        ctx.rect(x - 1.8, ky - 1, 3.6, 12);
-        ctx.fillStyle = '#fbbf24';
-        ctx.fill();
-        ctx.strokeStyle = '#d97706';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Key teeth
-        ctx.beginPath();
-        ctx.rect(x + 1.2, ky + 4, 4.5, 2.5);
-        ctx.rect(x + 1.2, ky + 8, 3.5, 2.5);
-        ctx.fillStyle = '#fbbf24';
-        ctx.fill();
-        ctx.stroke();
-
-        // Sparkle icon
-        ctx.font = '10px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText('✨', x + 10, ky - 8 + floatY * 0.5);
-
-        ctx.restore();
-      }
-
-      drawExitPortal(ctx, x, y, tw, th, portalCol, isUnlocked) {
-        ctx.save();
-        const pulse = Math.sin(Date.now() * 0.005) * 2;
-        const color = isUnlocked ? portalCol : '#f43f5e'; // Red if locked, theme portal if unlocked
-
-        // Glowing floor rings
-        ctx.beginPath();
-        ctx.ellipse(x, y, (tw * 0.38) + pulse, (th * 0.38) + pulse * 0.5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = isUnlocked ? 14 : 8;
-        ctx.globalAlpha = isUnlocked ? 0.6 : 0.45;
-        ctx.fill();
-
-        // Portal Pillar Beam
-        const grad = ctx.createLinearGradient(x, y + 5, x, y - 35);
-        grad.addColorStop(0, color);
-        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = grad;
-        ctx.globalAlpha = isUnlocked ? 0.7 : 0.4;
-        ctx.beginPath();
-        ctx.moveTo(x - tw * 0.22, y);
-        ctx.lineTo(x + tw * 0.22, y);
-        ctx.lineTo(x + tw * 0.12, y - 35);
-        ctx.lineTo(x - tw * 0.12, y - 35);
-        ctx.closePath();
-        ctx.fill();
-
-        // Rotating icon on top: Padlock if locked, dimensional door if unlocked
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = isUnlocked ? 8 : 0;
-        ctx.shadowColor = color;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px system-ui';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        if (isUnlocked) {
-          ctx.fillText('🚪✨', x, y - 26 + pulse);
-        } else {
-          ctx.fillText('🔒', x, y - 26 + pulse);
-        }
-
-        ctx.restore();
-      }
-
-      drawPlayer(ctx, theme) {
-        const iso = this.gridToIso(this.player.renderX, this.player.renderY);
-        const px = iso.x;
-        const py = iso.y - (this.player.isMoving ? Math.abs(Math.sin(this.player.moveProgress * Math.PI) * 7) : this.player.bob);
+      drawFloatingGoldKey(ctx, x, y, tw, th) {
+        const floatOffset = Math.sin(this.player.bobPhase * 0.8) * 5;
+        const ky = y - 18 + floatOffset;
 
         ctx.save();
-
-        // 1. Soft Floor Shadow
+        // Ombra a terra
         ctx.beginPath();
-        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y, tw * 0.18, th * 0.18, 0, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fill();
 
-        // 2. Character Body (Isometric 3D Pill/Sphere)
-        const charRadius = this.camera.tileW * 0.22;
-        const bodyCenterY = py - charRadius - 3;
+        // Bagliore dorato fluttuante
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 14;
+        ctx.font = 'bold 20px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🗝️', x, ky);
+        ctx.restore();
+      }
 
+      drawExitPortal(ctx, x, y, tw, th, portalColor, isUnlocked) {
+        ctx.save();
+        const pulse = Math.sin(this.player.bobPhase) * 2.5;
+        const color = isUnlocked ? portalColor : '#f43f5e';
+
+        // Vortice base
+        ctx.beginPath();
+        ctx.ellipse(x, y, tw * 0.36 + pulse, th * 0.36 + pulse * 0.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.55;
+        ctx.fill();
+
+        // Icona portale
+        ctx.globalAlpha = 1.0;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.font = 'bold 15px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isUnlocked ? '🚪✨' : '🔒', x, y - 18 + pulse);
+        ctx.restore();
+      }
+
+      drawPlayerCharacter(ctx, theme) {
+        const pt = this.gridToScreen(this.player.renderX, this.player.renderY);
+        const px = pt.x;
+        const bounce = this.player.isMoving 
+          ? Math.abs(Math.sin(this.player.progress * Math.PI)) * 7 
+          : Math.sin(this.player.bobPhase) * 2;
+        const py = pt.y - bounce;
+
+        ctx.save();
+        // Ombra sferica al suolo
+        ctx.beginPath();
+        ctx.ellipse(pt.x, pt.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fill();
+
+        const radius = this.camera.tileW * 0.23;
+        const centerY = py - radius - 2;
+
+        // Corpo 3D con illuminazione sferica radiale
         const bodyGrad = ctx.createRadialGradient(
-          px - charRadius * 0.35, bodyCenterY - charRadius * 0.35, charRadius * 0.1,
-          px, bodyCenterY, charRadius
+          px - radius * 0.3, centerY - radius * 0.3, radius * 0.1,
+          px, centerY, radius
         );
         bodyGrad.addColorStop(0, '#ffffff');
-        bodyGrad.addColorStop(0.3, theme.playerBody);
-        bodyGrad.addColorStop(1, '#b45309');
+        bodyGrad.addColorStop(0.35, theme.playerBody);
+        bodyGrad.addColorStop(1, '#78350f');
 
         ctx.beginPath();
-        ctx.arc(px, bodyCenterY, charRadius, 0, Math.PI * 2);
+        ctx.arc(px, centerY, radius, 0, Math.PI * 2);
         ctx.fillStyle = bodyGrad;
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 4;
         ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
-        // 3. Visor / Hat / Face indicator based on direction
-        ctx.fillStyle = theme.playerHat;
+        // Cappellino / Visiera direzionale
+        ctx.fillStyle = theme.playerAcc;
         ctx.beginPath();
-        ctx.arc(px, bodyCenterY - charRadius * 0.6, charRadius * 0.55, 0, Math.PI * 2);
+        ctx.arc(px, centerY - radius * 0.55, radius * 0.55, 0, Math.PI * 2);
         ctx.fill();
 
-        // Eyes depending on direction
+        // Occhio/punto di direzione
+        let eyeDx = 0, eyeDy = 0;
+        if (this.player.dir === 'NE') { eyeDx = radius * 0.4; eyeDy = -radius * 0.2; }
+        else if (this.player.dir === 'NW') { eyeDx = -radius * 0.4; eyeDy = -radius * 0.2; }
+        else if (this.player.dir === 'SE') { eyeDx = radius * 0.4; eyeDy = radius * 0.2; }
+        else if (this.player.dir === 'SW') { eyeDx = -radius * 0.4; eyeDy = radius * 0.2; }
+
         ctx.fillStyle = '#1e293b';
-        let eyeOffsetX = 0;
-        let eyeOffsetY = 0;
-
-        if (this.player.dir === 'W') { eyeOffsetX = 3; eyeOffsetY = -2; }
-        else if (this.player.dir === 'S') { eyeOffsetX = -3; eyeOffsetY = 2; }
-        else if (this.player.dir === 'A') { eyeOffsetX = -3; eyeOffsetY = -2; }
-        else if (this.player.dir === 'D') { eyeOffsetX = 3; eyeOffsetY = 2; }
-
         ctx.beginPath();
-        ctx.arc(px + eyeOffsetX - 2, bodyCenterY + eyeOffsetY, 1.8, 0, Math.PI * 2);
-        ctx.arc(px + eyeOffsetX + 2, bodyCenterY + eyeOffsetY, 1.8, 0, Math.PI * 2);
+        ctx.arc(px + eyeDx, centerY + eyeDy, radius * 0.16, 0, Math.PI * 2);
         ctx.fill();
 
-        // Directional pointer arrow indicator beneath
-        ctx.beginPath();
-        ctx.moveTo(px, py - charRadius * 2 - 8);
-        ctx.lineTo(px - 3, py - charRadius * 2 - 13);
-        ctx.lineTo(px + 3, py - charRadius * 2 - 13);
-        ctx.closePath();
-        ctx.fillStyle = '#fde047';
-        ctx.fill();
-
-        // If player has the key, render a small hovering key accessory next to their hat
+        // Indicatore chiave raccolta al seguito del personaggio
         if (this.hasKey) {
-          ctx.font = '10px system-ui';
-          ctx.fillText('🗝️', px + charRadius * 0.85, bodyCenterY - charRadius * 0.9);
+          ctx.font = '11px system-ui';
+          ctx.fillText('🗝️', px + radius * 0.8, centerY - radius * 0.7);
         }
 
         ctx.restore();
@@ -1930,41 +1658,36 @@
       drawParticles(ctx) {
         ctx.save();
         for (const p of this.particles.particles) {
-          const iso = this.gridToIso(p.x, p.y);
-          const drawY = iso.y - (p.z * this.camera.wallH * 1.5);
+          const pt = this.gridToScreen(p.x, p.y);
           ctx.beginPath();
-          ctx.arc(iso.x, drawY, p.size, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y - (p.z * this.camera.wallH * 1.5), p.size, 0, Math.PI * 2);
           ctx.fillStyle = p.color;
-          ctx.globalAlpha = p.alpha;
-          ctx.shadowColor = p.color;
-          ctx.shadowBlur = 6;
+          ctx.globalAlpha = Math.max(0, p.life);
           ctx.fill();
         }
         ctx.restore();
       }
 
-      gameLoop(timestamp) {
-        if (!this.lastTime) this.lastTime = timestamp;
-        const deltaTime = Math.min((timestamp - this.lastTime) / 1000, 0.1);
-        this.lastTime = timestamp;
-
-        this.update(deltaTime);
-        this.render();
-
-        requestAnimationFrame(this.gameLoop);
-      }
-
       start() {
-        this.resize();
-        this.startNewGame();
-        requestAnimationFrame(this.gameLoop);
+        this.handleResize();
+        this.startNewCampaign();
+
+        let lastTime = performance.now();
+        const loop = (time) => {
+          const dt = Math.min((time - lastTime) / 1000, 0.1);
+          lastTime = time;
+
+          this.update(dt);
+          this.render();
+          requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
       }
     }
 
-    // Initialize once window loads
     window.onload = () => {
-      const game = new IsometricGame();
-      game.start();
+      const app = new IsometricMazeGame();
+      app.start();
     };
   </script>
 </body>
