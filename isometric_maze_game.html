@@ -72,7 +72,7 @@
       <div>
         <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400" id="theme-name">Foresta Antica</div>
         <div class="text-sm font-black text-slate-100 flex items-center gap-1.5">
-          <span id="level-text">Livello 1 / 5</span>
+          <span id="level-text">Livello 1 / 10</span>
           <span class="text-xs font-normal text-slate-400" id="grid-size">(10x10)</span>
         </div>
       </div>
@@ -199,13 +199,13 @@
         VITTORIA ASSOLUTA!
       </h2>
       <p class="text-xs text-slate-300 mt-1 mb-5">
-        Hai conquistato con successo tutti e 5 i labirinti dimensionali!
+        Hai conquistato con successo tutti e 10 i labirinti dimensionali!
       </p>
 
       <div class="w-full bg-slate-900/90 rounded-2xl p-4 mb-6 border border-slate-700/60 flex flex-col gap-2.5">
         <div class="flex justify-between items-center text-xs">
           <span class="text-slate-400">Labirinti completati:</span>
-          <span class="font-bold text-white">5 / 5</span>
+          <span class="font-bold text-white">10 / 10</span>
         </div>
         <div class="flex justify-between items-center text-xs">
           <span class="text-slate-400">Passi totali:</span>
@@ -344,7 +344,7 @@
   </script>
 
   <script>
-    // Visual themes for the 5 progression levels
+    // Visual themes for the 10 progression levels
     const LEVEL_THEMES = [
       {
         name: "Foresta Antica",
@@ -415,13 +415,83 @@
         portal: "#38bdf8",
         playerBody: "#34d399",
         playerHat: "#10b981"
+      },
+      {
+        name: "Tundra Glaciale",
+        accent: "#38bdf8",
+        bgTop: "#071e2e",
+        bgBottom: "#0f344d",
+        floorTop: "#0284c7",
+        floorEdge: "#0369a1",
+        wallTop: "#bae6fd",
+        wallLeft: "#7dd3fc",
+        wallRight: "#38bdf8",
+        portal: "#f472b6",
+        playerBody: "#f59e0b",
+        playerHat: "#ef4444"
+      },
+      {
+        name: "Dune del Sole",
+        accent: "#f59e0b",
+        bgTop: "#2b1904",
+        bgBottom: "#452605",
+        floorTop: "#d97706",
+        floorEdge: "#92400e",
+        wallTop: "#fde68a",
+        wallLeft: "#f59e0b",
+        wallRight: "#b45309",
+        portal: "#06b6d4",
+        playerBody: "#ec4899",
+        playerHat: "#8b5cf6"
+      },
+      {
+        name: "Rovine di Ossidiana",
+        accent: "#a78bfa",
+        bgTop: "#111019",
+        bgBottom: "#1f1c30",
+        floorTop: "#312e81",
+        floorEdge: "#1e1b4b",
+        wallTop: "#c4b5fd",
+        wallLeft: "#6366f1",
+        wallRight: "#4338ca",
+        portal: "#2dd4bf",
+        playerBody: "#34d399",
+        playerHat: "#fbbf24"
+      },
+      {
+        name: "Oasi di Corallo",
+        accent: "#fb7185",
+        bgTop: "#1e0b16",
+        bgBottom: "#381028",
+        floorTop: "#be185d",
+        floorEdge: "#831843",
+        wallTop: "#fda4af",
+        wallLeft: "#f43f5e",
+        wallRight: "#be123c",
+        portal: "#a3e635",
+        playerBody: "#38bdf8",
+        playerHat: "#a855f7"
+      },
+      {
+        name: "Vuoto Astrale",
+        accent: "#e879f9",
+        bgTop: "#0d0417",
+        bgBottom: "#19082c",
+        floorTop: "#581c87",
+        floorEdge: "#3b0764",
+        wallTop: "#f0abfc",
+        wallLeft: "#c026d3",
+        wallRight: "#86198f",
+        portal: "#fde047",
+        playerBody: "#4ade80",
+        playerHat: "#38bdf8"
       }
     ];
 
     /**
      * Procedural Maze Generator using Recursive Backtracking Algorithm
      * Guarantees a fully connected, solvable labyrinth with no isolated loops.
-     * Dimensions are (9 + level) x (9 + level).
+     * Dimensions are (8 + (level * 2)) x (8 + (level * 2)).
      */
     class MazeGenerator {
       static generate(width, height) {
@@ -556,7 +626,7 @@
 
         // Progression State
         this.currentLevel = 1;
-        this.maxLevel = 5;
+        this.maxLevel = 10;
         this.totalSteps = 0;
         this.levelSteps = 0;
         this.totalSeconds = 0;
@@ -733,9 +803,9 @@
         this.levelSteps = 0;
         this.levelSeconds = 0;
 
-        // Formula: dimension is (9 + level) x (9 + level)
-        // Level 1: 10x10, Level 2: 11x11, ... Level 5: 14x14
-        const mazeDim = 9 + this.currentLevel;
+        // Formula: dimension is (8 + (n.livello x 2)) x (8 + (n.livello x 2))
+        // Level 1: 10x10, Level 2: 12x12, Level 3: 14x14 ... Level 10: 28x28
+        const mazeDim = 8 + (this.currentLevel * 2);
         this.mazeData = MazeGenerator.generate(mazeDim, mazeDim);
 
         // Player positioning
@@ -754,6 +824,11 @@
 
         // Auto-scale camera to fit neatly in portrait viewport
         this.adjustCameraForMaze();
+
+        // Center camera immediately on player start position
+        const startIso = this.gridToIso(this.player.gx, this.player.gy);
+        this.camera.x = this.canvas.clientWidth / 2 - startIso.x;
+        this.camera.y = (this.canvas.clientHeight / 2 - startIso.y) + (this.camera.tileH * 0.8);
 
         // Start Level Timer
         if (this.timerInterval) clearInterval(this.timerInterval);
@@ -774,7 +849,7 @@
         document.getElementById('theme-dot').style.backgroundColor = theme.accent;
         document.getElementById('theme-dot').style.boxShadow = `0 0 10px ${theme.accent}`;
         document.getElementById('level-text').textContent = `Livello ${this.currentLevel} / ${this.maxLevel}`;
-        const mazeDim = 9 + this.currentLevel;
+        const mazeDim = 8 + (this.currentLevel * 2);
         document.getElementById('grid-size').textContent = `(${mazeDim}x${mazeDim})`;
       }
 
@@ -796,13 +871,13 @@
         const totalSpanX = (this.mazeData.gridW + this.mazeData.gridH) * (baseW / 2);
         const totalSpanY = (this.mazeData.gridW + this.mazeData.gridH) * (baseH / 2) + 70;
 
-        // Auto calculate optimal scale factor for mobile portrait
+        // Calculate fit scale and zoom in by an additional 20% (1.5 * 1.2 = 1.8x)
         const scaleX = (width * 0.88) / totalSpanX;
         const scaleY = (height * 0.65) / totalSpanY;
-        let fitScale = Math.min(scaleX, scaleY);
+        let fitScale = Math.min(scaleX, scaleY) * 1.8;
         
-        // Clamp scale within comfortable reading range
-        fitScale = Math.max(0.6, Math.min(1.4, fitScale));
+        // Ensure character remains comfortably large and up-close across all 10 levels
+        fitScale = Math.max(1.15, Math.min(2.5, fitScale));
 
         this.camera.scale = fitScale;
         this.camera.tileW = baseW * fitScale;
@@ -1000,25 +1075,19 @@
         // Animated idle / walk bobbing
         this.player.bob = Math.sin(Date.now() * 0.007) * (this.player.isMoving ? 4 : 2);
 
-        // Smooth camera follow (centers on the center of the labyrinth with slight tracking to player)
+        // Smooth camera follow (closely tracks the 3D player)
         if (this.mazeData) {
-          const mazeCenterX = this.mazeData.gridW / 2;
-          const mazeCenterY = this.mazeData.gridH / 2;
-          // 85% maze center, 15% player position to give gentle dynamic feel while keeping maze in frame
-          const focusGx = mazeCenterX * 0.85 + this.player.renderX * 0.15;
-          const focusGy = mazeCenterY * 0.85 + this.player.renderY * 0.15;
-          
-          const centerIso = this.gridToIso(focusGx, focusGy);
+          const focusIso = this.gridToIso(this.player.renderX, this.player.renderY);
           const viewWidth = this.canvas.clientWidth;
           const viewHeight = this.canvas.clientHeight;
 
-          const desiredCamX = viewWidth / 2 - centerIso.x;
-          // Offset slightly upward to account for bottom controls on portrait screens
-          const desiredCamY = viewHeight / 2 - centerIso.y - (this.camera.wallH * 1.5);
+          const desiredCamX = viewWidth / 2 - focusIso.x;
+          // Offset slightly upward to keep the character nicely centered above controls
+          const desiredCamY = (viewHeight / 2 - focusIso.y) + (this.camera.tileH * 0.8);
 
-          // Smooth lerp camera
-          this.camera.x += (desiredCamX - this.camera.x) * (deltaTime * 8);
-          this.camera.y += (desiredCamY - this.camera.y) * (deltaTime * 8);
+          // Smooth lerp camera tracking the player
+          this.camera.x += (desiredCamX - this.camera.x) * Math.min(1, deltaTime * 9);
+          this.camera.y += (desiredCamY - this.camera.y) * Math.min(1, deltaTime * 9);
         }
 
         // Update Exit Portal Particles
