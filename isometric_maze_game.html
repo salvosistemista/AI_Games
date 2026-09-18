@@ -54,7 +54,7 @@
       box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
     }
 
-    /* D-PAD Isometrico Diamante calibrato */
+    /* D-PAD Isometrico Diamante calibrato per smartphone touch */
     .iso-pad-btn {
       position: absolute;
       width: 54px;
@@ -83,6 +83,13 @@
     }
     .key-pulse {
       animation: keyGlow 2s infinite ease-in-out;
+    }
+
+    /* Suggerimenti tasti desktop in basso */
+    .desktop-key-hint {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
     }
   </style>
 </head>
@@ -170,7 +177,7 @@
 
     <!-- Overlay Mappa Isometrica Trasparente (Fog of War) -->
     <div id="map-radar-overlay" class="absolute inset-0 z-30 pointer-events-none opacity-0 transition-opacity duration-200 flex items-center justify-center p-3">
-      <div id="map-frame" class="relative pointer-events-auto rounded-3xl border border-amber-400/35 bg-slate-950/80 backdrop-blur-md shadow-[0_0_35px_rgba(0,0,0,0.85)] flex flex-col items-center justify-between p-3.5 transition-all duration-200 w-[92vw] h-[62vh] sm:w-[480px] sm:h-[480px]">
+      <div id="map-frame" class="relative pointer-events-auto rounded-3xl border border-amber-400/35 bg-slate-950/80 backdrop-blur-md shadow-[0_0_35px_rgba(0,0,0,0.85)] flex flex-col items-center justify-between p-3.5 transition-all duration-200 w-[92vw] h-[62vh] sm:w-[500px] sm:h-[500px]">
         <div class="w-full flex items-center justify-between pb-1.5 border-b border-slate-700/60 text-xs">
           <div class="flex items-center gap-2">
             <span class="text-amber-300 font-black tracking-wider flex items-center gap-1">
@@ -195,11 +202,28 @@
     </div>
   </main>
 
-  <!-- D-Pad Isometrico a diamante calibrato secondo la specifica esatta:
-       - In Alto a Destra (Top-Right): NORD (↗) -> Verso Alto-Destra a schermo: dx = 0, dy = -1
-       - In Basso a Destra (Bottom-Right): EST (↘) -> Verso Basso-Destra a schermo: dx = +1, dy = 0
-       - In Basso a Sinistra (Bottom-Left): SUD (↙) -> Verso Basso-Sinistra a schermo: dx = 0, dy = +1
-       - In Alto a Sinistra (Top-Left): OVEST (↖) -> Verso Alto-Sinistra a schermo: dx = -1, dy = 0
+  <!-- Suggerimenti comandi tastiera Desktop (Mostrati SOLO su Desktop, nascosti su mobile) -->
+  <aside id="desktop-controls-hint" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden select-none transition-opacity duration-300">
+    <div class="desktop-key-hint px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2.5 text-[11px] text-slate-300">
+      <span class="flex items-center gap-1 font-mono font-bold text-amber-300">
+        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">W</kbd>
+        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">A</kbd>
+        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">S</kbd>
+        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">D</kbd>
+        <span class="text-slate-400 text-[10px] font-normal font-sans ml-0.5">o Frecce</span>
+      </span>
+      <span class="w-[1px] h-3 bg-slate-700"></span>
+      <span class="flex items-center gap-1 text-[10px] text-slate-300">
+        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-cyan-300">TAB</kbd>
+        <span class="text-slate-400">Mappa Radar</span>
+      </span>
+    </div>
+  </aside>
+
+  <!-- D-Pad Isometrico Diamante calibrato per smartphone touch:
+       - Riconoscimento Desktop vs Mobile: se si è su desktop, questo intero blocco <footer>
+         viene nascosto impostando display: none (classe hidden), lasciando lo schermo libero!
+       - Su Mobile Portrait rimane visibile ed ergonomico con zero latency e auto-repeat.
   -->
   <footer id="touch-controls-container" class="w-full z-30 pb-[calc(var(--sab)+10px)] flex flex-col items-center pointer-events-none select-none">
     <div id="virtual-dpad" class="relative w-[210px] h-[210px] pointer-events-auto transition-opacity duration-200 opacity-95">
@@ -505,6 +529,9 @@
 
         this.audio = new AudioSynthesizer();
 
+        // Riconoscimento Desktop vs Mobile Touch
+        this.isDesktop = false;
+
         // Stato Gioco
         this.currentLevel = 1;
         this.maxLevels = 10;
@@ -547,10 +574,42 @@
         this.heldInterval = null;
 
         this.bindEvents();
+        this.detectDeviceMode();
+      }
+
+      detectDeviceMode() {
+        // Riconoscimento accurato Desktop vs Mobile Touch:
+        // Verifica se l'ambiente dispone di hover fine con mouse/trackpad o assenza di touch screen primario
+        const hasFinePointer = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+        const hasTouchSupport = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+        const isDesktopDimensions = window.innerWidth >= 1024;
+
+        // Si considera desktop se c'è mouse/pointer fine E non siamo in orientamento portrait tipico da telefono con touch primario
+        this.isDesktop = hasFinePointer && (!hasTouchSupport || isDesktopDimensions);
+
+        const touchContainer = document.getElementById('touch-controls-container');
+        const desktopHint = document.getElementById('desktop-controls-hint');
+
+        if (this.isDesktop) {
+          // Nascondi completamente il D-Pad e l'area swipe su desktop
+          touchContainer.classList.add('hidden');
+          touchContainer.style.display = 'none';
+          desktopHint.classList.remove('hidden');
+        } else {
+          // Mostra D-Pad e controlli touch su smartphone / tablet portrait
+          touchContainer.classList.remove('hidden');
+          touchContainer.style.display = 'flex';
+          desktopHint.classList.add('hidden');
+        }
+
+        this.updateCameraMetrics();
       }
 
       bindEvents() {
-        window.addEventListener('resize', () => this.handleResize());
+        window.addEventListener('resize', () => {
+          this.detectDeviceMode();
+          this.handleResize();
+        });
 
         // Gestione Audio
         const audioBtn = document.getElementById('btn-audio');
@@ -583,7 +642,6 @@
 
         // Controllo Mappa Radar (TAB su Desktop, Hold o Click su Mobile)
         const mapBtn = document.getElementById('btn-map');
-        let mapTouchHoldTimer = null;
 
         const onMapPressStart = (e) => {
           if (e) e.preventDefault();
@@ -592,7 +650,6 @@
         };
         const onMapPressEnd = (e) => {
           if (e) e.preventDefault();
-          // Se su desktop rilascia, su touch lascia aperta per agevolare l'uso
           if (e && e.pointerType === 'mouse') {
             this.showTransparentMap(false);
           }
@@ -629,7 +686,7 @@
           }
         });
 
-        // Configurazione D-PAD a diamante con cattura pointer e auto-ripetizione:
+        // Configurazione D-PAD per smartphone touch con cattura pointer e auto-ripetizione:
         // - pad-nord  (In alto a destra ↗):  dx = 0,  dy = -1
         // - pad-est   (In basso a destra ↘): dx = 1,  dy = 0
         // - pad-sud   (In basso a sinistra ↙): dx = 0, dy = 1
@@ -676,12 +733,13 @@
         setupPadBtn('pad-sud', 0, 1, 'SW');   // SUD (Bottom-Left ↙)
         setupPadBtn('pad-ovest', -1, 0, 'NW'); // OVEST (Top-Left ↖)
 
-        // Swipe Touch a 45 gradi su Canvas allineato esattamente alle direzioni a schermo:
+        // Swipe Touch a 45 gradi su Canvas per smartphone touch:
         let touchStartX = 0;
         let touchStartY = 0;
         let isTouching = false;
 
         this.canvas.addEventListener('touchstart', (e) => {
+          if (this.isDesktop) return; // Disattiva swipe su mouse desktop
           if (e.touches.length === 1) {
             this.audio.init();
             isTouching = true;
@@ -697,7 +755,7 @@
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', (e) => {
-          if (!isTouching || !this.isGameActive) {
+          if (!isTouching || !this.isGameActive || this.isDesktop) {
             isTouching = false;
             return;
           }
@@ -709,11 +767,6 @@
           const distance = Math.hypot(dx, dy);
 
           if (distance >= 20) {
-            // Angolo polare in gradi tra -180 e +180:
-            // - In alto a destra (↗): -90° <= angle < 0° -> NORD (dx = 0, dy = -1)
-            // - In basso a destra (↘): 0° <= angle < 90° -> EST (dx = 1, dy = 0)
-            // - In basso a sinistra (↙): 90° <= angle <= 180° -> SUD (dx = 0, dy = 1)
-            // - In alto a sinistra (↖): -180° <= angle < -90° -> OVEST (dx = -1, dy = 0)
             const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
 
             if (angleDeg >= -90 && angleDeg < 0) {
@@ -1001,8 +1054,8 @@
             frame.style.width = '92vw';
             frame.style.height = '60vh';
           } else {
-            frame.style.width = '480px';
-            frame.style.height = '480px';
+            frame.style.width = '520px';
+            frame.style.height = '500px';
           }
 
           this.renderTransparentRadar();
@@ -1123,8 +1176,8 @@
         const h = this.canvas.clientHeight;
         const isPortrait = h > w;
 
-        // Dimensione generosa in portrait per massima leggibilità
-        const baseW = isPortrait ? 56 : 50;
+        // Dimensione bilanciata: 56 in mobile portrait per facile lettura corridoi, 52 su desktop
+        const baseW = (isPortrait && !this.isDesktop) ? 56 : 52;
         this.camera.tileW = baseW;
         this.camera.tileH = baseW * 0.5;
         this.camera.wallH = baseW * 0.52;
@@ -1161,14 +1214,16 @@
 
         this.player.bobPhase += dt * 6;
 
-        // Camera follow con sollevamento in modalità portrait (per non coprire il corridoio col DPad)
+        // Camera follow dinamica:
+        // - Su smartphone portrait: solleva il target dell'11% per non coprire il corridoio col d-pad
+        // - Su desktop: centratura fluida perfetta al centro dello schermo
         if (this.maze) {
           const pIso = this.gridToScreen(this.player.renderX, this.player.renderY);
           const vw = this.canvas.clientWidth;
           const vh = this.canvas.clientHeight;
           const isPortrait = vh > vw;
 
-          const portraitShift = isPortrait ? (vh * 0.10) : 0;
+          const portraitShift = (!this.isDesktop && isPortrait) ? (vh * 0.11) : 0;
           const targetCamX = vw / 2 - pIso.x;
           const targetCamY = (vh / 2 - pIso.y) - portraitShift;
 
@@ -1403,6 +1458,7 @@
       }
 
       start() {
+        this.detectDeviceMode();
         this.handleResize();
         this.startNewCampaign();
 
