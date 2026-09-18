@@ -668,6 +668,7 @@
 <div id="modal-options" class="modal">
   <div class="modal-content">
     <h2>Opzioni</h2>
+    <button class="btn-main" id="btn-toggle-sound">🔊 Effetti Sonori: ON</button>
     <button class="btn-main" id="btn-open-leaderboard">🏆 Classifica</button>
     <button class="btn-main btn-danger-opt" id="btn-reset-game">Ricomincia Partita</button>
     <button class="btn-main" id="btn-close-options">Chiudi</button>
@@ -698,9 +699,275 @@
 
 <script>
   /* =========================================================================
+     SINTETIZZATORE EFFETTI SONORI (WEB AUDIO API - ZERO FILE ESTERNI)
+     ========================================================================= */
+  let audioCtx = null;
+
+  function initAudioContext() {
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+      }
+    }
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function playSound(type) {
+    if (!player.soundEnabled) return;
+    try {
+      initAudioContext();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+
+      if (type === "move") {
+        // Passo ovattato / marcia
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.12);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === "drink") {
+        // Gorgoglio d'acqua
+        [0, 0.08, 0.16].forEach((delay, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          const freq = 420 + idx * 80;
+          osc.frequency.setValueAtTime(freq, now + delay);
+          osc.frequency.exponentialRampToValueAtTime(freq + 140, now + delay + 0.07);
+          gain.gain.setValueAtTime(0.2, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.07);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.07);
+        });
+      } else if (type === "eat") {
+        // Masticazione / crunch
+        [0, 0.07, 0.14].forEach(delay => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(180, now + delay);
+          osc.frequency.exponentialRampToValueAtTime(80, now + delay + 0.05);
+          gain.gain.setValueAtTime(0.25, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.05);
+        });
+      } else if (type === "cure") {
+        // Fruscio / bende medicali (accordo morbido ascendente)
+        [329.63, 440, 554.37].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.18, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.25);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.25);
+        });
+      } else if (type === "craft") {
+        // Colpi metallici di fabbricazione
+        [0, 0.11, 0.22].forEach((delay, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "square";
+          osc.frequency.setValueAtTime(520 + idx * 70, now + delay);
+          gain.gain.setValueAtTime(0.2, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.08);
+        });
+      } else if (type === "sleep") {
+        // Risonanza profonda del sonno
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(65, now + 0.4);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === "wake") {
+        // Risveglio: nota limpida ascendente
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (type === "scavenge") {
+        // Frugare tra le macerie
+        [0, 0.08, 0.16].forEach((d, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(280 + (i % 2) * 90, now + d);
+          gain.gain.setValueAtTime(0.12, now + d);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + d + 0.06);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + d);
+          osc.stop(now + d + 0.06);
+        });
+      } else if (type === "loot") {
+        // Ritrovamento / Tappi tp (chime brillante)
+        [784, 988, 1318].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.22, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.22);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.22);
+        });
+      } else if (type === "discard") {
+        // Oggetto gettato via (scarto rapido verso il basso)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.12);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === "hit") {
+        // Danno subito (impatto sordo e violento)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (type === "dodge") {
+        // Schivata (fruscio ad alta velocità)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(350, now);
+        osc.frequency.exponentialRampToValueAtTime(750, now + 0.14);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } else if (type === "parry") {
+        // Parata con arma (impatto metallico brillante)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(980, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.18);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } else if (type === "pet") {
+        // Guaito/abbaio del compagno di viaggio
+        [0, 0.08].forEach(d => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(380, now + d);
+          osc.frequency.exponentialRampToValueAtTime(620, now + d + 0.06);
+          gain.gain.setValueAtTime(0.25, now + d);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + d + 0.06);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + d);
+          osc.stop(now + d + 0.06);
+        });
+      } else if (type === "flee") {
+        // Fuga rapida
+        [160, 210, 140, 190].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          gain.gain.setValueAtTime(0.25, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.06 + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.05);
+        });
+      } else if (type === "trade") {
+        // Scambio baratto concluso
+        [523.25, 659.25].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, now + i * 0.08);
+          gain.gain.setValueAtTime(0.25, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.15);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.15);
+        });
+      } else if (type === "death") {
+        // Morte (rintocco funereo discendente)
+        [220, 174.61, 130.81].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(f, now + i * 0.2);
+          gain.gain.setValueAtTime(0.3, now + i * 0.2);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.2 + 0.4);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.2);
+          osc.stop(now + i * 0.2 + 0.4);
+        });
+      }
+    } catch (e) {
+      console.warn("Riproduzione audio non riuscita", e);
+    }
+  }
+
+  /* =========================================================================
      CONFIGURAZIONE COSTANTI & TEMPISTICHE (IN SECONDI)
      ========================================================================= */
-  const STORAGE_KEY = "terra_desolata_save_v18";
+  const STORAGE_KEY = "terra_desolata_save_v19";
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
 
   const FOOD_TICK_SEC = 480;
@@ -722,6 +989,7 @@
     maxFood: 100,
     thirst: 100,
     caps: 5,
+    soundEnabled: true, // Default ON
     drinkFlask: 1.0,
     dirtyFlask: 0.0,
     energy: 100,
@@ -810,6 +1078,7 @@
       maxHp: 100
     };
 
+    playSound("pet");
     log(`Incredibile! ${chosenName} si è unito a te come fedele compagno di viaggio!`, "pet");
     saveGame();
     updateUI();
@@ -827,6 +1096,7 @@
 
   function healCompanion(amount, isFull = false) {
     if (!player.companion) return false;
+    playSound("cure");
     if (isFull) {
       player.companion.hp = player.companion.maxHp;
       log(`Hai utilizzato bende e disinfettante su ${player.companion.name}: salute completamente ripristinata!`, "pet");
@@ -856,6 +1126,7 @@
     player.drinkFlask = Math.max(0, Math.round((player.drinkFlask - 0.20) * 100) / 100);
     player.thirst = Math.min(100, player.thirst + 20);
 
+    playSound("drink");
     log("Bevi una generosa sorsata d'acqua fresca (-0.20 L, +20% Idratazione).", "water");
     saveGame();
     updateUI();
@@ -889,6 +1160,7 @@
         player.isSleeping = false;
         player.consecutiveSleepHours = 0;
         player.consecutiveSleepSeconds = 0;
+        playSound("wake");
         log("Hai dormito 8 ore di fila: ti svegli automaticamente ben riposato!", "success");
 
         const remainingSeconds = secondsToAdd - sleepCapacity;
@@ -991,6 +1263,7 @@
 
   function tryDodgeAttack(enemyType) {
     if (canAttemptDodge() && Math.random() < 0.5) {
+      playSound("dodge");
       log(`Riflessi pronti: schivi l'assalto di ${enemyType}!`, "success");
       return true;
     }
@@ -1074,6 +1347,7 @@
     const item = player.inventory.find(i => i.id === id);
     if (!item) return;
 
+    playSound("discard");
     if (item.qty > 1) {
       item.qty -= 1;
       log(`Hai gettato 1x ${item.name} per fare spazio (rimasti: x${item.qty}).`, "idle");
@@ -1116,6 +1390,7 @@
     }
 
     if (item.type === "food" || item.type === "perishable_food") {
+      playSound("eat");
       player.food = Math.min(player.maxFood, player.food + item.val);
       player.maxEnergy = Math.min(100, player.maxEnergy + (item.type === "perishable_food" ? 2 : 5));
       player.energy = Math.min(player.maxEnergy, player.energy + (item.type === "perishable_food" ? 15 : 30));
@@ -1136,12 +1411,14 @@
         log(`Hai medicato le ferite (+${item.val} HP).`, "success");
       }
       if (used) {
+        playSound("cure");
         removeItem(id, 1);
       } else {
         log("Sei già in salute, non serve usarlo adesso.", "idle");
       }
     } else if (item.type === "cure_minor") {
       if (player.hp < player.maxHp) {
+        playSound("cure");
         player.hp = Math.min(player.maxHp, player.hp + item.val);
         log(`Applichi le bende rudimentali (+${item.val} HP).`, "success");
         removeItem(id, 1);
@@ -1165,6 +1442,7 @@
         label: `Impugna ${newWeapon.name}`,
         action: () => {
           player.equippedWeapon = newWeapon;
+          playSound("craft");
           log(`Hai equipaggiato: ${newWeapon.name}.`, "success");
           clearContextActions();
           saveGame();
@@ -1186,8 +1464,10 @@
   function useEquippedWeapon() {
     if (!player.equippedWeapon) return false;
     player.equippedWeapon.uses -= 1;
+    playSound("parry");
     log(`Usi ${player.equippedWeapon.name} per parare! Usi rimasti: ${player.equippedWeapon.uses}.`, "combat");
     if (player.equippedWeapon.uses <= 0) {
+      playSound("discard");
       log(`CRACK! ${player.equippedWeapon.name} si è frantumata!`, "danger");
       player.equippedWeapon = null;
     }
@@ -1214,6 +1494,7 @@
         player.dirtyFlask = Math.max(0, Math.round((player.dirtyFlask - amountToTransfer) * 100) / 100);
         player.drinkFlask = Math.min(1.0, Math.round((player.drinkFlask + amountToTransfer) * 100) / 100);
 
+        playSound("drink");
         log(`Hai scaldato e purificato ${amountToTransfer.toFixed(2)} L di acqua spostandoli nella borraccia per bere!`, "water");
         return true;
       }
@@ -1227,6 +1508,7 @@
       isUnique: false,
       craft: () => {
         if (addItem("rudimentary_bandage", "Bende rudimentali", "cure_minor", 15, 1)) {
+          playSound("craft");
           log("Hai fabbricato un set di Bende rudimentali.", "success");
           return true;
         }
@@ -1244,6 +1526,7 @@
       craft: () => {
         player.backpackTier = 1;
         player.maxSlots = 14;
+        playSound("loot");
         log("Hai rinforzato il tuo zaino! Capienza estesa a 14 Slot!", "success");
         return true;
       }
@@ -1259,6 +1542,7 @@
       craft: () => {
         player.backpackTier = 2;
         player.maxSlots = 18;
+        playSound("loot");
         log("Hai espanso al massimo lo zaino! Capienza estesa a 18 Slot!", "success");
         return true;
       }
@@ -1271,6 +1555,7 @@
       type: "weapon",
       isUnique: false,
       craft: () => {
+        playSound("craft");
         promptEquipWeapon({ name: "Bastone chiodato", maxUses: 4, uses: 4, dmgReduction: 0.5 });
         return true;
       }
@@ -1283,6 +1568,7 @@
       type: "weapon",
       isUnique: false,
       craft: () => {
+        playSound("craft");
         promptEquipWeapon({ name: "Lama rinforzata", maxUses: 6, uses: 6, dmgReduction: 0.65 });
         return true;
       }
@@ -1295,6 +1581,7 @@
       type: "weapon",
       isUnique: false,
       craft: () => {
+        playSound("craft");
         promptEquipWeapon({ name: "Piede di porco", maxUses: 6, uses: 6, dmgReduction: 0.8 });
         return true;
       }
@@ -1433,12 +1720,14 @@
       player.isSleeping = true;
       player.consecutiveSleepHours = 0;
       player.consecutiveSleepSeconds = 0;
+      playSound("sleep");
       log("Ti accovacci in un angolo riparato e ti addormenti.", "sleep");
       clearContextActions();
     } else {
       player.isSleeping = false;
       player.consecutiveSleepHours = 0;
       player.consecutiveSleepSeconds = 0;
+      playSound("wake");
       log("Riapri gli occhi e ti rimetti in piedi.", "idle");
     }
 
@@ -1448,6 +1737,7 @@
 
   function sleepOneHour() {
     if (!player.isSleeping || player.hp <= 0) return;
+    playSound("sleep");
     advanceTime(3600);
     if (player.isSleeping) {
       const oreTesto = player.consecutiveSleepHours === 1 ? "1 ora" : `${player.consecutiveSleepHours} ore`;
@@ -1469,6 +1759,7 @@
       return;
     }
 
+    playSound("move");
     player.km += 1;
     player.maxEnergy = Math.max(0, player.maxEnergy - 5);
     player.energy = Math.max(0, player.energy - 5);
@@ -1509,6 +1800,7 @@
     loc.maxSearches = Math.random() < 0.5 ? 2 : 1;
 
     currentLocation = loc;
+    playSound("loot");
     log(`Scorgi ${loc.name}. Puoi perlustrare la zona.`, "success");
 
     setContextActions([
@@ -1524,10 +1816,13 @@
     }
     player.energy = Math.max(0, player.energy - 3);
 
+    playSound("scavenge");
+
     // 50% di possibilità di trovare dai 2 ai 5 tappi
     if (Math.random() < 0.5) {
       const capsFound = Math.floor(Math.random() * 4) + 2; // 2..5
       player.caps = (player.caps || 0) + capsFound;
+      playSound("loot");
       log(`Hai recuperato ${capsFound} Tappi (tp) tra i detriti!`, "caps");
     }
 
@@ -1548,21 +1843,27 @@
     const lootRoll = Math.random();
     if (lootRoll < 0.22) {
       addItem("scrap", "Rottami metallici", "material", 1);
+      playSound("loot");
       log("Hai recuperato del metallo utile dai rottami.", "success");
     } else if (lootRoll < 0.36) {
       addItem("duct_tape", "Nastro adesivo", "material", 1);
+      playSound("loot");
       log("Hai trovato un rotolo di nastro adesivo!", "success");
     } else if (lootRoll < 0.50) {
       addItem("cloth", "Tessuto", "material", 2);
+      playSound("loot");
       log("Hai recuperato pezzi di tessuto integro (2x).", "success");
     } else if (lootRoll < 0.65) {
       addItem("canned_food", "Cibo in scatola", "food", 35, 1);
+      playSound("loot");
       log("Hai trovato una latta di cibo intatta!", "success");
     } else if (lootRoll < 0.78) {
       addPerishableFood("raw_meat", "Carne cruda", 20);
+      playSound("loot");
       log("Trovi della carne commestibile (si guasta entro 24 ore!).", "success");
     } else if (lootRoll < 0.88) {
       addItem("medkit", "Bende e disinfettante", "cure", 30, 1);
+      playSound("loot");
       log("Trovi una cassetta medica intatta.", "success");
     } else {
       log("Hai frugato ovunque ma non c'era altro di valore.", "idle");
@@ -1593,6 +1894,7 @@
     }
 
     currentEncounter = "animal";
+    playSound("hit");
     log("Un predatore selvatico ringhia e ti sbarra la strada con fare feroce!", "danger");
 
     const combatRow = [];
@@ -1621,6 +1923,7 @@
             log(`Lanci ${perishableItem.name}. L'animale mangia voracemente e si calma, avvicinandosi docile!`, "success");
             tameAnimal();
           } else {
+            playSound("eat");
             log(`Lanci ${perishableItem.name}: la fiera si avventa sulla carne e ti lascia passare!`, "success");
           }
           endEncounter();
@@ -1638,12 +1941,14 @@
 
   function handleHumanEncounter() {
     if (Math.random() < 0.5) {
+      playSound("loot");
       log("Incontri un viandante pacifico disposto a barattare con te.", "success");
       renderTradeOptions();
       return;
     }
 
     currentEncounter = "human";
+    playSound("hit");
     log("Un predone sbuca da un angolo puntandoti contro una spranga!", "danger");
 
     const combatRow = [];
@@ -1666,6 +1971,7 @@
       otherActions.push({
         label: `Cedi 1x ${foodItem.name}`,
         action: () => {
+          playSound("discard");
           log(`Cedi 1x ${foodItem.name}. Il predone arraffa il cibo e scappa.`, "idle");
           removeItem(foodItem.id, 1);
           endEncounter();
@@ -1695,6 +2001,7 @@
       const chosen = possibleLoot[Math.floor(Math.random() * possibleLoot.length)];
       if (chosen.type === "perishable_food") {
         if (addPerishableFood(chosen.id, chosen.name, chosen.val)) {
+          playSound("loot");
           log(`Nello scontro, il predone perde dallo zaino: ${chosen.name}! Lo raccogli al volo.`, "combat");
           looted++;
         } else {
@@ -1702,6 +2009,7 @@
         }
       } else {
         if (addItem(chosen.id, chosen.name, chosen.type, chosen.val || 0, 1)) {
+          playSound("loot");
           log(`Nello scontro, il predone perde dallo zaino: ${chosen.name}! Lo raccogli al volo.`, "combat");
           looted++;
         } else {
@@ -1727,6 +2035,8 @@
       baseDmg = Math.max(2, baseDmg - absorbedDmg);
       useEquippedWeapon();
       log(`Ti difendi con la tua arma assorbendo il colpo!`, "combat");
+    } else {
+      playSound("hit");
     }
 
     player.hp = Math.max(0, player.hp - baseDmg);
@@ -1748,6 +2058,7 @@
     if (!player.companion) return;
 
     if (Math.random() < 0.35) {
+      playSound("dodge");
       log(`${player.companion.name} balza con agilità e svia l'attacco di ${enemyName} senza subire ferite!`, "pet");
       if (type === "human") {
         lootRaiderItems(2);
@@ -1756,6 +2067,7 @@
       return;
     }
 
+    playSound("pet");
     const baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
     player.companion.hp = Math.max(0, player.companion.hp - baseDmg);
     log(`${player.companion.name} si scaglia con coraggio contro ${enemyName} subendo ${baseDmg} danni al posto tuo!`, "danger");
@@ -1769,6 +2081,7 @@
   }
 
   function fleeEncounter(type) {
+    playSound("flee");
     if (type === "human") {
       if (player.energy < 20) {
         log("Non hai abbastanza energia corrente per sfuggire al predone (richiesti 20)! Sei costretto a combattere!", "danger");
@@ -1920,6 +2233,7 @@
       addItem(r.id, r.name, r.type, r.val || 0, r.qty);
     });
 
+    playSound("trade");
     const recDesc = receiveList.map(r => `${r.qty}x ${r.name}`).join(" e ");
     log(`Scambio completato: ceduti ${giveQty}x per ricevere ${recDesc}.`, "success");
     clearContextActions();
@@ -1950,6 +2264,7 @@
       addItem(r.id, r.name, r.type, r.val || 0, r.qty);
     });
 
+    playSound("trade");
     const recDesc = receiveList.map(r => `${r.qty}x ${r.name}`).join(" e ");
     log(`Acquisto completato: pagati ${costCaps} Tappi (tp) per ricevere ${recDesc}.`, "success");
     clearContextActions();
@@ -1958,6 +2273,7 @@
   }
 
   function handleHazardEncounter() {
+    playSound("hit");
     if (!player.sick && Math.random() < 0.5) {
       player.sick = true;
       log("Inali esalazioni tossiche: sei MALATO.", "danger");
@@ -2035,6 +2351,17 @@
     const box = document.getElementById("context-actions");
     box.innerHTML = "";
     box.style.display = "none";
+  }
+
+  function updateSoundButton() {
+    const btnSound = document.getElementById("btn-toggle-sound");
+    if (player.soundEnabled) {
+      btnSound.textContent = "🔊 Effetti Sonori: ON";
+      btnSound.style.color = "var(--text-main)";
+    } else {
+      btnSound.textContent = "🔇 Effetti Sonori: OFF";
+      btnSound.style.color = "var(--text-muted)";
+    }
   }
 
   function updateUI() {
@@ -2186,7 +2513,6 @@
           }
         }
 
-        // Tasto di eliminazione (decrementa di 1 o rimuove l'oggetto)
         const btnDel = document.createElement("button");
         btnDel.className = "btn-delete-item";
         btnDel.textContent = "✕";
@@ -2199,6 +2525,8 @@
         invList.appendChild(row);
       });
     }
+
+    updateSoundButton();
   }
 
   /* =========================================================================
@@ -2240,6 +2568,7 @@
   function checkDeath() {
     if (player.hp <= 0 && !player.isDead) {
       player.isDead = true;
+      playSound("death");
       log("SEI MORTO. Il tuo cammino nella desolazione finisce qui.", "danger");
       recordDeathLeaderboard();
       clearContextActions();
@@ -2313,6 +2642,7 @@
       player = Object.assign({}, defaultPlayerState, loaded);
 
       if (player.caps === undefined) player.caps = 5;
+      if (player.soundEnabled === undefined) player.soundEnabled = true;
 
       const now = Date.now();
       const elapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
@@ -2357,6 +2687,13 @@
   document.getElementById("btn-options").onclick = () => { modalOptions.style.display = "flex"; };
   document.getElementById("btn-close-options").onclick = () => { modalOptions.style.display = "none"; };
   document.getElementById("btn-reset-game").onclick = resetGame;
+
+  document.getElementById("btn-toggle-sound").onclick = () => {
+    player.soundEnabled = !player.soundEnabled;
+    if (player.soundEnabled) playSound("loot");
+    saveGame();
+    updateUI();
+  };
 
   document.getElementById("btn-open-crafting").onclick = () => {
     if (player.isDead) return;
