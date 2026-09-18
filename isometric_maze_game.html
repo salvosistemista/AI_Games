@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - Isometric Maze</title>
+  <title>Labyrinthus 3D</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     :root {
       --sat: env(safe-area-inset-top, 0px);
       --sab: env(safe-area-inset-bottom, 0px);
-      --sal: env(safe-area-inset-left, 0px);
-      --sar: env(safe-area-inset-right, 0px);
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
     html, body {
       margin: 0;
@@ -19,30 +21,25 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      touch-action: none;
-      -webkit-user-select: none;
-      user-select: none;
       background: #04080e;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .glass-panel {
       background: rgba(13, 20, 36, 0.88);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.14);
     }
     .glass-btn {
       background: rgba(26, 36, 56, 0.9);
-      backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.16);
-      transition: transform 0.08s ease, background-color 0.08s ease;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
       cursor: pointer;
     }
     .glass-btn:active {
-      transform: scale(0.92);
       background: rgba(99, 102, 241, 0.9);
+      transform: scale(0.92);
     }
     .iso-dpad-btn {
       position: absolute;
@@ -55,26 +52,22 @@
       background: rgba(22, 32, 50, 0.94);
       border: 1.5px solid rgba(255, 255, 255, 0.22);
       border-radius: 18px;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.55), inset 0 1px 1px rgba(255,255,255,0.25);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
       touch-action: none;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
       cursor: pointer;
-      transition: transform 0.06s ease, background-color 0.06s ease, border-color 0.06s ease;
     }
     .iso-dpad-btn:active, .iso-dpad-btn.active {
       transform: scale(0.90);
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
-      box-shadow: 0 0 14px rgba(99, 102, 241, 0.7);
     }
   </style>
 </head>
-<body class="relative w-full h-full flex flex-col justify-between text-white overflow-hidden select-none">
+<body class="relative w-full h-full flex flex-col justify-between text-white">
 
-  <!-- Header Anti-Overflow -->
-  <header class="w-full z-40 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between pointer-events-auto gap-1">
-    <div class="glass-panel px-2 py-1 rounded-xl shadow-lg flex items-center gap-1.5 shrink-0 max-w-[125px]">
+  <!-- Header -->
+  <header class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between gap-1">
+    <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[125px]">
       <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
       <div class="flex flex-col min-w-0">
         <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta</div>
@@ -85,7 +78,7 @@
       </div>
     </div>
 
-    <div class="glass-panel px-2 py-1 rounded-xl shadow-lg flex items-center gap-1.5 shrink-0">
+    <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0">
       <div class="flex flex-col items-center">
         <span class="text-[7px] uppercase tracking-wider text-slate-400">Passi</span>
         <span id="stat-steps" class="font-bold text-amber-400 text-[11px] leading-none">0</span>
@@ -103,7 +96,7 @@
     </div>
 
     <div class="flex items-center gap-1 shrink-0">
-      <button id="btn-map" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center text-xs shadow" aria-label="Mappa">🗺️</button>
+      <button id="btn-map" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center text-xs" aria-label="Mappa">🗺️</button>
       <button id="btn-audio" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Audio">
         <svg id="icon-sound-on" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
         <svg id="icon-sound-off" class="w-3.5 h-3.5 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
@@ -117,25 +110,22 @@
     </div>
   </header>
 
-  <!-- Area Canvas di Gioco -->
-  <main id="game-container" class="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden z-10">
-    <canvas id="gameCanvas" class="block w-full h-full touch-none"></canvas>
+  <!-- Area Canvas -->
+  <main class="absolute inset-0 w-full h-full">
+    <canvas id="gameCanvas" class="block w-full h-full" style="touch-action: none;"></canvas>
 
-    <!-- Toast fluttuante avvisi -->
-    <div id="game-toast" class="absolute top-16 z-50 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/40 shadow-xl opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw] text-center">
+    <!-- Toast -->
+    <div id="game-toast" class="absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/40 opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw]">
       <span id="toast-icon">🗝️</span>
       <span id="toast-msg">Trova prima la chiave dorata!</span>
     </div>
 
-    <!-- Overlay Mappa Radar Isometrica (hidden di default per non intercettare click) -->
-    <div id="map-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center p-4">
-      <div id="map-backdrop" class="absolute inset-0 bg-slate-950/75 backdrop-blur-sm pointer-events-auto"></div>
-      <div class="relative z-10 bg-slate-950/90 backdrop-blur-md rounded-3xl p-4 flex flex-col items-center justify-between border border-amber-400/30 shadow-2xl w-[92vw] max-w-[480px] h-[68vh] max-h-[520px] pointer-events-auto">
-        <div class="w-full flex items-center justify-between pb-2 border-b border-slate-700/60">
+    <!-- Mappa Overlay -->
+    <div id="map-overlay" class="absolute inset-0 z-40 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+      <div class="relative bg-slate-900 rounded-3xl p-4 flex flex-col items-center justify-between border border-amber-400/30 w-full max-w-[420px] h-[65vh] max-h-[480px]">
+        <div class="w-full flex items-center justify-between pb-2 border-b border-slate-700">
           <div class="flex items-center gap-2">
-            <span class="text-amber-400 font-bold text-xs flex items-center gap-1">
-              <span>🗺️</span> <span>MAPPA ESPLORATA</span>
-            </span>
+            <span class="text-amber-400 font-bold text-xs">🗺️ MAPPA ESPLORATA</span>
             <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono" id="map-explored-pct">0%</span>
           </div>
           <button id="btn-close-map" class="glass-btn px-2.5 py-1 rounded-lg text-slate-300 text-xs font-bold">Chiudi ✕</button>
@@ -147,53 +137,61 @@
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Tu</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Inizio</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Uscita</span>
-          <span class="flex items-center gap-1"><span class="text-xs">🗝️</span> Chiave</span>
+          <span class="flex items-center gap-1">🗝️ Chiave</span>
         </div>
       </div>
     </div>
   </main>
 
   <!-- Suggerimenti Desktop -->
-  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700/60 pointer-events-none items-center gap-2">
-    <span>Comandi: <b class="text-amber-400">WASD</b> o <b class="text-amber-400">Frecce</b></span>
+  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
+    <span>Comandi: <b class="text-amber-400">WASD</b> / <b class="text-amber-400">Frecce</b></span>
     <span class="text-slate-500">•</span>
-    <span>Mappa: Tieni premuto <b class="text-cyan-400">TAB</b></span>
+    <span>Mappa: <b class="text-cyan-400">TAB</b></span>
   </div>
 
-  <!-- D-Pad Isometrico Mobile -->
-  <footer id="touch-controls" class="w-full z-30 pb-[calc(var(--sab)+12px)] flex flex-col items-center pointer-events-none select-none">
+  <!-- D-Pad Mobile -->
+  <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex flex-col items-center pointer-events-none">
     <div class="relative w-[210px] h-[210px] pointer-events-auto">
+      <!-- NORD: Alto-Destra -->
       <button id="pad-n" class="iso-dpad-btn top-2 right-4" aria-label="Nord">
         <span class="text-amber-300 text-lg font-black leading-none">↗</span>
         <span class="text-[9px] text-slate-200 font-bold mt-0.5">NORD</span>
       </button>
+
+      <!-- OVEST: Alto-Sinistra -->
       <button id="pad-w" class="iso-dpad-btn top-2 left-4" aria-label="Ovest">
         <span class="text-amber-300 text-lg font-black leading-none">↖</span>
         <span class="text-[9px] text-slate-200 font-bold mt-0.5">OVEST</span>
       </button>
+
+      <!-- SUD: Basso-Sinistra -->
       <button id="pad-s" class="iso-dpad-btn bottom-2 left-4" aria-label="Sud">
         <span class="text-[9px] text-slate-200 font-bold mb-0.5">SUD</span>
         <span class="text-amber-300 text-lg font-black leading-none">↙</span>
       </button>
+
+      <!-- EST: Basso-Destra -->
       <button id="pad-e" class="iso-dpad-btn bottom-2 right-4" aria-label="Est">
         <span class="text-[9px] text-slate-200 font-bold mb-0.5">EST</span>
         <span class="text-amber-300 text-lg font-black leading-none">↘</span>
       </button>
-      <div class="absolute inset-[66px] rounded-full glass-panel flex flex-col items-center justify-center pointer-events-none opacity-50 border border-slate-600/40">
-        <span class="text-[9px] text-amber-300 font-bold tracking-tight">SWIPE</span>
+
+      <div class="absolute inset-[66px] rounded-full glass-panel flex flex-col items-center justify-center pointer-events-none opacity-50">
+        <span class="text-[9px] text-amber-300 font-bold">SWIPE</span>
         <span class="text-[7px] text-slate-400">D-PAD</span>
       </div>
     </div>
   </footer>
 
-  <!-- Modali Fine Livello / Vittoria -->
-  <div id="modal-level-cleared" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden pointer-events-auto p-4">
+  <!-- Modali -->
+  <div id="modal-level-cleared" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden p-4">
     <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/40 shadow-2xl flex flex-col items-center">
       <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl mb-2.5">✨</div>
       <h3 class="text-lg font-black text-white">Livello Completato!</h3>
-      <p class="text-xs text-slate-300 mt-0.5 mb-3">Chiave raccolta e portale attraversato.</p>
+      <p class="text-xs text-slate-300 mt-0.5 mb-3">Chiave raccolta e portale sbloccato.</p>
       
-      <div class="w-full bg-slate-900/80 rounded-2xl p-2.5 mb-4 text-xs text-slate-300 flex justify-around border border-slate-700/50">
+      <div class="w-full bg-slate-900 rounded-2xl p-2.5 mb-4 text-xs text-slate-300 flex justify-around border border-slate-700">
         <div>
           <div class="text-[9px] text-slate-400 uppercase">Passi</div>
           <div class="text-sm font-bold text-amber-400" id="modal-step-count">0</div>
@@ -205,20 +203,20 @@
         </div>
       </div>
 
-      <button id="btn-next-level" class="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 active:scale-95 text-white font-black rounded-xl shadow-lg transition-transform text-xs flex items-center justify-center gap-2">
+      <button id="btn-next-level" class="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer">
         <span>Prossimo Livello</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
       </button>
     </div>
   </div>
 
-  <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden pointer-events-auto p-4">
+  <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
     <div class="glass-panel w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/40 shadow-2xl flex flex-col items-center">
       <div class="text-4xl mb-2 animate-bounce">🏆</div>
       <h2 class="text-xl font-black text-amber-300">VITTORIA TOTALE!</h2>
       <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 10 labirinti procedurali!</p>
 
-      <div class="w-full bg-slate-900/90 rounded-2xl p-3 mb-5 border border-slate-700/60 flex flex-col gap-2">
+      <div class="w-full bg-slate-900 rounded-2xl p-3 mb-5 border border-slate-700 flex flex-col gap-2">
         <div class="flex justify-between items-center text-xs">
           <span class="text-slate-400">Passi totali:</span>
           <span id="victory-total-steps" class="font-bold text-amber-400">0</span>
@@ -229,13 +227,12 @@
         </div>
       </div>
 
-      <button id="btn-new-game-win" class="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 active:scale-95 text-slate-950 font-black rounded-xl shadow-xl text-xs flex items-center justify-center">
+      <button id="btn-new-game-win" class="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center cursor-pointer">
         Nuova Partita
       </button>
     </div>
   </div>
 
-  <!-- Audio Sintetico -->
   <script>
     class SoundEngine {
       constructor() { this.ctx = null; this.muted = false; }
@@ -244,9 +241,7 @@
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           if (AudioContext) this.ctx = new AudioContext();
         }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
-        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       }
       playTone(freq, type, duration, vol = 0.08) {
         if (this.muted) return;
@@ -477,7 +472,6 @@
 
         this.heldDirection = null;
         this.holdInterval = null;
-        this.isTouchDevice = false;
 
         this.resize = this.resize.bind(this);
         this.gameLoop = this.gameLoop.bind(this);
@@ -490,14 +484,11 @@
       }
 
       detectDeviceMode() {
-        // Rilevamento accurato per touch mobile
-        this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        const isDesktop = !this.isTouchDevice && window.innerWidth >= 1024;
-
+        const isMobileScreen = window.innerWidth <= 768;
         const touchFooter = document.getElementById('touch-controls');
         const desktopHint = document.getElementById('desktop-hint');
 
-        if (isDesktop) {
+        if (!isMobileScreen) {
           touchFooter.classList.add('hidden');
           desktopHint.classList.remove('hidden');
           desktopHint.classList.add('flex');
@@ -512,44 +503,37 @@
         const unlock = () => {
           this.sound.init();
           window.removeEventListener('touchstart', unlock);
-          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('click', unlock);
         };
         window.addEventListener('touchstart', unlock, { passive: true });
-        window.addEventListener('pointerdown', unlock, { passive: true });
+        window.addEventListener('click', unlock, { passive: true });
       }
 
       initUI() {
-        const bind = (id, fn) => {
+        const bindButton = (id, action) => {
           const el = document.getElementById(id);
           if (!el) return;
-          const handler = (e) => {
+          el.addEventListener('click', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             this.sound.init();
-            fn();
-          };
-          el.addEventListener('pointerdown', handler);
-          el.addEventListener('click', handler);
+            action();
+          });
         };
 
-        bind('btn-audio', () => {
+        bindButton('btn-audio', () => {
           this.sound.muted = !this.sound.muted;
           document.getElementById('icon-sound-on').classList.toggle('hidden', this.sound.muted);
           document.getElementById('icon-sound-off').classList.toggle('hidden', !this.sound.muted);
         });
 
-        bind('btn-fullscreen', () => this.toggleFullscreen());
-        bind('btn-restart', () => this.restartLevel());
-        bind('btn-next-level', () => this.advanceNextLevel());
-        bind('btn-new-game-win', () => this.startNewGame());
-        bind('btn-map', () => {
+        bindButton('btn-fullscreen', () => this.toggleFullscreen());
+        bindButton('btn-restart', () => this.restartLevel());
+        bindButton('btn-next-level', () => this.advanceNextLevel());
+        bindButton('btn-new-game-win', () => this.startNewGame());
+        bindButton('btn-map', () => {
           if (this.isMapVisible) this.hideMap(); else this.showMap();
         });
-        bind('btn-close-map', () => this.hideMap());
-        document.getElementById('map-backdrop').addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          this.hideMap();
-        });
+        bindButton('btn-close-map', () => this.hideMap());
       }
 
       toggleFullscreen() {
@@ -592,23 +576,27 @@
         const bindPad = (id, dx, dy) => {
           const btn = document.getElementById(id);
           if (!btn) return;
-          
-          btn.addEventListener('pointerdown', (e) => {
+
+          // Gestione touch pulita
+          btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            e.stopPropagation();
-            try { btn.setPointerCapture(e.pointerId); } catch(err) {}
+            startHold(dx, dy, btn);
+          }, { passive: false });
+
+          btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopHold(btn);
+          }, { passive: false });
+
+          btn.addEventListener('touchcancel', () => stopHold(btn));
+
+          // Gestione mouse desktop fallback
+          btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
             startHold(dx, dy, btn);
           });
-
-          const end = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            try { btn.releasePointerCapture(e.pointerId); } catch(err) {}
-            stopHold(btn);
-          };
-
-          btn.addEventListener('pointerup', end);
-          btn.addEventListener('pointercancel', end);
+          btn.addEventListener('mouseup', () => stopHold(btn));
+          btn.addEventListener('mouseleave', () => stopHold(btn));
         };
 
         bindPad('pad-n', 0, -1);
@@ -616,27 +604,32 @@
         bindPad('pad-s', 0, 1);
         bindPad('pad-w', -1, 0);
 
-        // Swipe Touch Naturale sul Canvas
-        let touchStart = null;
+        // Swipe su Canvas
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isSwiping = false;
+
         this.canvas.addEventListener('touchstart', (e) => {
           if (e.touches.length === 1) {
             this.sound.init();
-            touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = true;
           }
         }, { passive: true });
 
         this.canvas.addEventListener('touchmove', (e) => {
-          if (touchStart) {
-            // Disattiva il pull-to-refresh nativo
-            if (e.cancelable) e.preventDefault();
+          if (isSwiping && e.cancelable) {
+            e.preventDefault();
           }
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', (e) => {
-          if (!touchStart || !this.isGameActive) return;
+          if (!isSwiping || !this.isGameActive) return;
+          isSwiping = false;
           const end = e.changedTouches[0];
-          const dx = end.clientX - touchStart.x;
-          const dy = end.clientY - touchStart.y;
+          const dx = end.clientX - touchStartX;
+          const dy = end.clientY - touchStartY;
           const dist = Math.hypot(dx, dy);
 
           if (dist >= 20) {
@@ -651,10 +644,9 @@
               this.handleDirectionInput(-1, 0); // OVEST ↖
             }
           }
-          touchStart = null;
         }, { passive: true });
 
-        // Controlli Tastiera Desktop
+        // Tastiera desktop
         window.addEventListener('keydown', (e) => {
           if (!this.isGameActive) return;
           const k = e.key.toLowerCase();
@@ -766,12 +758,12 @@
           nextY >= 0 && nextY < this.mazeData.gridH &&
           this.mazeData.grid[nextY][nextX] === 0
         ) {
-          // Blocco uscita se non c'è la chiave
+          // Blocco se si tenta l'uscita senza chiave
           if (!this.hasKey && nextX === this.mazeData.exit.x && nextY === this.mazeData.exit.y) {
             this.sound.playLockedDoor();
             this.camera.shake = 8;
             if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
-            this.showToast('PORTALE BLOCCATO! Trova la chiave dorata 🗝️', '🔒', true);
+            this.showToast('PORTALE BLOCCATO! Trova prima la chiave dorata 🗝️', '🔒', true);
             return;
           }
 
@@ -818,8 +810,8 @@
         document.getElementById('toast-msg').textContent = msg;
         document.getElementById('toast-icon').textContent = icon;
         toast.className = isWarning 
-          ? 'absolute top-16 z-50 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-rose-300 border border-rose-500/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center'
-          : 'absolute top-16 z-50 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center';
+          ? 'absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-rose-300 border border-rose-500/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center'
+          : 'absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center';
 
         if (this.toastTimeout) clearTimeout(this.toastTimeout);
         this.toastTimeout = setTimeout(() => {
@@ -865,12 +857,14 @@
         this.isMapVisible = true;
         const overlay = document.getElementById('map-overlay');
         overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
         this.renderMap();
       }
 
       hideMap() {
         this.isMapVisible = false;
         const overlay = document.getElementById('map-overlay');
+        overlay.classList.remove('flex');
         overlay.classList.add('hidden');
       }
 
@@ -1026,7 +1020,7 @@
           const vh = this.canvas.clientHeight;
           const isPortrait = vh > vw;
 
-          const portraitYShift = (this.isTouchDevice && isPortrait) ? (vh * 0.11) : 0;
+          const portraitYShift = isPortrait ? (vh * 0.10) : 0;
           const desiredCamX = vw / 2 - focusIso.x;
           const desiredCamY = (vh / 2 - focusIso.y) - portraitYShift;
 
@@ -1062,7 +1056,7 @@
         const wh = this.camera.wallH;
         const { gridW, gridH } = this.mazeData;
 
-        // Disegno Pavimenti
+        // Disegno pavimenti
         for (let gy = 0; gy < gridH; gy++) {
           for (let gx = 0; gx < gridW; gx++) {
             if (this.mazeData.grid[gy][gx] === 0) {
