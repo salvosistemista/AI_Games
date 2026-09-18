@@ -514,7 +514,6 @@
       cursor: not-allowed;
     }
 
-    /* Stili Nuove Finestre (Scambio & Deposito) */
     .trade-modal-list {
       display: flex;
       flex-direction: column;
@@ -1130,15 +1129,16 @@
   const LEADERBOARD_KEY = "terra_desolata_leaderboard";
   const COMMON_CHEST_KEY = "terra_desolata_chest_common";
 
-  const FOOD_TICK_SEC = 480;
-  const THIRST_TOTAL_SEC = 36 * 3600;
-  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100;
-  const AWAKE_CUR_ENERGY_DECAY_SEC = 540;
-  const AWAKE_MAX_ENERGY_DECAY_SEC = 600;
-  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;
-  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;
-  const FOOD_PERISH_LIMIT_SEC = 86400;
-  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600;
+  const FOOD_TICK_SEC = 480;              // -1 Sazietà ogni 8 min (480s)
+  const THIRST_TOTAL_SEC = 18 * 3600;     // 18 ore totali da svegli
+  const THIRST_TICK_SEC = THIRST_TOTAL_SEC / 100; // -1% Sete ogni 648 secondi
+  const AWAKE_CUR_ENERGY_DECAY_SEC = 540; // -1 Energia Corrente ogni 9 min
+  const AWAKE_MAX_ENERGY_DECAY_SEC = 600; // -1 Energia Massima ogni 10 min
+  const SLEEP_MAX_ENERGY_GAIN_SEC = 240;  // +1 Energia Massima ogni 4 min
+  const SLEEP_CUR_ENERGY_GAIN_SEC = 360;  // +1 Energia Corrente ogni 6 min
+  const FOOD_PERISH_LIMIT_SEC = 86400;    // Carne scade dopo 24h interne
+  const MAX_CONSECUTIVE_SLEEP_SEC = 8 * 3600; // Risveglio forzato dopo 8h continue
+  const MAX_OFFLINE_SIMULATION_SEC = 6 * 3600; // Tetto massimo offline: 6 ore
 
   let isResetting = false;
 
@@ -1187,7 +1187,6 @@
   let currentLocation = null;
   let currentEncounter = null;
 
-  // Cassa dei viandanti (Condivisa e persistente)
   let viandantiChest = [];
 
   function loadViandantiChest() {
@@ -1388,6 +1387,7 @@
   }
 
   function applyAwakeTime(secondsToAdd, silent) {
+    // Sete / Idratazione (18 ore continue da svegli = 100% in 64800s => -1% ogni 648s)
     const totalThirstSec = (player.secThirst || 0) + secondsToAdd;
     const thirstLoss = Math.floor(totalThirstSec / THIRST_TICK_SEC);
     player.secThirst = totalThirstSec % THIRST_TICK_SEC;
@@ -1405,6 +1405,7 @@
       }
     }
 
+    // Fame / Sazietà (-1 ogni 480s)
     const totalFoodSec = (player.secFood || 0) + secondsToAdd;
     const foodLoss = Math.floor(totalFoodSec / FOOD_TICK_SEC);
     player.secFood = totalFoodSec % FOOD_TICK_SEC;
@@ -2149,7 +2150,6 @@
       playSound("loot");
       log("Incontri un viandante pacifico con una grande gerla sulle spalle.", "success");
       
-      // Due tasti separati: Commercia merci e Cassa dei viandanti
       setContextActions([
         {
           label: "🤝 Commercia merci",
@@ -2407,7 +2407,6 @@
 
     currentTradeSelections[offerId][mode] += delta;
 
-    // Se si eccedono i limiti con un incremento, si ripristina
     if (delta > 0) {
       const check = validateTradeSelections();
       if (!check.valid) {
@@ -3031,12 +3030,21 @@
       if (player.soundEnabled === undefined) player.soundEnabled = true;
 
       const now = Date.now();
-      const elapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
+      const rawElapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
       player.lastActiveTimestamp = now;
 
+      // Limite massimo invalicabile di 6 ore (21600 secondi)
+      const elapsedSeconds = Math.min(rawElapsedSeconds, MAX_OFFLINE_SIMULATION_SEC);
+
       if (!player.isDead && elapsedSeconds > 5) {
-        const mins = Math.floor(elapsedSeconds / 60);
-        log(`Sei rimasto assente per circa ${mins > 0 ? mins + " minuti" : elapsedSeconds + " secondi"}.`, "idle");
+        const ore = Math.floor(elapsedSeconds / 3600);
+        const min = Math.floor((elapsedSeconds % 3600) / 60);
+
+        if (rawElapsedSeconds > MAX_OFFLINE_SIMULATION_SEC) {
+          log(`Sei rimasto via per più di 6 ore. Il mondo ha simulato il tetto massimo consentito di 6 ore.`, "idle");
+        } else {
+          log(`Sei rimasto via per ${ore > 0 ? ore + "h " : ""}${min}m.`, "idle");
+        }
         advanceTime(elapsedSeconds, true);
       } else if (!player.isDead) {
         log("Bentornato nelle rovine.");
@@ -3093,13 +3101,11 @@
     modalCrafting.style.display = "none";
   };
 
-  // Finestra Scambio Merci
   document.getElementById("btn-trade-cancel").onclick = () => {
     modalTrade.style.display = "none";
   };
   document.getElementById("btn-trade-confirm").onclick = executeBatchTradeModal;
 
-  // Finestra Deposito Cassa
   document.getElementById("btn-storage-cancel").onclick = () => {
     modalStorage.style.display = "none";
   };
