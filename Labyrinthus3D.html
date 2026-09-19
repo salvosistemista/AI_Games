@@ -69,7 +69,7 @@
     /* Posizionamento Tasto Bomba */
     .action-bomb-btn {
       position: absolute;
-      left: 90px;
+      left: 45px;
       bottom: 79px;
       width: 60px;
       height: 60px;
@@ -83,6 +83,7 @@
       justify-content: center;
       touch-action: none;
       cursor: pointer;
+	  opacity: 0.6;
     }
     .action-bomb-btn:active {
       transform: scale(0.88);
@@ -92,7 +93,7 @@
     .action-map-btn {
       position: absolute;
       left: 295px;
-      bottom: 230px;
+      bottom: 250px;
       width: 48px;
       height: 48px;
       border-radius: 16px;
@@ -104,6 +105,7 @@
       justify-content: center;
       touch-action: none;
       cursor: pointer;
+	  opacity: 0.6;
     }
     .action-map-btn:active {
       transform: scale(0.90);
@@ -124,6 +126,7 @@
       align-items: center;
       justify-content: center;
       user-select: none;
+	  opacity: 0.45;
     }
     .joystick-knob {
       width: 58px;
@@ -291,7 +294,7 @@
       </div>
 
       <!-- Modalità 2: Virtual Joystick Isometrico -->
-      <div id="touch-joystick-wrapper" class="hidden relative w-[160px] h-[160px] items-center justify-center">
+      <div id="touch-joystick-wrapper" class="hidden relative w-[160px] h-[160px] items-center justify-center mr-12 mb-12" >
         <div id="joystick-container" class="joystick-base">
           <span class="joystick-guideline top-2 right-3">↗ N</span>
           <span class="joystick-guideline top-2 left-3">↖ O</span>
