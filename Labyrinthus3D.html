@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - Gameplay Expansion Edition</title>
+  <title>Labyrinthus 3D - Difficulty & Reset Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -70,8 +70,8 @@
       position: absolute;
       left: 45px;
       bottom: 79px;
-      width: 60px;
-      height: 60px;
+      width: 62px;
+      height: 62px;
       border-radius: 20px;
       background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
       border: 2px solid rgba(255, 255, 255, 0.35);
@@ -82,9 +82,14 @@
       justify-content: center;
       touch-action: none;
       cursor: pointer;
-      opacity: 0.6;
+      opacity: 0.85;
+      transition: opacity 0.2s, filter 0.2s;
     }
-    .action-bomb-btn:active {
+    .action-bomb-btn.disabled {
+      filter: grayscale(0.7) brightness(0.7);
+      opacity: 0.4;
+    }
+    .action-bomb-btn:active:not(.disabled) {
       transform: scale(0.88);
       filter: brightness(1.2);
     }
@@ -189,12 +194,19 @@
       </div>
     </div>
 
+    <!-- Sotto-header -->
     <div class="flex items-center justify-between w-full px-0.5">
-      <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-1.5 flex-wrap">
         <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-md" id="lives-container" title="Vite rimanenti">
           <span class="text-xs" id="life-1">❤️</span>
           <span class="text-xs" id="life-2">❤️</span>
           <span class="text-xs" id="life-3">❤️</span>
+        </div>
+
+        <div id="bombs-hud-container" class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1 shadow-md border border-slate-700 text-xs" title="Bombe disponibili">
+          <span>💣</span>
+          <span id="bombs-count-text" class="font-black text-rose-300 text-[11px] leading-none">3/3</span>
+          <span id="bombs-timer-text" class="hidden text-[9px] font-mono text-amber-400 pl-0.5">⏱ 15s</span>
         </div>
 
         <div id="buffs-container" class="flex items-center gap-1">
@@ -220,6 +232,17 @@
   <!-- Canvas di Gioco -->
   <main class="absolute inset-0 w-full h-full">
     <canvas id="gameCanvas" class="block w-full h-full" style="touch-action: none;"></canvas>
+
+    <!-- Barra HP Boss -->
+    <div id="boss-hud" class="absolute top-28 left-1/2 -translate-x-1/2 z-40 hidden flex-col items-center gap-1 w-[260px] glass-panel px-3 py-2 rounded-2xl border border-rose-500/50 shadow-2xl">
+      <div class="flex items-center justify-between w-full text-[10px] font-black uppercase text-rose-300 tracking-wider">
+        <span id="boss-title">👑 GOLEM BOSS</span>
+        <span id="boss-hp-text">3 / 3 HP</span>
+      </div>
+      <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-rose-500/30">
+        <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-rose-600 to-red-400 transition-all duration-300" style="width: 100%;"></div>
+      </div>
+    </div>
 
     <div id="game-toast" class="absolute top-24 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/40 opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw]">
       <span id="toast-icon">🗝️</span>
@@ -249,11 +272,11 @@
     </div>
   </main>
 
-  <!-- Suggerimenti Desktop & Gamepad -->
+  <!-- Suggerimenti Desktop -->
   <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
-    <span>Tastiera: <b class="text-amber-400">WASD</b> | Bomba: <b class="text-rose-400">SPAZIO</b> | Mappa: <b class="text-cyan-400">TAB</b> | Menu: <b class="text-cyan-300">ESC</b></span>
+    <span>Tastiera: <b class="text-amber-400">WASD</b> | Bomba: <b class="text-rose-400">SPAZIO</b> (<span id="desktop-bomb-count" class="text-rose-300 font-bold">3/3</span>) | Mappa: <b class="text-cyan-400">TAB</b> | Menu: <b class="text-cyan-300">ESC</b></span>
     <span class="text-slate-500">•</span>
-    <span>Gamepad: <b class="text-emerald-400">Stick L / D-Pad</b> | Bomba/OK: <b class="text-rose-400">A (✕)</b> | Annulla: <b class="text-amber-300">B (○)</b></span>
+    <span>Gamepad: <b class="text-emerald-400">Stick L / D-Pad</b> | Bomba/OK: <b class="text-rose-400">A (✕)</b></span>
   </div>
 
   <!-- Controlli Touch Inferiori -->
@@ -265,7 +288,8 @@
 
       <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
         <span class="text-2xl leading-none">💣</span>
-        <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
+        <span id="btn-bomb-counter" class="text-[10px] font-black uppercase text-white tracking-tight leading-none mt-0.5">3/3</span>
+        <span id="btn-bomb-recharge-badge" class="hidden text-[8px] text-amber-300 font-mono leading-none mt-0.5">15s</span>
       </button>
     </div>
 
@@ -311,7 +335,7 @@
         🏛️
       </div>
       <h1 class="text-2xl font-black tracking-wider text-amber-300 uppercase">Labyrinthus 3D</h1>
-      <p class="text-xs text-slate-400 mt-0.5 mb-5">50 Livelli • Spettri • Bombe & Potenziamenti</p>
+      <p class="text-xs text-slate-400 mt-0.5 mb-5">50 Livelli • Boss Fights • Difficoltà personalizzabile</p>
 
       <div class="w-full flex flex-col gap-2.5" id="menu-main-buttons">
         <button id="btn-menu-continue" class="menu-nav-btn w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
@@ -336,8 +360,6 @@
         <span>Gamepad: <b class="text-amber-400">Stick L / D-Pad</b></span>
         <span>•</span>
         <span><b class="text-emerald-400">A (✕)</b> OK</span>
-        <span>•</span>
-        <span><b class="text-rose-400">B (○)</b> Indietro</span>
       </div>
     </div>
   </div>
@@ -380,7 +402,7 @@
     <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/50 shadow-2xl flex flex-col items-center">
       <div class="text-3xl mb-2">⚠️</div>
       <h3 class="text-base font-black text-white">Iniziare nuova partita?</h3>
-      <p class="text-xs text-slate-300 mt-1 mb-4">C'è già una partita in corso. Se prosegui, i progressi attuali verranno persi e ripartirai dal <b class="text-amber-400">Livello 1</b>.</p>
+      <p class="text-xs text-slate-300 mt-1 mb-4">C'è già una partita in corso. Se prosegui, i progressi attuali verranno persi e ripartirai dal <b class="text-amber-400">Livello 1</b>[cite: 1, 2].</p>
 
       <div class="w-full flex gap-2" id="modal-confirm-buttons">
         <button id="btn-confirm-newgame-cancel" class="confirm-nav-btn flex-1 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all duration-150">
@@ -401,12 +423,34 @@
       </h3>
 
       <div class="w-full flex flex-col gap-3 mb-5" id="options-items">
+        <!-- 1) Livello di Difficoltà -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>📊</span>
+            <span>Difficoltà</span>
+          </div>
+          <button id="btn-opt-toggle-diff" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150">
+            NORMALE
+          </button>
+        </div>
+
+        <!-- 2) Reset Classifica -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>🗑️</span>
+            <span>Classifica</span>
+          </div>
+          <button id="btn-opt-reset-leaderboard" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150">
+            RESET TOP 5
+          </button>
+        </div>
+
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
           <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
             <span id="opt-control-icon">🕹️</span>
             <span>Controlli Mobile</span>
           </div>
-          <button id="btn-opt-toggle-control" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150">
+          <button id="btn-opt-toggle-control" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150">
             TASTI D-PAD
           </button>
         </div>
@@ -426,7 +470,7 @@
             <span>⛶</span>
             <span>Schermo Intero</span>
           </div>
-          <button id="btn-opt-toggle-fullscreen" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150">
+          <button id="btn-opt-toggle-fullscreen" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 transition-all duration-150">
             ATTIVA
           </button>
         </div>
@@ -518,7 +562,7 @@
 
   <script>
     /* ========================================================
-       1. SOUND ENGINE & PARTICLES & GENERATOR DEFINITIONS
+       1. SOUND ENGINE & PARTICLES
        ======================================================== */
     class SoundEngine {
       constructor() { this.ctx = null; this.muted = false; }
@@ -554,6 +598,13 @@
         this.playTone(320, 'sine', 0.1, 0.12);
         setTimeout(() => this.playTone(480, 'sine', 0.12, 0.14), 70);
       }
+      playBombReload() {
+        this.playTone(350, 'sine', 0.08, 0.1);
+        setTimeout(() => this.playTone(550, 'triangle', 0.12, 0.15), 60);
+      }
+      playBombEmpty() {
+        this.playTone(140, 'sawtooth', 0.08, 0.12);
+      }
       playTick() { this.playTone(850, 'square', 0.025, 0.04); }
       playExplosion() {
         this.playTone(85, 'sawtooth', 0.45, 0.28);
@@ -584,6 +635,11 @@
       playGhostSpawn() {
         [500, 620, 750].forEach((f, i) => {
           setTimeout(() => this.playTone(f, 'sine', 0.3, 0.12), i * 90);
+        });
+      }
+      playBossHit() {
+        [180, 120, 90].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.25, 0.22), i * 50);
         });
       }
       playEnemyDefeated() {
@@ -660,7 +716,7 @@
     }
 
     /* ========================================================
-       2. LISTA COMPLETA DEI 50 TEMI DEL LABIRINTO (RIPRISTINATA)
+       2. LISTA COMPLETA DEI 50 TEMI DEL LABIRINTO
        ======================================================== */
     const LEVEL_THEMES = [
       { name: "Foresta Antica", accent: "#34d399", bgTop: "#051610", bgBottom: "#0b2b20", floorTop: "#2d6a4f", floorEdge: "#1b4332", wallTop: "#74c69d", wallLeft: "#40916c", wallRight: "#2d6a4f", portal: "#5eead4", playerBody: "#fbbf24", playerHat: "#f97316" },
@@ -863,6 +919,22 @@
         this.hasKey = false;
         this.toastTimeout = null;
 
+        // Difficoltà e Configurazione Bombe
+        this.DIFFICULTY_KEY = 'labyrinthus_difficulty_v1';
+        this.difficulty = 'normale'; // 'facile', 'normale', 'difficile'
+        try {
+          const savedDiff = localStorage.getItem(this.DIFFICULTY_KEY);
+          if (savedDiff === 'facile' || savedDiff === 'normale' || savedDiff === 'difficile') {
+            this.difficulty = savedDiff;
+          }
+        } catch(e) {}
+
+        this.applyDifficultySettings();
+
+        // Gestione Boss
+        this.isBossLevel = false;
+        this.boss = null;
+
         this.bulletTime = 0;
 
         this.powerups = [];
@@ -932,8 +1004,39 @@
         this.initUI();
         this.initMenuSystem();
         this.applyControlModeUI();
+        this.applyDifficultyUI();
         this.setupAudioUnlock();
         this.setupAutoSaveListeners();
+      }
+
+      applyDifficultySettings() {
+        if (this.difficulty === 'facile') {
+          this.maxAvailableBombs = 4;
+          this.bombRechargeTime = 10.0;
+        } else if (this.difficulty === 'difficile') {
+          this.maxAvailableBombs = 2;
+          this.bombRechargeTime = 20.0;
+        } else { // Normale
+          this.maxAvailableBombs = 3;
+          this.bombRechargeTime = 15.0;
+        }
+        if (typeof this.availableBombs !== 'number' || this.availableBombs > this.maxAvailableBombs) {
+          this.availableBombs = this.maxAvailableBombs;
+        }
+      }
+
+      applyDifficultyUI() {
+        const btnDiff = document.getElementById('btn-opt-toggle-diff');
+        if (btnDiff) {
+          btnDiff.textContent = this.difficulty.toUpperCase();
+          if (this.difficulty === 'facile') {
+            btnDiff.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150';
+          } else if (this.difficulty === 'difficile') {
+            btnDiff.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150';
+          } else {
+            btnDiff.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150';
+          }
+        }
       }
 
       setupAutoSaveListeners() {
@@ -1001,6 +1104,7 @@
           lives: Math.max(1, Math.min(this.maxLives, this.lives)),
           totalSteps: this.totalSteps || 0,
           totalSeconds: this.totalSeconds || 0,
+          availableBombs: this.availableBombs,
           timestamp: Date.now()
         };
         try {
@@ -1047,6 +1151,12 @@
         } catch (e) {
           return [];
         }
+      }
+
+      resetLeaderboard() {
+        try { localStorage.removeItem(this.LEADERBOARD_KEY); } catch(e) {}
+        delete this.memoryStore[this.LEADERBOARD_KEY];
+        this.showToast('Classifica resettata con successo! 🗑️', '🗑️');
       }
 
       recordScoreToLeaderboard() {
@@ -1274,6 +1384,8 @@
 
         const modalOptions = document.getElementById('modal-options');
         const btnCloseOptions = document.getElementById('btn-close-options');
+        const btnOptDiff = document.getElementById('btn-opt-toggle-diff');
+        const btnOptResetLb = document.getElementById('btn-opt-reset-leaderboard');
         const btnOptControl = document.getElementById('btn-opt-toggle-control');
         const btnOptAudio = document.getElementById('btn-opt-toggle-audio');
         const btnOptFullscreen = document.getElementById('btn-opt-toggle-fullscreen');
@@ -1320,6 +1432,7 @@
             this.lives = save.lives;
             this.totalSteps = save.totalSteps || 0;
             this.totalSeconds = save.totalSeconds || 0;
+            this.availableBombs = (typeof save.availableBombs === 'number') ? save.availableBombs : this.maxAvailableBombs;
             this.hideMainMenu();
             this.closeModals();
             this.startLevel(this.currentLevel);
@@ -1380,6 +1493,29 @@
           if (ctx) this.updateMenuFocusVisuals(ctx.items);
         });
 
+        // 1) Gestione cambio Difficoltà
+        btnOptDiff.addEventListener('click', () => {
+          if (this.difficulty === 'normale') {
+            this.difficulty = 'difficile';
+          } else if (this.difficulty === 'difficile') {
+            this.difficulty = 'facile';
+          } else {
+            this.difficulty = 'normale';
+          }
+          try {
+            localStorage.setItem(this.DIFFICULTY_KEY, this.difficulty);
+          } catch(e) {}
+          this.applyDifficultySettings();
+          this.applyDifficultyUI();
+          this.updateBombsUI();
+          this.showToast(`Difficoltà impostata su: ${this.difficulty.toUpperCase()} 📊`, '⚙️');
+        });
+
+        // 2) Gestione Reset Classifica
+        btnOptResetLb.addEventListener('click', () => {
+          this.resetLeaderboard();
+        });
+
         btnOptControl.addEventListener('click', () => {
           this.controlMode = (this.controlMode === 'dpad') ? 'joystick' : 'dpad';
           try {
@@ -1401,6 +1537,7 @@
 
         this.updateOptionsUI = () => {
           this.applyControlModeUI();
+          this.applyDifficultyUI();
 
           if (this.sound.muted) {
             btnOptAudio.textContent = "DISATTIVO";
@@ -1415,10 +1552,10 @@
           const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
           if (isFull) {
             btnOptFullscreen.textContent = "ATTIVO (ESCI)";
-            btnOptFullscreen.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150";
+            btnOptFullscreen.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 transition-all duration-150";
           } else {
             btnOptFullscreen.textContent = "ATTIVA";
-            btnOptFullscreen.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150";
+            btnOptFullscreen.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 transition-all duration-150";
           }
         };
 
@@ -1431,6 +1568,8 @@
         this.lives = this.maxLives;
         this.totalSteps = 0;
         this.totalSeconds = 0;
+        this.availableBombs = this.maxAvailableBombs;
+        this.bombRechargeTimer = 0;
         this.hideMainMenu();
         this.closeModals();
         this.startLevel(1);
@@ -1877,12 +2016,27 @@
 
       placeBomb() {
         if (!this.isGameActive || this.isPausedInMenu) return;
+
+        if (this.availableBombs <= 0) {
+          this.sound.playBombEmpty();
+          this.showToast(`Bombe esaurite! Ricarica tra ${Math.ceil(this.bombRechargeTimer)}s ⏱️`, '⏳', true);
+          return;
+        }
+
         const targetX = this.player.gx;
         const targetY = this.player.gy;
 
         if (this.bombs.some(b => b.gx === targetX && b.gy === targetY)) {
           return;
         }
+
+        this.availableBombs--;
+
+        if (this.bombRechargeTimer <= 0) {
+          this.bombRechargeTimer = this.bombRechargeTime;
+        }
+
+        this.updateBombsUI();
 
         this.bombs.push({
           gx: targetX,
@@ -1894,7 +2048,45 @@
 
         this.sound.playBombPlant();
         this.particles.spawn(targetX, targetY, 0.2, '#f87171', 12, 0.04);
-        this.showToast('Bomba innescata! (3s) 💣', '💣');
+        this.showToast(`Bomba piazzata! (${this.availableBombs}/${this.maxAvailableBombs} rimaste) 💣`, '💣');
+        this.saveGameState();
+      }
+
+      updateBombsUI() {
+        const hudText = document.getElementById('bombs-count-text');
+        const hudTimer = document.getElementById('bombs-timer-text');
+        const btnTouch = document.getElementById('btn-touch-bomb');
+        const btnCounter = document.getElementById('btn-bomb-counter');
+        const btnRecharge = document.getElementById('btn-bomb-recharge-badge');
+        const desktopCount = document.getElementById('desktop-bomb-count');
+
+        const ratioStr = `${this.availableBombs}/${this.maxAvailableBombs}`;
+        if (hudText) hudText.textContent = ratioStr;
+        if (btnCounter) btnCounter.textContent = ratioStr;
+        if (desktopCount) desktopCount.textContent = ratioStr;
+
+        if (btnTouch) {
+          if (this.availableBombs <= 0) {
+            btnTouch.classList.add('disabled');
+          } else {
+            btnTouch.classList.remove('disabled');
+          }
+        }
+
+        if (this.availableBombs < this.maxAvailableBombs && this.bombRechargeTimer > 0) {
+          const sec = Math.ceil(this.bombRechargeTimer);
+          if (hudTimer) {
+            hudTimer.classList.remove('hidden');
+            hudTimer.textContent = `⏱ ${sec}s`;
+          }
+          if (btnRecharge) {
+            btnRecharge.classList.remove('hidden');
+            btnRecharge.textContent = `${sec}s`;
+          }
+        } else {
+          if (hudTimer) hudTimer.classList.add('hidden');
+          if (btnRecharge) btnRecharge.classList.add('hidden');
+        }
       }
 
       spawnRandomEnemy(isGhost = false) {
@@ -1953,7 +2145,7 @@
             if (grid[gy][gx] === 0) {
               const notOnPlayer = !(gx === this.player.gx && gy === this.player.gy);
               const notOnExit = !(gx === this.mazeData.exit.x && gy === this.mazeData.exit.y);
-              const notOnKey = !this.hasKey ? !(gx === this.mazeData.key.x && gy === this.mazeData.key.y) : true;
+              const notOnKey = !this.hasKey && this.mazeData.key.x > 0 ? !(gx === this.mazeData.key.x && gy === this.mazeData.key.y) : true;
               const notOnHeart = this.heart ? !(gx === this.heart.gx && gy === this.heart.gy) : true;
               const notOnOther = !this.powerups.some(p => p.gx === gx && p.gy === gy);
               if (notOnPlayer && notOnExit && notOnKey && notOnHeart && notOnOther) {
@@ -1991,7 +2183,7 @@
             if (grid[gy][gx] === 0) {
               const notOnPlayer = !(gx === this.player.gx && gy === this.player.gy);
               const notOnExit = !(gx === this.mazeData.exit.x && gy === this.mazeData.exit.y);
-              const notOnKey = !this.hasKey ? !(gx === this.mazeData.key.x && gy === this.mazeData.key.y) : true;
+              const notOnKey = !this.hasKey && this.mazeData.key.x > 0 ? !(gx === this.mazeData.key.x && gy === this.mazeData.key.y) : true;
               if (notOnPlayer && notOnExit && notOnKey) {
                 candidates.push({ x: gx, y: gy });
               }
@@ -2068,7 +2260,7 @@
         this.particles.spawn(this.player.renderX, this.player.renderY, 0.5, '#ef4444', 35, 0.12);
 
         let keyDroppedMsg = '';
-        if (this.hasKey) {
+        if (this.hasKey && this.mazeData.key.x > 0) {
           const dropX = Math.round(this.player.renderX);
           const dropY = Math.round(this.player.renderY);
 
@@ -2107,6 +2299,47 @@
 
       updateEnemies(dt) {
         if (this.buffFreezeTimer > 0) return;
+
+        // Gestione Boss (ogni 5 livelli)
+        if (this.isBossLevel && this.boss) {
+          this.boss.bob = Math.sin(Date.now() * 0.01) * 4;
+          if (this.boss.isMoving) {
+            this.boss.moveProgress += this.boss.moveSpeed * dt;
+            if (this.boss.moveProgress >= 1) {
+              this.boss.gx = this.boss.targetGx;
+              this.boss.gy = this.boss.targetGy;
+              this.boss.renderX = this.boss.gx;
+              this.boss.renderY = this.boss.gy;
+              this.boss.isMoving = false;
+              this.boss.moveProgress = 0;
+            } else {
+              this.boss.renderX = this.boss.gx + (this.boss.targetGx - this.boss.gx) * this.boss.moveProgress;
+              this.boss.renderY = this.boss.gy + (this.boss.targetGy - this.boss.gy) * this.boss.moveProgress;
+            }
+          } else {
+            this.boss.moveCooldown -= dt;
+            if (this.boss.moveCooldown <= 0) {
+              this.boss.moveCooldown = 0.3;
+              const nextStep = this.findNextStepBFS(
+                { x: this.boss.gx, y: this.boss.gy },
+                { x: this.player.gx, y: this.player.gy }
+              );
+              if (nextStep) {
+                this.boss.targetGx = nextStep.x;
+                this.boss.targetGy = nextStep.y;
+                this.boss.isMoving = true;
+                this.boss.moveProgress = 0;
+              }
+            }
+          }
+
+          const distBossPlayer = Math.hypot(this.boss.renderX - this.player.renderX, this.boss.renderY - this.player.renderY);
+          if (distBossPlayer < 0.55) {
+            this.camera.shake = 16;
+            if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+            this.playerLoseLife("Il Boss ti ha travolto!");
+          }
+        }
 
         for (let i = 0; i < this.enemies.length; i++) {
           const enemy = this.enemies[i];
@@ -2202,6 +2435,24 @@
       }
 
       updateBombs(dt) {
+        if (this.availableBombs < this.maxAvailableBombs) {
+          this.bombRechargeTimer -= dt;
+          if (this.bombRechargeTimer <= 0) {
+            this.availableBombs++;
+            this.sound.playBombReload();
+            this.particles.spawn(this.player.renderX, this.player.renderY, 0.4, '#f97316', 20, 0.08);
+            this.showToast(`+1 Bomba ricaricata! (${this.availableBombs}/${this.maxAvailableBombs}) 💣⚡`, '💣');
+
+            if (this.availableBombs < this.maxAvailableBombs) {
+              this.bombRechargeTimer = this.bombRechargeTime;
+            } else {
+              this.bombRechargeTimer = 0;
+            }
+            this.saveGameState();
+          }
+        }
+        this.updateBombsUI();
+
         for (let i = this.bombs.length - 1; i >= 0; i--) {
           const b = this.bombs[i];
           b.timeLeft -= dt;
@@ -2221,6 +2472,35 @@
             this.particles.spawn(b.gx, b.gy, 0.4, '#f97316', 40, 0.13);
             this.particles.spawn(b.gx, b.gy, 0.2, '#fde047', 30, 0.09);
             this.particles.spawn(b.gx, b.gy, 0.6, '#334155', 25, 0.06);
+
+            // Danni al Boss (3 colpi)
+            if (this.isBossLevel && this.boss) {
+              const distBoss = Math.hypot(this.boss.renderX - b.gx, this.boss.renderY - b.gy);
+              if (distBoss <= 1.6) {
+                this.boss.hp--;
+                this.sound.playBossHit();
+                this.particles.spawn(this.boss.renderX, this.boss.renderY, 0.6, '#f43f5e', 50, 0.15);
+                this.updateBossUI();
+
+                if (this.boss.hp <= 0) {
+                  // Sconfitta Boss: fa comparire la Chiave Dorata
+                  this.mazeData.key = { x: Math.round(this.boss.renderX), y: Math.round(this.boss.renderY) };
+                  this.boss = null;
+                  const bossHud = document.getElementById('boss-hud');
+                  if (bossHud) {
+                    bossHud.classList.remove('flex');
+                    bossHud.classList.add('hidden');
+                  }
+                  this.sound.playKeyPickup();
+                  this.showToast('Il Boss è stato sconfitto! È apparsa la Chiave Dorata 🗝️✨', '🏆', true);
+                  if (typeof confetti === 'function') {
+                    confetti({ particleCount: 80, spread: 70, origin: { y: 0.5 } });
+                  }
+                } else {
+                  this.showToast(`Colpo al Boss! HP rimasti: ${this.boss.hp}/3 👑`, '💥', true);
+                }
+              }
+            }
 
             for (let dy = -1; dy <= 1; dy++) {
               for (let dx = -1; dx <= 1; dx++) {
@@ -2278,8 +2558,45 @@
         this.bulletTime = 0;
         this.hideMap();
 
+        this.isBossLevel = (this.currentLevel % 5 === 0);
+        this.boss = null;
+
         const formulaDim = 8 + (this.currentLevel * 2);
         this.mazeData = MazeGenerator.generate(formulaDim, this.currentLevel);
+
+        if (this.isBossLevel) {
+          const bossX = this.mazeData.key.x;
+          const bossY = this.mazeData.key.y;
+          this.boss = {
+            gx: bossX,
+            gy: bossY,
+            targetGx: bossX,
+            targetGy: bossY,
+            renderX: bossX,
+            renderY: bossY,
+            isMoving: false,
+            moveProgress: 0,
+            moveSpeed: 3.0,
+            moveCooldown: 0.3,
+            hp: 3,
+            maxHp: 3,
+            bob: 0
+          };
+          this.mazeData.key = { x: -99, y: -99 };
+          this.showToast('LIVELLO BOSS! Sconfiggi il Golem con 3 bombe per ottenere la Chiave 👑', '👑', true);
+        }
+
+        const bossHud = document.getElementById('boss-hud');
+        if (bossHud) {
+          if (this.isBossLevel) {
+            bossHud.classList.remove('hidden');
+            bossHud.classList.add('flex');
+            this.updateBossUI();
+          } else {
+            bossHud.classList.remove('flex');
+            bossHud.classList.add('hidden');
+          }
+        }
 
         this.visitedTiles = Array.from({ length: this.mazeData.gridH }, () => 
           Array(this.mazeData.gridW).fill(false)
@@ -2300,6 +2617,7 @@
         this.updateKeyUI();
         this.updateLivesUI();
         this.updateBuffsUI();
+        this.updateBombsUI();
 
         this.adjustCameraForMaze();
         this.saveGameState();
@@ -2314,6 +2632,17 @@
         }, 1000);
 
         this.isGameActive = true;
+      }
+
+      updateBossUI() {
+        if (!this.boss) return;
+        const hpText = document.getElementById('boss-hp-text');
+        const hpBar = document.getElementById('boss-hp-bar');
+        if (hpText) hpText.textContent = `${this.boss.hp} / ${this.boss.maxHp} HP`;
+        if (hpBar) {
+          const pct = Math.max(0, (this.boss.hp / this.boss.maxHp) * 100);
+          hpBar.style.width = `${pct}%`;
+        }
       }
 
       markExplored(gx, gy) {
@@ -2371,7 +2700,7 @@
       }
 
       checkTileInteractions() {
-        if (!this.hasKey && this.player.gx === this.mazeData.key.x && this.player.gy === this.mazeData.key.y) {
+        if (!this.hasKey && this.mazeData.key.x > 0 && this.player.gx === this.mazeData.key.x && this.player.gy === this.mazeData.key.y) {
           this.hasKey = true;
           this.updateKeyUI();
           this.sound.playKeyPickup();
@@ -2418,7 +2747,7 @@
 
         if (this.player.gx === this.mazeData.exit.x && this.player.gy === this.mazeData.exit.y) {
           if (!this.hasKey) {
-            this.showToast('Questo è il portale d\'uscita! Trova la chiave dorata 🗝️', '🔒');
+            this.showToast(this.isBossLevel && this.boss ? 'Sconfiggi prima il Boss per fare apparire la Chiave! 👑' : 'Questo è il portale d\'uscita! Trova la chiave dorata 🗝️', '🔒', true);
             return;
           }
 
@@ -2498,7 +2827,8 @@
         const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
         document.getElementById('theme-name').textContent = theme.name;
         document.getElementById('theme-dot').style.backgroundColor = theme.accent;
-        document.getElementById('level-text').textContent = `L.${this.currentLevel}/${this.maxLevel}`;
+        const prefix = this.isBossLevel ? '👑 BOSS L.' : 'L.';
+        document.getElementById('level-text').textContent = `${prefix}${this.currentLevel}/${this.maxLevel}`;
         const formulaDim = 8 + (this.currentLevel * 2);
         document.getElementById('grid-size').textContent = `(${formulaDim}x${formulaDim})`;
       }
@@ -2592,7 +2922,7 @@
                 ctx.fillStyle = this.hasKey ? theme.portal : '#f43f5e';
                 ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
               }
-              if (!this.hasKey && gx === this.mazeData.key.x && gy === this.mazeData.key.y) {
+              if (!this.hasKey && this.mazeData.key.x > 0 && gx === this.mazeData.key.x && gy === this.mazeData.key.y) {
                 ctx.fillStyle = '#fbbf24';
                 ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
               }
@@ -2623,6 +2953,13 @@
         for (const b of this.bombs) {
           ctx.beginPath();
           ctx.arc(startX + (b.gx + 0.5) * cellW, startY + (b.gy + 0.5) * cellW, cellW * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (this.boss && this.visitedTiles[Math.round(this.boss.renderY)][Math.round(this.boss.renderX)]) {
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(startX + (this.boss.renderX + 0.5) * cellW, startY + (this.boss.renderY + 0.5) * cellW, cellW * 0.55, 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -2860,14 +3197,16 @@
 
         const maxDepth = (gridW - 1) + (gridH - 1);
         const playerDepth = this.player.renderX + this.player.renderY;
-        const keyDepth = this.mazeData.key.x + this.mazeData.key.y;
+        const keyDepth = this.mazeData.key.x > 0 ? this.mazeData.key.x + this.mazeData.key.y : -999;
         const exitDepth = this.mazeData.exit.x + this.mazeData.exit.y;
         const heartDepth = this.heart ? this.heart.gx + this.heart.gy : -999;
+        const bossDepth = this.boss ? this.boss.renderX + this.boss.renderY : -999;
 
         let playerDrawn = false;
-        let keyDrawn = this.hasKey;
+        let keyDrawn = this.hasKey || this.mazeData.key.x < 0;
         let exitDrawn = false;
         let heartDrawn = !this.heart;
+        let bossDrawn = !this.boss;
         const drawnBombs = new Set();
         const drawnEnemies = new Set();
         const drawnPowerups = new Set();
@@ -2895,6 +3234,11 @@
               this.drawEnemy(ctx, enemy);
               drawnEnemies.add(eIdx);
             }
+          }
+
+          if (!bossDrawn && bossDepth <= depth + 0.4) {
+            this.drawBoss(ctx, this.boss);
+            bossDrawn = true;
           }
 
           if (!heartDrawn && heartDepth <= depth) {
@@ -2940,6 +3284,9 @@
         for (let eIdx = 0; eIdx < this.enemies.length; eIdx++) {
           if (!drawnEnemies.has(eIdx)) this.drawEnemy(ctx, this.enemies[eIdx]);
         }
+        if (!bossDrawn && this.boss) {
+          this.drawBoss(ctx, this.boss);
+        }
         if (!heartDrawn && this.heart) {
           this.drawHeart(ctx, this.heart);
         }
@@ -2947,7 +3294,7 @@
           const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
           this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
         }
-        if (!keyDrawn) {
+        if (!keyDrawn && this.mazeData.key.x > 0) {
           const iso = this.gridToIso(this.mazeData.key.x, this.mazeData.key.y);
           this.drawKey(ctx, iso.x, iso.y);
         }
@@ -3015,6 +3362,46 @@
           ctx.lineTo(x + 5, y - wh + 18);
           ctx.stroke();
         }
+      }
+
+      drawBoss(ctx, boss) {
+        if (!boss) return;
+        const iso = this.gridToIso(boss.renderX, boss.renderY);
+        const px = iso.x;
+        const py = iso.y - boss.bob;
+        const rad = this.camera.tileW * 0.35;
+        const cy = py - rad - 4;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.38, this.camera.tileH * 0.38, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fill();
+
+        const grad = ctx.createRadialGradient(px - rad * 0.3, cy - rad * 0.3, rad * 0.1, px, cy, rad);
+        grad.addColorStop(0, '#f43f5e');
+        grad.addColorStop(0.5, '#991b1b');
+        grad.addColorStop(1, '#450a0a');
+
+        ctx.beginPath();
+        ctx.arc(px, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.shadowColor = '#f43f5e';
+        ctx.shadowBlur = 16;
+        ctx.fill();
+
+        ctx.font = '22px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👑', px, cy - rad - 12);
+
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(px - rad * 0.32, cy - rad * 0.1, rad * 0.18, 0, Math.PI * 2);
+        ctx.arc(px + rad * 0.32, cy - rad * 0.1, rad * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
       }
 
       drawHeart(ctx, heart) {
@@ -3260,16 +3647,20 @@
           this.lives = saved.lives;
           this.totalSteps = saved.totalSteps || 0;
           this.totalSeconds = saved.totalSeconds || 0;
+          this.availableBombs = (typeof saved.availableBombs === 'number') ? saved.availableBombs : this.maxAvailableBombs;
         } else {
           this.currentLevel = 1;
           this.lives = this.maxLives;
+          this.availableBombs = this.maxAvailableBombs;
         }
 
         const startLvl = this.currentLevel;
         this.mazeData = MazeGenerator.generate(8 + (startLvl * 2), startLvl);
         this.updateThemeUI();
         this.updateLivesUI();
+        this.updateBombsUI();
         this.applyControlModeUI();
+        this.applyDifficultyUI();
         
         this.showMainMenu();
         requestAnimationFrame(this.gameLoop);
