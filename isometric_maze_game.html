@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - 50 Levels Menu Edition</title>
+  <title>Labyrinthus 3D - 50 Levels Persistent Save Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -124,7 +124,7 @@
       </div>
     </div>
 
-    <!-- Tasti in alto a destra: Mappa, Rifai, Fullscreen, Menu (Audio rimosso su mobile, configurabile in Opzioni) -->
+    <!-- Pulsanti Header (Desktop & Smartphone) -->
     <div class="flex items-center gap-1 shrink-0">
       <div id="gamepad-badge" class="hidden glass-panel px-1.5 py-1 rounded-xl text-[10px] text-emerald-400 items-center gap-1 border-emerald-500/40" title="Gamepad Connesso">
         <span>🎮</span>
@@ -271,7 +271,6 @@
       </h3>
 
       <div class="w-full flex flex-col gap-3.5 mb-5">
-        <!-- Switch Audio -->
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
           <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
             <span id="opt-audio-icon">🔊</span>
@@ -282,7 +281,6 @@
           </button>
         </div>
 
-        <!-- Fullscreen Switch -->
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
           <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
             <span>⛶</span>
@@ -642,7 +640,6 @@
         this.mapCtx = this.mapCanvas.getContext('2d');
         this.isMapVisible = false;
 
-        // Configurazione Livelli e Vite
         this.currentLevel = 1;
         this.maxLevel = 50;
         this.maxLives = 3;
@@ -685,7 +682,6 @@
         this.heldDirection = null;
         this.holdInterval = null;
 
-        // Gamepad
         this.gamepadConnected = false;
         this.gamepadPrevButtons = {};
         this.gamepadStickCooldown = 0;
@@ -703,18 +699,22 @@
         this.initUI();
         this.initMenuSystem();
         this.setupAudioUnlock();
-        this.setupAutoSaveOnClose();
+        this.setupAutoSaveListeners();
       }
 
-      // Salvataggio su chiusura / abbandono scheda
-      setupAutoSaveOnClose() {
+      setupAutoSaveListeners() {
         const autoSave = () => {
-          if (this.isGameActive || (!this.isPausedInMenu && this.lives > 0)) {
+          if (this.lives > 0) {
             this.saveGameState();
           }
         };
         window.addEventListener('beforeunload', autoSave);
         window.addEventListener('pagehide', autoSave);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            autoSave();
+          }
+        });
       }
 
       detectDeviceMode() {
@@ -743,14 +743,13 @@
         window.addEventListener('click', unlock, { passive: true });
       }
 
-      // ================= Gestione Salvataggio localStorage =================
       saveGameState() {
-        if (!this.mazeData || this.lives <= 0) return;
+        if (this.lives <= 0) return;
         const saveObj = {
-          currentLevel: this.currentLevel,
-          lives: this.lives,
-          totalSteps: this.totalSteps,
-          totalSeconds: this.totalSeconds,
+          currentLevel: Math.max(1, Math.min(this.maxLevel, this.currentLevel)),
+          lives: Math.max(1, this.lives),
+          totalSteps: this.totalSteps || 0,
+          totalSeconds: this.totalSeconds || 0,
           timestamp: Date.now()
         };
         try {
@@ -762,7 +761,11 @@
         try {
           const raw = localStorage.getItem(this.STORAGE_KEY);
           if (!raw) return null;
-          return JSON.parse(raw);
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.currentLevel === 'number' && parsed.lives > 0) {
+            return parsed;
+          }
+          return null;
         } catch (e) {
           return null;
         }
@@ -779,7 +782,6 @@
         return save !== null && save.lives > 0 && save.currentLevel <= this.maxLevel;
       }
 
-      // ================= Menu Principale & Opzioni =================
       initMenuSystem() {
         const menuOverlay = document.getElementById('main-menu-overlay');
         const btnContinue = document.getElementById('btn-menu-continue');
@@ -797,12 +799,11 @@
         const btnOptFullscreen = document.getElementById('btn-opt-toggle-fullscreen');
         const optAudioIcon = document.getElementById('opt-audio-icon');
 
-        // Aggiorna stato iniziale tasto Continua
         this.refreshMenuContinueButton = () => {
           const save = this.loadGameState();
           if (save && save.lives > 0) {
             btnContinue.disabled = false;
-            badgeContinue.textContent = `Liv. ${save.currentLevel}`;
+            badgeContinue.textContent = `Liv. ${save.currentLevel} (${save.lives}❤️)`;
             badgeContinue.classList.remove('hidden');
           } else {
             btnContinue.disabled = true;
@@ -823,13 +824,12 @@
           this.isPausedInMenu = false;
         };
 
-        // Click CONTINUA
         btnContinue.addEventListener('click', () => {
           this.sound.init();
           const save = this.loadGameState();
-          if (save) {
-            this.currentLevel = save.currentLevel || 1;
-            this.lives = save.lives !== undefined ? save.lives : this.maxLives;
+          if (save && save.lives > 0) {
+            this.currentLevel = save.currentLevel;
+            this.lives = save.lives;
             this.totalSteps = save.totalSteps || 0;
             this.totalSeconds = save.totalSeconds || 0;
             this.hideMainMenu();
@@ -838,7 +838,6 @@
           }
         });
 
-        // Click NUOVA PARTITA
         btnNewGame.addEventListener('click', () => {
           this.sound.init();
           if (this.hasActiveSavedGame()) {
@@ -858,7 +857,6 @@
           this.startFreshGame();
         });
 
-        // OPZIONI
         btnOptions.addEventListener('click', () => {
           this.sound.init();
           this.updateOptionsUI();
@@ -869,13 +867,11 @@
           modalOptions.classList.add('hidden');
         });
 
-        // Switch Audio nelle opzioni
         btnOptAudio.addEventListener('click', () => {
           this.sound.muted = !this.sound.muted;
           this.updateOptionsUI();
         });
 
-        // Switch Fullscreen nelle opzioni
         btnOptFullscreen.addEventListener('click', () => {
           this.toggleFullscreen();
           setTimeout(() => this.updateOptionsUI(), 100);
@@ -998,7 +994,6 @@
 
         this.sound.init();
 
-        // Tasto START / OPTIONS (indice 9 standard) -> Pausa / Salva / Menu Principale
         const startBtn = gp.buttons[9];
         const isStartPressed = startBtn && startBtn.pressed;
         if (isStartPressed && !this.gamepadPrevButtons[9]) {
@@ -1010,7 +1005,6 @@
 
         if (this.isPausedInMenu) return;
 
-        // Tasto LT / L2 (indice 6 standard) -> Mappa
         const ltBtn = gp.buttons[6];
         const isLtPressed = ltBtn && (ltBtn.pressed || ltBtn.value > 0.4);
         if (isLtPressed && !this.ltWasPressed) {
@@ -1021,7 +1015,6 @@
           this.ltWasPressed = false;
         }
 
-        // Tasto BACK / SHARE / Select (indice 8 standard) -> Ricrea labirinto
         const backBtn = gp.buttons[8];
         const isBackPressed = backBtn && backBtn.pressed;
         if (isBackPressed && !this.gamepadPrevButtons[8]) {
@@ -1029,7 +1022,6 @@
         }
         this.gamepadPrevButtons[8] = isBackPressed;
 
-        // Tasto A (Croce) o X (Quadrato)
         const btnA = gp.buttons[0] && gp.buttons[0].pressed;
         const btnX = gp.buttons[2] && gp.buttons[2].pressed;
 
@@ -1048,7 +1040,6 @@
         this.gamepadPrevButtons[0] = btnA;
         this.gamepadPrevButtons[2] = btnX;
 
-        // Stick Sinistro Diagonale
         if (this.gamepadStickCooldown > 0) {
           this.gamepadStickCooldown -= dt;
         }
@@ -1128,7 +1119,6 @@
         bindPad('pad-s', 0, 1);
         bindPad('pad-w', -1, 0);
 
-        // Swipe su Canvas
         let touchStartX = 0;
         let touchStartY = 0;
         let isSwiping = false;
@@ -1171,7 +1161,6 @@
           }
         }, { passive: true });
 
-        // Tasto ESC per Menu Principale & comandi tastiera
         window.addEventListener('keydown', (e) => {
           if (e.key === 'Escape') {
             e.preventDefault();
@@ -1414,7 +1403,7 @@
       }
 
       startLevel(lvl) {
-        this.currentLevel = lvl;
+        this.currentLevel = Math.max(1, Math.min(this.maxLevel, lvl));
         this.levelSteps = 0;
         this.levelSeconds = 0;
         this.hasKey = false;
@@ -1509,6 +1498,7 @@
           this.totalSteps++;
           this.updateStatsUI();
           this.sound.playStep();
+          this.saveGameState();
         }
       }
 
@@ -1520,6 +1510,7 @@
           if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
           this.particles.spawn(this.mazeData.key.x, this.mazeData.key.y, 0.4, '#fbbf24', 30);
           this.showToast('Chiave raccolta! Il portale è aperto 🗝️✨', '✨');
+          this.saveGameState();
         }
 
         if (this.player.gx === this.mazeData.exit.x && this.player.gy === this.mazeData.exit.y) {
@@ -2151,11 +2142,25 @@
 
       start() {
         this.resize();
-        // Inizializza il generatore sul livello di salvataggio o default
-        const save = this.loadGameState();
-        const startLvl = save ? save.currentLevel : 1;
+        
+        // Controllo e ripristino dati salvati all'avvio / F5
+        const saved = this.loadGameState();
+        if (saved && saved.lives > 0) {
+          this.currentLevel = saved.currentLevel;
+          this.lives = saved.lives;
+          this.totalSteps = saved.totalSteps || 0;
+          this.totalSeconds = saved.totalSeconds || 0;
+        } else {
+          this.currentLevel = 1;
+          this.lives = this.maxLives;
+        }
+
+        const startLvl = this.currentLevel;
         this.mazeData = MazeGenerator.generate(8 + (startLvl * 2));
         this.updateThemeUI();
+        this.updateLivesUI();
+        
+        // Mostra il menu principale e aggiorna il tasto continua
         this.showMainMenu();
         requestAnimationFrame(this.gameLoop);
       }
