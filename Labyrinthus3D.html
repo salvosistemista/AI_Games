@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - HUD Layout Update</title>
+  <title>Labyrinthus 3D - Ultimate Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -46,8 +46,6 @@
       box-shadow: 0 0 16px rgba(251, 191, 36, 0.7) !important;
       transform: scale(1.03) !important;
     }
-    
-    /* Tasti movimento ravvicinati */
     .iso-dpad-btn {
       position: absolute;
       width: 54px;
@@ -68,8 +66,6 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
-
-    /* Pulsante Bomba spostato leggermente a destra */
     .action-bomb-btn {
       position: absolute;
       left: 58px;
@@ -91,8 +87,6 @@
       transform: scale(0.88);
       filter: brightness(1.2);
     }
-
-    /* Pulsante Mappa posizionato sopra il tasto bomba */
     .action-map-btn {
       position: absolute;
       left: 64px;
@@ -117,9 +111,8 @@
 </head>
 <body class="relative w-full h-full flex flex-col justify-between text-white">
 
-  <!-- Header Gioco Superiore: compatto, senza sovrapposizioni -->
+  <!-- Header Gioco Superiore -->
   <header id="game-header" class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between gap-1">
-    <!-- Livello & Tema -->
     <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[140px]">
       <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
       <div class="flex flex-col min-w-0">
@@ -131,7 +124,7 @@
       </div>
     </div>
 
-    <!-- HUD Centrale: Solo Passi e Tempo trascorso -->
+    <!-- HUD Centrale: Passi e Tempo -->
     <div class="glass-panel px-3 py-1 rounded-xl flex items-center gap-2 shrink-0">
       <div class="flex flex-col items-center min-w-[28px]">
         <span class="text-[7px] uppercase tracking-wider text-slate-400">Passi</span>
@@ -201,37 +194,31 @@
 
   <!-- Controlli e HUD Inferiori -->
   <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
-    
-    <!-- Quadrante Sinistro: Cuori (in basso a sinistra), Tasto Mappa e Tasto Bomba -->
+    <!-- Quadrante Sinistro: Cuori, Tasto Mappa e Tasto Bomba -->
     <div class="relative w-[130px] h-[170px] pointer-events-auto">
-      <!-- Cuori spostati in basso a sinistra -->
       <div class="absolute left-1 bottom-4 glass-panel px-2 py-1.5 rounded-xl flex items-center gap-1 shadow-lg" id="lives-container" title="Vite rimanenti">
         <span class="text-sm" id="life-1">❤️</span>
         <span class="text-sm" id="life-2">❤️</span>
         <span class="text-sm" id="life-3">❤️</span>
       </div>
 
-      <!-- Tasto Mappa posizionato sopra il tasto bomba -->
       <button id="btn-map" class="action-map-btn" aria-label="Mappa">
         <span class="text-xl">🗺️</span>
       </button>
 
-      <!-- Tasto Bomba (spostato leggermente verso destra nel quadrante sinistro) -->
       <button id="btn-touch-bomb" class="action-bomb-btn" aria-label="Piazza Bomba">
         <span class="text-2xl leading-none">💣</span>
         <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
       </button>
     </div>
 
-    <!-- Quadrante Destro: Chiave (in basso a destra) e Tasti Movimento Avvicinati -->
+    <!-- Quadrante Destro: Chiave e D-Pad -->
     <div class="flex items-end gap-1.5 pointer-events-auto ml-auto">
-      <!-- Indicatore Chiave spostato in basso sulla destra -->
       <div id="key-badge" class="mb-4 glass-panel flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-700 shadow-lg">
         <span id="key-badge-icon" class="text-sm grayscale opacity-40">🗝️</span>
         <span id="key-badge-text" class="text-xs font-black text-slate-400 leading-none">0/1</span>
       </div>
 
-      <!-- Pad di Movimento Isometrico (tasti più ravvicinati) -->
       <div class="relative w-[160px] h-[160px]">
         <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
           <span class="text-amber-300 text-lg font-black leading-none">↗</span>
@@ -459,6 +446,125 @@
   </div>
 
   <script>
+    /* ========================================================
+       1. SOUND ENGINE & PARTICLES & GENERATOR DEFINITIONS
+       ======================================================== */
+    class SoundEngine {
+      constructor() { this.ctx = null; this.muted = false; }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      }
+      playTone(freq, type, duration, vol = 0.08) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.05); }
+      playMenuNav() { this.playTone(420, 'sine', 0.04, 0.06); }
+      playMenuSelect() { this.playTone(650, 'sine', 0.08, 0.09); }
+      playMenuCancel() { this.playTone(240, 'triangle', 0.08, 0.08); }
+      playBombPlant() {
+        this.playTone(320, 'sine', 0.1, 0.12);
+        setTimeout(() => this.playTone(480, 'sine', 0.12, 0.14), 70);
+      }
+      playTick() { this.playTone(850, 'square', 0.025, 0.04); }
+      playExplosion() {
+        this.playTone(85, 'sawtooth', 0.45, 0.28);
+        setTimeout(() => this.playTone(45, 'triangle', 0.6, 0.35), 40);
+      }
+      playPlayerHit() {
+        this.playTone(120, 'sawtooth', 0.2, 0.25);
+        setTimeout(() => this.playTone(70, 'sawtooth', 0.35, 0.3), 80);
+      }
+      playGameOver() {
+        [150, 120, 90, 60].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.35, 0.2), i * 120);
+        });
+      }
+      playEnemySpawn() {
+        [220, 180, 140].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.25, 0.15), i * 110);
+        });
+      }
+      playEnemyDefeated() {
+        [300, 450, 600].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.2, 0.16), i * 60);
+        });
+      }
+      playHeartSpawn() {
+        [440, 554, 659, 880].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.2, 0.12), i * 70);
+        });
+      }
+      playHeartCollect() {
+        [523, 659, 784, 1046, 1318].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.16), i * 60);
+        });
+      }
+      playHeartEaten() {
+        [280, 210, 140].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.22, 0.14), i * 80);
+        });
+      }
+      playKeyPickup() {
+        [587, 740, 880, 1174].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), i * 60);
+        });
+      }
+      playLevelWin() {
+        [392, 523, 659, 784].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.15), i * 80);
+        });
+      }
+      playGameWin() {
+        [440, 554, 659, 880, 1108].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.18), i * 100);
+        });
+      }
+    }
+
+    class ParticleSystem {
+      constructor() { this.particles = []; }
+      spawn(x, y, z, color, count = 1, speed = 0.05) {
+        for (let i = 0; i < count; i++) {
+          this.particles.push({
+            x, y, z,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            vz: 0.02 + Math.random() * speed,
+            size: 2 + Math.random() * 3,
+            color,
+            life: 1,
+            decay: 0.02 + Math.random() * 0.03
+          });
+        }
+      }
+      update() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx; p.y += p.vy; p.z += p.vz;
+          p.life -= p.decay;
+          if (p.life <= 0) this.particles.splice(i, 1);
+        }
+      }
+    }
+
     const LEVEL_THEMES = [
       { name: "Foresta Antica", accent: "#34d399", bgTop: "#051610", bgBottom: "#0b2b20", floorTop: "#2d6a4f", floorEdge: "#1b4332", wallTop: "#74c69d", wallLeft: "#40916c", wallRight: "#2d6a4f", portal: "#5eead4", playerBody: "#fbbf24", playerHat: "#f97316" },
       { name: "Cripta al Neon", accent: "#06b6d4", bgTop: "#071724", bgBottom: "#0e2e47", floorTop: "#155e75", floorEdge: "#0e4454", wallTop: "#38bdf8", wallLeft: "#0284c7", wallRight: "#0369a1", portal: "#a855f7", playerBody: "#ec4899", playerHat: "#f43f5e" },
@@ -503,7 +609,7 @@
       { name: "Pozzo di Catrame", accent: "#909296", bgTop: "#0d0e10", bgBottom: "#191b1f", floorTop: "#25262b", floorEdge: "#141517", wallTop: "#ced4da", wallLeft: "#495057", wallRight: "#212529", portal: "#ff6b6b", playerBody: "#51cf66", playerHat: "#ffd43b" },
       { name: "Landa d'Ambra", accent: "#fab005", bgTop: "#1c1403", bgBottom: "#362607", floorTop: "#e67700", floorEdge: "#d9480f", wallTop: "#fff9db", wallLeft: "#f59f00", wallRight: "#d9480f", portal: "#20c997", playerBody: "#339af0", playerHat: "#e64980" },
       { name: "Valle di Cristallo", accent: "#22b8cf", bgTop: "#03141a", bgBottom: "#072633", floorTop: "#1098ad", floorEdge: "#0c8599", wallTop: "#c5f6fa", wallLeft: "#15aabf", wallRight: "#0b7285", portal: "#ff922b", playerBody: "#fcc419", playerHat: "#845ef7" },
-      { name: "Abisso Cremisi", accent: "#c2255c", bgTop: "#1c050f", bgBottom: "#330a1c", floorTop: "#a61e4d", floorEdge: "#861b42", wallTop: "#fcc2d7", wallLeft: "#d6336c", wallRight: "#9c1444", portal: "#51cf66", playerBody: "#ffd43b", playerHat: "#22b8cf" },
+      { name: "Abisso Cremisi", accent: "#c2255c", bgTop: "#1c050f", bgBottom: "#330a1c", floorTop: "#a61e4d", floorEdge: "#861b42", wallTop: "#fcc2d7", wallLeft: "#d6336c", wallRight: "#9c1444", portal: "#51cf66", playerBody: "#ffd43b", playerHat: "#228be6" },
       { name: "Trono di Bronzo", accent: "#e8590c", bgTop: "#1a0b04", bgBottom: "#331608", floorTop: "#d9480f", floorEdge: "#c92a2a", wallTop: "#ffd8a8", wallLeft: "#f76707", wallRight: "#d9480f", portal: "#339af0", playerBody: "#20c997", playerHat: "#f06595" },
       { name: "Labirinto Etereo", accent: "#b197fc", bgTop: "#0e0921", bgBottom: "#1a123d", floorTop: "#6741d9", floorEdge: "#4c2889", wallTop: "#e5dbff", wallLeft: "#7950f2", wallRight: "#5f3dc4", portal: "#ffd43b", playerBody: "#51cf66", playerHat: "#ff6b6b" },
       { name: "Cripta dei Draghi", accent: "#ff6b6b", bgTop: "#210505", bgBottom: "#3d0a0a", floorTop: "#c92a2a", floorEdge: "#a51d24", wallTop: "#ffe3e3", wallLeft: "#f03e3e", wallRight: "#c92a2a", portal: "#20c997", playerBody: "#339af0", playerHat: "#ffd43b" },
@@ -617,32 +723,9 @@
       }
     }
 
-    class ParticleSystem {
-      constructor() { this.particles = []; }
-      spawn(x, y, z, color, count = 1, speed = 0.05) {
-        for (let i = 0; i < count; i++) {
-          this.particles.push({
-            x, y, z,
-            vx: (Math.random() - 0.5) * speed,
-            vy: (Math.random() - 0.5) * speed,
-            vz: 0.02 + Math.random() * speed,
-            size: 2 + Math.random() * 3,
-            color,
-            life: 1,
-            decay: 0.02 + Math.random() * 0.03
-          });
-        }
-      }
-      update() {
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-          const p = this.particles[i];
-          p.x += p.vx; p.y += p.vy; p.z += p.vz;
-          p.life -= p.decay;
-          if (p.life <= 0) this.particles.splice(i, 1);
-        }
-      }
-    }
-
+    /* ========================================================
+       3. ISOMETRIC GAME MAIN CLASS
+       ======================================================== */
     class IsometricGame {
       constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -707,6 +790,7 @@
 
         this.STORAGE_KEY = 'labyrinthus_save_state_v1';
         this.LEADERBOARD_KEY = 'labyrinthus_leaderboard_top5_v1';
+        this.memoryStore = {};
 
         this.resize = this.resize.bind(this);
         this.gameLoop = this.gameLoop.bind(this);
@@ -790,12 +874,16 @@
         };
         try {
           localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saveObj));
-        } catch (e) {}
+        } catch (e) {
+          this.memoryStore[this.STORAGE_KEY] = JSON.stringify(saveObj);
+        }
       }
 
       loadGameState() {
         try {
-          const raw = localStorage.getItem(this.STORAGE_KEY);
+          let raw = null;
+          try { raw = localStorage.getItem(this.STORAGE_KEY); } catch (e) {}
+          if (!raw) raw = this.memoryStore[this.STORAGE_KEY];
           if (!raw) return null;
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed.currentLevel === 'number' && parsed.lives > 0) {
@@ -808,9 +896,8 @@
       }
 
       clearSavedState() {
-        try {
-          localStorage.removeItem(this.STORAGE_KEY);
-        } catch (e) {}
+        try { localStorage.removeItem(this.STORAGE_KEY); } catch (e) {}
+        delete this.memoryStore[this.STORAGE_KEY];
       }
 
       hasActiveSavedGame() {
@@ -820,7 +907,9 @@
 
       loadLeaderboard() {
         try {
-          const raw = localStorage.getItem(this.LEADERBOARD_KEY);
+          let raw = null;
+          try { raw = localStorage.getItem(this.LEADERBOARD_KEY); } catch (e) {}
+          if (!raw) raw = this.memoryStore[this.LEADERBOARD_KEY];
           if (!raw) return [];
           const parsed = JSON.parse(raw);
           return Array.isArray(parsed) ? parsed : [];
@@ -851,7 +940,9 @@
         const top5 = board.slice(0, 5);
         try {
           localStorage.setItem(this.LEADERBOARD_KEY, JSON.stringify(top5));
-        } catch (e) {}
+        } catch (e) {
+          this.memoryStore[this.LEADERBOARD_KEY] = JSON.stringify(top5);
+        }
 
         const isRanked = top5.some(entry => entry.date === newEntry.date);
         if (isRanked) {
