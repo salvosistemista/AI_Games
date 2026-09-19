@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - Key Drop Edition</title>
+  <title>Labyrinthus 3D - HUD Layout Update</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -46,17 +46,19 @@
       box-shadow: 0 0 16px rgba(251, 191, 36, 0.7) !important;
       transform: scale(1.03) !important;
     }
+    
+    /* Tasti movimento ravvicinati */
     .iso-dpad-btn {
       position: absolute;
-      width: 58px;
-      height: 58px;
+      width: 54px;
+      height: 54px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       background: rgba(22, 32, 50, 0.94);
       border: 1.5px solid rgba(255, 255, 255, 0.22);
-      border-radius: 18px;
+      border-radius: 16px;
       box-shadow: 0 6px 16px rgba(0,0,0,0.5);
       touch-action: none;
       cursor: pointer;
@@ -66,12 +68,14 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
+
+    /* Pulsante Bomba spostato leggermente a destra */
     .action-bomb-btn {
       position: absolute;
-      left: 18px;
-      bottom: 22px;
-      width: 62px;
-      height: 62px;
+      left: 58px;
+      bottom: 16px;
+      width: 60px;
+      height: 60px;
       border-radius: 20px;
       background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
       border: 2px solid rgba(255, 255, 255, 0.35);
@@ -87,16 +91,39 @@
       transform: scale(0.88);
       filter: brightness(1.2);
     }
+
+    /* Pulsante Mappa posizionato sopra il tasto bomba */
+    .action-map-btn {
+      position: absolute;
+      left: 64px;
+      bottom: 84px;
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: rgba(26, 36, 56, 0.92);
+      border: 1.5px solid rgba(251, 191, 36, 0.4);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      cursor: pointer;
+    }
+    .action-map-btn:active {
+      transform: scale(0.90);
+      background: rgba(79, 70, 229, 0.9);
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between text-white">
 
-  <!-- Header Gioco -->
+  <!-- Header Gioco Superiore: compatto, senza sovrapposizioni -->
   <header id="game-header" class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between gap-1">
-    <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[125px]">
+    <!-- Livello & Tema -->
+    <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[140px]">
       <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
       <div class="flex flex-col min-w-0">
-        <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta</div>
+        <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta Antica</div>
         <div class="text-[11px] font-black text-slate-100 flex items-center gap-1 leading-none">
           <span id="level-text">L.1/50</span>
           <span class="text-[9px] text-slate-400" id="grid-size">(10x10)</span>
@@ -104,36 +131,24 @@
       </div>
     </div>
 
-    <!-- HUD Centrale -->
-    <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0">
-      <div class="flex items-center gap-0.5" id="lives-container" title="Vite rimanenti">
-        <span class="text-xs" id="life-1">❤️</span>
-        <span class="text-xs" id="life-2">❤️</span>
-        <span class="text-xs" id="life-3">❤️</span>
-      </div>
-      <div class="h-3.5 w-[1px] bg-slate-700"></div>
-      <div class="flex flex-col items-center">
+    <!-- HUD Centrale: Solo Passi e Tempo trascorso -->
+    <div class="glass-panel px-3 py-1 rounded-xl flex items-center gap-2 shrink-0">
+      <div class="flex flex-col items-center min-w-[28px]">
         <span class="text-[7px] uppercase tracking-wider text-slate-400">Passi</span>
         <span id="stat-steps" class="font-bold text-amber-400 text-[11px] leading-none">0</span>
       </div>
       <div class="h-3.5 w-[1px] bg-slate-700"></div>
-      <div class="flex flex-col items-center min-w-[28px]">
+      <div class="flex flex-col items-center min-w-[34px]">
         <span class="text-[7px] uppercase tracking-wider text-slate-400">Tempo</span>
         <span id="stat-time" class="font-bold text-cyan-400 text-[11px] leading-none">00:00</span>
       </div>
-      <div class="h-3.5 w-[1px] bg-slate-700"></div>
-      <div id="key-badge" class="flex items-center gap-0.5 px-1 py-0.5 rounded bg-slate-800 border border-slate-700">
-        <span id="key-badge-icon" class="text-[10px] grayscale opacity-40">🗝️</span>
-        <span id="key-badge-text" class="text-[9px] font-black text-slate-400 leading-none">0/1</span>
-      </div>
     </div>
 
-    <!-- Pulsanti Header -->
+    <!-- Pulsanti Header Destra -->
     <div class="flex items-center gap-1 shrink-0">
       <div id="gamepad-badge" class="hidden glass-panel px-1.5 py-1 rounded-xl text-[10px] text-emerald-400 items-center gap-1 border-emerald-500/40" title="Gamepad Connesso">
         <span>🎮</span>
       </div>
-      <button id="btn-map" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center text-xs" aria-label="Mappa">🗺️</button>
       <button id="btn-restart" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Rifai Labirinto">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
       </button>
@@ -184,33 +199,60 @@
     <span>Gamepad: <b class="text-emerald-400">Stick L / D-Pad</b> | Bomba/OK: <b class="text-rose-400">A (✕)</b> | Annulla: <b class="text-amber-300">B (○)</b></span>
   </div>
 
-  <!-- Controlli Touch Mobile -->
+  <!-- Controlli e HUD Inferiori -->
   <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
-    <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
-      <span class="text-2xl leading-none">💣</span>
-      <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
-    </button>
+    
+    <!-- Quadrante Sinistro: Cuori (in basso a sinistra), Tasto Mappa e Tasto Bomba -->
+    <div class="relative w-[130px] h-[170px] pointer-events-auto">
+      <!-- Cuori spostati in basso a sinistra -->
+      <div class="absolute left-1 bottom-4 glass-panel px-2 py-1.5 rounded-xl flex items-center gap-1 shadow-lg" id="lives-container" title="Vite rimanenti">
+        <span class="text-sm" id="life-1">❤️</span>
+        <span class="text-sm" id="life-2">❤️</span>
+        <span class="text-sm" id="life-3">❤️</span>
+      </div>
 
-    <div class="relative w-[190px] h-[190px] ml-auto pointer-events-auto">
-      <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
-        <span class="text-amber-300 text-lg font-black leading-none">↗</span>
-        <span class="text-[8px] text-slate-200 font-bold">NORD</span>
+      <!-- Tasto Mappa posizionato sopra il tasto bomba -->
+      <button id="btn-map" class="action-map-btn" aria-label="Mappa">
+        <span class="text-xl">🗺️</span>
       </button>
 
-      <button id="pad-w" class="iso-dpad-btn top-1 left-2" aria-label="Ovest">
-        <span class="text-amber-300 text-lg font-black leading-none">↖</span>
-        <span class="text-[8px] text-slate-200 font-bold">OVEST</span>
+      <!-- Tasto Bomba (spostato leggermente verso destra nel quadrante sinistro) -->
+      <button id="btn-touch-bomb" class="action-bomb-btn" aria-label="Piazza Bomba">
+        <span class="text-2xl leading-none">💣</span>
+        <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
       </button>
+    </div>
 
-      <button id="pad-s" class="iso-dpad-btn bottom-1 left-2" aria-label="Sud">
-        <span class="text-[8px] text-slate-200 font-bold">SUD</span>
-        <span class="text-amber-300 text-lg font-black leading-none">↙</span>
-      </button>
+    <!-- Quadrante Destro: Chiave (in basso a destra) e Tasti Movimento Avvicinati -->
+    <div class="flex items-end gap-1.5 pointer-events-auto ml-auto">
+      <!-- Indicatore Chiave spostato in basso sulla destra -->
+      <div id="key-badge" class="mb-4 glass-panel flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-700 shadow-lg">
+        <span id="key-badge-icon" class="text-sm grayscale opacity-40">🗝️</span>
+        <span id="key-badge-text" class="text-xs font-black text-slate-400 leading-none">0/1</span>
+      </div>
 
-      <button id="pad-e" class="iso-dpad-btn bottom-1 right-2" aria-label="Est">
-        <span class="text-[8px] text-slate-200 font-bold">EST</span>
-        <span class="text-amber-300 text-lg font-black leading-none">↘</span>
-      </button>
+      <!-- Pad di Movimento Isometrico (tasti più ravvicinati) -->
+      <div class="relative w-[160px] h-[160px]">
+        <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
+          <span class="text-amber-300 text-lg font-black leading-none">↗</span>
+          <span class="text-[8px] text-slate-200 font-bold">NORD</span>
+        </button>
+
+        <button id="pad-w" class="iso-dpad-btn top-1 left-2" aria-label="Ovest">
+          <span class="text-amber-300 text-lg font-black leading-none">↖</span>
+          <span class="text-[8px] text-slate-200 font-bold">OVEST</span>
+        </button>
+
+        <button id="pad-s" class="iso-dpad-btn bottom-1 left-2" aria-label="Sud">
+          <span class="text-[8px] text-slate-200 font-bold">SUD</span>
+          <span class="text-amber-300 text-lg font-black leading-none">↙</span>
+        </button>
+
+        <button id="pad-e" class="iso-dpad-btn bottom-1 right-2" aria-label="Est">
+          <span class="text-[8px] text-slate-200 font-bold">EST</span>
+          <span class="text-amber-300 text-lg font-black leading-none">↘</span>
+        </button>
+      </div>
     </div>
   </footer>
 
@@ -417,96 +459,6 @@
   </div>
 
   <script>
-    class SoundEngine {
-      constructor() { this.ctx = null; this.muted = false; }
-      init() {
-        if (!this.ctx) {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) this.ctx = new AudioCtx();
-        }
-        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-      }
-      playTone(freq, type, duration, vol = 0.08) {
-        if (this.muted) return;
-        this.init();
-        if (!this.ctx) return;
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + duration);
-        } catch (e) {}
-      }
-      playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.05); }
-      playMenuNav() { this.playTone(420, 'sine', 0.04, 0.06); }
-      playMenuSelect() { this.playTone(650, 'sine', 0.08, 0.09); }
-      playMenuCancel() { this.playTone(240, 'triangle', 0.08, 0.08); }
-      playBombPlant() {
-        this.playTone(320, 'sine', 0.1, 0.12);
-        setTimeout(() => this.playTone(480, 'sine', 0.12, 0.14), 70);
-      }
-      playTick() { this.playTone(850, 'square', 0.025, 0.04); }
-      playExplosion() {
-        this.playTone(85, 'sawtooth', 0.45, 0.28);
-        setTimeout(() => this.playTone(45, 'triangle', 0.6, 0.35), 40);
-      }
-      playPlayerHit() {
-        this.playTone(120, 'sawtooth', 0.2, 0.25);
-        setTimeout(() => this.playTone(70, 'sawtooth', 0.35, 0.3), 80);
-      }
-      playGameOver() {
-        [150, 120, 90, 60].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sawtooth', 0.35, 0.2), i * 120);
-        });
-      }
-      playEnemySpawn() {
-        [220, 180, 140].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sawtooth', 0.25, 0.15), i * 110);
-        });
-      }
-      playEnemyDefeated() {
-        [300, 450, 600].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'triangle', 0.2, 0.16), i * 60);
-        });
-      }
-      playHeartSpawn() {
-        [440, 554, 659, 880].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.2, 0.12), i * 70);
-        });
-      }
-      playHeartCollect() {
-        [523, 659, 784, 1046, 1318].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.16), i * 60);
-        });
-      }
-      playHeartEaten() {
-        [280, 210, 140].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sawtooth', 0.22, 0.14), i * 80);
-        });
-      }
-      playKeyPickup() {
-        [587, 740, 880, 1174].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), i * 60);
-        });
-      }
-      playLevelWin() {
-        [392, 523, 659, 784].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.15), i * 80);
-        });
-      }
-      playGameWin() {
-        [440, 554, 659, 880, 1108].forEach((f, i) => {
-          setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.18), i * 100);
-        });
-      }
-    }
-
     const LEVEL_THEMES = [
       { name: "Foresta Antica", accent: "#34d399", bgTop: "#051610", bgBottom: "#0b2b20", floorTop: "#2d6a4f", floorEdge: "#1b4332", wallTop: "#74c69d", wallLeft: "#40916c", wallRight: "#2d6a4f", portal: "#5eead4", playerBody: "#fbbf24", playerHat: "#f97316" },
       { name: "Cripta al Neon", accent: "#06b6d4", bgTop: "#071724", bgBottom: "#0e2e47", floorTop: "#155e75", floorEdge: "#0e4454", wallTop: "#38bdf8", wallLeft: "#0284c7", wallRight: "#0369a1", portal: "#a855f7", playerBody: "#ec4899", playerHat: "#f43f5e" },
@@ -721,7 +673,6 @@
         this.enemies = [];
         this.enemySpawnTimer = 0;
 
-        // Meccanica del Cuore curativo ogni 60 secondi
         this.heart = null;
         this.heartSpawnTimer = 60.0;
 
@@ -1691,14 +1642,12 @@
         return prev;
       }
 
-      // Gestione perdita di una vita e caduta della chiave
       playerLoseLife(reason) {
         this.lives--;
         this.updateLivesUI();
         this.sound.playPlayerHit();
         this.particles.spawn(this.player.renderX, this.player.renderY, 0.5, '#ef4444', 35, 0.12);
 
-        // Se il giocatore aveva preso la chiave, la chiave cade esattamente dove il giocatore è stato colpito
         let keyDroppedMsg = '';
         if (this.hasKey) {
           const dropX = Math.round(this.player.renderX);
@@ -1728,7 +1677,6 @@
         this.saveGameState();
         this.showToast(`${reason}${keyDroppedMsg} Ti restano ${this.lives} vite!`, '💔', true);
         
-        // Ritorno alla partenza del labirinto
         this.player.gx = this.mazeData.start.x;
         this.player.gy = this.mazeData.start.y;
         this.player.targetGx = this.player.gx;
@@ -2036,14 +1984,14 @@
         const icon = document.getElementById('key-badge-icon');
         const text = document.getElementById('key-badge-text');
         if (this.hasKey) {
-          badge.className = 'flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-500/25 border border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]';
-          icon.className = 'text-[10px] grayscale-0 opacity-100 scale-110';
-          text.className = 'text-[9px] font-black text-amber-300 leading-none';
+          badge.className = 'mb-4 glass-panel flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)]';
+          icon.className = 'text-sm grayscale-0 opacity-100 scale-110';
+          text.className = 'text-xs font-black text-amber-300 leading-none';
           text.textContent = '1/1';
         } else {
-          badge.className = 'flex items-center gap-0.5 px-1 py-0.5 rounded bg-slate-800 border border-slate-700';
-          icon.className = 'text-[10px] grayscale opacity-40';
-          text.className = 'text-[9px] font-black text-slate-400 leading-none';
+          badge.className = 'mb-4 glass-panel flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-700 shadow-lg';
+          icon.className = 'text-sm grayscale opacity-40';
+          text.className = 'text-xs font-black text-slate-400 leading-none';
           text.textContent = '0/1';
         }
       }
