@@ -66,7 +66,7 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
-    /* Posizionamento Tasto Bomba sulla X indicata nello screenshot */
+    /* Posizionamento Tasto Bomba */
     .action-bomb-btn {
       position: absolute;
       left: 90px;
@@ -88,7 +88,7 @@
       transform: scale(0.88);
       filter: brightness(1.2);
     }
-    /* Posizionamento Tasto Mappa sulla X indicata nello screenshot */
+    /* Posizionamento Tasto Mappa */
     .action-map-btn {
       position: absolute;
       left: 295px;
@@ -108,6 +108,43 @@
     .action-map-btn:active {
       transform: scale(0.90);
       background: rgba(79, 70, 229, 0.9);
+    }
+
+    /* Virtual Joystick Styles */
+    .joystick-base {
+      width: 146px;
+      height: 146px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 0 14px rgba(99, 102, 241, 0.25);
+      position: relative;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .joystick-knob {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #818cf8, #4338ca);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(129, 140, 248, 0.5);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      will-change: transform;
+    }
+    .joystick-guideline {
+      position: absolute;
+      font-size: 10px;
+      font-weight: 800;
+      color: rgba(251, 191, 36, 0.75);
+      pointer-events: none;
     }
   </style>
 </head>
@@ -158,14 +195,14 @@
 
     <!-- Sotto-header: Cuori a sinistra e Chiave a destra -->
     <div class="flex items-center justify-between w-full px-0.5">
-      <!-- Cuori in alto a sinistra (sotto il livello) -->
+      <!-- Cuori in alto a sinistra -->
       <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-md" id="lives-container" title="Vite rimanenti">
         <span class="text-xs" id="life-1">❤️</span>
         <span class="text-xs" id="life-2">❤️</span>
         <span class="text-xs" id="life-3">❤️</span>
       </div>
 
-      <!-- Chiave in alto a destra (sotto i tasti) -->
+      <!-- Chiave in alto a destra -->
       <div id="key-badge" class="glass-panel flex items-center gap-1 px-2.5 py-1 rounded-xl border border-slate-700 shadow-md">
         <span id="key-badge-icon" class="text-xs grayscale opacity-40">🗝️</span>
         <span id="key-badge-text" class="text-xs font-black text-slate-400 leading-none">0/1</span>
@@ -213,23 +250,25 @@
     <span>Gamepad: <b class="text-emerald-400">Stick L / D-Pad</b> | Bomba/OK: <b class="text-rose-400">A (✕)</b> | Annulla: <b class="text-amber-300">B (○)</b></span>
   </div>
 
-  <!-- Controlli Touch Inferiori (Mobile Ergonomic Layout con X-targets) -->
+  <!-- Controlli Touch Inferiori -->
   <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
-    <!-- Quadrante Sinistro: Tasti Mappa e Bomba posizionati esattamente sulle X -->
-    <div class="relative w-[180px] h-[180px] pointer-events-auto">
-      <button id="btn-map" class="action-map-btn" aria-label="Mappa">
+    <!-- Quadrante Sinistro: Tasti Mappa e Bomba -->
+    <div class="relative w-[360px] h-[290px] pointer-events-none">
+      <button id="btn-map" class="action-map-btn pointer-events-auto" aria-label="Mappa">
         <span class="text-xl">🗺️</span>
       </button>
 
-      <button id="btn-touch-bomb" class="action-bomb-btn" aria-label="Piazza Bomba">
+      <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
         <span class="text-2xl leading-none">💣</span>
         <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
       </button>
     </div>
 
-    <!-- Quadrante Destro: D-Pad Isometrico -->
-    <div class="flex items-end gap-1.5 pointer-events-auto ml-auto mr-5 mb-7">
-      <div class="relative w-[160px] h-[160px]">
+    <!-- Quadrante Destro: Tasti D-Pad oppure Virtual Stick -->
+    <div class="flex items-end gap-1.5 pointer-events-auto ml-auto mr-4 mb-6">
+      
+      <!-- Modalità 1: D-PAD a 4 Tasti -->
+      <div id="touch-dpad-wrapper" class="relative w-[160px] h-[160px]">
         <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
           <span class="text-amber-300 text-lg font-black leading-none">↗</span>
           <span class="text-[8px] text-slate-200 font-bold">NORD</span>
@@ -250,6 +289,18 @@
           <span class="text-amber-300 text-lg font-black leading-none">↘</span>
         </button>
       </div>
+
+      <!-- Modalità 2: Virtual Joystick Isometrico -->
+      <div id="touch-joystick-wrapper" class="hidden relative w-[160px] h-[160px] items-center justify-center">
+        <div id="joystick-container" class="joystick-base">
+          <span class="joystick-guideline top-2 right-3">↗ N</span>
+          <span class="joystick-guideline top-2 left-3">↖ O</span>
+          <span class="joystick-guideline bottom-2 left-3">↙ S</span>
+          <span class="joystick-guideline bottom-2 right-3">↘ E</span>
+          <div id="joystick-knob" class="joystick-knob"></div>
+        </div>
+      </div>
+
     </div>
   </footer>
 
@@ -349,13 +400,24 @@
         <span>⚙️</span> OPZIONI
       </h3>
 
-      <div class="w-full flex flex-col gap-3.5 mb-5" id="options-items">
+      <div class="w-full flex flex-col gap-3 mb-5" id="options-items">
+        <!-- Switch Controlli Mobile: D-Pad vs Joystick -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span id="opt-control-icon">🕹️</span>
+            <span>Controlli Mobile</span>
+          </div>
+          <button id="btn-opt-toggle-control" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150">
+            TASTI D-PAD
+          </button>
+        </div>
+
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
           <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
             <span id="opt-audio-icon">🔊</span>
             <span>Effetti Audio</span>
           </div>
-          <button id="btn-opt-toggle-audio" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150">
+          <button id="btn-opt-toggle-audio" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150">
             ATTIVO
           </button>
         </div>
@@ -365,13 +427,13 @@
             <span>⛶</span>
             <span>Schermo Intero</span>
           </div>
-          <button id="btn-opt-toggle-fullscreen" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150">
+          <button id="btn-opt-toggle-fullscreen" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150">
             ATTIVA
           </button>
         </div>
       </div>
 
-      <button id="btn-close-options" class="w-full h-10 bg-slate-800 text-slate-200 hover:bg-slate-700 font-bold rounded-xl text-xs transition-all duration-150">
+      <button id="btn-close-options" class="opt-nav-btn w-full h-10 bg-slate-800 text-slate-200 hover:bg-slate-700 font-bold rounded-xl text-xs transition-all duration-150">
         Chiudi (B/○)
       </button>
     </div>
@@ -792,6 +854,16 @@
         this.heldDirection = null;
         this.holdInterval = null;
 
+        // Modalità Controlli Mobile: 'dpad' oppure 'joystick'
+        this.CONTROL_MODE_KEY = 'labyrinthus_control_mode_v1';
+        this.controlMode = 'dpad';
+        try {
+          const savedMode = localStorage.getItem(this.CONTROL_MODE_KEY);
+          if (savedMode === 'dpad' || savedMode === 'joystick') {
+            this.controlMode = savedMode;
+          }
+        } catch(e) {}
+
         this.gamepadConnected = false;
         this.gamepadPrevButtons = {};
         this.gamepadStickCooldown = 0;
@@ -808,9 +880,11 @@
         window.addEventListener('resize', this.resize);
         this.detectDeviceMode();
         this.initControls();
+        this.initVirtualJoystick();
         this.initGamepad();
         this.initUI();
         this.initMenuSystem();
+        this.applyControlModeUI();
         this.setupAudioUnlock();
         this.setupAutoSaveListeners();
       }
@@ -1105,6 +1179,37 @@
         }, 80);
       }
 
+      applyControlModeUI() {
+        const dpadWrapper = document.getElementById('touch-dpad-wrapper');
+        const joystickWrapper = document.getElementById('touch-joystick-wrapper');
+        const btnControl = document.getElementById('btn-opt-toggle-control');
+        const controlIcon = document.getElementById('opt-control-icon');
+
+        if (this.controlMode === 'joystick') {
+          if (dpadWrapper) dpadWrapper.classList.add('hidden');
+          if (joystickWrapper) {
+            joystickWrapper.classList.remove('hidden');
+            joystickWrapper.classList.add('flex');
+          }
+          if (btnControl) {
+            btnControl.textContent = 'VIRTUAL STICK';
+            btnControl.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150';
+          }
+          if (controlIcon) controlIcon.textContent = '🕹️';
+        } else {
+          if (joystickWrapper) {
+            joystickWrapper.classList.add('hidden');
+            joystickWrapper.classList.remove('flex');
+          }
+          if (dpadWrapper) dpadWrapper.classList.remove('hidden');
+          if (btnControl) {
+            btnControl.textContent = 'TASTI D-PAD';
+            btnControl.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150';
+          }
+          if (controlIcon) controlIcon.textContent = '🎛️';
+        }
+      }
+
       initMenuSystem() {
         const menuOverlay = document.getElementById('main-menu-overlay');
         const btnContinue = document.getElementById('btn-menu-continue');
@@ -1122,6 +1227,7 @@
 
         const modalOptions = document.getElementById('modal-options');
         const btnCloseOptions = document.getElementById('btn-close-options');
+        const btnOptControl = document.getElementById('btn-opt-toggle-control');
         const btnOptAudio = document.getElementById('btn-opt-toggle-audio');
         const btnOptFullscreen = document.getElementById('btn-opt-toggle-fullscreen');
         const optAudioIcon = document.getElementById('opt-audio-icon');
@@ -1227,6 +1333,15 @@
           if (ctx) this.updateMenuFocusVisuals(ctx.items);
         });
 
+        btnOptControl.addEventListener('click', () => {
+          this.controlMode = (this.controlMode === 'dpad') ? 'joystick' : 'dpad';
+          try {
+            localStorage.setItem(this.CONTROL_MODE_KEY, this.controlMode);
+          } catch(e) {}
+          this.applyControlModeUI();
+          this.showToast(this.controlMode === 'joystick' ? 'Modalità Virtual Stick attiva 🕹️' : 'Modalità Tasti D-Pad attiva 🎛️', '⚙️');
+        });
+
         btnOptAudio.addEventListener('click', () => {
           this.sound.muted = !this.sound.muted;
           this.updateOptionsUI();
@@ -1238,6 +1353,8 @@
         });
 
         this.updateOptionsUI = () => {
+          this.applyControlModeUI();
+
           if (this.sound.muted) {
             btnOptAudio.textContent = "DISATTIVO";
             btnOptAudio.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150";
@@ -1466,6 +1583,111 @@
 
           this.gamepadStickCooldown = 0.14;
         }
+      }
+
+      /* ========================================================
+         VIRTUAL JOYSTICK (ISOMETRIC 4-WAY MAPPING)
+         ======================================================== */
+      initVirtualJoystick() {
+        const container = document.getElementById('joystick-container');
+        const knob = document.getElementById('joystick-knob');
+        if (!container || !knob) return;
+
+        let activePointerId = null;
+        const maxRadius = 46;
+        let joyInterval = null;
+        let currentJoyDir = null;
+
+        const processJoystickMove = (clientX, clientY) => {
+          const rect = container.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          let dx = clientX - centerX;
+          let dy = clientY - centerY;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist > maxRadius) {
+            const angle = Math.atan2(dy, dx);
+            dx = Math.cos(angle) * maxRadius;
+            dy = Math.sin(angle) * maxRadius;
+          }
+
+          knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+          // Deadzone minima di 18px per evitare falsi tocchi
+          if (dist >= 18) {
+            const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+            let dir = null;
+
+            // Quadranti Isometrici corrispondenti alla vista 3D:
+            // ↗ In alto a destra [-90, 0]  -> NORD (dx=0, dy=-1)
+            // ↘ In basso a destra [0, 90]  -> EST  (dx=1, dy=0)
+            // ↙ In basso a sinistra [90, 180] -> SUD (dx=0, dy=1)
+            // ↖ In alto a sinistra [-180, -90] -> OVEST (dx=-1, dy=0)
+            if (angleDeg >= -90 && angleDeg < 0) {
+              dir = { dx: 0, dy: -1 };
+            } else if (angleDeg >= 0 && angleDeg < 90) {
+              dir = { dx: 1, dy: 0 };
+            } else if (angleDeg >= 90 && angleDeg <= 180) {
+              dir = { dx: 0, dy: 1 };
+            } else {
+              dir = { dx: -1, dy: 0 };
+            }
+
+            if (!currentJoyDir || currentJoyDir.dx !== dir.dx || currentJoyDir.dy !== dir.dy) {
+              currentJoyDir = dir;
+              if (!this.player.isMoving) {
+                this.handleDirectionInput(dir.dx, dir.dy);
+              }
+            }
+          } else {
+            currentJoyDir = null;
+          }
+        };
+
+        const resetJoystick = () => {
+          activePointerId = null;
+          currentJoyDir = null;
+          knob.style.transform = 'translate(-50%, -50%)';
+          if (joyInterval) {
+            clearInterval(joyInterval);
+            joyInterval = null;
+          }
+        };
+
+        container.addEventListener('pointerdown', (e) => {
+          if (this.isPausedInMenu || activePointerId !== null) return;
+          e.preventDefault();
+          this.sound.init();
+          activePointerId = e.pointerId;
+          container.setPointerCapture(e.pointerId);
+
+          processJoystickMove(e.clientX, e.clientY);
+
+          if (joyInterval) clearInterval(joyInterval);
+          joyInterval = setInterval(() => {
+            if (currentJoyDir && !this.player.isMoving && !this.isPausedInMenu) {
+              this.handleDirectionInput(currentJoyDir.dx, currentJoyDir.dy);
+            }
+          }, 130);
+        });
+
+        container.addEventListener('pointermove', (e) => {
+          if (e.pointerId !== activePointerId) return;
+          e.preventDefault();
+          processJoystickMove(e.clientX, e.clientY);
+        });
+
+        const handlePointerUp = (e) => {
+          if (e.pointerId !== activePointerId) return;
+          e.preventDefault();
+          try { container.releasePointerCapture(e.pointerId); } catch(err) {}
+          resetJoystick();
+        };
+
+        container.addEventListener('pointerup', handlePointerUp);
+        container.addEventListener('pointercancel', handlePointerUp);
       }
 
       initControls() {
@@ -2724,6 +2946,7 @@
         this.mazeData = MazeGenerator.generate(8 + (startLvl * 2));
         this.updateThemeUI();
         this.updateLivesUI();
+        this.applyControlModeUI();
         
         this.showMainMenu();
         requestAnimationFrame(this.gameLoop);
