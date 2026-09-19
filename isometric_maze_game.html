@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - Bomb & Enemy Edition</title>
+  <title>Labyrinthus 3D - 50 Levels Menu Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -27,9 +27,9 @@
       -webkit-user-select: none;
     }
     .glass-panel {
-      background: rgba(13, 20, 36, 0.88);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: rgba(13, 20, 36, 0.90);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.14);
     }
     .glass-btn {
@@ -39,7 +39,7 @@
     }
     .glass-btn:active {
       background: rgba(99, 102, 241, 0.9);
-      transform: scale(0.92);
+      transform: scale(0.94);
     }
     .iso-dpad-btn {
       position: absolute;
@@ -61,7 +61,6 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
-    /* Pulsante Bomba posizionato a sinistra per l'uso a due mani */
     .action-bomb-btn {
       position: absolute;
       left: 18px;
@@ -87,20 +86,28 @@
 </head>
 <body class="relative w-full h-full flex flex-col justify-between text-white">
 
-  <!-- Header -->
-  <header class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between gap-1">
+  <!-- Header Gioco -->
+  <header id="game-header" class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between gap-1">
+    <!-- Livello & Tema -->
     <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[125px]">
       <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
       <div class="flex flex-col min-w-0">
         <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta</div>
         <div class="text-[11px] font-black text-slate-100 flex items-center gap-1 leading-none">
-          <span id="level-text">L.1/10</span>
+          <span id="level-text">L.1/50</span>
           <span class="text-[9px] text-slate-400" id="grid-size">(10x10)</span>
         </div>
       </div>
     </div>
 
+    <!-- HUD Centrale: Vite, Passi, Tempo, Chiave -->
     <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0">
+      <div class="flex items-center gap-0.5" id="lives-container" title="Vite rimanenti">
+        <span class="text-xs" id="life-1">❤️</span>
+        <span class="text-xs" id="life-2">❤️</span>
+        <span class="text-xs" id="life-3">❤️</span>
+      </div>
+      <div class="h-3.5 w-[1px] bg-slate-700"></div>
       <div class="flex flex-col items-center">
         <span class="text-[7px] uppercase tracking-wider text-slate-400">Passi</span>
         <span id="stat-steps" class="font-bold text-amber-400 text-[11px] leading-none">0</span>
@@ -117,32 +124,33 @@
       </div>
     </div>
 
+    <!-- Tasti in alto a destra: Mappa, Rifai, Fullscreen, Menu (Audio rimosso su mobile, configurabile in Opzioni) -->
     <div class="flex items-center gap-1 shrink-0">
+      <div id="gamepad-badge" class="hidden glass-panel px-1.5 py-1 rounded-xl text-[10px] text-emerald-400 items-center gap-1 border-emerald-500/40" title="Gamepad Connesso">
+        <span>🎮</span>
+      </div>
       <button id="btn-map" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center text-xs" aria-label="Mappa">🗺️</button>
-      <button id="btn-audio" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Audio">
-        <svg id="icon-sound-on" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-        <svg id="icon-sound-off" class="w-3.5 h-3.5 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-      </button>
-      <button id="btn-restart" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Riavvia">
+      <button id="btn-restart" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Rifai Labirinto">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
       </button>
       <button id="btn-fullscreen" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center" aria-label="Schermo Intero">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
       </button>
+      <button id="btn-to-menu" class="glass-btn w-8 h-8 rounded-xl text-cyan-300 flex items-center justify-center text-xs font-bold" aria-label="Menu Principale">☰</button>
     </div>
   </header>
 
-  <!-- Canvas -->
+  <!-- Canvas di Gioco -->
   <main class="absolute inset-0 w-full h-full">
     <canvas id="gameCanvas" class="block w-full h-full" style="touch-action: none;"></canvas>
 
-    <!-- Toast -->
+    <!-- Toast fluttuante -->
     <div id="game-toast" class="absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/40 opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw]">
       <span id="toast-icon">🗝️</span>
       <span id="toast-msg">Trova prima la chiave dorata!</span>
     </div>
 
-    <!-- Mappa Overlay -->
+    <!-- Mappa Overlay Radar -->
     <div id="map-overlay" class="absolute inset-0 z-40 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
       <div class="relative bg-slate-900 rounded-3xl p-4 flex flex-col items-center justify-between border border-amber-400/30 w-full max-w-[420px] h-[65vh] max-h-[480px]">
         <div class="w-full flex items-center justify-between pb-2 border-b border-slate-700">
@@ -166,23 +174,19 @@
   </main>
 
   <!-- Suggerimenti Desktop -->
-  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
-    <span>Comandi: <b class="text-amber-400">WASD / Frecce</b></span>
+  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
+    <span>Tastiera: <b class="text-amber-400">WASD</b> | Bomba: <b class="text-rose-400">SPAZIO</b> | Mappa: <b class="text-cyan-400">TAB</b> | Menu: <b class="text-cyan-300">ESC</b></span>
     <span class="text-slate-500">•</span>
-    <span>Bomba: <b class="text-rose-400">SPAZIO</b></span>
-    <span class="text-slate-500">•</span>
-    <span>Mappa: <b class="text-cyan-400">TAB</b></span>
+    <span>Gamepad: <b class="text-emerald-400">Stick L</b> | Bomba: <b class="text-rose-400">A / X</b> | Mappa: <b class="text-cyan-400">LT</b> | Reset: <b class="text-amber-400">BACK</b> | Menu: <b class="text-cyan-300">START</b></span>
   </div>
 
-  <!-- Controlli Touch Mobile (Invertiti: Bomba a Sinistra, D-Pad a Destra) -->
+  <!-- Controlli Touch Mobile (Bomba a Sinistra, D-Pad a Destra) -->
   <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
-    <!-- Pulsante Bomba Mobile a Sinistra -->
     <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
       <span class="text-2xl leading-none">💣</span>
       <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
     </button>
 
-    <!-- D-Pad Isometrico a Destra -->
     <div class="relative w-[190px] h-[190px] ml-auto pointer-events-auto">
       <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
         <span class="text-amber-300 text-lg font-black leading-none">↗</span>
@@ -206,12 +210,102 @@
     </div>
   </footer>
 
-  <!-- Modali -->
+  <!-- ==================== MENU PRINCIPALE OVERLAY ==================== -->
+  <div id="main-menu-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+    <div class="glass-panel w-full max-w-sm p-6 rounded-3xl border-amber-400/40 shadow-2xl flex flex-col items-center text-center">
+      <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-4xl mb-3 shadow-[0_0_24px_rgba(251,191,36,0.3)]">
+        🏛️
+      </div>
+      <h1 class="text-2xl font-black tracking-wider text-amber-300 uppercase">Labyrinthus 3D</h1>
+      <p class="text-xs text-slate-400 mt-0.5 mb-6">50 Livelli • Bombe • Fuga dai Nemici</p>
+
+      <div class="w-full flex flex-col gap-3">
+        <!-- Bottone Continua -->
+        <button id="btn-menu-continue" class="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200">
+          <span>▶ Continua Partita</span>
+          <span id="menu-continue-badge" class="text-[10px] px-2 py-0.5 bg-black/40 rounded-full font-mono text-emerald-200 hidden">L.1</span>
+        </button>
+
+        <!-- Bottone Nuova Partita -->
+        <button id="btn-menu-newgame" class="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200">
+          <span>⚔️ Nuova Partita</span>
+        </button>
+
+        <!-- Bottone Opzioni -->
+        <button id="btn-menu-options" class="w-full h-11 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all duration-200">
+          <span>⚙️ Opzioni</span>
+        </button>
+      </div>
+
+      <div class="mt-6 text-[10px] text-slate-500 flex items-center gap-2">
+        <span>Desktop: ESC per menu</span>
+        <span>•</span>
+        <span>Gamepad: START</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALE CONFERMA NUOVA PARTITA ==================== -->
+  <div id="modal-confirm-newgame" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/50 shadow-2xl flex flex-col items-center">
+      <div class="text-3xl mb-2">⚠️</div>
+      <h3 class="text-base font-black text-white">Iniziare nuova partita?</h3>
+      <p class="text-xs text-slate-300 mt-1 mb-4">C'è già una partita in corso. Se prosegui, i progressi attuali verranno persi e ripartirai dal <b class="text-amber-400">Livello 1</b>.</p>
+
+      <div class="w-full flex gap-2">
+        <button id="btn-confirm-newgame-cancel" class="flex-1 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
+          Annulla
+        </button>
+        <button id="btn-confirm-newgame-ok" class="flex-1 h-10 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black rounded-xl text-xs">
+          Sì, Ricomincia
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALE OPZIONI ==================== -->
+  <div id="modal-options" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl border-slate-700 shadow-2xl flex flex-col items-center">
+      <h3 class="text-lg font-black text-amber-400 mb-4 flex items-center gap-2">
+        <span>⚙️</span> OPZIONI
+      </h3>
+
+      <div class="w-full flex flex-col gap-3.5 mb-5">
+        <!-- Switch Audio -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span id="opt-audio-icon">🔊</span>
+            <span>Effetti Audio</span>
+          </div>
+          <button id="btn-opt-toggle-audio" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            ATTIVO
+          </button>
+        </div>
+
+        <!-- Fullscreen Switch -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>⛶</span>
+            <span>Schermo Intero</span>
+          </div>
+          <button id="btn-opt-toggle-fullscreen" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+            ATTIVA
+          </button>
+        </div>
+      </div>
+
+      <button id="btn-close-options" class="w-full h-10 bg-slate-800 text-slate-200 hover:bg-slate-700 font-bold rounded-xl text-xs">
+        Chiudi
+      </button>
+    </div>
+  </div>
+
+  <!-- Modale Fine Livello -->
   <div id="modal-level-cleared" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden p-4">
     <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/40 shadow-2xl flex flex-col items-center">
       <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl mb-2.5">✨</div>
       <h3 class="text-lg font-black text-white">Livello Completato!</h3>
-      <p class="text-xs text-slate-300 mt-0.5 mb-3">Chiave raccolta e portale sbloccato.</p>
+      <p class="text-xs text-slate-300 mt-0.5 mb-3">Chiave raccolta e portale attraversato.</p>
       
       <div class="w-full bg-slate-900 rounded-2xl p-2.5 mb-4 text-xs text-slate-300 flex justify-around border border-slate-700">
         <div>
@@ -226,17 +320,42 @@
       </div>
 
       <button id="btn-next-level" class="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer">
-        <span>Prossimo Livello</span>
+        <span>Prossimo Livello (o tasto A/✕)</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
       </button>
     </div>
   </div>
 
+  <!-- Modale Game Over -->
+  <div id="modal-gameover" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-6 rounded-3xl text-center border-rose-500/50 shadow-2xl flex flex-col items-center">
+      <div class="text-4xl mb-2">☠️</div>
+      <h2 class="text-xl font-black text-rose-400">GAME OVER</h2>
+      <p class="text-xs text-slate-300 mt-1 mb-4">Hai esaurito tutte e 3 le vite disponibili!</p>
+
+      <div class="w-full bg-slate-900 rounded-2xl p-3 mb-5 border border-slate-700 flex flex-col gap-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Livello raggiunto:</span>
+          <span id="gameover-level" class="font-bold text-amber-400">1</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Passi totali:</span>
+          <span id="gameover-steps" class="font-bold text-amber-400">0</span>
+        </div>
+      </div>
+
+      <button id="btn-restart-gameover" class="w-full h-11 bg-gradient-to-r from-rose-600 to-red-500 text-white font-black rounded-xl text-xs flex items-center justify-center cursor-pointer">
+        Menu Principale
+      </button>
+    </div>
+  </div>
+
+  <!-- Modale Vittoria Totale -->
   <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
     <div class="glass-panel w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/40 shadow-2xl flex flex-col items-center">
       <div class="text-4xl mb-2 animate-bounce">🏆</div>
       <h2 class="text-xl font-black text-amber-300">VITTORIA TOTALE!</h2>
-      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 10 labirinti!</p>
+      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 50 labirinti!</p>
 
       <div class="w-full bg-slate-900 rounded-2xl p-3 mb-5 border border-slate-700 flex flex-col gap-2">
         <div class="flex justify-between items-center text-xs">
@@ -250,7 +369,7 @@
       </div>
 
       <button id="btn-new-game-win" class="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center cursor-pointer">
-        Nuova Partita
+        Menu Principale
       </button>
     </div>
   </div>
@@ -283,7 +402,6 @@
         } catch (e) {}
       }
       playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.05); }
-      playBump() { this.playTone(60, 'sawtooth', 0.12, 0.12); }
       playBombPlant() {
         this.playTone(320, 'sine', 0.1, 0.12);
         setTimeout(() => this.playTone(480, 'sine', 0.12, 0.14), 70);
@@ -294,8 +412,13 @@
         setTimeout(() => this.playTone(45, 'triangle', 0.6, 0.35), 40);
       }
       playPlayerHit() {
-        this.playTone(110, 'sawtooth', 0.2, 0.25);
-        setTimeout(() => this.playTone(65, 'sawtooth', 0.35, 0.3), 80);
+        this.playTone(120, 'sawtooth', 0.2, 0.25);
+        setTimeout(() => this.playTone(70, 'sawtooth', 0.35, 0.3), 80);
+      }
+      playGameOver() {
+        [150, 120, 90, 60].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.35, 0.2), i * 120);
+        });
       }
       playEnemySpawn() {
         [220, 180, 140].forEach((f, i) => {
@@ -311,10 +434,6 @@
         [587, 740, 880, 1174].forEach((f, i) => {
           setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), i * 60);
         });
-      }
-      playLockedDoor() {
-        this.playTone(130, 'sawtooth', 0.07, 0.14);
-        setTimeout(() => this.playTone(85, 'sawtooth', 0.09, 0.14), 60);
       }
       playLevelWin() {
         [392, 523, 659, 784].forEach((f, i) => {
@@ -338,7 +457,47 @@
       { name: "Dune del Sole", accent: "#f59e0b", bgTop: "#261603", bgBottom: "#422405", floorTop: "#d97706", floorEdge: "#92400e", wallTop: "#fde68a", wallLeft: "#f59e0b", wallRight: "#b45309", portal: "#06b6d4", playerBody: "#ec4899", playerHat: "#8b5cf6" },
       { name: "Ossidiana", accent: "#a78bfa", bgTop: "#0f0e16", bgBottom: "#1d1a2d", floorTop: "#312e81", floorEdge: "#1e1b4b", wallTop: "#c4b5fd", wallLeft: "#6366f1", wallRight: "#4338ca", portal: "#2dd4bf", playerBody: "#34d399", playerHat: "#fbbf24" },
       { name: "Corallo Abisso", accent: "#fb7185", bgTop: "#1c0a15", bgBottom: "#350f26", floorTop: "#be185d", floorEdge: "#831843", wallTop: "#fda4af", wallLeft: "#f43f5e", wallRight: "#be123c", portal: "#a3e635", playerBody: "#38bdf8", playerHat: "#a855f7" },
-      { name: "Vuoto Astrale", accent: "#e879f9", bgTop: "#0b0314", bgBottom: "#18072b", floorTop: "#581c87", floorEdge: "#3b0764", wallTop: "#f0abfc", wallLeft: "#c026d3", wallRight: "#86198f", portal: "#fde047", playerBody: "#4ade80", playerHat: "#38bdf8" }
+      { name: "Vuoto Astrale", accent: "#e879f9", bgTop: "#0b0314", bgBottom: "#18072b", floorTop: "#581c87", floorEdge: "#3b0764", wallTop: "#f0abfc", wallLeft: "#c026d3", wallRight: "#86198f", portal: "#fde047", playerBody: "#4ade80", playerHat: "#38bdf8" },
+      { name: "Miniera di Smeraldo", accent: "#10b981", bgTop: "#04150d", bgBottom: "#0a2618", floorTop: "#047857", floorEdge: "#064e3b", wallTop: "#6ee7b7", wallLeft: "#059669", wallRight: "#047857", portal: "#f59e0b", playerBody: "#f43f5e", playerHat: "#fbbf24" },
+      { name: "Fortezza di Rame", accent: "#ea580c", bgTop: "#1c0d06", bgBottom: "#33180c", floorTop: "#c2410c", floorEdge: "#7c2d12", wallTop: "#fdba74", wallLeft: "#ea580c", wallRight: "#9a3412", portal: "#06b6d4", playerBody: "#38bdf8", playerHat: "#facc15" },
+      { name: "Fondo Marino", accent: "#0284c7", bgTop: "#02121d", bgBottom: "#04253a", floorTop: "#0369a1", floorEdge: "#075985", wallTop: "#7dd3fc", wallLeft: "#0284c7", wallRight: "#0c4a6e", portal: "#ec4899", playerBody: "#facc15", playerHat: "#10b981" },
+      { name: "Cripta Spettrale", accent: "#84cc16", bgTop: "#111a08", bgBottom: "#1e2e0e", floorTop: "#4d7c0f", floorEdge: "#365314", wallTop: "#bef264", wallLeft: "#65a30d", wallRight: "#3f6212", portal: "#c084fc", playerBody: "#e879f9", playerHat: "#3b82f6" },
+      { name: "Labirinto Amatista", accent: "#9333ea", bgTop: "#160724", bgBottom: "#280f40", floorTop: "#7e22ce", floorEdge: "#581c87", wallTop: "#d8b4fe", wallLeft: "#9333ea", wallRight: "#6b21a8", portal: "#34d399", playerBody: "#fbbf24", playerHat: "#ef4444" },
+      { name: "Valle d'Autunno", accent: "#d97706", bgTop: "#1a1005", bgBottom: "#301d0a", floorTop: "#b45309", floorEdge: "#78350f", wallTop: "#fcd34d", wallLeft: "#d97706", wallRight: "#92400e", portal: "#38bdf8", playerBody: "#10b981", playerHat: "#f97316" },
+      { name: "Fucina Ardente", accent: "#e11d48", bgTop: "#1a060a", bgBottom: "#330d15", floorTop: "#be123c", floorEdge: "#881337", wallTop: "#fda4af", wallLeft: "#e11d48", wallRight: "#9f1239", portal: "#fbbf24", playerBody: "#38bdf8", playerHat: "#4ade80" },
+      { name: "Ghiaccio Nero", accent: "#38bdf8", bgTop: "#050d14", bgBottom: "#0b1a26", floorTop: "#0f172a", floorEdge: "#020617", wallTop: "#94a3b8", wallLeft: "#334155", wallRight: "#1e293b", portal: "#38bdf8", playerBody: "#f43f5e", playerHat: "#facc15" },
+      { name: "Nebulosa Rosa", accent: "#ec4899", bgTop: "#1c0713", bgBottom: "#330d22", floorTop: "#be185d", floorEdge: "#831843", wallTop: "#fbcfe8", wallLeft: "#db2777", wallRight: "#9d174d", portal: "#10b981", playerBody: "#fde047", playerHat: "#6366f1" },
+      { name: "Labirinto di Giada", accent: "#059669", bgTop: "#04140e", bgBottom: "#092419", floorTop: "#047857", floorEdge: "#064e3b", wallTop: "#a7f3d0", wallLeft: "#10b981", wallRight: "#065f46", portal: "#f43f5e", playerBody: "#f97316", playerHat: "#e11d48" },
+      { name: "Canyon Rosso", accent: "#dc2626", bgTop: "#1b0606", bgBottom: "#310c0c", floorTop: "#b91c1c", floorEdge: "#7f1d1d", wallTop: "#fca5a5", wallLeft: "#dc2626", wallRight: "#991b1b", portal: "#38bdf8", playerBody: "#fde047", playerHat: "#10b981" },
+      { name: "Rovine di Quarzo", accent: "#f472b6", bgTop: "#190a12", bgBottom: "#2f1422", floorTop: "#db2777", floorEdge: "#9d174d", wallTop: "#fce7f3", wallLeft: "#f472b6", wallRight: "#be185d", portal: "#facc15", playerBody: "#2dd4bf", playerHat: "#f97316" },
+      { name: "Palude Tossica", accent: "#a3e635", bgTop: "#131a06", bgBottom: "#232e0c", floorTop: "#65a30d", floorEdge: "#3f6212", wallTop: "#d9f99d", wallLeft: "#84cc16", wallRight: "#4d7c0f", portal: "#c084fc", playerBody: "#ec4899", playerHat: "#38bdf8" },
+      { name: "Bastione Celeste", accent: "#60a5fa", bgTop: "#061326", bgBottom: "#0c2345", floorTop: "#2563eb", floorEdge: "#1d4ed8", wallTop: "#bfdbfe", wallLeft: "#3b82f6", wallRight: "#1e40af", portal: "#fbbf24", playerBody: "#f43f5e", playerHat: "#10b981" },
+      { name: "Abisso Dorato", accent: "#f59e0b", bgTop: "#1e1303", bgBottom: "#362207", floorTop: "#d97706", floorEdge: "#92400e", wallTop: "#fef08a", wallLeft: "#f59e0b", wallRight: "#b45309", portal: "#a855f7", playerBody: "#38bdf8", playerHat: "#ec4899" },
+      { name: "Torre di Notte", accent: "#818cf8", bgTop: "#0c0e21", bgBottom: "#161a3b", floorTop: "#4338ca", floorEdge: "#312e81", wallTop: "#c7d2fe", wallLeft: "#6366f1", wallRight: "#3730a3", portal: "#34d399", playerBody: "#fbbf24", playerHat: "#ef4444" },
+      { name: "Giardino Zen", accent: "#4ade80", bgTop: "#07170c", bgBottom: "#0e2916", floorTop: "#16a34a", floorEdge: "#15803d", wallTop: "#bbf7d0", wallLeft: "#22c55e", wallRight: "#166534", portal: "#f472b6", playerBody: "#facc15", playerHat: "#6366f1" },
+      { name: "Camera di Magma", accent: "#ff6b6b", bgTop: "#260606", bgBottom: "#450c0c", floorTop: "#c92a2a", floorEdge: "#a51d24", wallTop: "#ffc9c9", wallLeft: "#f03e3e", wallRight: "#c92a2a", portal: "#4dabf7", playerBody: "#51cf66", playerHat: "#fcc419" },
+      { name: "Fantasmi del Mare", accent: "#20c997", bgTop: "#031411", bgBottom: "#082922", floorTop: "#0ca678", floorEdge: "#099268", wallTop: "#96f2d7", wallLeft: "#12b886", wallRight: "#087f5b", portal: "#e599f7", playerBody: "#ffd43b", playerHat: "#ff6b6b" },
+      { name: "Tempesta Elettrica", accent: "#ffe066", bgTop: "#1f1c04", bgBottom: "#383308", floorTop: "#f59f00", floorEdge: "#d9480f", wallTop: "#fff3bf", wallLeft: "#fab005", wallRight: "#e67700", portal: "#339af0", playerBody: "#20c997", playerHat: "#f06595" },
+      { name: "Orizzonte Viola", accent: "#da77f2", bgTop: "#1a0624", bgBottom: "#310c42", floorTop: "#ae3ec9", floorEdge: "#862e9c", wallTop: "#eebefa", wallLeft: "#cc5de8", wallRight: "#9c36b5", portal: "#51cf66", playerBody: "#fcc419", playerHat: "#339af0" },
+      { name: "Terre Selvagge", accent: "#94d82d", bgTop: "#111a05", bgBottom: "#20300a", floorTop: "#74b816", floorEdge: "#5c940d", wallTop: "#d8f5a2", wallLeft: "#82c91e", wallRight: "#66a80f", portal: "#ff922b", playerBody: "#ff6b6b", playerHat: "#cc5de8" },
+      { name: "Deserto di Rubino", accent: "#f03e3e", bgTop: "#21060b", bgBottom: "#3d0c15", floorTop: "#d6336c", floorEdge: "#a61e4d", wallTop: "#fcc2d7", wallLeft: "#e64980", wallRight: "#c2255c", portal: "#20c997", playerBody: "#ffe066", playerHat: "#228be6" },
+      { name: "Grotte di Cobalto", accent: "#339af0", bgTop: "#051121", bgBottom: "#0a203d", floorTop: "#1c7ed6", floorEdge: "#1971c2", wallTop: "#a5d8ff", wallLeft: "#228be6", wallRight: "#1864ab", portal: "#ff6b6b", playerBody: "#ffd43b", playerHat: "#51cf66" },
+      { name: "Roccia Solare", accent: "#ff922b", bgTop: "#211104", bgBottom: "#3d1f08", floorTop: "#f76707", floorEdge: "#d9480f", wallTop: "#ffd8a8", wallLeft: "#fd7e14", wallRight: "#e8590c", portal: "#845ef7", playerBody: "#20c997", playerHat: "#339af0" },
+      { name: "Giungla Nera", accent: "#51cf66", bgTop: "#08170c", bgBottom: "#0f2b16", floorTop: "#2f9e44", floorEdge: "#2b8a3e", wallTop: "#b2f2bb", wallLeft: "#37b24d", wallRight: "#237032", portal: "#f783ac", playerBody: "#ffd43b", playerHat: "#ff6b6b" },
+      { name: "Banchisa Polare", accent: "#4dabf7", bgTop: "#061324", bgBottom: "#0c2442", floorTop: "#1971c2", floorEdge: "#1864ab", wallTop: "#d0ebff", wallLeft: "#339af0", wallRight: "#1c7ed6", portal: "#fcc419", playerBody: "#f06595", playerHat: "#20c997" },
+      { name: "Castello di Rame", accent: "#f76707", bgTop: "#1a0c04", bgBottom: "#331709", floorTop: "#d9480f", floorEdge: "#c92a2a", wallTop: "#ffe8cc", wallLeft: "#f76707", wallRight: "#d9480f", portal: "#22b8cf", playerBody: "#51cf66", playerHat: "#845ef7" },
+      { name: "Isola Fantasma", accent: "#845ef7", bgTop: "#110a24", bgBottom: "#201342", floorTop: "#7048e8", floorEdge: "#5f3dc4", wallTop: "#d0bfff", wallLeft: "#7950f2", wallRight: "#6741d9", portal: "#94d82d", playerBody: "#ffd43b", playerHat: "#ff6b6b" },
+      { name: "Radice Antica", accent: "#82c91e", bgTop: "#0e1704", bgBottom: "#1a2b09", floorTop: "#5c940d", floorEdge: "#3b5bdb", wallTop: "#e9fac8", wallLeft: "#74b816", wallRight: "#5c940d", portal: "#f783ac", playerBody: "#ffa94d", playerHat: "#228be6" },
+      { name: "Pozzo di Catrame", accent: "#909296", bgTop: "#0d0e10", bgBottom: "#191b1f", floorTop: "#25262b", floorEdge: "#141517", wallTop: "#ced4da", wallLeft: "#495057", wallRight: "#212529", portal: "#ff6b6b", playerBody: "#51cf66", playerHat: "#ffd43b" },
+      { name: "Landa d'Ambra", accent: "#fab005", bgTop: "#1c1403", bgBottom: "#362607", floorTop: "#e67700", floorEdge: "#d9480f", wallTop: "#fff9db", wallLeft: "#f59f00", wallRight: "#d9480f", portal: "#20c997", playerBody: "#339af0", playerHat: "#e64980" },
+      { name: "Valle di Cristallo", accent: "#22b8cf", bgTop: "#03141a", bgBottom: "#072633", floorTop: "#1098ad", floorEdge: "#0c8599", wallTop: "#c5f6fa", wallLeft: "#15aabf", wallRight: "#0b7285", portal: "#ff922b", playerBody: "#fcc419", playerHat: "#845ef7" },
+      { name: "Abisso Cremisi", accent: "#c2255c", bgTop: "#1c050f", bgBottom: "#330a1c", floorTop: "#a61e4d", floorEdge: "#861b42", wallTop: "#fcc2d7", wallLeft: "#d6336c", wallRight: "#9c1444", portal: "#51cf66", playerBody: "#ffd43b", playerHat: "#22b8cf" },
+      { name: "Trono di Bronzo", accent: "#e8590c", bgTop: "#1a0b04", bgBottom: "#331608", floorTop: "#d9480f", floorEdge: "#c92a2a", wallTop: "#ffd8a8", wallLeft: "#f76707", wallRight: "#d9480f", portal: "#339af0", playerBody: "#20c997", playerHat: "#f06595" },
+      { name: "Labirinto Etereo", accent: "#b197fc", bgTop: "#0e0921", bgBottom: "#1a123d", floorTop: "#6741d9", floorEdge: "#4c2889", wallTop: "#e5dbff", wallLeft: "#7950f2", wallRight: "#5f3dc4", portal: "#ffd43b", playerBody: "#51cf66", playerHat: "#ff6b6b" },
+      { name: "Cripta dei Draghi", accent: "#ff6b6b", bgTop: "#210505", bgBottom: "#3d0a0a", floorTop: "#c92a2a", floorEdge: "#a51d24", wallTop: "#ffe3e3", wallLeft: "#f03e3e", wallRight: "#c92a2a", portal: "#20c997", playerBody: "#339af0", playerHat: "#ffd43b" },
+      { name: "Profondità Titaniche", accent: "#20c997", bgTop: "#041411", bgBottom: "#082620", floorTop: "#099268", floorEdge: "#087f5b", wallTop: "#c3fae8", wallLeft: "#12b886", wallRight: "#0ca678", portal: "#f783ac", playerBody: "#ffa94d", playerHat: "#7950f2" },
+      { name: "Singolarità Oscura", accent: "#e599f7", bgTop: "#080412", bgBottom: "#120824", floorTop: "#341052", floorEdge: "#220838", wallTop: "#f3d9fa", wallLeft: "#862e9c", wallRight: "#581c87", portal: "#ffd43b", playerBody: "#20c997", playerHat: "#ff6b6b" },
+      { name: "Santuario Supremo", accent: "#ffd43b", bgTop: "#241804", bgBottom: "#452e08", floorTop: "#e67700", floorEdge: "#b45309", wallTop: "#fff3bf", wallLeft: "#f59f00", wallRight: "#d97706", portal: "#38bdf8", playerBody: "#4ade80", playerHat: "#f43f5e" }
     ];
 
     class MazeGenerator {
@@ -433,8 +592,7 @@
               if (grid[gy][gx - 1] === 1) walls++;
               if (grid[gy][gx + 1] === 1) walls++;
               const isDeadEnd = (walls === 3);
-              const minDistance = Math.min(distStart[gy][gx], distExit[gy][gx]);
-              const score = minDistance + (isDeadEnd ? 30 : 0);
+              const score = Math.min(distStart[gy][gx], distExit[gy][gx]) + (isDeadEnd ? 30 : 0);
               candidates.push({ x: gx, y: gy, score });
             }
           }
@@ -484,14 +642,19 @@
         this.mapCtx = this.mapCanvas.getContext('2d');
         this.isMapVisible = false;
 
+        // Configurazione Livelli e Vite
         this.currentLevel = 1;
-        this.maxLevel = 10;
+        this.maxLevel = 50;
+        this.maxLives = 3;
+        this.lives = 3;
+
         this.totalSteps = 0;
         this.levelSteps = 0;
         this.totalSeconds = 0;
         this.levelSeconds = 0;
         this.timerInterval = null;
         this.isGameActive = false;
+        this.isPausedInMenu = true;
         this.hasKey = false;
         this.toastTimeout = null;
 
@@ -522,14 +685,36 @@
         this.heldDirection = null;
         this.holdInterval = null;
 
+        // Gamepad
+        this.gamepadConnected = false;
+        this.gamepadPrevButtons = {};
+        this.gamepadStickCooldown = 0;
+        this.ltWasPressed = false;
+
+        this.STORAGE_KEY = 'labyrinthus_save_state_v1';
+
         this.resize = this.resize.bind(this);
         this.gameLoop = this.gameLoop.bind(this);
 
         window.addEventListener('resize', this.resize);
         this.detectDeviceMode();
         this.initControls();
+        this.initGamepad();
         this.initUI();
+        this.initMenuSystem();
         this.setupAudioUnlock();
+        this.setupAutoSaveOnClose();
+      }
+
+      // Salvataggio su chiusura / abbandono scheda
+      setupAutoSaveOnClose() {
+        const autoSave = () => {
+          if (this.isGameActive || (!this.isPausedInMenu && this.lives > 0)) {
+            this.saveGameState();
+          }
+        };
+        window.addEventListener('beforeunload', autoSave);
+        window.addEventListener('pagehide', autoSave);
       }
 
       detectDeviceMode() {
@@ -558,6 +743,179 @@
         window.addEventListener('click', unlock, { passive: true });
       }
 
+      // ================= Gestione Salvataggio localStorage =================
+      saveGameState() {
+        if (!this.mazeData || this.lives <= 0) return;
+        const saveObj = {
+          currentLevel: this.currentLevel,
+          lives: this.lives,
+          totalSteps: this.totalSteps,
+          totalSeconds: this.totalSeconds,
+          timestamp: Date.now()
+        };
+        try {
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saveObj));
+        } catch (e) {}
+      }
+
+      loadGameState() {
+        try {
+          const raw = localStorage.getItem(this.STORAGE_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      clearSavedState() {
+        try {
+          localStorage.removeItem(this.STORAGE_KEY);
+        } catch (e) {}
+      }
+
+      hasActiveSavedGame() {
+        const save = this.loadGameState();
+        return save !== null && save.lives > 0 && save.currentLevel <= this.maxLevel;
+      }
+
+      // ================= Menu Principale & Opzioni =================
+      initMenuSystem() {
+        const menuOverlay = document.getElementById('main-menu-overlay');
+        const btnContinue = document.getElementById('btn-menu-continue');
+        const btnNewGame = document.getElementById('btn-menu-newgame');
+        const btnOptions = document.getElementById('btn-menu-options');
+        const badgeContinue = document.getElementById('menu-continue-badge');
+
+        const modalConfirmNew = document.getElementById('modal-confirm-newgame');
+        const btnConfirmCancel = document.getElementById('btn-confirm-newgame-cancel');
+        const btnConfirmOk = document.getElementById('btn-confirm-newgame-ok');
+
+        const modalOptions = document.getElementById('modal-options');
+        const btnCloseOptions = document.getElementById('btn-close-options');
+        const btnOptAudio = document.getElementById('btn-opt-toggle-audio');
+        const btnOptFullscreen = document.getElementById('btn-opt-toggle-fullscreen');
+        const optAudioIcon = document.getElementById('opt-audio-icon');
+
+        // Aggiorna stato iniziale tasto Continua
+        this.refreshMenuContinueButton = () => {
+          const save = this.loadGameState();
+          if (save && save.lives > 0) {
+            btnContinue.disabled = false;
+            badgeContinue.textContent = `Liv. ${save.currentLevel}`;
+            badgeContinue.classList.remove('hidden');
+          } else {
+            btnContinue.disabled = true;
+            badgeContinue.classList.add('hidden');
+          }
+        };
+
+        this.showMainMenu = () => {
+          this.isGameActive = false;
+          this.isPausedInMenu = true;
+          this.saveGameState();
+          this.refreshMenuContinueButton();
+          menuOverlay.classList.remove('hidden');
+        };
+
+        this.hideMainMenu = () => {
+          menuOverlay.classList.add('hidden');
+          this.isPausedInMenu = false;
+        };
+
+        // Click CONTINUA
+        btnContinue.addEventListener('click', () => {
+          this.sound.init();
+          const save = this.loadGameState();
+          if (save) {
+            this.currentLevel = save.currentLevel || 1;
+            this.lives = save.lives !== undefined ? save.lives : this.maxLives;
+            this.totalSteps = save.totalSteps || 0;
+            this.totalSeconds = save.totalSeconds || 0;
+            this.hideMainMenu();
+            this.closeModals();
+            this.startLevel(this.currentLevel);
+          }
+        });
+
+        // Click NUOVA PARTITA
+        btnNewGame.addEventListener('click', () => {
+          this.sound.init();
+          if (this.hasActiveSavedGame()) {
+            modalConfirmNew.classList.remove('hidden');
+          } else {
+            this.startFreshGame();
+          }
+        });
+
+        btnConfirmCancel.addEventListener('click', () => {
+          modalConfirmNew.classList.add('hidden');
+        });
+
+        btnConfirmOk.addEventListener('click', () => {
+          modalConfirmNew.classList.add('hidden');
+          this.clearSavedState();
+          this.startFreshGame();
+        });
+
+        // OPZIONI
+        btnOptions.addEventListener('click', () => {
+          this.sound.init();
+          this.updateOptionsUI();
+          modalOptions.classList.remove('hidden');
+        });
+
+        btnCloseOptions.addEventListener('click', () => {
+          modalOptions.classList.add('hidden');
+        });
+
+        // Switch Audio nelle opzioni
+        btnOptAudio.addEventListener('click', () => {
+          this.sound.muted = !this.sound.muted;
+          this.updateOptionsUI();
+        });
+
+        // Switch Fullscreen nelle opzioni
+        btnOptFullscreen.addEventListener('click', () => {
+          this.toggleFullscreen();
+          setTimeout(() => this.updateOptionsUI(), 100);
+        });
+
+        this.updateOptionsUI = () => {
+          if (this.sound.muted) {
+            btnOptAudio.textContent = "DISATTIVO";
+            btnOptAudio.className = "px-3 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40";
+            optAudioIcon.textContent = "🔇";
+          } else {
+            btnOptAudio.textContent = "ATTIVO";
+            btnOptAudio.className = "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+            optAudioIcon.textContent = "🔊";
+          }
+
+          const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
+          if (isFull) {
+            btnOptFullscreen.textContent = "ATTIVO (ESCI)";
+            btnOptFullscreen.className = "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+          } else {
+            btnOptFullscreen.textContent = "ATTIVA";
+            btnOptFullscreen.className = "px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40";
+          }
+        };
+
+        this.refreshMenuContinueButton();
+      }
+
+      startFreshGame() {
+        this.clearSavedState();
+        this.currentLevel = 1;
+        this.lives = this.maxLives;
+        this.totalSteps = 0;
+        this.totalSeconds = 0;
+        this.hideMainMenu();
+        this.closeModals();
+        this.startLevel(1);
+      }
+
       initUI() {
         const bindButton = (id, action) => {
           const el = document.getElementById(id);
@@ -569,16 +927,13 @@
           });
         };
 
-        bindButton('btn-audio', () => {
-          this.sound.muted = !this.sound.muted;
-          document.getElementById('icon-sound-on').classList.toggle('hidden', this.sound.muted);
-          document.getElementById('icon-sound-off').classList.toggle('hidden', !this.sound.muted);
-        });
-
         bindButton('btn-fullscreen', () => this.toggleFullscreen());
         bindButton('btn-restart', () => this.restartLevel());
         bindButton('btn-next-level', () => this.advanceNextLevel());
-        bindButton('btn-new-game-win', () => this.startNewGame());
+        bindButton('btn-new-game-win', () => this.showMainMenu());
+        bindButton('btn-restart-gameover', () => this.showMainMenu());
+        bindButton('btn-to-menu', () => this.showMainMenu());
+
         bindButton('btn-map', () => {
           if (this.isMapVisible) this.hideMap(); else this.showMap();
         });
@@ -609,8 +964,119 @@
         } catch (err) {}
       }
 
+      initGamepad() {
+        window.addEventListener('gamepadconnected', (e) => {
+          this.gamepadConnected = true;
+          const badge = document.getElementById('gamepad-badge');
+          if (badge) {
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+          }
+          this.showToast(`Gamepad connesso: ${e.gamepad.id.slice(0, 20)}... 🎮`, '🎮');
+        });
+
+        window.addEventListener('gamepaddisconnected', () => {
+          this.gamepadConnected = false;
+          const badge = document.getElementById('gamepad-badge');
+          if (badge) {
+            badge.classList.add('hidden');
+            badge.classList.remove('flex');
+          }
+        });
+      }
+
+      pollGamepad(dt) {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        let gp = null;
+        for (let i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            gp = gamepads[i];
+            break;
+          }
+        }
+        if (!gp) return;
+
+        this.sound.init();
+
+        // Tasto START / OPTIONS (indice 9 standard) -> Pausa / Salva / Menu Principale
+        const startBtn = gp.buttons[9];
+        const isStartPressed = startBtn && startBtn.pressed;
+        if (isStartPressed && !this.gamepadPrevButtons[9]) {
+          if (!this.isPausedInMenu) {
+            this.showMainMenu();
+          }
+        }
+        this.gamepadPrevButtons[9] = isStartPressed;
+
+        if (this.isPausedInMenu) return;
+
+        // Tasto LT / L2 (indice 6 standard) -> Mappa
+        const ltBtn = gp.buttons[6];
+        const isLtPressed = ltBtn && (ltBtn.pressed || ltBtn.value > 0.4);
+        if (isLtPressed && !this.ltWasPressed) {
+          this.showMap();
+          this.ltWasPressed = true;
+        } else if (!isLtPressed && this.ltWasPressed) {
+          this.hideMap();
+          this.ltWasPressed = false;
+        }
+
+        // Tasto BACK / SHARE / Select (indice 8 standard) -> Ricrea labirinto
+        const backBtn = gp.buttons[8];
+        const isBackPressed = backBtn && backBtn.pressed;
+        if (isBackPressed && !this.gamepadPrevButtons[8]) {
+          this.restartLevel();
+        }
+        this.gamepadPrevButtons[8] = isBackPressed;
+
+        // Tasto A (Croce) o X (Quadrato)
+        const btnA = gp.buttons[0] && gp.buttons[0].pressed;
+        const btnX = gp.buttons[2] && gp.buttons[2].pressed;
+
+        const modalCleared = document.getElementById('modal-level-cleared');
+        const isModalVisible = modalCleared && !modalCleared.classList.contains('hidden');
+
+        if (isModalVisible) {
+          if ((btnA && !this.gamepadPrevButtons[0]) || (btnX && !this.gamepadPrevButtons[2])) {
+            this.advanceNextLevel();
+          }
+        } else {
+          if ((btnA && !this.gamepadPrevButtons[0]) || (btnX && !this.gamepadPrevButtons[2])) {
+            this.placeBomb();
+          }
+        }
+        this.gamepadPrevButtons[0] = btnA;
+        this.gamepadPrevButtons[2] = btnX;
+
+        // Stick Sinistro Diagonale
+        if (this.gamepadStickCooldown > 0) {
+          this.gamepadStickCooldown -= dt;
+        }
+
+        const stickX = gp.axes[0] || 0;
+        const stickY = gp.axes[1] || 0;
+        const mag = Math.hypot(stickX, stickY);
+
+        if (mag > 0.32 && !this.player.isMoving && this.gamepadStickCooldown <= 0) {
+          const angleDeg = Math.atan2(stickY, stickX) * (180 / Math.PI);
+
+          if (angleDeg >= -90 && angleDeg < 0) {
+            this.handleDirectionInput(0, -1);
+          } else if (angleDeg >= 0 && angleDeg < 90) {
+            this.handleDirectionInput(1, 0);
+          } else if (angleDeg >= 90 && angleDeg <= 180) {
+            this.handleDirectionInput(0, 1);
+          } else {
+            this.handleDirectionInput(-1, 0);
+          }
+
+          this.gamepadStickCooldown = 0.14;
+        }
+      }
+
       initControls() {
         const startHold = (dx, dy, btnEl) => {
+          if (this.isPausedInMenu) return;
           this.sound.init();
           this.heldDirection = { dx, dy };
           if (btnEl) btnEl.classList.add('active');
@@ -662,11 +1128,13 @@
         bindPad('pad-s', 0, 1);
         bindPad('pad-w', -1, 0);
 
+        // Swipe su Canvas
         let touchStartX = 0;
         let touchStartY = 0;
         let isSwiping = false;
 
         this.canvas.addEventListener('touchstart', (e) => {
+          if (this.isPausedInMenu) return;
           if (e.touches.length === 1) {
             this.sound.init();
             touchStartX = e.touches[0].clientX;
@@ -682,7 +1150,7 @@
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', (e) => {
-          if (!isSwiping || !this.isGameActive) return;
+          if (!isSwiping || !this.isGameActive || this.isPausedInMenu) return;
           isSwiping = false;
           const end = e.changedTouches[0];
           const dx = end.clientX - touchStartX;
@@ -703,8 +1171,17 @@
           }
         }, { passive: true });
 
+        // Tasto ESC per Menu Principale & comandi tastiera
         window.addEventListener('keydown', (e) => {
-          if (!this.isGameActive) return;
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            if (!this.isPausedInMenu) {
+              this.showMainMenu();
+            }
+            return;
+          }
+
+          if (!this.isGameActive || this.isPausedInMenu) return;
           const k = e.key.toLowerCase();
           if (k === 'w' || k === 'arrowup') this.handleDirectionInput(0, -1);
           else if (k === 'd' || k === 'arrowright') this.handleDirectionInput(1, 0);
@@ -728,7 +1205,7 @@
       }
 
       placeBomb() {
-        if (!this.isGameActive) return;
+        if (!this.isGameActive || this.isPausedInMenu) return;
         const targetX = this.player.gx;
         const targetY = this.player.gy;
 
@@ -750,7 +1227,7 @@
       }
 
       spawnRandomEnemy() {
-        if (!this.mazeData) return;
+        if (!this.mazeData || this.isPausedInMenu) return;
         const { gridW, gridH, grid } = this.mazeData;
         const candidates = [];
 
@@ -826,6 +1303,31 @@
         return prev;
       }
 
+      playerLoseLife(reason) {
+        this.lives--;
+        this.updateLivesUI();
+        this.sound.playPlayerHit();
+        this.particles.spawn(this.player.renderX, this.player.renderY, 0.5, '#ef4444', 35, 0.12);
+
+        if (this.lives <= 0) {
+          this.isGameActive = false;
+          this.clearSavedState();
+          this.sound.playGameOver();
+          setTimeout(() => this.showGameOverModal(), 350);
+          return;
+        }
+
+        this.saveGameState();
+        this.showToast(`${reason} Ti restano ${this.lives} vite!`, '💔', true);
+        this.player.gx = this.mazeData.start.x;
+        this.player.gy = this.mazeData.start.y;
+        this.player.targetGx = this.player.gx;
+        this.player.targetGy = this.player.gy;
+        this.player.renderX = this.player.gx;
+        this.player.renderY = this.player.gy;
+        this.player.isMoving = false;
+      }
+
       updateEnemies(dt) {
         for (let i = 0; i < this.enemies.length; i++) {
           const enemy = this.enemies[i];
@@ -863,17 +1365,10 @@
 
           const distToPlayer = Math.hypot(enemy.renderX - this.player.renderX, enemy.renderY - this.player.renderY);
           if (distToPlayer < 0.45) {
-            this.sound.playPlayerHit();
             this.camera.shake = 12;
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-            this.showToast('Il nemico ti ha catturato! Ritorno alla partenza!', '☠️', true);
-            this.player.gx = this.mazeData.start.x;
-            this.player.gy = this.mazeData.start.y;
-            this.player.targetGx = this.player.gx;
-            this.player.targetGy = this.player.gy;
-            this.player.renderX = this.player.gx;
-            this.player.renderY = this.player.gy;
-            this.player.isMoving = false;
+            this.playerLoseLife("Il nemico ti ha catturato! Ritorno alla partenza.");
+            break;
           }
         }
       }
@@ -897,22 +1392,11 @@
             this.particles.spawn(b.gx, b.gy, 0.2, '#fde047', 30, 0.09);
             this.particles.spawn(b.gx, b.gy, 0.6, '#334155', 25, 0.06);
 
-            // Morte del giocatore se rimane vicino alla bomba
             const distPlayer = Math.hypot(this.player.renderX - b.gx, this.player.renderY - b.gy);
             if (distPlayer <= 1.45) {
-              this.sound.playPlayerHit();
-              this.particles.spawn(this.player.renderX, this.player.renderY, 0.5, '#ef4444', 35, 0.12);
-              this.showToast('Sei rimasto coinvolto nell\'esplosione! 💥 Ritorno allo start!', '💥', true);
-              this.player.gx = this.mazeData.start.x;
-              this.player.gy = this.mazeData.start.y;
-              this.player.targetGx = this.player.gx;
-              this.player.targetGy = this.player.gy;
-              this.player.renderX = this.player.gx;
-              this.player.renderY = this.player.gy;
-              this.player.isMoving = false;
+              this.playerLoseLife("Coinvolto nell'esplosione!");
             }
 
-            // Eliminazione nemici coinvolti nello scoppio
             for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
               const enemy = this.enemies[eIdx];
               const distEnemy = Math.hypot(enemy.renderX - b.gx, enemy.renderY - b.gy);
@@ -927,14 +1411,6 @@
             this.bombs.splice(i, 1);
           }
         }
-      }
-
-      startNewGame() {
-        this.currentLevel = 1;
-        this.totalSteps = 0;
-        this.totalSeconds = 0;
-        this.closeModals();
-        this.startLevel(1);
       }
 
       startLevel(lvl) {
@@ -966,12 +1442,14 @@
         this.updateThemeUI();
         this.updateStatsUI();
         this.updateKeyUI();
+        this.updateLivesUI();
 
         this.adjustCameraForMaze();
+        this.saveGameState();
 
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => {
-          if (this.isGameActive) {
+          if (this.isGameActive && !this.isPausedInMenu) {
             this.levelSeconds++;
             this.totalSeconds++;
             this.updateStatsUI();
@@ -1012,7 +1490,7 @@
       }
 
       handleDirectionInput(dx, dy) {
-        if (!this.isGameActive || this.player.isMoving) return;
+        if (!this.isGameActive || this.player.isMoving || this.isPausedInMenu) return;
 
         const nextX = this.player.gx + dx;
         const nextY = this.player.gy + dy;
@@ -1022,14 +1500,6 @@
           nextY >= 0 && nextY < this.mazeData.gridH &&
           this.mazeData.grid[nextY][nextX] === 0
         ) {
-          if (!this.hasKey && nextX === this.mazeData.exit.x && nextY === this.mazeData.exit.y) {
-            this.sound.playLockedDoor();
-            this.camera.shake = 8;
-            if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
-            this.showToast('PORTALE BLOCCATO! Trova la chiave dorata 🗝️', '🔒', true);
-            return;
-          }
-
           this.player.targetGx = nextX;
           this.player.targetGy = nextY;
           this.player.isMoving = true;
@@ -1039,10 +1509,6 @@
           this.totalSteps++;
           this.updateStatsUI();
           this.sound.playStep();
-        } else {
-          this.sound.playBump();
-          this.camera.shake = 5;
-          if (navigator.vibrate) navigator.vibrate(15);
         }
       }
 
@@ -1057,10 +1523,14 @@
         }
 
         if (this.player.gx === this.mazeData.exit.x && this.player.gy === this.mazeData.exit.y) {
-          if (!this.hasKey) return;
+          if (!this.hasKey) {
+            this.showToast('Questo è il portale d\'uscita! Trova la chiave dorata 🗝️', '🔒');
+            return;
+          }
 
           this.isGameActive = false;
           if (this.currentLevel >= this.maxLevel) {
+            this.clearSavedState();
             setTimeout(() => this.showVictoryModal(), 300);
           } else {
             setTimeout(() => this.showLevelClearedModal(), 300);
@@ -1081,6 +1551,16 @@
           toast.classList.remove('opacity-100', 'translate-y-0');
           toast.classList.add('opacity-0', '-translate-y-2');
         }, 2200);
+      }
+
+      updateLivesUI() {
+        for (let i = 1; i <= this.maxLives; i++) {
+          const heartEl = document.getElementById(`life-${i}`);
+          if (heartEl) {
+            heartEl.textContent = i <= this.lives ? '❤️' : '🖤';
+            heartEl.style.opacity = i <= this.lives ? '1' : '0.4';
+          }
+        }
       }
 
       updateThemeUI() {
@@ -1225,6 +1705,12 @@
         document.getElementById('modal-level-cleared').classList.remove('hidden');
       }
 
+      showGameOverModal() {
+        document.getElementById('gameover-level').textContent = `${this.currentLevel} / ${this.maxLevel}`;
+        document.getElementById('gameover-steps').textContent = this.totalSteps;
+        document.getElementById('modal-gameover').classList.remove('hidden');
+      }
+
       advanceNextLevel() {
         this.closeModals();
         this.startLevel(this.currentLevel + 1);
@@ -1250,6 +1736,9 @@
       closeModals() {
         document.getElementById('modal-level-cleared').classList.add('hidden');
         document.getElementById('modal-victory').classList.add('hidden');
+        document.getElementById('modal-gameover').classList.add('hidden');
+        document.getElementById('modal-confirm-newgame').classList.add('hidden');
+        document.getElementById('modal-options').classList.add('hidden');
       }
 
       resize() {
@@ -1264,6 +1753,10 @@
       }
 
       update(deltaTime) {
+        this.pollGamepad(deltaTime);
+
+        if (this.isPausedInMenu) return;
+
         if (this.camera.shake > 0) {
           this.camera.shake = Math.max(0, this.camera.shake - deltaTime * 30);
         }
@@ -1658,7 +2151,12 @@
 
       start() {
         this.resize();
-        this.startNewGame();
+        // Inizializza il generatore sul livello di salvataggio o default
+        const save = this.loadGameState();
+        const startLvl = save ? save.currentLevel : 1;
+        this.mazeData = MazeGenerator.generate(8 + (startLvl * 2));
+        this.updateThemeUI();
+        this.showMainMenu();
         requestAnimationFrame(this.gameLoop);
       }
     }
