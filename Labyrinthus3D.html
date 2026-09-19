@@ -1,0 +1,2690 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Labyrinthus 3D - Key Drop Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #04080e;
+      font-family: system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .glass-panel {
+      background: rgba(13, 20, 36, 0.90);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .glass-btn {
+      background: rgba(26, 36, 56, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      cursor: pointer;
+    }
+    .glass-btn:active {
+      background: rgba(99, 102, 241, 0.9);
+      transform: scale(0.94);
+    }
+    .gp-focused {
+      outline: 2.5px solid #fbbf24 !important;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.7) !important;
+      transform: scale(1.03) !important;
+    }
+    .iso-dpad-btn {
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(22, 32, 50, 0.94);
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      border-radius: 18px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+      touch-action: none;
+      cursor: pointer;
+    }
+    .iso-dpad-btn:active, .iso-dpad-btn.active {
+      transform: scale(0.90);
+      background: rgba(79, 70, 229, 0.95);
+      border-color: rgba(251, 191, 36, 0.8);
+    }
+    .action-bomb-btn {
+      position: absolute;
+      left: 18px;
+      bottom: 22px;
+      width: 62px;
+      height: 62px;
+      border-radius: 20px;
+      background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4), inset 0 2px 4px rgba(255,255,255,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      cursor: pointer;
+    }
+    .action-bomb-btn:active {
+      transform: scale(0.88);
+      filter: brightness(1.2);
+    }
+  </style>
+</head>
+<body class="relative w-full h-full flex flex-col justify-between text-white">
+
+  <!-- Header Gioco -->
+  <header id="game-header" class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex items-center justify-between gap-1">
+    <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[125px]">
+      <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
+      <div class="flex flex-col min-w-0">
+        <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta</div>
+        <div class="text-[11px] font-black text-slate-100 flex items-center gap-1 leading-none">
+          <span id="level-text">L.1/50</span>
+          <span class="text-[9px] text-slate-400" id="grid-size">(10x10)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUD Centrale -->
+    <div class="glass-panel px-2 py-1 rounded-xl flex items-center gap-1.5 shrink-0">
+      <div class="flex items-center gap-0.5" id="lives-container" title="Vite rimanenti">
+        <span class="text-xs" id="life-1">❤️</span>
+        <span class="text-xs" id="life-2">❤️</span>
+        <span class="text-xs" id="life-3">❤️</span>
+      </div>
+      <div class="h-3.5 w-[1px] bg-slate-700"></div>
+      <div class="flex flex-col items-center">
+        <span class="text-[7px] uppercase tracking-wider text-slate-400">Passi</span>
+        <span id="stat-steps" class="font-bold text-amber-400 text-[11px] leading-none">0</span>
+      </div>
+      <div class="h-3.5 w-[1px] bg-slate-700"></div>
+      <div class="flex flex-col items-center min-w-[28px]">
+        <span class="text-[7px] uppercase tracking-wider text-slate-400">Tempo</span>
+        <span id="stat-time" class="font-bold text-cyan-400 text-[11px] leading-none">00:00</span>
+      </div>
+      <div class="h-3.5 w-[1px] bg-slate-700"></div>
+      <div id="key-badge" class="flex items-center gap-0.5 px-1 py-0.5 rounded bg-slate-800 border border-slate-700">
+        <span id="key-badge-icon" class="text-[10px] grayscale opacity-40">🗝️</span>
+        <span id="key-badge-text" class="text-[9px] font-black text-slate-400 leading-none">0/1</span>
+      </div>
+    </div>
+
+    <!-- Pulsanti Header -->
+    <div class="flex items-center gap-1 shrink-0">
+      <div id="gamepad-badge" class="hidden glass-panel px-1.5 py-1 rounded-xl text-[10px] text-emerald-400 items-center gap-1 border-emerald-500/40" title="Gamepad Connesso">
+        <span>🎮</span>
+      </div>
+      <button id="btn-map" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center text-xs" aria-label="Mappa">🗺️</button>
+      <button id="btn-restart" class="glass-btn w-8 h-8 rounded-xl text-slate-300 flex items-center justify-center" aria-label="Rifai Labirinto">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+      <button id="btn-fullscreen" class="glass-btn w-8 h-8 rounded-xl text-amber-300 flex items-center justify-center" aria-label="Schermo Intero">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+      </button>
+      <button id="btn-to-menu" class="glass-btn w-8 h-8 rounded-xl text-cyan-300 flex items-center justify-center text-xs font-bold" aria-label="Menu Principale">☰</button>
+    </div>
+  </header>
+
+  <!-- Canvas di Gioco -->
+  <main class="absolute inset-0 w-full h-full">
+    <canvas id="gameCanvas" class="block w-full h-full" style="touch-action: none;"></canvas>
+
+    <div id="game-toast" class="absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/40 opacity-0 pointer-events-none transition-all duration-300 -translate-y-2 flex items-center gap-2 max-w-[90vw]">
+      <span id="toast-icon">🗝️</span>
+      <span id="toast-msg">Trova prima la chiave dorata!</span>
+    </div>
+
+    <!-- Mappa Overlay Radar -->
+    <div id="map-overlay" class="absolute inset-0 z-40 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+      <div class="relative bg-slate-900 rounded-3xl p-4 flex flex-col items-center justify-between border border-amber-400/30 w-full max-w-[420px] h-[65vh] max-h-[480px]">
+        <div class="w-full flex items-center justify-between pb-2 border-b border-slate-700">
+          <div class="flex items-center gap-2">
+            <span class="text-amber-400 font-bold text-xs">🗺️ MAPPA ESPLORATA</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono" id="map-explored-pct">0%</span>
+          </div>
+          <button id="btn-close-map" class="glass-btn px-2.5 py-1 rounded-lg text-slate-300 text-xs font-bold">Chiudi ✕</button>
+        </div>
+        <div class="relative w-full flex-1 overflow-hidden my-2">
+          <canvas id="mapCanvas" class="block w-full h-full"></canvas>
+        </div>
+        <div class="w-full flex items-center justify-around text-[9px] text-slate-300 pt-2 border-t border-slate-800">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Tu</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Inizio</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> Uscita</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Nemico</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Cuore</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Suggerimenti Desktop & Gamepad -->
+  <div id="desktop-hint" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-full glass-panel text-[11px] text-slate-300 border border-slate-700 pointer-events-none items-center gap-2">
+    <span>Tastiera: <b class="text-amber-400">WASD</b> | Bomba: <b class="text-rose-400">SPAZIO</b> | Mappa: <b class="text-cyan-400">TAB</b> | Menu: <b class="text-cyan-300">ESC</b></span>
+    <span class="text-slate-500">•</span>
+    <span>Gamepad: <b class="text-emerald-400">Stick L / D-Pad</b> | Bomba/OK: <b class="text-rose-400">A (✕)</b> | Annulla: <b class="text-amber-300">B (○)</b></span>
+  </div>
+
+  <!-- Controlli Touch Mobile -->
+  <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
+    <button id="btn-touch-bomb" class="action-bomb-btn pointer-events-auto" aria-label="Piazza Bomba">
+      <span class="text-2xl leading-none">💣</span>
+      <span class="text-[8px] font-black uppercase text-white tracking-tight mt-0.5">Bomba</span>
+    </button>
+
+    <div class="relative w-[190px] h-[190px] ml-auto pointer-events-auto">
+      <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
+        <span class="text-amber-300 text-lg font-black leading-none">↗</span>
+        <span class="text-[8px] text-slate-200 font-bold">NORD</span>
+      </button>
+
+      <button id="pad-w" class="iso-dpad-btn top-1 left-2" aria-label="Ovest">
+        <span class="text-amber-300 text-lg font-black leading-none">↖</span>
+        <span class="text-[8px] text-slate-200 font-bold">OVEST</span>
+      </button>
+
+      <button id="pad-s" class="iso-dpad-btn bottom-1 left-2" aria-label="Sud">
+        <span class="text-[8px] text-slate-200 font-bold">SUD</span>
+        <span class="text-amber-300 text-lg font-black leading-none">↙</span>
+      </button>
+
+      <button id="pad-e" class="iso-dpad-btn bottom-1 right-2" aria-label="Est">
+        <span class="text-[8px] text-slate-200 font-bold">EST</span>
+        <span class="text-amber-300 text-lg font-black leading-none">↘</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- ==================== MENU PRINCIPALE OVERLAY ==================== -->
+  <div id="main-menu-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+    <div class="glass-panel w-full max-w-sm p-6 rounded-3xl border-amber-400/40 shadow-2xl flex flex-col items-center text-center">
+      <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-4xl mb-3 shadow-[0_0_24px_rgba(251,191,36,0.3)]">
+        🏛️
+      </div>
+      <h1 class="text-2xl font-black tracking-wider text-amber-300 uppercase">Labyrinthus 3D</h1>
+      <p class="text-xs text-slate-400 mt-0.5 mb-5">50 Livelli • Bombe • Caccia al Cuore</p>
+
+      <div class="w-full flex flex-col gap-2.5" id="menu-main-buttons">
+        <button id="btn-menu-continue" class="menu-nav-btn w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
+          <span>▶ Continua Partita</span>
+          <span id="menu-continue-badge" class="text-[10px] px-2 py-0.5 bg-black/40 rounded-full font-mono text-emerald-200 hidden">L.1</span>
+        </button>
+
+        <button id="btn-menu-newgame" class="menu-nav-btn w-full h-11 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
+          <span>⚔️ Nuova Partita</span>
+        </button>
+
+        <button id="btn-menu-leaderboard" class="menu-nav-btn w-full h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold rounded-xl text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
+          <span>🏆 Classifica Top 5</span>
+        </button>
+
+        <button id="btn-menu-options" class="menu-nav-btn w-full h-10 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
+          <span>⚙️ Opzioni</span>
+        </button>
+      </div>
+
+      <div class="mt-5 text-[10px] text-slate-400 flex items-center gap-2">
+        <span>Gamepad: <b class="text-amber-400">Stick L / D-Pad</b></span>
+        <span>•</span>
+        <span><b class="text-emerald-400">A (✕)</b> OK</span>
+        <span>•</span>
+        <span><b class="text-rose-400">B (○)</b> Indietro</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALE CLASSIFICA (TOP 5) ==================== -->
+  <div id="modal-leaderboard" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-md p-5 rounded-3xl border-amber-400/40 shadow-2xl flex flex-col items-center">
+      <div class="flex items-center justify-between w-full pb-3 border-b border-slate-800 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🏆</span>
+          <div class="text-left">
+            <h3 class="text-sm font-black text-amber-300 uppercase tracking-wide">Migliori 5 di Tutti i Tempi</h3>
+            <p class="text-[10px] text-slate-400">Classifica record fino al Game Over</p>
+          </div>
+        </div>
+        <button id="btn-close-leaderboard" class="sub-nav-btn glass-btn px-2.5 py-1 rounded-lg text-slate-300 text-xs font-bold transition-all duration-150">Chiudi ✕ (B/○)</button>
+      </div>
+
+      <div class="w-full overflow-x-auto my-1">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="text-[9px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+              <th class="py-1.5 px-2">#</th>
+              <th class="py-1.5 px-2">Livello</th>
+              <th class="py-1.5 px-2">Passi</th>
+              <th class="py-1.5 px-2">Tempo</th>
+              <th class="py-1.5 px-2 text-right">Data</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
+        </table>
+      </div>
+
+      <p class="text-[9px] text-slate-500 mt-3 italic text-center">Premi <b class="text-slate-300">B (o Cerchio)</b> per tornare al Menu Principale.</p>
+    </div>
+  </div>
+
+  <!-- ==================== MODALE CONFERMA NUOVA PARTITA ==================== -->
+  <div id="modal-confirm-newgame" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/50 shadow-2xl flex flex-col items-center">
+      <div class="text-3xl mb-2">⚠️</div>
+      <h3 class="text-base font-black text-white">Iniziare nuova partita?</h3>
+      <p class="text-xs text-slate-300 mt-1 mb-4">C'è già una partita in corso. Se prosegui, i progressi attuali verranno persi e ripartirai dal <b class="text-amber-400">Livello 1</b>.</p>
+
+      <div class="w-full flex gap-2" id="modal-confirm-buttons">
+        <button id="btn-confirm-newgame-cancel" class="confirm-nav-btn flex-1 h-10 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all duration-150">
+          Annulla (B/○)
+        </button>
+        <button id="btn-confirm-newgame-ok" class="confirm-nav-btn flex-1 h-10 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black rounded-xl text-xs transition-all duration-150">
+          Sì, Ricomincia (A/✕)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALE OPZIONI ==================== -->
+  <div id="modal-options" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl border-slate-700 shadow-2xl flex flex-col items-center">
+      <h3 class="text-lg font-black text-amber-400 mb-4 flex items-center gap-2">
+        <span>⚙️</span> OPZIONI
+      </h3>
+
+      <div class="w-full flex flex-col gap-3.5 mb-5" id="options-items">
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span id="opt-audio-icon">🔊</span>
+            <span>Effetti Audio</span>
+          </div>
+          <button id="btn-opt-toggle-audio" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150">
+            ATTIVO
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>⛶</span>
+            <span>Schermo Intero</span>
+          </div>
+          <button id="btn-opt-toggle-fullscreen" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150">
+            ATTIVA
+          </button>
+        </div>
+      </div>
+
+      <button id="btn-close-options" class="opt-nav-btn w-full h-10 bg-slate-800 text-slate-200 hover:bg-slate-700 font-bold rounded-xl text-xs transition-all duration-150">
+        Chiudi (B/○)
+      </button>
+    </div>
+  </div>
+
+  <!-- Modale Fine Livello -->
+  <div id="modal-level-cleared" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl text-center border-amber-400/40 shadow-2xl flex flex-col items-center">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-3xl mb-2.5">✨</div>
+      <h3 class="text-lg font-black text-white">Livello Completato!</h3>
+      <p class="text-xs text-slate-300 mt-0.5 mb-3">Chiave raccolta e portale attraversato.</p>
+      
+      <div class="w-full bg-slate-900 rounded-2xl p-2.5 mb-4 text-xs text-slate-300 flex justify-around border border-slate-700">
+        <div>
+          <div class="text-[9px] text-slate-400 uppercase">Passi</div>
+          <div class="text-sm font-bold text-amber-400" id="modal-step-count">0</div>
+        </div>
+        <div class="w-[1px] bg-slate-700"></div>
+        <div>
+          <div class="text-[9px] text-slate-400 uppercase">Tempo</div>
+          <div class="text-sm font-bold text-cyan-400" id="modal-time-count">00:00</div>
+        </div>
+      </div>
+
+      <button id="btn-next-level" class="endlevel-nav-btn w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
+        <span>Prossimo Livello (A/✕)</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modale Game Over -->
+  <div id="modal-gameover" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-6 rounded-3xl text-center border-rose-500/50 shadow-2xl flex flex-col items-center">
+      <div class="text-4xl mb-2">☠️</div>
+      <h2 class="text-xl font-black text-rose-400">GAME OVER</h2>
+      <p class="text-xs text-slate-300 mt-1 mb-3">Hai esaurito tutte e 3 le vite disponibili!</p>
+
+      <div class="w-full bg-slate-900 rounded-2xl p-3 mb-4 border border-slate-700 flex flex-col gap-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Livello raggiunto:</span>
+          <span id="gameover-level" class="font-bold text-amber-400">1</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Passi totali:</span>
+          <span id="gameover-steps" class="font-bold text-amber-400">0</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Tempo totale:</span>
+          <span id="gameover-time" class="font-bold text-cyan-400">00:00:00</span>
+        </div>
+      </div>
+
+      <button id="btn-restart-gameover" class="gameover-nav-btn w-full h-11 bg-gradient-to-r from-rose-600 to-red-500 text-white font-black rounded-xl text-xs flex items-center justify-center cursor-pointer transition-all duration-150">
+        Menu Principale (A/✕ o B/○)
+      </button>
+    </div>
+  </div>
+
+  <!-- Modale Vittoria Totale -->
+  <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-sm p-6 rounded-3xl text-center border-amber-300/40 shadow-2xl flex flex-col items-center">
+      <div class="text-4xl mb-2 animate-bounce">🏆</div>
+      <h2 class="text-xl font-black text-amber-300">VITTORIA TOTALE!</h2>
+      <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 50 labirinti!</p>
+
+      <div class="w-full bg-slate-900 rounded-2xl p-3 mb-5 border border-slate-700 flex flex-col gap-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Passi totali:</span>
+          <span id="victory-total-steps" class="font-bold text-amber-400">0</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Tempo totale:</span>
+          <span id="victory-total-time" class="font-bold text-cyan-400">00:00:00</span>
+        </div>
+      </div>
+
+      <button id="btn-new-game-win" class="victory-nav-btn w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center cursor-pointer transition-all duration-150">
+        Menu Principale (A/✕ o B/○)
+      </button>
+    </div>
+  </div>
+
+  <script>
+    class SoundEngine {
+      constructor() { this.ctx = null; this.muted = false; }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      }
+      playTone(freq, type, duration, vol = 0.08) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      playStep() { this.playTone(180 + Math.random() * 40, 'triangle', 0.05, 0.05); }
+      playMenuNav() { this.playTone(420, 'sine', 0.04, 0.06); }
+      playMenuSelect() { this.playTone(650, 'sine', 0.08, 0.09); }
+      playMenuCancel() { this.playTone(240, 'triangle', 0.08, 0.08); }
+      playBombPlant() {
+        this.playTone(320, 'sine', 0.1, 0.12);
+        setTimeout(() => this.playTone(480, 'sine', 0.12, 0.14), 70);
+      }
+      playTick() { this.playTone(850, 'square', 0.025, 0.04); }
+      playExplosion() {
+        this.playTone(85, 'sawtooth', 0.45, 0.28);
+        setTimeout(() => this.playTone(45, 'triangle', 0.6, 0.35), 40);
+      }
+      playPlayerHit() {
+        this.playTone(120, 'sawtooth', 0.2, 0.25);
+        setTimeout(() => this.playTone(70, 'sawtooth', 0.35, 0.3), 80);
+      }
+      playGameOver() {
+        [150, 120, 90, 60].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.35, 0.2), i * 120);
+        });
+      }
+      playEnemySpawn() {
+        [220, 180, 140].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.25, 0.15), i * 110);
+        });
+      }
+      playEnemyDefeated() {
+        [300, 450, 600].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.2, 0.16), i * 60);
+        });
+      }
+      playHeartSpawn() {
+        [440, 554, 659, 880].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.2, 0.12), i * 70);
+        });
+      }
+      playHeartCollect() {
+        [523, 659, 784, 1046, 1318].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.16), i * 60);
+        });
+      }
+      playHeartEaten() {
+        [280, 210, 140].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sawtooth', 0.22, 0.14), i * 80);
+        });
+      }
+      playKeyPickup() {
+        [587, 740, 880, 1174].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.22, 0.14), i * 60);
+        });
+      }
+      playLevelWin() {
+        [392, 523, 659, 784].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.25, 0.15), i * 80);
+        });
+      }
+      playGameWin() {
+        [440, 554, 659, 880, 1108].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.18), i * 100);
+        });
+      }
+    }
+
+    const LEVEL_THEMES = [
+      { name: "Foresta Antica", accent: "#34d399", bgTop: "#051610", bgBottom: "#0b2b20", floorTop: "#2d6a4f", floorEdge: "#1b4332", wallTop: "#74c69d", wallLeft: "#40916c", wallRight: "#2d6a4f", portal: "#5eead4", playerBody: "#fbbf24", playerHat: "#f97316" },
+      { name: "Cripta al Neon", accent: "#06b6d4", bgTop: "#071724", bgBottom: "#0e2e47", floorTop: "#155e75", floorEdge: "#0e4454", wallTop: "#38bdf8", wallLeft: "#0284c7", wallRight: "#0369a1", portal: "#a855f7", playerBody: "#ec4899", playerHat: "#f43f5e" },
+      { name: "Tempio Dorato", accent: "#fbbf24", bgTop: "#1e1605", bgBottom: "#38290c", floorTop: "#b45309", floorEdge: "#78350f", wallTop: "#fcd34d", wallLeft: "#d97706", wallRight: "#b45309", portal: "#38bdf8", playerBody: "#38bdf8", playerHat: "#6366f1" },
+      { name: "Grotte Cristallo", accent: "#c084fc", bgTop: "#1a0b26", bgBottom: "#2c0e42", floorTop: "#6b21a8", floorEdge: "#4a1473", wallTop: "#e879f9", wallLeft: "#a855f7", wallRight: "#7e22ce", portal: "#4ade80", playerBody: "#facc15", playerHat: "#fb923c" },
+      { name: "Nucleo Lava", accent: "#f87171", bgTop: "#210909", bgBottom: "#3d0e0e", floorTop: "#991b1b", floorEdge: "#701313", wallTop: "#fb7185", wallLeft: "#e11d48", wallRight: "#be123c", portal: "#38bdf8", playerBody: "#34d399", playerHat: "#10b981" },
+      { name: "Tundra Glaciale", accent: "#38bdf8", bgTop: "#061b29", bgBottom: "#0d314a", floorTop: "#0284c7", floorEdge: "#0369a1", wallTop: "#bae6fd", wallLeft: "#7dd3fc", wallRight: "#38bdf8", portal: "#f472b6", playerBody: "#f59e0b", playerHat: "#ef4444" },
+      { name: "Dune del Sole", accent: "#f59e0b", bgTop: "#261603", bgBottom: "#422405", floorTop: "#d97706", floorEdge: "#92400e", wallTop: "#fde68a", wallLeft: "#f59e0b", wallRight: "#b45309", portal: "#06b6d4", playerBody: "#ec4899", playerHat: "#8b5cf6" },
+      { name: "Ossidiana", accent: "#a78bfa", bgTop: "#0f0e16", bgBottom: "#1d1a2d", floorTop: "#312e81", floorEdge: "#1e1b4b", wallTop: "#c4b5fd", wallLeft: "#6366f1", wallRight: "#4338ca", portal: "#2dd4bf", playerBody: "#34d399", playerHat: "#fbbf24" },
+      { name: "Corallo Abisso", accent: "#fb7185", bgTop: "#1c0a15", bgBottom: "#350f26", floorTop: "#be185d", floorEdge: "#831843", wallTop: "#fda4af", wallLeft: "#f43f5e", wallRight: "#be123c", portal: "#a3e635", playerBody: "#38bdf8", playerHat: "#a855f7" },
+      { name: "Vuoto Astrale", accent: "#e879f9", bgTop: "#0b0314", bgBottom: "#18072b", floorTop: "#581c87", floorEdge: "#3b0764", wallTop: "#f0abfc", wallLeft: "#c026d3", wallRight: "#86198f", portal: "#fde047", playerBody: "#4ade80", playerHat: "#38bdf8" },
+      { name: "Miniera di Smeraldo", accent: "#10b981", bgTop: "#04150d", bgBottom: "#0a2618", floorTop: "#047857", floorEdge: "#064e3b", wallTop: "#6ee7b7", wallLeft: "#059669", wallRight: "#047857", portal: "#f59e0b", playerBody: "#f43f5e", playerHat: "#fbbf24" },
+      { name: "Fortezza di Rame", accent: "#ea580c", bgTop: "#1c0d06", bgBottom: "#33180c", floorTop: "#c2410c", floorEdge: "#7c2d12", wallTop: "#fdba74", wallLeft: "#ea580c", wallRight: "#9a3412", portal: "#06b6d4", playerBody: "#38bdf8", playerHat: "#facc15" },
+      { name: "Fondo Marino", accent: "#0284c7", bgTop: "#02121d", bgBottom: "#04253a", floorTop: "#0369a1", floorEdge: "#075985", wallTop: "#7dd3fc", wallLeft: "#0284c7", wallRight: "#0c4a6e", portal: "#ec4899", playerBody: "#facc15", playerHat: "#10b981" },
+      { name: "Cripta Spettrale", accent: "#84cc16", bgTop: "#111a08", bgBottom: "#1e2e0e", floorTop: "#4d7c0f", floorEdge: "#365314", wallTop: "#bef264", wallLeft: "#65a30d", wallRight: "#3f6212", portal: "#c084fc", playerBody: "#e879f9", playerHat: "#3b82f6" },
+      { name: "Labirinto Amatista", accent: "#9333ea", bgTop: "#160724", bgBottom: "#280f40", floorTop: "#7e22ce", floorEdge: "#581c87", wallTop: "#d8b4fe", wallLeft: "#9333ea", wallRight: "#6b21a8", portal: "#34d399", playerBody: "#fbbf24", playerHat: "#ef4444" },
+      { name: "Valle d'Autunno", accent: "#d97706", bgTop: "#1a1005", bgBottom: "#301d0a", floorTop: "#b45309", floorEdge: "#78350f", wallTop: "#fcd34d", wallLeft: "#d97706", wallRight: "#92400e", portal: "#38bdf8", playerBody: "#10b981", playerHat: "#f97316" },
+      { name: "Fucina Ardente", accent: "#e11d48", bgTop: "#1a060a", bgBottom: "#330d15", floorTop: "#be123c", floorEdge: "#881337", wallTop: "#fda4af", wallLeft: "#e11d48", wallRight: "#9f1239", portal: "#fbbf24", playerBody: "#38bdf8", playerHat: "#4ade80" },
+      { name: "Ghiaccio Nero", accent: "#38bdf8", bgTop: "#050d14", bgBottom: "#0b1a26", floorTop: "#0f172a", floorEdge: "#020617", wallTop: "#94a3b8", wallLeft: "#334155", wallRight: "#1e293b", portal: "#38bdf8", playerBody: "#f43f5e", playerHat: "#facc15" },
+      { name: "Nebulosa Rosa", accent: "#ec4899", bgTop: "#1c0713", bgBottom: "#330d22", floorTop: "#be185d", floorEdge: "#831843", wallTop: "#fbcfe8", wallLeft: "#db2777", wallRight: "#9d174d", portal: "#10b981", playerBody: "#fde047", playerHat: "#6366f1" },
+      { name: "Labirinto di Giada", accent: "#059669", bgTop: "#04140e", bgBottom: "#092419", floorTop: "#047857", floorEdge: "#064e3b", wallTop: "#a7f3d0", wallLeft: "#10b981", wallRight: "#065f46", portal: "#f43f5e", playerBody: "#f97316", playerHat: "#e11d48" },
+      { name: "Canyon Rosso", accent: "#dc2626", bgTop: "#1b0606", bgBottom: "#310c0c", floorTop: "#b91c1c", floorEdge: "#7f1d1d", wallTop: "#fca5a5", wallLeft: "#dc2626", wallRight: "#991b1b", portal: "#38bdf8", playerBody: "#fde047", playerHat: "#10b981" },
+      { name: "Rovine di Quarzo", accent: "#f472b6", bgTop: "#190a12", bgBottom: "#2f1422", floorTop: "#db2777", floorEdge: "#9d174d", wallTop: "#fce7f3", wallLeft: "#f472b6", wallRight: "#be185d", portal: "#facc15", playerBody: "#2dd4bf", playerHat: "#f97316" },
+      { name: "Palude Tossica", accent: "#a3e635", bgTop: "#131a06", bgBottom: "#232e0c", floorTop: "#65a30d", floorEdge: "#3f6212", wallTop: "#d9f99d", wallLeft: "#84cc16", wallRight: "#4d7c0f", portal: "#c084fc", playerBody: "#ec4899", playerHat: "#38bdf8" },
+      { name: "Bastione Celeste", accent: "#60a5fa", bgTop: "#061326", bgBottom: "#0c2345", floorTop: "#2563eb", floorEdge: "#1d4ed8", wallTop: "#bfdbfe", wallLeft: "#3b82f6", wallRight: "#1e40af", portal: "#fbbf24", playerBody: "#f43f5e", playerHat: "#10b981" },
+      { name: "Abisso Dorato", accent: "#f59e0b", bgTop: "#1e1303", bgBottom: "#362207", floorTop: "#d97706", floorEdge: "#92400e", wallTop: "#fef08a", wallLeft: "#f59e0b", wallRight: "#b45309", portal: "#a855f7", playerBody: "#38bdf8", playerHat: "#ec4899" },
+      { name: "Torre di Notte", accent: "#818cf8", bgTop: "#0c0e21", bgBottom: "#161a3b", floorTop: "#4338ca", floorEdge: "#312e81", wallTop: "#c7d2fe", wallLeft: "#6366f1", wallRight: "#3730a3", portal: "#34d399", playerBody: "#fbbf24", playerHat: "#ef4444" },
+      { name: "Giardino Zen", accent: "#4ade80", bgTop: "#07170c", bgBottom: "#0e2916", floorTop: "#16a34a", floorEdge: "#15803d", wallTop: "#bbf7d0", wallLeft: "#22c55e", wallRight: "#166534", portal: "#f472b6", playerBody: "#facc15", playerHat: "#6366f1" },
+      { name: "Camera di Magma", accent: "#ff6b6b", bgTop: "#260606", bgBottom: "#450c0c", floorTop: "#c92a2a", floorEdge: "#a51d24", wallTop: "#ffc9c9", wallLeft: "#f03e3e", wallRight: "#c92a2a", portal: "#4dabf7", playerBody: "#51cf66", playerHat: "#fcc419" },
+      { name: "Fantasmi del Mare", accent: "#20c997", bgTop: "#031411", bgBottom: "#082922", floorTop: "#0ca678", floorEdge: "#099268", wallTop: "#96f2d7", wallLeft: "#12b886", wallRight: "#087f5b", portal: "#e599f7", playerBody: "#ffd43b", playerHat: "#ff6b6b" },
+      { name: "Tempesta Elettrica", accent: "#ffe066", bgTop: "#1f1c04", bgBottom: "#383308", floorTop: "#f59f00", floorEdge: "#d9480f", wallTop: "#fff3bf", wallLeft: "#fab005", wallRight: "#e67700", portal: "#339af0", playerBody: "#20c997", playerHat: "#f06595" },
+      { name: "Orizzonte Viola", accent: "#da77f2", bgTop: "#1a0624", bgBottom: "#310c42", floorTop: "#ae3ec9", floorEdge: "#862e9c", wallTop: "#eebefa", wallLeft: "#cc5de8", wallRight: "#9c36b5", portal: "#51cf66", playerBody: "#fcc419", playerHat: "#339af0" },
+      { name: "Terre Selvagge", accent: "#94d82d", bgTop: "#111a05", bgBottom: "#20300a", floorTop: "#74b816", floorEdge: "#5c940d", wallTop: "#d8f5a2", wallLeft: "#82c91e", wallRight: "#66a80f", portal: "#ff922b", playerBody: "#ff6b6b", playerHat: "#cc5de8" },
+      { name: "Deserto di Rubino", accent: "#f03e3e", bgTop: "#21060b", bgBottom: "#3d0c15", floorTop: "#d6336c", floorEdge: "#a61e4d", wallTop: "#fcc2d7", wallLeft: "#e64980", wallRight: "#c2255c", portal: "#20c997", playerBody: "#ffe066", playerHat: "#228be6" },
+      { name: "Grotte di Cobalto", accent: "#339af0", bgTop: "#051121", bgBottom: "#0a203d", floorTop: "#1c7ed6", floorEdge: "#1971c2", wallTop: "#a5d8ff", wallLeft: "#228be6", wallRight: "#1864ab", portal: "#ff6b6b", playerBody: "#ffd43b", playerHat: "#51cf66" },
+      { name: "Roccia Solare", accent: "#ff922b", bgTop: "#211104", bgBottom: "#3d1f08", floorTop: "#f76707", floorEdge: "#d9480f", wallTop: "#ffd8a8", wallLeft: "#fd7e14", wallRight: "#e8590c", portal: "#845ef7", playerBody: "#20c997", playerHat: "#339af0" },
+      { name: "Giungla Nera", accent: "#51cf66", bgTop: "#08170c", bgBottom: "#0f2b16", floorTop: "#2f9e44", floorEdge: "#2b8a3e", wallTop: "#b2f2bb", wallLeft: "#37b24d", wallRight: "#237032", portal: "#f783ac", playerBody: "#ffd43b", playerHat: "#ff6b6b" },
+      { name: "Banchisa Polare", accent: "#4dabf7", bgTop: "#061324", bgBottom: "#0c2442", floorTop: "#1971c2", floorEdge: "#1864ab", wallTop: "#d0ebff", wallLeft: "#339af0", wallRight: "#1c7ed6", portal: "#fcc419", playerBody: "#f06595", playerHat: "#20c997" },
+      { name: "Castello di Rame", accent: "#f76707", bgTop: "#1a0c04", bgBottom: "#331709", floorTop: "#d9480f", floorEdge: "#c92a2a", wallTop: "#ffe8cc", wallLeft: "#f76707", wallRight: "#d9480f", portal: "#22b8cf", playerBody: "#51cf66", playerHat: "#845ef7" },
+      { name: "Isola Fantasma", accent: "#845ef7", bgTop: "#110a24", bgBottom: "#201342", floorTop: "#7048e8", floorEdge: "#5f3dc4", wallTop: "#d0bfff", wallLeft: "#7950f2", wallRight: "#6741d9", portal: "#94d82d", playerBody: "#ffd43b", playerHat: "#ff6b6b" },
+      { name: "Radice Antica", accent: "#82c91e", bgTop: "#0e1704", bgBottom: "#1a2b09", floorTop: "#5c940d", floorEdge: "#3b5bdb", wallTop: "#e9fac8", wallLeft: "#74b816", wallRight: "#5c940d", portal: "#f783ac", playerBody: "#ffa94d", playerHat: "#228be6" },
+      { name: "Pozzo di Catrame", accent: "#909296", bgTop: "#0d0e10", bgBottom: "#191b1f", floorTop: "#25262b", floorEdge: "#141517", wallTop: "#ced4da", wallLeft: "#495057", wallRight: "#212529", portal: "#ff6b6b", playerBody: "#51cf66", playerHat: "#ffd43b" },
+      { name: "Landa d'Ambra", accent: "#fab005", bgTop: "#1c1403", bgBottom: "#362607", floorTop: "#e67700", floorEdge: "#d9480f", wallTop: "#fff9db", wallLeft: "#f59f00", wallRight: "#d9480f", portal: "#20c997", playerBody: "#339af0", playerHat: "#e64980" },
+      { name: "Valle di Cristallo", accent: "#22b8cf", bgTop: "#03141a", bgBottom: "#072633", floorTop: "#1098ad", floorEdge: "#0c8599", wallTop: "#c5f6fa", wallLeft: "#15aabf", wallRight: "#0b7285", portal: "#ff922b", playerBody: "#fcc419", playerHat: "#845ef7" },
+      { name: "Abisso Cremisi", accent: "#c2255c", bgTop: "#1c050f", bgBottom: "#330a1c", floorTop: "#a61e4d", floorEdge: "#861b42", wallTop: "#fcc2d7", wallLeft: "#d6336c", wallRight: "#9c1444", portal: "#51cf66", playerBody: "#ffd43b", playerHat: "#22b8cf" },
+      { name: "Trono di Bronzo", accent: "#e8590c", bgTop: "#1a0b04", bgBottom: "#331608", floorTop: "#d9480f", floorEdge: "#c92a2a", wallTop: "#ffd8a8", wallLeft: "#f76707", wallRight: "#d9480f", portal: "#339af0", playerBody: "#20c997", playerHat: "#f06595" },
+      { name: "Labirinto Etereo", accent: "#b197fc", bgTop: "#0e0921", bgBottom: "#1a123d", floorTop: "#6741d9", floorEdge: "#4c2889", wallTop: "#e5dbff", wallLeft: "#7950f2", wallRight: "#5f3dc4", portal: "#ffd43b", playerBody: "#51cf66", playerHat: "#ff6b6b" },
+      { name: "Cripta dei Draghi", accent: "#ff6b6b", bgTop: "#210505", bgBottom: "#3d0a0a", floorTop: "#c92a2a", floorEdge: "#a51d24", wallTop: "#ffe3e3", wallLeft: "#f03e3e", wallRight: "#c92a2a", portal: "#20c997", playerBody: "#339af0", playerHat: "#ffd43b" },
+      { name: "Profondità Titaniche", accent: "#20c997", bgTop: "#041411", bgBottom: "#082620", floorTop: "#099268", floorEdge: "#087f5b", wallTop: "#c3fae8", wallLeft: "#12b886", wallRight: "#0ca678", portal: "#f783ac", playerBody: "#ffa94d", playerHat: "#7950f2" },
+      { name: "Singolarità Oscura", accent: "#e599f7", bgTop: "#080412", bgBottom: "#120824", floorTop: "#341052", floorEdge: "#220838", wallTop: "#f3d9fa", wallLeft: "#862e9c", wallRight: "#581c87", portal: "#ffd43b", playerBody: "#20c997", playerHat: "#ff6b6b" },
+      { name: "Santuario Supremo", accent: "#ffd43b", bgTop: "#241804", bgBottom: "#452e08", floorTop: "#e67700", floorEdge: "#b45309", wallTop: "#fff3bf", wallLeft: "#f59f00", wallRight: "#d97706", portal: "#38bdf8", playerBody: "#4ade80", playerHat: "#f43f5e" }
+    ];
+
+    class MazeGenerator {
+      static generate(dim) {
+        const width = dim;
+        const height = dim;
+
+        const cells = Array.from({ length: height }, (_, y) =>
+          Array.from({ length: width }, (_, x) => ({
+            x, y,
+            walls: { top: true, right: true, bottom: true, left: true },
+            visited: false
+          }))
+        );
+
+        const stack = [cells[0][0]];
+        cells[0][0].visited = true;
+
+        const dirs = [
+          { dx: 0, dy: -1, wall: 'top', opp: 'bottom' },
+          { dx: 1, dy: 0, wall: 'right', opp: 'left' },
+          { dx: 0, dy: 1, wall: 'bottom', opp: 'top' },
+          { dx: -1, dy: 0, wall: 'left', opp: 'right' }
+        ];
+
+        while (stack.length > 0) {
+          const curr = stack[stack.length - 1];
+          const unvisited = [];
+          for (const d of dirs) {
+            const nx = curr.x + d.dx, ny = curr.y + d.dy;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height && !cells[ny][nx].visited) {
+              unvisited.push({ cell: cells[ny][nx], dir: d });
+            }
+          }
+          if (unvisited.length > 0) {
+            const pick = unvisited[Math.floor(Math.random() * unvisited.length)];
+            curr.walls[pick.dir.wall] = false;
+            pick.cell.walls[pick.dir.opp] = false;
+            pick.cell.visited = true;
+            stack.push(pick.cell);
+          } else {
+            stack.pop();
+          }
+        }
+
+        const gridW = width * 2 + 1;
+        const gridH = height * 2 + 1;
+        const grid = Array.from({ length: gridH }, () => Array(gridW).fill(1));
+
+        for (let cy = 0; cy < height; cy++) {
+          for (let cx = 0; cx < width; cx++) {
+            const gx = cx * 2 + 1, gy = cy * 2 + 1;
+            grid[gy][gx] = 0;
+            if (!cells[cy][cx].walls.bottom && cy < height - 1) grid[gy + 1][gx] = 0;
+            if (!cells[cy][cx].walls.right && cx < width - 1) grid[gy][gx + 1] = 0;
+          }
+        }
+
+        const start = { x: 1, y: 1 };
+        const exit = { x: gridW - 2, y: gridH - 2 };
+
+        const computeDist = (origin) => {
+          const dist = Array.from({ length: gridH }, () => Array(gridW).fill(-1));
+          const queue = [origin];
+          dist[origin.y][origin.x] = 0;
+          let head = 0;
+          while (head < queue.length) {
+            const c = queue[head++];
+            for (const d of [{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0}]) {
+              const nx = c.x + d.dx, ny = c.y + d.dy;
+              if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH && grid[ny][nx] === 0 && dist[ny][nx] === -1) {
+                dist[ny][nx] = dist[c.y][c.x] + 1;
+                queue.push({ x: nx, y: ny });
+              }
+            }
+          }
+          return dist;
+        };
+
+        const distStart = computeDist(start);
+        const distExit = computeDist(exit);
+
+        let candidates = [];
+        for (let cy = 0; cy < height; cy++) {
+          for (let cx = 0; cx < width; cx++) {
+            const gx = cx * 2 + 1;
+            const gy = cy * 2 + 1;
+            if (!(gx === start.x && gy === start.y) && !(gx === exit.x && gy === exit.y)) {
+              let walls = 0;
+              if (grid[gy - 1][gx] === 1) walls++;
+              if (grid[gy + 1][gx] === 1) walls++;
+              if (grid[gy][gx - 1] === 1) walls++;
+              if (grid[gy][gx + 1] === 1) walls++;
+              const isDeadEnd = (walls === 3);
+              const score = Math.min(distStart[gy][gx], distExit[gy][gx]) + (isDeadEnd ? 30 : 0);
+              candidates.push({ x: gx, y: gy, score });
+            }
+          }
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+        const key = candidates.length > 0 ? candidates[Math.floor(Math.random() * Math.min(3, candidates.length))] : { x: 1, y: 3 };
+
+        return { grid, gridW, gridH, start, exit, key: { x: key.x, y: key.y } };
+      }
+    }
+
+    class ParticleSystem {
+      constructor() { this.particles = []; }
+      spawn(x, y, z, color, count = 1, speed = 0.05) {
+        for (let i = 0; i < count; i++) {
+          this.particles.push({
+            x, y, z,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            vz: 0.02 + Math.random() * speed,
+            size: 2 + Math.random() * 3,
+            color,
+            life: 1,
+            decay: 0.02 + Math.random() * 0.03
+          });
+        }
+      }
+      update() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx; p.y += p.vy; p.z += p.vz;
+          p.life -= p.decay;
+          if (p.life <= 0) this.particles.splice(i, 1);
+        }
+      }
+    }
+
+    class IsometricGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.sound = new SoundEngine();
+        this.particles = new ParticleSystem();
+
+        this.mapCanvas = document.getElementById('mapCanvas');
+        this.mapCtx = this.mapCanvas.getContext('2d');
+        this.isMapVisible = false;
+
+        this.currentLevel = 1;
+        this.maxLevel = 50;
+        this.maxLives = 3;
+        this.lives = 3;
+
+        this.totalSteps = 0;
+        this.levelSteps = 0;
+        this.totalSeconds = 0;
+        this.levelSeconds = 0;
+        this.timerInterval = null;
+        this.isGameActive = false;
+        this.isPausedInMenu = true;
+        this.hasKey = false;
+        this.toastTimeout = null;
+
+        this.bombs = [];
+        this.enemies = [];
+        this.enemySpawnTimer = 0;
+
+        // Meccanica del Cuore curativo ogni 60 secondi
+        this.heart = null;
+        this.heartSpawnTimer = 60.0;
+
+        this.mazeData = null;
+        this.visitedTiles = null;
+        this.player = {
+          gx: 1, gy: 1,
+          targetGx: 1, targetGy: 1,
+          renderX: 1, renderY: 1,
+          isMoving: false,
+          moveProgress: 0,
+          moveSpeed: 7.5,
+          bob: 0
+        };
+
+        this.camera = {
+          x: 0, y: 0,
+          tileW: 52,
+          tileH: 26,
+          wallH: 28,
+          shake: 0
+        };
+
+        this.heldDirection = null;
+        this.holdInterval = null;
+
+        this.gamepadConnected = false;
+        this.gamepadPrevButtons = {};
+        this.gamepadStickCooldown = 0;
+        this.gamepadMenuCooldown = 0;
+        this.ltWasPressed = false;
+
+        this.STORAGE_KEY = 'labyrinthus_save_state_v1';
+        this.LEADERBOARD_KEY = 'labyrinthus_leaderboard_top5_v1';
+
+        this.resize = this.resize.bind(this);
+        this.gameLoop = this.gameLoop.bind(this);
+
+        window.addEventListener('resize', this.resize);
+        this.detectDeviceMode();
+        this.initControls();
+        this.initGamepad();
+        this.initUI();
+        this.initMenuSystem();
+        this.setupAudioUnlock();
+        this.setupAutoSaveListeners();
+      }
+
+      setupAutoSaveListeners() {
+        const autoSave = () => {
+          if (this.lives > 0) {
+            this.saveGameState();
+          }
+        };
+        window.addEventListener('beforeunload', autoSave);
+        window.addEventListener('pagehide', autoSave);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            autoSave();
+          }
+        });
+      }
+
+      detectDeviceMode() {
+        const isMobileScreen = window.innerWidth <= 768;
+        const touchFooter = document.getElementById('touch-controls');
+        const desktopHint = document.getElementById('desktop-hint');
+
+        if (!isMobileScreen) {
+          touchFooter.classList.add('hidden');
+          desktopHint.classList.remove('hidden');
+          desktopHint.classList.add('flex');
+        } else {
+          touchFooter.classList.remove('hidden');
+          desktopHint.classList.add('hidden');
+          desktopHint.classList.remove('flex');
+        }
+      }
+
+      setupAudioUnlock() {
+        const unlock = () => {
+          this.sound.init();
+          window.removeEventListener('touchstart', unlock);
+          window.removeEventListener('click', unlock);
+        };
+        window.addEventListener('touchstart', unlock, { passive: true });
+        window.addEventListener('click', unlock, { passive: true });
+      }
+
+      formatHHMMSS(sec) {
+        const h = Math.floor(sec / 3600).toString().padStart(2, '0');
+        const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      }
+
+      formatDate(ts) {
+        const d = new Date(ts);
+        const day = d.getDate().toString().padStart(2, '0');
+        const mon = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        const hrs = d.getHours().toString().padStart(2, '0');
+        const mins = d.getMinutes().toString().padStart(2, '0');
+        return `${day}/${mon}/${year} ${hrs}:${mins}`;
+      }
+
+      saveGameState() {
+        if (this.lives <= 0) return;
+        const saveObj = {
+          currentLevel: Math.max(1, Math.min(this.maxLevel, this.currentLevel)),
+          lives: Math.max(1, Math.min(this.maxLives, this.lives)),
+          totalSteps: this.totalSteps || 0,
+          totalSeconds: this.totalSeconds || 0,
+          timestamp: Date.now()
+        };
+        try {
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saveObj));
+        } catch (e) {}
+      }
+
+      loadGameState() {
+        try {
+          const raw = localStorage.getItem(this.STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.currentLevel === 'number' && parsed.lives > 0) {
+            return parsed;
+          }
+          return null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      clearSavedState() {
+        try {
+          localStorage.removeItem(this.STORAGE_KEY);
+        } catch (e) {}
+      }
+
+      hasActiveSavedGame() {
+        const save = this.loadGameState();
+        return save !== null && save.lives > 0 && save.currentLevel <= this.maxLevel;
+      }
+
+      loadLeaderboard() {
+        try {
+          const raw = localStorage.getItem(this.LEADERBOARD_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      recordScoreToLeaderboard() {
+        if (this.totalSteps <= 0 && this.currentLevel <= 1 && this.totalSeconds <= 0) return;
+
+        const newEntry = {
+          level: this.currentLevel,
+          steps: this.totalSteps,
+          seconds: this.totalSeconds,
+          date: Date.now()
+        };
+
+        const board = this.loadLeaderboard();
+        board.push(newEntry);
+
+        board.sort((a, b) => {
+          if (b.level !== a.level) return b.level - a.level;
+          if (a.seconds !== b.seconds) return a.seconds - b.seconds;
+          return a.steps - b.steps;
+        });
+
+        const top5 = board.slice(0, 5);
+        try {
+          localStorage.setItem(this.LEADERBOARD_KEY, JSON.stringify(top5));
+        } catch (e) {}
+
+        const isRanked = top5.some(entry => entry.date === newEntry.date);
+        if (isRanked) {
+          this.showToast('Nuovo Record registrato nella Top 5! 🏆', '🏆');
+        }
+      }
+
+      renderLeaderboard() {
+        const tbody = document.getElementById('leaderboard-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const top5 = this.loadLeaderboard();
+
+        if (top5.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="5" class="py-4 text-center text-slate-500 font-sans italic">
+                Nessun record registrato finora. Gioca e scala la classifica!
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        const medalIcons = ['🥇', '🥈', '🥉', '4°', '5°'];
+        top5.forEach((item, index) => {
+          const tr = document.createElement('tr');
+          tr.className = index === 0 ? 'text-amber-300 bg-amber-500/10' : 'text-slate-300 hover:bg-slate-800/40';
+          tr.innerHTML = `
+            <td class="py-2 px-2 font-bold">${medalIcons[index] || (index + 1)}</td>
+            <td class="py-2 px-2 font-bold text-amber-400">L.${item.level}</td>
+            <td class="py-2 px-2 text-cyan-300">${item.steps}</td>
+            <td class="py-2 px-2 text-slate-200">${this.formatHHMMSS(item.seconds)}</td>
+            <td class="py-2 px-2 text-right text-[10px] text-slate-400">${this.formatDate(item.date)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      getActiveMenuContext() {
+        const modLeaderboard = document.getElementById('modal-leaderboard');
+        if (modLeaderboard && !modLeaderboard.classList.contains('hidden')) {
+          return { name: 'leaderboard', items: [document.getElementById('btn-close-leaderboard')] };
+        }
+
+        const modConfirm = document.getElementById('modal-confirm-newgame');
+        if (modConfirm && !modConfirm.classList.contains('hidden')) {
+          return { name: 'confirm', items: Array.from(document.querySelectorAll('.confirm-nav-btn')) };
+        }
+
+        const modOptions = document.getElementById('modal-options');
+        if (modOptions && !modOptions.classList.contains('hidden')) {
+          return { name: 'options', items: Array.from(document.querySelectorAll('.opt-nav-btn')) };
+        }
+
+        const modCleared = document.getElementById('modal-level-cleared');
+        if (modCleared && !modCleared.classList.contains('hidden')) {
+          return { name: 'cleared', items: [document.getElementById('btn-next-level')] };
+        }
+
+        const modGameOver = document.getElementById('modal-gameover');
+        if (modGameOver && !modGameOver.classList.contains('hidden')) {
+          return { name: 'gameover', items: [document.getElementById('btn-restart-gameover')] };
+        }
+
+        const modVictory = document.getElementById('modal-victory');
+        if (modVictory && !modVictory.classList.contains('hidden')) {
+          return { name: 'victory', items: [document.getElementById('btn-new-game-win')] };
+        }
+
+        const modMainMenu = document.getElementById('main-menu-overlay');
+        if (modMainMenu && !modMainMenu.classList.contains('hidden')) {
+          const btns = Array.from(document.querySelectorAll('.menu-nav-btn')).filter(b => !b.disabled);
+          return { name: 'main', items: btns };
+        }
+
+        return null;
+      }
+
+      updateMenuFocusVisuals(items) {
+        document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
+        if (items && items.length > 0) {
+          if (this.currentFocusIndex >= items.length) this.currentFocusIndex = 0;
+          if (this.currentFocusIndex < 0) this.currentFocusIndex = items.length - 1;
+          const target = items[this.currentFocusIndex];
+          if (target) {
+            target.classList.add('gp-focused');
+          }
+        }
+      }
+
+      navigateMenu(dir) {
+        const ctx = this.getActiveMenuContext();
+        if (!ctx || ctx.items.length === 0) return;
+
+        this.currentFocusIndex = (this.currentFocusIndex || 0) + dir;
+        if (this.currentFocusIndex < 0) this.currentFocusIndex = ctx.items.length - 1;
+        if (this.currentFocusIndex >= ctx.items.length) this.currentFocusIndex = 0;
+
+        this.updateMenuFocusVisuals(ctx.items);
+        this.sound.playMenuNav();
+      }
+
+      confirmMenuAction() {
+        const ctx = this.getActiveMenuContext();
+        if (!ctx || ctx.items.length === 0) return;
+
+        const target = ctx.items[this.currentFocusIndex || 0];
+        if (target) {
+          this.sound.playMenuSelect();
+          target.click();
+          setTimeout(() => {
+            const nextCtx = this.getActiveMenuContext();
+            if (nextCtx) {
+              this.currentFocusIndex = 0;
+              this.updateMenuFocusVisuals(nextCtx.items);
+            }
+          }, 80);
+        }
+      }
+
+      cancelMenuAction() {
+        const ctx = this.getActiveMenuContext();
+        this.sound.playMenuCancel();
+
+        if (ctx) {
+          if (ctx.name === 'leaderboard') {
+            document.getElementById('btn-close-leaderboard').click();
+          } else if (ctx.name === 'options') {
+            document.getElementById('btn-close-options').click();
+          } else if (ctx.name === 'confirm') {
+            document.getElementById('btn-confirm-newgame-cancel').click();
+          } else if (ctx.name === 'gameover') {
+            document.getElementById('btn-restart-gameover').click();
+          } else if (ctx.name === 'victory') {
+            document.getElementById('btn-new-game-win').click();
+          }
+        } else {
+          if (!this.isPausedInMenu) {
+            this.showMainMenu();
+          }
+        }
+
+        setTimeout(() => {
+          const nextCtx = this.getActiveMenuContext();
+          if (nextCtx) {
+            this.currentFocusIndex = 0;
+            this.updateMenuFocusVisuals(nextCtx.items);
+          }
+        }, 80);
+      }
+
+      initMenuSystem() {
+        const menuOverlay = document.getElementById('main-menu-overlay');
+        const btnContinue = document.getElementById('btn-menu-continue');
+        const btnNewGame = document.getElementById('btn-menu-newgame');
+        const btnLeaderboard = document.getElementById('btn-menu-leaderboard');
+        const btnOptions = document.getElementById('btn-menu-options');
+        const badgeContinue = document.getElementById('menu-continue-badge');
+
+        const modalLeaderboard = document.getElementById('modal-leaderboard');
+        const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+
+        const modalConfirmNew = document.getElementById('modal-confirm-newgame');
+        const btnConfirmCancel = document.getElementById('btn-confirm-newgame-cancel');
+        const btnConfirmOk = document.getElementById('btn-confirm-newgame-ok');
+
+        const modalOptions = document.getElementById('modal-options');
+        const btnCloseOptions = document.getElementById('btn-close-options');
+        const btnOptAudio = document.getElementById('btn-opt-toggle-audio');
+        const btnOptFullscreen = document.getElementById('btn-opt-toggle-fullscreen');
+        const optAudioIcon = document.getElementById('opt-audio-icon');
+
+        this.currentFocusIndex = 0;
+
+        this.refreshMenuContinueButton = () => {
+          const save = this.loadGameState();
+          if (save && save.lives > 0) {
+            btnContinue.disabled = false;
+            badgeContinue.textContent = `Liv. ${save.currentLevel} (${save.lives}❤️)`;
+            badgeContinue.classList.remove('hidden');
+          } else {
+            btnContinue.disabled = true;
+            badgeContinue.classList.add('hidden');
+          }
+        };
+
+        this.showMainMenu = () => {
+          this.isGameActive = false;
+          this.isPausedInMenu = true;
+          this.closeModals();
+          this.saveGameState();
+          this.refreshMenuContinueButton();
+          menuOverlay.classList.remove('hidden');
+
+          this.currentFocusIndex = 0;
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        };
+
+        this.hideMainMenu = () => {
+          menuOverlay.classList.add('hidden');
+          this.isPausedInMenu = false;
+          document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
+        };
+
+        btnContinue.addEventListener('click', () => {
+          this.sound.init();
+          const save = this.loadGameState();
+          if (save && save.lives > 0) {
+            this.currentLevel = save.currentLevel;
+            this.lives = save.lives;
+            this.totalSteps = save.totalSteps || 0;
+            this.totalSeconds = save.totalSeconds || 0;
+            this.hideMainMenu();
+            this.closeModals();
+            this.startLevel(this.currentLevel);
+          }
+        });
+
+        btnNewGame.addEventListener('click', () => {
+          this.sound.init();
+          if (this.hasActiveSavedGame()) {
+            modalConfirmNew.classList.remove('hidden');
+            this.currentFocusIndex = 0;
+            const ctx = this.getActiveMenuContext();
+            if (ctx) this.updateMenuFocusVisuals(ctx.items);
+          } else {
+            this.startFreshGame();
+          }
+        });
+
+        btnConfirmCancel.addEventListener('click', () => {
+          modalConfirmNew.classList.add('hidden');
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        });
+
+        btnConfirmOk.addEventListener('click', () => {
+          modalConfirmNew.classList.add('hidden');
+          this.clearSavedState();
+          this.startFreshGame();
+        });
+
+        btnLeaderboard.addEventListener('click', () => {
+          this.sound.init();
+          this.renderLeaderboard();
+          modalLeaderboard.classList.remove('hidden');
+          this.currentFocusIndex = 0;
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        });
+
+        btnCloseLeaderboard.addEventListener('click', () => {
+          modalLeaderboard.classList.add('hidden');
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        });
+
+        btnOptions.addEventListener('click', () => {
+          this.sound.init();
+          this.updateOptionsUI();
+          modalOptions.classList.remove('hidden');
+          this.currentFocusIndex = 0;
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        });
+
+        btnCloseOptions.addEventListener('click', () => {
+          modalOptions.classList.add('hidden');
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        });
+
+        btnOptAudio.addEventListener('click', () => {
+          this.sound.muted = !this.sound.muted;
+          this.updateOptionsUI();
+        });
+
+        btnOptFullscreen.addEventListener('click', () => {
+          this.toggleFullscreen();
+          setTimeout(() => this.updateOptionsUI(), 100);
+        });
+
+        this.updateOptionsUI = () => {
+          if (this.sound.muted) {
+            btnOptAudio.textContent = "DISATTIVO";
+            btnOptAudio.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150";
+            optAudioIcon.textContent = "🔇";
+          } else {
+            btnOptAudio.textContent = "ATTIVO";
+            btnOptAudio.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150";
+            optAudioIcon.textContent = "🔊";
+          }
+
+          const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
+          if (isFull) {
+            btnOptFullscreen.textContent = "ATTIVO (ESCI)";
+            btnOptFullscreen.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150";
+          } else {
+            btnOptFullscreen.textContent = "ATTIVA";
+            btnOptFullscreen.className = "opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 transition-all duration-150";
+          }
+        };
+
+        this.refreshMenuContinueButton();
+      }
+
+      startFreshGame() {
+        this.clearSavedState();
+        this.currentLevel = 1;
+        this.lives = this.maxLives;
+        this.totalSteps = 0;
+        this.totalSeconds = 0;
+        this.hideMainMenu();
+        this.closeModals();
+        this.startLevel(1);
+      }
+
+      initUI() {
+        const bindButton = (id, action) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const handler = (e) => {
+            e.preventDefault();
+            this.sound.init();
+            action();
+          };
+          el.addEventListener('click', handler);
+          el.addEventListener('touchstart', handler, { passive: false });
+        };
+
+        bindButton('btn-fullscreen', () => this.toggleFullscreen());
+        bindButton('btn-restart', () => this.restartLevel());
+        bindButton('btn-next-level', () => this.advanceNextLevel());
+        bindButton('btn-new-game-win', () => this.showMainMenu());
+        
+        bindButton('btn-restart-gameover', () => {
+          this.closeModals();
+          this.clearSavedState();
+          this.showMainMenu();
+        });
+
+        bindButton('btn-to-menu', () => this.showMainMenu());
+
+        bindButton('btn-map', () => {
+          if (this.isMapVisible) this.hideMap(); else this.showMap();
+        });
+        bindButton('btn-close-map', () => this.hideMap());
+
+        const btnBomb = document.getElementById('btn-touch-bomb');
+        if (btnBomb) {
+          const triggerBomb = (e) => {
+            e.preventDefault();
+            this.sound.init();
+            this.placeBomb();
+          };
+          btnBomb.addEventListener('touchstart', triggerBomb, { passive: false });
+          btnBomb.addEventListener('click', triggerBomb);
+        }
+      }
+
+      toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+            else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+          } else {
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          }
+        } catch (err) {}
+      }
+
+      initGamepad() {
+        window.addEventListener('gamepadconnected', (e) => {
+          this.gamepadConnected = true;
+          const badge = document.getElementById('gamepad-badge');
+          if (badge) {
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+          }
+          this.showToast(`Gamepad connesso: ${e.gamepad.id.slice(0, 20)}... 🎮`, '🎮');
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
+        });
+
+        window.addEventListener('gamepaddisconnected', () => {
+          this.gamepadConnected = false;
+          const badge = document.getElementById('gamepad-badge');
+          if (badge) {
+            badge.classList.add('hidden');
+            badge.classList.remove('flex');
+          }
+          document.querySelectorAll('.gp-focused').forEach(el => el.classList.remove('gp-focused'));
+        });
+      }
+
+      pollGamepad(dt) {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        let gp = null;
+        for (let i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            gp = gamepads[i];
+            break;
+          }
+        }
+        if (!gp) return;
+
+        this.sound.init();
+
+        const startBtn = gp.buttons[9];
+        const isStartPressed = startBtn && startBtn.pressed;
+        if (isStartPressed && !this.gamepadPrevButtons[9]) {
+          if (!this.isPausedInMenu) {
+            this.showMainMenu();
+          }
+        }
+        this.gamepadPrevButtons[9] = isStartPressed;
+
+        const btnA = gp.buttons[0] && gp.buttons[0].pressed;
+        const btnB = gp.buttons[1] && gp.buttons[1].pressed;
+        const btnX = gp.buttons[2] && gp.buttons[2].pressed;
+
+        const activeMenu = this.getActiveMenuContext();
+
+        if (activeMenu) {
+          if (this.gamepadMenuCooldown > 0) {
+            this.gamepadMenuCooldown -= dt;
+          }
+
+          const stickY = gp.axes[1] || 0;
+          const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
+          const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
+
+          if (this.gamepadMenuCooldown <= 0) {
+            if (stickY < -0.45 || dpadUp) {
+              this.navigateMenu(-1);
+              this.gamepadMenuCooldown = 0.22;
+            } else if (stickY > 0.45 || dpadDown) {
+              this.navigateMenu(1);
+              this.gamepadMenuCooldown = 0.22;
+            }
+          }
+
+          if (btnA && !this.gamepadPrevButtons[0]) {
+            this.confirmMenuAction();
+          }
+
+          if (btnB && !this.gamepadPrevButtons[1]) {
+            this.cancelMenuAction();
+          }
+
+          this.gamepadPrevButtons[0] = btnA;
+          this.gamepadPrevButtons[1] = btnB;
+          this.gamepadPrevButtons[2] = btnX;
+          return;
+        }
+
+        if (btnB && !this.gamepadPrevButtons[1]) {
+          this.cancelMenuAction();
+          this.gamepadPrevButtons[1] = btnB;
+          return;
+        }
+        this.gamepadPrevButtons[1] = btnB;
+
+        const ltBtn = gp.buttons[6];
+        const isLtPressed = ltBtn && (ltBtn.pressed || ltBtn.value > 0.4);
+        if (isLtPressed && !this.ltWasPressed) {
+          this.showMap();
+          this.ltWasPressed = true;
+        } else if (!isLtPressed && this.ltWasPressed) {
+          this.hideMap();
+          this.ltWasPressed = false;
+        }
+
+        const backBtn = gp.buttons[8];
+        const isBackPressed = backBtn && backBtn.pressed;
+        if (isBackPressed && !this.gamepadPrevButtons[8]) {
+          this.restartLevel();
+        }
+        this.gamepadPrevButtons[8] = isBackPressed;
+
+        if ((btnA && !this.gamepadPrevButtons[0]) || (btnX && !this.gamepadPrevButtons[2])) {
+          this.placeBomb();
+        }
+        this.gamepadPrevButtons[0] = btnA;
+        this.gamepadPrevButtons[2] = btnX;
+
+        if (this.gamepadStickCooldown > 0) {
+          this.gamepadStickCooldown -= dt;
+        }
+
+        const stickX = gp.axes[0] || 0;
+        const stickY = gp.axes[1] || 0;
+        const mag = Math.hypot(stickX, stickY);
+
+        if (mag > 0.32 && !this.player.isMoving && this.gamepadStickCooldown <= 0) {
+          const angleDeg = Math.atan2(stickY, stickX) * (180 / Math.PI);
+
+          if (angleDeg >= -90 && angleDeg < 0) {
+            this.handleDirectionInput(0, -1);
+          } else if (angleDeg >= 0 && angleDeg < 90) {
+            this.handleDirectionInput(1, 0);
+          } else if (angleDeg >= 90 && angleDeg <= 180) {
+            this.handleDirectionInput(0, 1);
+          } else {
+            this.handleDirectionInput(-1, 0);
+          }
+
+          this.gamepadStickCooldown = 0.14;
+        }
+      }
+
+      initControls() {
+        const startHold = (dx, dy, btnEl) => {
+          if (this.isPausedInMenu) return;
+          this.sound.init();
+          this.heldDirection = { dx, dy };
+          if (btnEl) btnEl.classList.add('active');
+          this.handleDirectionInput(dx, dy);
+
+          if (this.holdInterval) clearInterval(this.holdInterval);
+          this.holdInterval = setInterval(() => {
+            if (this.heldDirection && !this.player.isMoving) {
+              this.handleDirectionInput(this.heldDirection.dx, this.heldDirection.dy);
+            }
+          }, 130);
+        };
+
+        const stopHold = (btnEl) => {
+          this.heldDirection = null;
+          if (btnEl) btnEl.classList.remove('active');
+          if (this.holdInterval) {
+            clearInterval(this.holdInterval);
+            this.holdInterval = null;
+          }
+        };
+
+        const bindPad = (id, dx, dy) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+
+          btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startHold(dx, dy, btn);
+          }, { passive: false });
+
+          btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopHold(btn);
+          }, { passive: false });
+
+          btn.addEventListener('touchcancel', () => stopHold(btn));
+
+          btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startHold(dx, dy, btn);
+          });
+          btn.addEventListener('mouseup', () => stopHold(btn));
+          btn.addEventListener('mouseleave', () => stopHold(btn));
+        };
+
+        bindPad('pad-n', 0, -1);
+        bindPad('pad-e', 1, 0);
+        bindPad('pad-s', 0, 1);
+        bindPad('pad-w', -1, 0);
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isSwiping = false;
+
+        this.canvas.addEventListener('touchstart', (e) => {
+          if (this.isPausedInMenu) return;
+          if (e.touches.length === 1) {
+            this.sound.init();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = true;
+          }
+        }, { passive: true });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+          if (isSwiping && e.cancelable) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', (e) => {
+          if (!isSwiping || !this.isGameActive || this.isPausedInMenu) return;
+          isSwiping = false;
+          const end = e.changedTouches[0];
+          const dx = end.clientX - touchStartX;
+          const dy = end.clientY - touchStartY;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist >= 20) {
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            if (angle >= -90 && angle < 0) {
+              this.handleDirectionInput(0, -1);
+            } else if (angle >= 0 && angle < 90) {
+              this.handleDirectionInput(1, 0);
+            } else if (angle >= 90 && angle < 180) {
+              this.handleDirectionInput(0, 1);
+            } else {
+              this.handleDirectionInput(-1, 0);
+            }
+          }
+        }, { passive: true });
+
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            if (!this.isPausedInMenu) {
+              this.showMainMenu();
+            } else {
+              this.cancelMenuAction();
+            }
+            return;
+          }
+
+          if (this.isPausedInMenu) {
+            if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') {
+              e.preventDefault();
+              this.navigateMenu(-1);
+            } else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') {
+              e.preventDefault();
+              this.navigateMenu(1);
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              this.confirmMenuAction();
+            }
+            return;
+          }
+
+          if (!this.isGameActive) return;
+          const k = e.key.toLowerCase();
+          if (k === 'w' || k === 'arrowup') this.handleDirectionInput(0, -1);
+          else if (k === 'd' || k === 'arrowright') this.handleDirectionInput(1, 0);
+          else if (k === 's' || k === 'arrowdown') this.handleDirectionInput(0, 1);
+          else if (k === 'a' || k === 'arrowleft') this.handleDirectionInput(-1, 0);
+          else if (e.code === 'Space') {
+            e.preventDefault();
+            this.placeBomb();
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            this.showMap();
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            this.hideMap();
+          }
+        });
+      }
+
+      placeBomb() {
+        if (!this.isGameActive || this.isPausedInMenu) return;
+        const targetX = this.player.gx;
+        const targetY = this.player.gy;
+
+        if (this.bombs.some(b => b.gx === targetX && b.gy === targetY)) {
+          return;
+        }
+
+        this.bombs.push({
+          gx: targetX,
+          gy: targetY,
+          timeLeft: 3.0,
+          totalTime: 3.0,
+          nextTick: 0.8
+        });
+
+        this.sound.playBombPlant();
+        this.particles.spawn(targetX, targetY, 0.2, '#f87171', 12, 0.04);
+        this.showToast('Bomba innescata! (3s) 💣', '💣');
+      }
+
+      spawnRandomEnemy() {
+        if (!this.mazeData || this.isPausedInMenu) return;
+        const { gridW, gridH, grid } = this.mazeData;
+        const candidates = [];
+
+        for (let gy = 1; gy < gridH - 1; gy++) {
+          for (let gx = 1; gx < gridW - 1; gx++) {
+            if (grid[gy][gx] === 0) {
+              const distToPlayer = Math.abs(gx - this.player.gx) + Math.abs(gy - this.player.gy);
+              if (distToPlayer >= 4) {
+                candidates.push({ x: gx, y: gy });
+              }
+            }
+          }
+        }
+
+        if (candidates.length === 0) return;
+        const pos = candidates[Math.floor(Math.random() * candidates.length)];
+
+        this.enemies.push({
+          gx: pos.x,
+          gy: pos.y,
+          targetGx: pos.x,
+          targetGy: pos.y,
+          renderX: pos.x,
+          renderY: pos.y,
+          isMoving: false,
+          moveProgress: 0,
+          moveSpeed: 3.5,
+          moveCooldown: 0.2,
+          bob: 0
+        });
+
+        this.sound.playEnemySpawn();
+        this.particles.spawn(pos.x, pos.y, 0.4, '#000000', 30, 0.07);
+        this.showToast('Attento! È apparso un nemico oscuro! 👤', '⚠️', true);
+      }
+
+      spawnHeart() {
+        if (!this.mazeData || this.heart || this.lives >= this.maxLives) return;
+        const { gridW, gridH, grid } = this.mazeData;
+        const candidates = [];
+
+        for (let gy = 1; gy < gridH - 1; gy++) {
+          for (let gx = 1; gx < gridW - 1; gx++) {
+            if (grid[gy][gx] === 0) {
+              const notOnPlayer = !(gx === this.player.gx && gy === this.player.gy);
+              const notOnExit = !(gx === this.mazeData.exit.x && gy === this.mazeData.exit.y);
+              const notOnKey = !this.hasKey ? !(gx === this.mazeData.key.x && gy === this.mazeData.key.y) : true;
+              if (notOnPlayer && notOnExit && notOnKey) {
+                candidates.push({ x: gx, y: gy });
+              }
+            }
+          }
+        }
+
+        if (candidates.length === 0) return;
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        this.heart = {
+          gx: pick.x,
+          gy: pick.y,
+          bob: 0,
+          pulse: 1
+        };
+
+        this.sound.playHeartSpawn();
+        this.particles.spawn(pick.x, pick.y, 0.3, '#f43f5e', 25, 0.08);
+        this.showToast('È apparso un cuore vitale! I nemici lo cercano! ❤️', '❤️');
+      }
+
+      findNextStepBFS(start, target) {
+        if (start.x === target.x && start.y === target.y) return null;
+        const { gridW, gridH, grid } = this.mazeData;
+        const queue = [start];
+        const visited = Array.from({ length: gridH }, () => Array(gridW).fill(false));
+        const parent = Array.from({ length: gridH }, () => Array(gridW).fill(null));
+
+        visited[start.y][start.x] = true;
+        let reached = false;
+
+        const dirs = [{dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0}];
+
+        while (queue.length > 0) {
+          const cur = queue.shift();
+          if (cur.x === target.x && cur.y === target.y) {
+            reached = true;
+            break;
+          }
+          for (const d of dirs) {
+            const nx = cur.x + d.dx, ny = cur.y + d.dy;
+            if (nx >= 0 && nx < gridW && ny >= 0 && ny < gridH && grid[ny][nx] === 0 && !visited[ny][nx]) {
+              visited[ny][nx] = true;
+              parent[ny][nx] = cur;
+              queue.push({ x: nx, y: ny });
+            }
+          }
+        }
+
+        if (!reached) return null;
+
+        let curr = target;
+        let prev = null;
+        while (curr && !(curr.x === start.x && curr.y === start.y)) {
+          prev = curr;
+          curr = parent[curr.y][curr.x];
+        }
+        return prev;
+      }
+
+      // Gestione perdita di una vita e caduta della chiave
+      playerLoseLife(reason) {
+        this.lives--;
+        this.updateLivesUI();
+        this.sound.playPlayerHit();
+        this.particles.spawn(this.player.renderX, this.player.renderY, 0.5, '#ef4444', 35, 0.12);
+
+        // Se il giocatore aveva preso la chiave, la chiave cade esattamente dove il giocatore è stato colpito
+        let keyDroppedMsg = '';
+        if (this.hasKey) {
+          const dropX = Math.round(this.player.renderX);
+          const dropY = Math.round(this.player.renderY);
+
+          this.mazeData.key.x = dropX;
+          this.mazeData.key.y = dropY;
+          this.hasKey = false;
+          this.updateKeyUI();
+          this.particles.spawn(dropX, dropY, 0.4, '#fbbf24', 40, 0.1);
+          keyDroppedMsg = ' Hai perso la chiave sul posto!';
+        }
+
+        if (this.lives <= 0) {
+          this.isGameActive = false;
+          this.recordScoreToLeaderboard();
+          this.clearSavedState();
+          this.sound.playGameOver();
+          setTimeout(() => {
+            this.showGameOverModal();
+            const ctx = this.getActiveMenuContext();
+            if (ctx) this.updateMenuFocusVisuals(ctx.items);
+          }, 350);
+          return;
+        }
+
+        this.saveGameState();
+        this.showToast(`${reason}${keyDroppedMsg} Ti restano ${this.lives} vite!`, '💔', true);
+        
+        // Ritorno alla partenza del labirinto
+        this.player.gx = this.mazeData.start.x;
+        this.player.gy = this.mazeData.start.y;
+        this.player.targetGx = this.player.gx;
+        this.player.targetGy = this.player.gy;
+        this.player.renderX = this.player.gx;
+        this.player.renderY = this.player.gy;
+        this.player.isMoving = false;
+      }
+
+      updateEnemies(dt) {
+        for (let i = 0; i < this.enemies.length; i++) {
+          const enemy = this.enemies[i];
+          enemy.bob = Math.sin(Date.now() * 0.009 + i) * 3;
+
+          const targetPos = this.heart 
+            ? { x: this.heart.gx, y: this.heart.gy } 
+            : { x: this.player.gx, y: this.player.gy };
+
+          if (enemy.isMoving) {
+            enemy.moveProgress += enemy.moveSpeed * dt;
+            if (enemy.moveProgress >= 1) {
+              enemy.gx = enemy.targetGx;
+              enemy.gy = enemy.targetGy;
+              enemy.renderX = enemy.gx;
+              enemy.renderY = enemy.gy;
+              enemy.isMoving = false;
+              enemy.moveProgress = 0;
+            } else {
+              enemy.renderX = enemy.gx + (enemy.targetGx - enemy.gx) * enemy.moveProgress;
+              enemy.renderY = enemy.gy + (enemy.targetGy - enemy.gy) * enemy.moveProgress;
+            }
+          } else {
+            enemy.moveCooldown -= dt;
+            if (enemy.moveCooldown <= 0) {
+              enemy.moveCooldown = 0.35;
+              const nextStep = this.findNextStepBFS(
+                { x: enemy.gx, y: enemy.gy },
+                targetPos
+              );
+              if (nextStep) {
+                enemy.targetGx = nextStep.x;
+                enemy.targetGy = nextStep.y;
+                enemy.isMoving = true;
+                enemy.moveProgress = 0;
+              }
+            }
+          }
+
+          if (this.heart) {
+            const distEnemyHeart = Math.hypot(enemy.renderX - this.heart.gx, enemy.renderY - this.heart.gy);
+            if (distEnemyHeart < 0.45) {
+              this.sound.playHeartEaten();
+              this.particles.spawn(this.heart.gx, this.heart.gy, 0.4, '#1e293b', 30, 0.09);
+              this.heart = null;
+              this.heartSpawnTimer = 60.0;
+              this.showToast('Un nemico ha divorato il cuore! I nemici tornano su di te! 👤⚠️', '⚠️', true);
+            }
+          }
+
+          const distToPlayer = Math.hypot(enemy.renderX - this.player.renderX, enemy.renderY - this.player.renderY);
+          if (distToPlayer < 0.45) {
+            this.camera.shake = 12;
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            this.playerLoseLife("Il nemico ti ha catturato!");
+            break;
+          }
+        }
+      }
+
+      updateBombs(dt) {
+        for (let i = this.bombs.length - 1; i >= 0; i--) {
+          const b = this.bombs[i];
+          b.timeLeft -= dt;
+
+          if (b.timeLeft <= b.nextTick && b.timeLeft > 0) {
+            this.sound.playTick();
+            b.nextTick = Math.max(0, b.nextTick - (b.timeLeft < 1.2 ? 0.25 : 0.7));
+          }
+
+          if (b.timeLeft <= 0) {
+            this.sound.playExplosion();
+            this.camera.shake = 16;
+            if (navigator.vibrate) navigator.vibrate([80, 40, 100]);
+
+            this.particles.spawn(b.gx, b.gy, 0.4, '#f97316', 40, 0.13);
+            this.particles.spawn(b.gx, b.gy, 0.2, '#fde047', 30, 0.09);
+            this.particles.spawn(b.gx, b.gy, 0.6, '#334155', 25, 0.06);
+
+            const distPlayer = Math.hypot(this.player.renderX - b.gx, this.player.renderY - b.gy);
+            if (distPlayer <= 1.45) {
+              this.playerLoseLife("Coinvolto nell'esplosione!");
+            }
+
+            for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
+              const enemy = this.enemies[eIdx];
+              const distEnemy = Math.hypot(enemy.renderX - b.gx, enemy.renderY - b.gy);
+              if (distEnemy <= 1.45) {
+                this.sound.playEnemyDefeated();
+                this.particles.spawn(enemy.renderX, enemy.renderY, 0.5, '#38bdf8', 40, 0.14);
+                this.enemies.splice(eIdx, 1);
+                this.showToast('Nemico polverizzato! 💥', '🎯');
+              }
+            }
+
+            this.bombs.splice(i, 1);
+          }
+        }
+      }
+
+      startLevel(lvl) {
+        this.currentLevel = Math.max(1, Math.min(this.maxLevel, lvl));
+        this.levelSteps = 0;
+        this.levelSeconds = 0;
+        this.hasKey = false;
+        this.bombs = [];
+        this.enemies = [];
+        this.enemySpawnTimer = 20;
+        this.heart = null;
+        this.heartSpawnTimer = 60.0;
+        this.hideMap();
+
+        const formulaDim = 8 + (this.currentLevel * 2);
+        this.mazeData = MazeGenerator.generate(formulaDim);
+
+        this.visitedTiles = Array.from({ length: this.mazeData.gridH }, () => 
+          Array(this.mazeData.gridW).fill(false)
+        );
+
+        this.player.gx = this.mazeData.start.x;
+        this.player.gy = this.mazeData.start.y;
+        this.player.targetGx = this.player.gx;
+        this.player.targetGy = this.player.gy;
+        this.player.renderX = this.player.gx;
+        this.player.renderY = this.player.gy;
+        this.player.isMoving = false;
+
+        this.markExplored(this.player.gx, this.player.gy);
+        this.updateThemeUI();
+        this.updateStatsUI();
+        this.updateKeyUI();
+        this.updateLivesUI();
+
+        this.adjustCameraForMaze();
+        this.saveGameState();
+
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => {
+          if (this.isGameActive && !this.isPausedInMenu) {
+            this.levelSeconds++;
+            this.totalSeconds++;
+            this.updateStatsUI();
+          }
+        }, 1000);
+
+        this.isGameActive = true;
+      }
+
+      markExplored(gx, gy) {
+        if (!this.visitedTiles || !this.mazeData) return;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = gx + dx, ny = gy + dy;
+            if (nx >= 0 && nx < this.mazeData.gridW && ny >= 0 && ny < this.mazeData.gridH) {
+              this.visitedTiles[ny][nx] = true;
+            }
+          }
+        }
+      }
+
+      adjustCameraForMaze() {
+        const w = this.canvas.clientWidth;
+        const h = this.canvas.clientHeight;
+        const isPortrait = h > w;
+
+        const baseTileW = isPortrait ? 56 : 48;
+        this.camera.tileW = baseTileW;
+        this.camera.tileH = baseTileW * 0.5;
+        this.camera.wallH = baseTileW * 0.52;
+      }
+
+      gridToIso(gx, gy) {
+        return {
+          x: (gx - gy) * (this.camera.tileW / 2),
+          y: (gx + gy) * (this.camera.tileH / 2)
+        };
+      }
+
+      handleDirectionInput(dx, dy) {
+        if (!this.isGameActive || this.player.isMoving || this.isPausedInMenu) return;
+
+        const nextX = this.player.gx + dx;
+        const nextY = this.player.gy + dy;
+
+        if (
+          nextX >= 0 && nextX < this.mazeData.gridW &&
+          nextY >= 0 && nextY < this.mazeData.gridH &&
+          this.mazeData.grid[nextY][nextX] === 0
+        ) {
+          this.player.targetGx = nextX;
+          this.player.targetGy = nextY;
+          this.player.isMoving = true;
+          this.player.moveProgress = 0;
+
+          this.levelSteps++;
+          this.totalSteps++;
+          this.updateStatsUI();
+          this.sound.playStep();
+          this.saveGameState();
+        }
+      }
+
+      checkTileInteractions() {
+        if (!this.hasKey && this.player.gx === this.mazeData.key.x && this.player.gy === this.mazeData.key.y) {
+          this.hasKey = true;
+          this.updateKeyUI();
+          this.sound.playKeyPickup();
+          if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
+          this.particles.spawn(this.mazeData.key.x, this.mazeData.key.y, 0.4, '#fbbf24', 30);
+          this.showToast('Chiave raccolta! Il portale è aperto 🗝️✨', '✨');
+          this.saveGameState();
+        }
+
+        if (this.heart && this.player.gx === this.heart.gx && this.player.gy === this.heart.gy) {
+          if (this.lives < this.maxLives) {
+            this.lives++;
+            this.updateLivesUI();
+            this.saveGameState();
+          }
+          this.sound.playHeartCollect();
+          this.particles.spawn(this.heart.gx, this.heart.gy, 0.4, '#ef4444', 35, 0.12);
+          this.particles.spawn(this.heart.gx, this.heart.gy, 0.2, '#fde047', 20, 0.08);
+          this.heart = null;
+          this.heartSpawnTimer = 60.0;
+          this.showToast(`Cuore raccolto! Vite: ${this.lives}/3 ❤️`, '💖');
+        }
+
+        if (this.player.gx === this.mazeData.exit.x && this.player.gy === this.mazeData.exit.y) {
+          if (!this.hasKey) {
+            this.showToast('Questo è il portale d\'uscita! Trova la chiave dorata 🗝️', '🔒');
+            return;
+          }
+
+          this.isGameActive = false;
+          if (this.currentLevel >= this.maxLevel) {
+            this.recordScoreToLeaderboard();
+            this.clearSavedState();
+            setTimeout(() => {
+              this.showVictoryModal();
+              const ctx = this.getActiveMenuContext();
+              if (ctx) this.updateMenuFocusVisuals(ctx.items);
+            }, 300);
+          } else {
+            setTimeout(() => {
+              this.showLevelClearedModal();
+              const ctx = this.getActiveMenuContext();
+              if (ctx) this.updateMenuFocusVisuals(ctx.items);
+            }, 300);
+          }
+        }
+      }
+
+      showToast(msg, icon = '🗝️', isWarning = false) {
+        const toast = document.getElementById('game-toast');
+        document.getElementById('toast-msg').textContent = msg;
+        document.getElementById('toast-icon').textContent = icon;
+        toast.className = isWarning 
+          ? 'absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-rose-300 border border-rose-500/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center'
+          : 'absolute top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-amber-200 border border-amber-400/70 shadow-xl opacity-100 transition-all duration-300 translate-y-0 flex items-center gap-2 max-w-[90vw] text-center';
+
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-2');
+        }, 2200);
+      }
+
+      updateLivesUI() {
+        for (let i = 1; i <= this.maxLives; i++) {
+          const heartEl = document.getElementById(`life-${i}`);
+          if (heartEl) {
+            heartEl.textContent = i <= this.lives ? '❤️' : '🖤';
+            heartEl.style.opacity = i <= this.lives ? '1' : '0.4';
+          }
+        }
+      }
+
+      updateThemeUI() {
+        const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
+        document.getElementById('theme-name').textContent = theme.name;
+        document.getElementById('theme-dot').style.backgroundColor = theme.accent;
+        document.getElementById('level-text').textContent = `L.${this.currentLevel}/${this.maxLevel}`;
+        const formulaDim = 8 + (this.currentLevel * 2);
+        document.getElementById('grid-size').textContent = `(${formulaDim}x${formulaDim})`;
+      }
+
+      updateStatsUI() {
+        document.getElementById('stat-steps').textContent = this.levelSteps;
+        const mins = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
+        const secs = (this.levelSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('stat-time').textContent = `${mins}:${secs}`;
+      }
+
+      updateKeyUI() {
+        const badge = document.getElementById('key-badge');
+        const icon = document.getElementById('key-badge-icon');
+        const text = document.getElementById('key-badge-text');
+        if (this.hasKey) {
+          badge.className = 'flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-500/25 border border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]';
+          icon.className = 'text-[10px] grayscale-0 opacity-100 scale-110';
+          text.className = 'text-[9px] font-black text-amber-300 leading-none';
+          text.textContent = '1/1';
+        } else {
+          badge.className = 'flex items-center gap-0.5 px-1 py-0.5 rounded bg-slate-800 border border-slate-700';
+          icon.className = 'text-[10px] grayscale opacity-40';
+          text.className = 'text-[9px] font-black text-slate-400 leading-none';
+          text.textContent = '0/1';
+        }
+      }
+
+      showMap() {
+        this.isMapVisible = true;
+        const overlay = document.getElementById('map-overlay');
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        this.renderMap();
+      }
+
+      hideMap() {
+        this.isMapVisible = false;
+        const overlay = document.getElementById('map-overlay');
+        overlay.classList.remove('flex');
+        overlay.classList.add('hidden');
+      }
+
+      renderMap() {
+        if (!this.mazeData || !this.visitedTiles) return;
+        const rect = this.mapCanvas.parentElement.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const w = rect.width, h = rect.height;
+        this.mapCanvas.width = w * dpr;
+        this.mapCanvas.height = h * dpr;
+
+        const ctx = this.mapCtx;
+        ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, w, h);
+
+        const theme = LEVEL_THEMES[this.currentLevel - 1];
+        const { gridW, gridH } = this.mazeData;
+
+        const cellW = Math.min((w * 0.9) / gridW, (h * 0.9) / gridH);
+        const startX = (w - gridW * cellW) / 2;
+        const startY = (h - gridH * cellW) / 2;
+
+        let total = 0, exp = 0;
+        for (let gy = 0; gy < gridH; gy++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            if (this.mazeData.grid[gy][gx] === 0) {
+              total++;
+              if (this.visitedTiles[gy][gx]) exp++;
+            }
+          }
+        }
+        document.getElementById('map-explored-pct').textContent = `${Math.round((exp / total) * 100)}%`;
+
+        for (let gy = 0; gy < gridH; gy++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            if (!this.visitedTiles[gy][gx]) {
+              ctx.fillStyle = 'rgba(10, 15, 26, 0.7)';
+              ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW - 0.5, cellW - 0.5);
+              continue;
+            }
+            if (this.mazeData.grid[gy][gx] === 0) {
+              ctx.fillStyle = theme.floorTop;
+              ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW - 0.5, cellW - 0.5);
+
+              if (gx === this.mazeData.start.x && gy === this.mazeData.start.y) {
+                ctx.fillStyle = '#34d399';
+                ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
+              }
+              if (gx === this.mazeData.exit.x && gy === this.mazeData.exit.y) {
+                ctx.fillStyle = this.hasKey ? theme.portal : '#f43f5e';
+                ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
+              }
+              if (!this.hasKey && gx === this.mazeData.key.x && gy === this.mazeData.key.y) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW, cellW);
+              }
+            } else {
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+              ctx.fillRect(startX + gx * cellW, startY + gy * cellW, cellW - 0.5, cellW - 0.5);
+            }
+          }
+        }
+
+        if (this.heart && this.visitedTiles[this.heart.gy][this.heart.gx]) {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(startX + (this.heart.gx + 0.5) * cellW, startY + (this.heart.gy + 0.5) * cellW, cellW * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = '#ef4444';
+        for (const b of this.bombs) {
+          ctx.beginPath();
+          ctx.arc(startX + (b.gx + 0.5) * cellW, startY + (b.gy + 0.5) * cellW, cellW * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = '#e11d48';
+        for (const e of this.enemies) {
+          ctx.beginPath();
+          ctx.arc(startX + (e.renderX + 0.5) * cellW, startY + (e.renderY + 0.5) * cellW, cellW * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(
+          startX + (this.player.renderX + 0.5) * cellW,
+          startY + (this.player.renderY + 0.5) * cellW,
+          cellW * 0.45, 0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+
+      showLevelClearedModal() {
+        this.sound.playLevelWin();
+        document.getElementById('modal-step-count').textContent = this.levelSteps;
+        const m = Math.floor(this.levelSeconds / 60).toString().padStart(2, '0');
+        const s = (this.levelSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('modal-time-count').textContent = `${m}:${s}`;
+        document.getElementById('modal-level-cleared').classList.remove('hidden');
+      }
+
+      showGameOverModal() {
+        document.getElementById('gameover-level').textContent = `${this.currentLevel} / ${this.maxLevel}`;
+        document.getElementById('gameover-steps').textContent = this.totalSteps;
+        document.getElementById('gameover-time').textContent = this.formatHHMMSS(this.totalSeconds);
+        document.getElementById('modal-gameover').classList.remove('hidden');
+      }
+
+      advanceNextLevel() {
+        this.closeModals();
+        this.startLevel(this.currentLevel + 1);
+      }
+
+      restartLevel() {
+        this.closeModals();
+        this.startLevel(this.currentLevel);
+      }
+
+      showVictoryModal() {
+        this.sound.playGameWin();
+        document.getElementById('victory-total-steps').textContent = this.totalSteps;
+        document.getElementById('victory-total-time').textContent = this.formatHHMMSS(this.totalSeconds);
+        document.getElementById('modal-victory').classList.remove('hidden');
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        }
+      }
+
+      closeModals() {
+        document.getElementById('modal-level-cleared').classList.add('hidden');
+        document.getElementById('modal-victory').classList.add('hidden');
+        document.getElementById('modal-gameover').classList.add('hidden');
+        document.getElementById('modal-confirm-newgame').classList.add('hidden');
+        document.getElementById('modal-options').classList.add('hidden');
+        document.getElementById('modal-leaderboard').classList.add('hidden');
+      }
+
+      resize() {
+        this.detectDeviceMode();
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = Math.round(rect.width * dpr);
+        this.canvas.height = Math.round(rect.height * dpr);
+        this.ctx.resetTransform();
+        this.ctx.scale(dpr, dpr);
+        this.adjustCameraForMaze();
+      }
+
+      update(deltaTime) {
+        this.pollGamepad(deltaTime);
+
+        if (this.isPausedInMenu) return;
+
+        if (this.camera.shake > 0) {
+          this.camera.shake = Math.max(0, this.camera.shake - deltaTime * 30);
+        }
+
+        if (this.isGameActive) {
+          this.enemySpawnTimer -= deltaTime;
+          if (this.enemySpawnTimer <= 0) {
+            this.enemySpawnTimer = 20;
+            this.spawnRandomEnemy();
+          }
+
+          if (this.lives < this.maxLives) {
+            if (!this.heart) {
+              this.heartSpawnTimer -= deltaTime;
+              if (this.heartSpawnTimer <= 0) {
+                this.heartSpawnTimer = 60.0;
+                this.spawnHeart();
+              }
+            }
+          } else {
+            if (!this.heart) {
+              this.heartSpawnTimer = 60.0;
+            }
+          }
+
+          if (this.heart) {
+            this.heart.bob = Math.sin(Date.now() * 0.006) * 4;
+            this.heart.pulse = 1 + (Math.sin(Date.now() * 0.01) * 0.08);
+          }
+
+          this.updateBombs(deltaTime);
+          this.updateEnemies(deltaTime);
+        }
+
+        if (this.player.isMoving) {
+          this.player.moveProgress += this.player.moveSpeed * deltaTime;
+          if (this.player.moveProgress >= 1) {
+            this.player.gx = this.player.targetGx;
+            this.player.gy = this.player.targetGy;
+            this.player.renderX = this.player.gx;
+            this.player.renderY = this.player.gy;
+            this.player.isMoving = false;
+            this.player.moveProgress = 0;
+            this.markExplored(this.player.gx, this.player.gy);
+            this.checkTileInteractions();
+          } else {
+            const t = this.player.moveProgress;
+            this.player.renderX = this.player.gx + (this.player.targetGx - this.player.gx) * t;
+            this.player.renderY = this.player.gy + (this.player.targetGy - this.player.gy) * t;
+          }
+        } else {
+          this.player.renderX = this.player.gx;
+          this.player.renderY = this.player.gy;
+        }
+
+        this.player.bob = Math.sin(Date.now() * 0.008) * (this.player.isMoving ? 4 : 2);
+
+        if (this.mazeData) {
+          const focusIso = this.gridToIso(this.player.renderX, this.player.renderY);
+          const vw = this.canvas.clientWidth;
+          const vh = this.canvas.clientHeight;
+          const isPortrait = vh > vw;
+
+          const portraitYShift = isPortrait ? (vh * 0.10) : 0;
+          const desiredCamX = vw / 2 - focusIso.x;
+          const desiredCamY = (vh / 2 - focusIso.y) - portraitYShift;
+
+          this.camera.x += (desiredCamX - this.camera.x) * Math.min(1, deltaTime * 8);
+          this.camera.y += (desiredCamY - this.camera.y) * Math.min(1, deltaTime * 8);
+        }
+
+        if (this.isMapVisible) this.renderMap();
+        this.particles.update();
+      }
+
+      render() {
+        const ctx = this.ctx;
+        const w = this.canvas.clientWidth;
+        const h = this.canvas.clientHeight;
+        const theme = LEVEL_THEMES[this.currentLevel - 1] || LEVEL_THEMES[0];
+
+        const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, Math.max(w, h));
+        bgGrad.addColorStop(0, theme.bgBottom);
+        bgGrad.addColorStop(1, theme.bgTop);
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        if (!this.mazeData) return;
+
+        ctx.save();
+        const shakeX = (Math.random() - 0.5) * this.camera.shake;
+        const shakeY = (Math.random() - 0.5) * this.camera.shake;
+        ctx.translate(this.camera.x + shakeX, this.camera.y + shakeY);
+
+        const tw = this.camera.tileW;
+        const th = this.camera.tileH;
+        const wh = this.camera.wallH;
+        const { gridW, gridH } = this.mazeData;
+
+        for (let gy = 0; gy < gridH; gy++) {
+          for (let gx = 0; gx < gridW; gx++) {
+            if (this.mazeData.grid[gy][gx] === 0) {
+              const iso = this.gridToIso(gx, gy);
+              this.drawIsoDiamond(ctx, iso.x, iso.y, tw, th, theme.floorTop, theme.floorEdge);
+
+              if (gx === this.mazeData.start.x && gy === this.mazeData.start.y) {
+                ctx.beginPath();
+                ctx.ellipse(iso.x, iso.y, tw * 0.28, th * 0.28, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#34d399';
+                ctx.fill();
+              }
+            }
+          }
+        }
+
+        const maxDepth = (gridW - 1) + (gridH - 1);
+        const playerDepth = this.player.renderX + this.player.renderY;
+        const keyDepth = this.mazeData.key.x + this.mazeData.key.y;
+        const exitDepth = this.mazeData.exit.x + this.mazeData.exit.y;
+        const heartDepth = this.heart ? this.heart.gx + this.heart.gy : -999;
+
+        let playerDrawn = false;
+        let keyDrawn = this.hasKey;
+        let exitDrawn = false;
+        let heartDrawn = !this.heart;
+        const drawnBombs = new Set();
+        const drawnEnemies = new Set();
+
+        for (let depth = 0; depth <= maxDepth; depth++) {
+          for (let bIdx = 0; bIdx < this.bombs.length; bIdx++) {
+            const b = this.bombs[bIdx];
+            if (!drawnBombs.has(bIdx) && (b.gx + b.gy) <= depth) {
+              this.drawBomb(ctx, b);
+              drawnBombs.add(bIdx);
+            }
+          }
+
+          for (let eIdx = 0; eIdx < this.enemies.length; eIdx++) {
+            const enemy = this.enemies[eIdx];
+            if (!drawnEnemies.has(eIdx) && (enemy.renderX + enemy.renderY) <= depth + 0.4) {
+              this.drawEnemy(ctx, enemy);
+              drawnEnemies.add(eIdx);
+            }
+          }
+
+          if (!heartDrawn && heartDepth <= depth) {
+            this.drawHeart(ctx, this.heart);
+            heartDrawn = true;
+          }
+
+          if (!exitDrawn && exitDepth <= depth) {
+            const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
+            this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
+            exitDrawn = true;
+          }
+
+          if (!keyDrawn && keyDepth <= depth) {
+            const iso = this.gridToIso(this.mazeData.key.x, this.mazeData.key.y);
+            this.drawKey(ctx, iso.x, iso.y);
+            keyDrawn = true;
+          }
+
+          if (!playerDrawn && playerDepth <= depth + 0.5) {
+            this.drawPlayer(ctx, theme);
+            playerDrawn = true;
+          }
+
+          for (let gy = 0; gy < gridH; gy++) {
+            const gx = depth - gy;
+            if (gx >= 0 && gx < gridW && this.mazeData.grid[gy][gx] === 1) {
+              const iso = this.gridToIso(gx, gy);
+              this.draw3DWallBlock(ctx, iso.x, iso.y, tw, th, wh, theme);
+            }
+          }
+        }
+
+        for (let bIdx = 0; bIdx < this.bombs.length; bIdx++) {
+          if (!drawnBombs.has(bIdx)) this.drawBomb(ctx, this.bombs[bIdx]);
+        }
+        for (let eIdx = 0; eIdx < this.enemies.length; eIdx++) {
+          if (!drawnEnemies.has(eIdx)) this.drawEnemy(ctx, this.enemies[eIdx]);
+        }
+        if (!heartDrawn && this.heart) {
+          this.drawHeart(ctx, this.heart);
+        }
+        if (!exitDrawn) {
+          const iso = this.gridToIso(this.mazeData.exit.x, this.mazeData.exit.y);
+          this.drawExitPortal(ctx, iso.x, iso.y, tw, th, theme.portal, this.hasKey);
+        }
+        if (!keyDrawn) {
+          const iso = this.gridToIso(this.mazeData.key.x, this.mazeData.key.y);
+          this.drawKey(ctx, iso.x, iso.y);
+        }
+        if (!playerDrawn) this.drawPlayer(ctx, theme);
+
+        this.drawParticles(ctx);
+        ctx.restore();
+      }
+
+      drawIsoDiamond(ctx, x, y, tw, th, fill, stroke) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - th / 2);
+        ctx.lineTo(x + tw / 2, y);
+        ctx.lineTo(x, y + th / 2);
+        ctx.lineTo(x - tw / 2, y);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      draw3DWallBlock(ctx, x, y, tw, th, wh, theme) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - th / 2 - wh);
+        ctx.lineTo(x + tw / 2, y - wh);
+        ctx.lineTo(x, y + th / 2 - wh);
+        ctx.lineTo(x - tw / 2, y - wh);
+        ctx.closePath();
+        ctx.fillStyle = theme.wallTop;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x - tw / 2, y - wh);
+        ctx.lineTo(x, y + th / 2 - wh);
+        ctx.lineTo(x, y + th / 2);
+        ctx.lineTo(x - tw / 2, y);
+        ctx.closePath();
+        ctx.fillStyle = theme.wallLeft;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(x, y + th / 2 - wh);
+        ctx.lineTo(x + tw / 2, y - wh);
+        ctx.lineTo(x + tw / 2, y);
+        ctx.lineTo(x, y + th / 2);
+        ctx.closePath();
+        ctx.fillStyle = theme.wallRight;
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.stroke();
+      }
+
+      drawHeart(ctx, heart) {
+        const iso = this.gridToIso(heart.gx, heart.gy);
+        const y = iso.y - 18 + heart.bob;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.18, this.camera.tileH * 0.18, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+        ctx.fill();
+
+        ctx.shadowColor = '#f43f5e';
+        ctx.shadowBlur = 12;
+        ctx.font = `bold ${Math.round(18 * heart.pulse)}px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('❤️', iso.x, y);
+        ctx.restore();
+      }
+
+      drawBomb(ctx, bomb) {
+        const iso = this.gridToIso(bomb.gx, bomb.gy);
+        const pulse = 1 + (Math.sin(Date.now() * 0.018) * 0.10);
+        const rad = this.camera.tileW * 0.18 * pulse;
+        const cy = iso.y - rad - 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, rad * 1.1, rad * 0.55, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fill();
+
+        const grad = ctx.createRadialGradient(iso.x - rad * 0.3, cy - rad * 0.3, rad * 0.1, iso.x, cy, rad);
+        grad.addColorStop(0, '#64748b');
+        grad.addColorStop(0.4, '#1e293b');
+        grad.addColorStop(1, '#020617');
+
+        ctx.beginPath();
+        ctx.arc(iso.x, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(iso.x, cy - rad);
+        ctx.quadraticCurveTo(iso.x + 6, cy - rad - 8, iso.x + 10, cy - rad - 5);
+        ctx.stroke();
+
+        ctx.fillStyle = (Math.floor(Date.now() / 50) % 2 === 0) ? '#facc15' : '#ef4444';
+        ctx.beginPath();
+        ctx.arc(iso.x + 10, cy - rad - 5, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(Math.ceil(bomb.timeLeft), iso.x, cy);
+
+        ctx.restore();
+      }
+
+      drawEnemy(ctx, enemy) {
+        const iso = this.gridToIso(enemy.renderX, enemy.renderY);
+        const px = iso.x;
+        const py = iso.y - (enemy.isMoving ? Math.abs(Math.sin(enemy.moveProgress * Math.PI) * 4) : enemy.bob);
+        const rad = this.camera.tileW * 0.20;
+        const cy = py - rad - 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fill();
+
+        const grad = ctx.createRadialGradient(px - rad * 0.3, cy - rad * 0.3, rad * 0.1, px, cy, rad);
+        grad.addColorStop(0, '#475569');
+        grad.addColorStop(0.3, '#1e293b');
+        grad.addColorStop(1, '#000000');
+
+        ctx.beginPath();
+        ctx.arc(px, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        const eyeColor = this.heart ? '#f43f5e' : '#ef4444';
+        ctx.fillStyle = eyeColor;
+        ctx.shadowColor = eyeColor;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(px - rad * 0.35, cy - rad * 0.1, rad * 0.16, 0, Math.PI * 2);
+        ctx.arc(px + rad * 0.35, cy - rad * 0.1, rad * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#450a0a';
+        ctx.beginPath();
+        ctx.arc(px - rad * 0.35, cy - rad * 0.1, rad * 0.07, 0, Math.PI * 2);
+        ctx.arc(px + rad * 0.35, cy - rad * 0.1, rad * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      drawKey(ctx, x, y) {
+        const floatY = Math.sin(Date.now() * 0.006) * 5;
+        const ky = y - 16 + floatY;
+        ctx.save();
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 14;
+        ctx.font = 'bold 20px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🗝️', x, ky);
+        ctx.restore();
+      }
+
+      drawExitPortal(ctx, x, y, tw, th, portalCol, isUnlocked) {
+        ctx.save();
+        const pulse = Math.sin(Date.now() * 0.006) * 2;
+        const col = isUnlocked ? portalCol : '#f43f5e';
+        ctx.beginPath();
+        ctx.ellipse(x, y, tw * 0.35 + pulse, th * 0.35 + pulse * 0.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = col;
+        ctx.globalAlpha = 0.55;
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.font = 'bold 16px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isUnlocked ? '🚪✨' : '🔒', x, y - 22 + pulse);
+        ctx.restore();
+      }
+
+      drawPlayer(ctx, theme) {
+        const iso = this.gridToIso(this.player.renderX, this.player.renderY);
+        const px = iso.x;
+        const py = iso.y - (this.player.isMoving ? Math.abs(Math.sin(this.player.moveProgress * Math.PI) * 5) : this.player.bob);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(iso.x, iso.y + 2, this.camera.tileW * 0.22, this.camera.tileH * 0.22, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fill();
+
+        const rad = this.camera.tileW * 0.21;
+        const cy = py - rad - 2;
+
+        const grad = ctx.createRadialGradient(px - rad * 0.3, cy - rad * 0.3, rad * 0.1, px, cy, rad);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.35, theme.playerBody);
+        grad.addColorStop(1, '#78350f');
+
+        ctx.beginPath();
+        ctx.arc(px, cy, rad, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.fillStyle = theme.playerHat;
+        ctx.beginPath();
+        ctx.arc(px, cy - rad * 0.58, rad * 0.52, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.hasKey) {
+          ctx.font = '11px system-ui';
+          ctx.fillText('🗝️', px + rad * 0.8, cy - rad * 0.8);
+        }
+
+        ctx.restore();
+      }
+
+      drawParticles(ctx) {
+        ctx.save();
+        for (const p of this.particles.particles) {
+          const iso = this.gridToIso(p.x, p.y);
+          ctx.beginPath();
+          ctx.arc(iso.x, iso.y - (p.z * this.camera.wallH * 1.5), p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.life;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      gameLoop(time) {
+        if (!this.lastTime) this.lastTime = time;
+        const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+        this.lastTime = time;
+
+        this.update(dt);
+        this.render();
+        requestAnimationFrame(this.gameLoop);
+      }
+
+      start() {
+        this.resize();
+        
+        const saved = this.loadGameState();
+        if (saved && saved.lives > 0) {
+          this.currentLevel = saved.currentLevel;
+          this.lives = saved.lives;
+          this.totalSteps = saved.totalSteps || 0;
+          this.totalSeconds = saved.totalSeconds || 0;
+        } else {
+          this.currentLevel = 1;
+          this.lives = this.maxLives;
+        }
+
+        const startLvl = this.currentLevel;
+        this.mazeData = MazeGenerator.generate(8 + (startLvl * 2));
+        this.updateThemeUI();
+        this.updateLivesUI();
+        
+        this.showMainMenu();
+        requestAnimationFrame(this.gameLoop);
+      }
+    }
+
+    window.onload = () => {
+      const game = new IsometricGame();
+      game.start();
+    };
+  </script>
+</body>
+</html>
