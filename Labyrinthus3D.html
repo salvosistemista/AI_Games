@@ -66,10 +66,11 @@
       background: rgba(79, 70, 229, 0.95);
       border-color: rgba(251, 191, 36, 0.8);
     }
+    /* Posizionamento Tasto Bomba sulla X indicata nello screenshot */
     .action-bomb-btn {
       position: absolute;
-      left: 12px;
-      bottom: 14px;
+      left: 108px;
+      bottom: 18px;
       width: 60px;
       height: 60px;
       border-radius: 20px;
@@ -87,10 +88,11 @@
       transform: scale(0.88);
       filter: brightness(1.2);
     }
+    /* Posizionamento Tasto Mappa sulla X indicata nello screenshot */
     .action-map-btn {
       position: absolute;
-      left: 18px;
-      bottom: 82px;
+      left: 114px;
+      bottom: 122px;
       width: 48px;
       height: 48px;
       border-radius: 16px;
@@ -211,10 +213,10 @@
     <span>Gamepad: <b class="text-emerald-400">Stick L / D-Pad</b> | Bomba/OK: <b class="text-rose-400">A (✕)</b> | Annulla: <b class="text-amber-300">B (○)</b></span>
   </div>
 
-  <!-- Controlli Touch Inferiori (Mobile Ergonomic Layout) -->
+  <!-- Controlli Touch Inferiori (Mobile Ergonomic Layout con X-targets) -->
   <footer id="touch-controls" class="relative w-full z-20 pb-[calc(var(--sab)+10px)] flex items-end justify-between px-3 pointer-events-none">
-    <!-- Quadrante Sinistro: Tasto Mappa e Tasto Bomba spostati leggermente verso destra -->
-    <div class="relative w-[130px] h-[155px] ml-6 pointer-events-auto">
+    <!-- Quadrante Sinistro: Tasti Mappa e Bomba posizionati esattamente sulle X -->
+    <div class="relative w-[180px] h-[180px] pointer-events-auto">
       <button id="btn-map" class="action-map-btn" aria-label="Mappa">
         <span class="text-xl">🗺️</span>
       </button>
@@ -225,7 +227,7 @@
       </button>
     </div>
 
-    <!-- Quadrante Destro: D-Pad Isometrico spostato in alto a sinistra -->
+    <!-- Quadrante Destro: D-Pad Isometrico -->
     <div class="flex items-end gap-1.5 pointer-events-auto ml-auto mr-5 mb-7">
       <div class="relative w-[160px] h-[160px]">
         <button id="pad-n" class="iso-dpad-btn top-1 right-2" aria-label="Nord">
