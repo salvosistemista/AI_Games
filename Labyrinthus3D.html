@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Labyrinthus 3D - Difficulty & Reset Edition</title>
+  <title>Labyrinthus 3D - Difficulty & Leaderboards Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -157,7 +157,7 @@
   <!-- Header Superiore -->
   <header id="game-header" class="relative w-full z-30 px-2 pt-[calc(var(--sat)+6px)] flex flex-col gap-1.5">
     <div class="flex items-center justify-between gap-1 w-full">
-      <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[140px]">
+      <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 shrink-0 max-w-[145px]">
         <div id="theme-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></div>
         <div class="flex flex-col min-w-0">
           <div class="text-[8px] uppercase font-bold tracking-wider text-slate-400 truncate" id="theme-name">Foresta Antica</div>
@@ -207,6 +207,10 @@
           <span>💣</span>
           <span id="bombs-count-text" class="font-black text-rose-300 text-[11px] leading-none">3/3</span>
           <span id="bombs-timer-text" class="hidden text-[9px] font-mono text-amber-400 pl-0.5">⏱ 15s</span>
+        </div>
+
+        <div id="diff-hud-badge" class="glass-panel px-2 py-1 rounded-xl font-black text-[9px] uppercase tracking-wider text-amber-300 border border-amber-400/30">
+          NORMALE
         </div>
 
         <div id="buffs-container" class="flex items-center gap-1">
@@ -335,7 +339,7 @@
         🏛️
       </div>
       <h1 class="text-2xl font-black tracking-wider text-amber-300 uppercase">Labyrinthus 3D</h1>
-      <p class="text-xs text-slate-400 mt-0.5 mb-5">50 Livelli • Boss Fights • Difficoltà personalizzabile</p>
+      <p class="text-xs text-slate-400 mt-0.5 mb-5">50 Livelli • Boss Fights • Classifiche Separate</p>
 
       <div class="w-full flex flex-col gap-2.5" id="menu-main-buttons">
         <button id="btn-menu-continue" class="menu-nav-btn w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-white font-black rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
@@ -348,7 +352,7 @@
         </button>
 
         <button id="btn-menu-leaderboard" class="menu-nav-btn w-full h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold rounded-xl text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
-          <span>🏆 Classifica Top 5</span>
+          <span>🏆 Classifiche Top 5</span>
         </button>
 
         <button id="btn-menu-options" class="menu-nav-btn w-full h-10 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all duration-150">
@@ -364,36 +368,42 @@
     </div>
   </div>
 
-  <!-- ==================== MODALE CLASSIFICA ==================== -->
-  <div id="modal-leaderboard" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
-    <div class="glass-panel w-full max-w-md p-5 rounded-3xl border-amber-400/40 shadow-2xl flex flex-col items-center">
-      <div class="flex items-center justify-between w-full pb-3 border-b border-slate-800 mb-3">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🏆</span>
-          <div class="text-left">
-            <h3 class="text-sm font-black text-amber-300 uppercase tracking-wide">Migliori 5 di Tutti i Tempi</h3>
-            <p class="text-[10px] text-slate-400">Classifica record fino al Game Over</p>
+  <!-- ==================== MODALE SELEZIONE DIFFICOLTÀ NUOVA PARTITA ==================== -->
+  <div id="modal-select-difficulty" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-3xl border-amber-400/50 shadow-2xl flex flex-col items-center text-center">
+      <div class="text-3xl mb-1.5">⚖️</div>
+      <h3 class="text-base font-black text-white">Scegli la Difficoltà</h3>
+      <p class="text-xs text-slate-400 mb-4">La difficoltà rimarrà fissa per tutta la durata della partita.</p>
+
+      <div class="w-full flex flex-col gap-2.5" id="difficulty-buttons">
+        <button id="btn-diff-easy" class="diff-nav-btn w-full p-2.5 rounded-2xl bg-slate-900 border border-emerald-500/40 hover:bg-emerald-950/40 text-left flex flex-col transition-all cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-emerald-400">🌱 FACILE</span>
+            <span class="text-[10px] text-emerald-300 font-mono">4 Bombe • 10s</span>
           </div>
-        </div>
-        <button id="btn-close-leaderboard" class="sub-nav-btn glass-btn px-2.5 py-1 rounded-lg text-slate-300 text-xs font-bold transition-all duration-150">Chiudi ✕ (B/○)</button>
+          <span class="text-[10px] text-slate-400 mt-0.5">Meno nemici sul percorso, recupero rapido.</span>
+        </button>
+
+        <button id="btn-diff-normal" class="diff-nav-btn w-full p-2.5 rounded-2xl bg-slate-900 border border-amber-500/40 hover:bg-amber-950/40 text-left flex flex-col transition-all cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-amber-400">⚔️ NORMALE</span>
+            <span class="text-[10px] text-amber-300 font-mono">3 Bombe • 15s</span>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-0.5">L'esperienza di gioco classica e bilanciata.</span>
+        </button>
+
+        <button id="btn-diff-hard" class="diff-nav-btn w-full p-2.5 rounded-2xl bg-slate-900 border border-rose-500/40 hover:bg-rose-950/40 text-left flex flex-col transition-all cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-rose-400">🔥 DIFFICILE</span>
+            <span class="text-[10px] text-rose-300 font-mono">2 Bombe • 20s</span>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-0.5">Poche risorse, nemici frequenti e implacabili.</span>
+        </button>
       </div>
 
-      <div class="w-full overflow-x-auto my-1">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr class="text-[9px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
-              <th class="py-1.5 px-2">#</th>
-              <th class="py-1.5 px-2">Livello</th>
-              <th class="py-1.5 px-2">Passi</th>
-              <th class="py-1.5 px-2">Tempo</th>
-              <th class="py-1.5 px-2 text-right">Data</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-body" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
-        </table>
-      </div>
-
-      <p class="text-[9px] text-slate-500 mt-3 italic text-center">Premi <b class="text-slate-300">B (o Cerchio)</b> per tornare al Menu Principale.</p>
+      <button id="btn-diff-cancel" class="diff-nav-btn mt-3 w-full h-9 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-all cursor-pointer">
+        Annulla (B/○)
+      </button>
     </div>
   </div>
 
@@ -415,6 +425,46 @@
     </div>
   </div>
 
+  <!-- ==================== MODALE CLASSIFICA (3 TAB) ==================== -->
+  <div id="modal-leaderboard" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-md p-5 rounded-3xl border-amber-400/40 shadow-2xl flex flex-col items-center">
+      <div class="flex items-center justify-between w-full pb-2 border-b border-slate-800 mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🏆</span>
+          <div class="text-left">
+            <h3 class="text-sm font-black text-amber-300 uppercase tracking-wide">Classifiche Top 5</h3>
+            <p class="text-[10px] text-slate-400">Record salvati separatamente per difficoltà</p>
+          </div>
+        </div>
+        <button id="btn-close-leaderboard" class="sub-nav-btn glass-btn px-2.5 py-1 rounded-lg text-slate-300 text-xs font-bold transition-all duration-150">Chiudi ✕ (B/○)</button>
+      </div>
+
+      <!-- Selettore Tab Difficoltà -->
+      <div class="w-full flex p-1 bg-slate-900 rounded-xl gap-1 mb-2 border border-slate-800">
+        <button id="tab-lb-facile" class="flex-1 py-1 text-[11px] font-black rounded-lg text-slate-400 hover:text-white transition-all">🌱 FACILE</button>
+        <button id="tab-lb-normale" class="flex-1 py-1 text-[11px] font-black rounded-lg bg-amber-500/25 text-amber-300 border border-amber-400/40 transition-all">⚔️ NORMALE</button>
+        <button id="tab-lb-difficile" class="flex-1 py-1 text-[11px] font-black rounded-lg text-slate-400 hover:text-white transition-all">🔥 DIFFICILE</button>
+      </div>
+
+      <div class="w-full overflow-x-auto my-1">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="text-[9px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+              <th class="py-1.5 px-2">#</th>
+              <th class="py-1.5 px-2">Livello</th>
+              <th class="py-1.5 px-2">Passi</th>
+              <th class="py-1.5 px-2">Tempo</th>
+              <th class="py-1.5 px-2 text-right">Data</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body" class="divide-y divide-slate-800/60 font-mono text-[11px]"></tbody>
+        </table>
+      </div>
+
+      <p class="text-[9px] text-slate-500 mt-3 italic text-center">Premi <b class="text-slate-300">B (o Cerchio)</b> per tornare al Menu Principale.</p>
+    </div>
+  </div>
+
   <!-- ==================== MODALE OPZIONI ==================== -->
   <div id="modal-options" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
     <div class="glass-panel w-full max-w-xs p-5 rounded-3xl border-slate-700 shadow-2xl flex flex-col items-center">
@@ -423,26 +473,6 @@
       </h3>
 
       <div class="w-full flex flex-col gap-3 mb-5" id="options-items">
-        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
-            <span>📊</span>
-            <span>Difficoltà</span>
-          </div>
-          <button id="btn-opt-toggle-diff" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150">
-            NORMALE
-          </button>
-        </div>
-
-        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
-            <span>🗑️</span>
-            <span>Classifica</span>
-          </div>
-          <button id="btn-opt-reset-leaderboard" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150">
-            RESET TOP 5
-          </button>
-        </div>
-
         <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
           <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
             <span id="opt-control-icon">🕹️</span>
@@ -470,6 +500,16 @@
           </div>
           <button id="btn-opt-toggle-fullscreen" class="opt-nav-btn px-3 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 transition-all duration-150">
             ATTIVA
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>🗑️</span>
+            <span>Azzera Classifiche</span>
+          </div>
+          <button id="btn-opt-reset-leaderboard" class="opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150">
+            RESET TUTTO
           </button>
         </div>
       </div>
@@ -515,6 +555,10 @@
 
       <div class="w-full bg-slate-900 rounded-2xl p-3 mb-4 border border-slate-700 flex flex-col gap-2">
         <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Difficoltà:</span>
+          <span id="gameover-diff" class="font-black text-amber-300 uppercase">NORMALE</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
           <span class="text-slate-400">Livello raggiunto:</span>
           <span id="gameover-level" class="font-bold text-amber-400">1</span>
         </div>
@@ -523,7 +567,7 @@
           <span id="gameover-steps" class="font-bold text-amber-400">0</span>
         </div>
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Tempo totali:</span>
+          <span class="text-slate-400">Tempo totale:</span>
           <span id="gameover-time" class="font-bold text-cyan-400">00:00:00</span>
         </div>
       </div>
@@ -542,6 +586,10 @@
       <p class="text-xs text-slate-300 mt-1 mb-4">Hai completato tutti i 50 labirinti!</p>
 
       <div class="w-full bg-slate-900 rounded-2xl p-3 mb-5 border border-slate-700 flex flex-col gap-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Difficoltà:</span>
+          <span id="victory-diff" class="font-black text-amber-300 uppercase">NORMALE</span>
+        </div>
         <div class="flex justify-between items-center text-xs">
           <span class="text-slate-400">Passi totali:</span>
           <span id="victory-total-steps" class="font-bold text-amber-400">0</span>
@@ -908,20 +956,11 @@
         this.hasKey = false;
         this.toastTimeout = null;
 
-        this.DIFFICULTY_KEY = 'labyrinthus_difficulty_v1';
         this.difficulty = 'normale';
-        try {
-          const savedDiff = localStorage.getItem(this.DIFFICULTY_KEY);
-          if (savedDiff === 'facile' || savedDiff === 'normale' || savedDiff === 'difficile') {
-            this.difficulty = savedDiff;
-          }
-        } catch(e) {}
-
         this.applyDifficultySettings();
 
         this.isBossLevel = false;
         this.boss = null;
-
         this.bulletTime = 0;
 
         this.powerups = [];
@@ -978,7 +1017,7 @@
         this.currentFocusIndex = 0;
 
         this.STORAGE_KEY = 'labyrinthus_save_state_v1';
-        this.LEADERBOARD_KEY = 'labyrinthus_leaderboard_top5_v1';
+        this.selectedLeaderboardTab = 'normale';
         this.memoryStore = {};
 
         this.resize = this.resize.bind(this);
@@ -992,7 +1031,6 @@
         this.initUI();
         this.initMenuSystem();
         this.applyControlModeUI();
-        this.applyDifficultyUI();
         this.setupAudioUnlock();
         this.setupAutoSaveListeners();
       }
@@ -1011,20 +1049,45 @@
         if (typeof this.availableBombs !== 'number' || this.availableBombs > this.maxAvailableBombs) {
           this.availableBombs = this.maxAvailableBombs;
         }
-      }
 
-      applyDifficultyUI() {
-        const btnDiff = document.getElementById('btn-opt-toggle-diff');
-        if (btnDiff) {
-          btnDiff.textContent = this.difficulty.toUpperCase();
+        const diffBadge = document.getElementById('diff-hud-badge');
+        if (diffBadge) {
+          diffBadge.textContent = this.difficulty.toUpperCase();
           if (this.difficulty === 'facile') {
-            btnDiff.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition-all duration-150';
+            diffBadge.className = 'glass-panel px-2 py-1 rounded-xl font-black text-[9px] uppercase tracking-wider text-emerald-300 border border-emerald-400/40';
           } else if (this.difficulty === 'difficile') {
-            btnDiff.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all duration-150';
+            diffBadge.className = 'glass-panel px-2 py-1 rounded-xl font-black text-[9px] uppercase tracking-wider text-rose-300 border border-rose-400/40';
           } else {
-            btnDiff.className = 'opt-nav-btn px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 transition-all duration-150';
+            diffBadge.className = 'glass-panel px-2 py-1 rounded-xl font-black text-[9px] uppercase tracking-wider text-amber-300 border border-amber-400/40';
           }
         }
+      }
+
+      getMaxEnemiesForCurrentLevel() {
+        const lvl = this.currentLevel;
+        let baseMax = 1;
+
+        if (lvl >= 46)      baseMax = 4;
+        else if (lvl >= 21) baseMax = 3;
+        else if (lvl >= 6)  baseMax = 2;
+        else                baseMax = 1;
+
+        let mod = 0;
+        if (this.difficulty === 'facile') {
+          mod = 0;
+        } else if (this.difficulty === 'normale') {
+          mod = (lvl >= 11 ? 1 : 0);
+        } else if (this.difficulty === 'difficile') {
+          mod = (lvl >= 36 ? 2 : 1);
+        }
+
+        let cap = baseMax + mod;
+
+        if (this.isBossLevel) {
+          cap = Math.max(1, cap - 1);
+        }
+
+        return cap;
       }
 
       setupAutoSaveListeners() {
@@ -1093,6 +1156,7 @@
           totalSteps: this.totalSteps || 0,
           totalSeconds: this.totalSeconds || 0,
           availableBombs: this.availableBombs,
+          difficulty: this.difficulty,
           timestamp: Date.now()
         };
         try {
@@ -1128,11 +1192,17 @@
         return save !== null && save.lives > 0 && save.currentLevel <= this.maxLevel;
       }
 
-      loadLeaderboard() {
+      getLeaderboardKey(diff = null) {
+        const d = diff || this.difficulty || 'normale';
+        return `labyrinthus_leaderboard_${d}_top5_v2`;
+      }
+
+      loadLeaderboard(diff = null) {
+        const key = this.getLeaderboardKey(diff);
         try {
           let raw = null;
-          try { raw = localStorage.getItem(this.LEADERBOARD_KEY); } catch (e) {}
-          if (!raw) raw = this.memoryStore[this.LEADERBOARD_KEY];
+          try { raw = localStorage.getItem(key); } catch (e) {}
+          if (!raw) raw = this.memoryStore[key];
           if (!raw) return [];
           const parsed = JSON.parse(raw);
           return Array.isArray(parsed) ? parsed : [];
@@ -1141,15 +1211,19 @@
         }
       }
 
-      resetLeaderboard() {
-        try { localStorage.removeItem(this.LEADERBOARD_KEY); } catch(e) {}
-        delete this.memoryStore[this.LEADERBOARD_KEY];
-        this.showToast('Classifica resettata con successo! 🗑️', '🗑️');
+      resetAllLeaderboards() {
+        ['facile', 'normale', 'difficile'].forEach(diff => {
+          const key = this.getLeaderboardKey(diff);
+          try { localStorage.removeItem(key); } catch(e) {}
+          delete this.memoryStore[key];
+        });
+        this.showToast('Tutte le classifiche sono state azzerate! 🗑️', '🗑️');
       }
 
       recordScoreToLeaderboard() {
         if (this.totalSteps <= 0 && this.currentLevel <= 1 && this.totalSeconds <= 0) return;
 
+        const key = this.getLeaderboardKey(this.difficulty);
         const newEntry = {
           level: this.currentLevel,
           steps: this.totalSteps,
@@ -1157,7 +1231,7 @@
           date: Date.now()
         };
 
-        const board = this.loadLeaderboard();
+        const board = this.loadLeaderboard(this.difficulty);
         board.push(newEntry);
 
         board.sort((a, b) => {
@@ -1168,28 +1242,42 @@
 
         const top5 = board.slice(0, 5);
         try {
-          localStorage.setItem(this.LEADERBOARD_KEY, JSON.stringify(top5));
+          localStorage.setItem(key, JSON.stringify(top5));
         } catch (e) {
-          this.memoryStore[this.LEADERBOARD_KEY] = JSON.stringify(top5);
+          this.memoryStore[key] = JSON.stringify(top5);
         }
 
         const isRanked = top5.some(entry => entry.date === newEntry.date);
         if (isRanked) {
-          this.showToast('Nuovo Record registrato nella Top 5! 🏆', '🏆');
+          this.showToast(`Nuovo Record (${this.difficulty.toUpperCase()}) nella Top 5! 🏆`, '🏆');
         }
       }
 
-      renderLeaderboard() {
+      renderLeaderboard(diff = null) {
+        const targetDiff = diff || this.selectedLeaderboardTab || 'normale';
+        this.selectedLeaderboardTab = targetDiff;
+
+        ['facile', 'normale', 'difficile'].forEach(d => {
+          const tab = document.getElementById(`tab-lb-${d}`);
+          if (tab) {
+            if (d === targetDiff) {
+              tab.className = 'flex-1 py-1 text-[11px] font-black rounded-lg bg-amber-500/25 text-amber-300 border border-amber-400/40 transition-all';
+            } else {
+              tab.className = 'flex-1 py-1 text-[11px] font-black rounded-lg text-slate-400 hover:text-white transition-all';
+            }
+          }
+        });
+
         const tbody = document.getElementById('leaderboard-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        const top5 = this.loadLeaderboard();
+        const top5 = this.loadLeaderboard(targetDiff);
 
         if (top5.length === 0) {
           tbody.innerHTML = `
             <tr>
               <td colspan="5" class="py-4 text-center text-slate-500 font-sans italic">
-                Nessun record registrato finora. Gioca e scala la classifica!
+                Nessun record salvato per la difficoltà ${targetDiff.toUpperCase()}. Gioca e scala la classifica!
               </td>
             </tr>
           `;
@@ -1215,6 +1303,11 @@
         const modLeaderboard = document.getElementById('modal-leaderboard');
         if (modLeaderboard && !modLeaderboard.classList.contains('hidden')) {
           return { name: 'leaderboard', items: [document.getElementById('btn-close-leaderboard')] };
+        }
+
+        const modSelectDiff = document.getElementById('modal-select-difficulty');
+        if (modSelectDiff && !modSelectDiff.classList.contains('hidden')) {
+          return { name: 'select-diff', items: Array.from(document.querySelectorAll('.diff-nav-btn')) };
         }
 
         const modConfirm = document.getElementById('modal-confirm-newgame');
@@ -1285,7 +1378,8 @@
           if (target && target.id === 'btn-confirm-newgame-cancel') {
             document.getElementById('btn-confirm-newgame-cancel').click();
           } else {
-            this.confirmAndStartNewGame();
+            document.getElementById('modal-confirm-newgame').classList.add('hidden');
+            this.openDifficultyModal();
           }
           return;
         }
@@ -1311,6 +1405,8 @@
         if (ctx) {
           if (ctx.name === 'leaderboard') {
             document.getElementById('btn-close-leaderboard').click();
+          } else if (ctx.name === 'select-diff') {
+            document.getElementById('btn-diff-cancel').click();
           } else if (ctx.name === 'options') {
             document.getElementById('btn-close-options').click();
           } else if (ctx.name === 'confirm') {
@@ -1335,10 +1431,12 @@
         }, 80);
       }
 
-      confirmAndStartNewGame() {
-        const modalConfirmNew = document.getElementById('modal-confirm-newgame');
-        if (modalConfirmNew) modalConfirmNew.classList.add('hidden');
-        this.startFreshGame();
+      openDifficultyModal() {
+        const modDiff = document.getElementById('modal-select-difficulty');
+        if (modDiff) modDiff.classList.remove('hidden');
+        this.currentFocusIndex = 1; // Focus predefinito su Normale
+        const ctx = this.getActiveMenuContext();
+        if (ctx) this.updateMenuFocusVisuals(ctx.items);
       }
 
       applyControlModeUI() {
@@ -1382,14 +1480,22 @@
 
         const modalLeaderboard = document.getElementById('modal-leaderboard');
         const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+        const tabEasy = document.getElementById('tab-lb-facile');
+        const tabNormal = document.getElementById('tab-lb-normale');
+        const tabHard = document.getElementById('tab-lb-difficile');
 
         const modalConfirmNew = document.getElementById('modal-confirm-newgame');
         const btnConfirmCancel = document.getElementById('btn-confirm-newgame-cancel');
         const btnConfirmOk = document.getElementById('btn-confirm-newgame-ok');
 
+        const modalSelectDiff = document.getElementById('modal-select-difficulty');
+        const btnDiffEasy = document.getElementById('btn-diff-easy');
+        const btnDiffNormal = document.getElementById('btn-diff-normal');
+        const btnDiffHard = document.getElementById('btn-diff-hard');
+        const btnDiffCancel = document.getElementById('btn-diff-cancel');
+
         const modalOptions = document.getElementById('modal-options');
         const btnCloseOptions = document.getElementById('btn-close-options');
-        const btnOptDiff = document.getElementById('btn-opt-toggle-diff');
         const btnOptResetLb = document.getElementById('btn-opt-reset-leaderboard');
         const btnOptControl = document.getElementById('btn-opt-toggle-control');
         const btnOptAudio = document.getElementById('btn-opt-toggle-audio');
@@ -1402,7 +1508,7 @@
           const save = this.loadGameState();
           if (save && save.lives > 0) {
             btnContinue.disabled = false;
-            badgeContinue.textContent = `Liv. ${save.currentLevel} (${save.lives}❤️)`;
+            badgeContinue.textContent = `Liv. ${save.currentLevel} (${save.lives}❤️ • ${save.difficulty ? save.difficulty.toUpperCase() : 'NORMALE'})`;
             badgeContinue.classList.remove('hidden');
           } else {
             btnContinue.disabled = true;
@@ -1437,6 +1543,8 @@
             this.lives = save.lives;
             this.totalSteps = save.totalSteps || 0;
             this.totalSeconds = save.totalSeconds || 0;
+            this.difficulty = save.difficulty || 'normale';
+            this.applyDifficultySettings();
             this.availableBombs = (typeof save.availableBombs === 'number') ? save.availableBombs : this.maxAvailableBombs;
             this.hideMainMenu();
             this.closeModals();
@@ -1452,7 +1560,7 @@
             const ctx = this.getActiveMenuContext();
             if (ctx) this.updateMenuFocusVisuals(ctx.items);
           } else {
-            this.startFreshGame();
+            this.openDifficultyModal();
           }
         });
 
@@ -1467,17 +1575,41 @@
         btnConfirmOk.addEventListener('click', (e) => {
           e.preventDefault();
           this.sound.playMenuSelect();
-          this.confirmAndStartNewGame();
+          modalConfirmNew.classList.add('hidden');
+          this.openDifficultyModal();
+        });
+
+        const selectDiffAndStart = (diff) => {
+          this.sound.playMenuSelect();
+          modalSelectDiff.classList.add('hidden');
+          this.difficulty = diff;
+          this.applyDifficultySettings();
+          this.startFreshGame();
+        };
+
+        btnDiffEasy.addEventListener('click', () => selectDiffAndStart('facile'));
+        btnDiffNormal.addEventListener('click', () => selectDiffAndStart('normale'));
+        btnDiffHard.addEventListener('click', () => selectDiffAndStart('difficile'));
+
+        btnDiffCancel.addEventListener('click', () => {
+          this.sound.playMenuCancel();
+          modalSelectDiff.classList.add('hidden');
+          const ctx = this.getActiveMenuContext();
+          if (ctx) this.updateMenuFocusVisuals(ctx.items);
         });
 
         btnLeaderboard.addEventListener('click', () => {
           this.sound.init();
-          this.renderLeaderboard();
+          this.renderLeaderboard(this.difficulty || 'normale');
           modalLeaderboard.classList.remove('hidden');
           this.currentFocusIndex = 0;
           const ctx = this.getActiveMenuContext();
           if (ctx) this.updateMenuFocusVisuals(ctx.items);
         });
+
+        tabEasy.addEventListener('click', () => this.renderLeaderboard('facile'));
+        tabNormal.addEventListener('click', () => this.renderLeaderboard('normale'));
+        tabHard.addEventListener('click', () => this.renderLeaderboard('difficile'));
 
         btnCloseLeaderboard.addEventListener('click', () => {
           modalLeaderboard.classList.add('hidden');
@@ -1500,25 +1632,8 @@
           if (ctx) this.updateMenuFocusVisuals(ctx.items);
         });
 
-        btnOptDiff.addEventListener('click', () => {
-          if (this.difficulty === 'normale') {
-            this.difficulty = 'difficile';
-          } else if (this.difficulty === 'difficile') {
-            this.difficulty = 'facile';
-          } else {
-            this.difficulty = 'normale';
-          }
-          try {
-            localStorage.setItem(this.DIFFICULTY_KEY, this.difficulty);
-          } catch(e) {}
-          this.applyDifficultySettings();
-          this.applyDifficultyUI();
-          this.updateBombsUI();
-          this.showToast(`Difficoltà impostata su: ${this.difficulty.toUpperCase()} 📊`, '⚙️');
-        });
-
         btnOptResetLb.addEventListener('click', () => {
-          this.resetLeaderboard();
+          this.resetAllLeaderboards();
         });
 
         btnOptControl.addEventListener('click', () => {
@@ -1542,7 +1657,6 @@
 
         this.updateOptionsUI = () => {
           this.applyControlModeUI();
-          this.applyDifficultyUI();
 
           if (this.sound.muted) {
             btnOptAudio.textContent = "DISATTIVO";
@@ -2099,6 +2213,11 @@
 
       spawnRandomEnemy(isGhost = false) {
         if (!this.mazeData || this.isPausedInMenu) return;
+        
+        // Verifica del cap massimo per livello e difficoltà
+        const maxAllowed = this.getMaxEnemiesForCurrentLevel();
+        if (this.enemies.length >= maxAllowed) return;
+
         const { gridW, gridH, grid } = this.mazeData;
         const candidates = [];
 
@@ -2995,6 +3114,7 @@
       }
 
       showGameOverModal() {
+        document.getElementById('gameover-diff').textContent = this.difficulty.toUpperCase();
         document.getElementById('gameover-level').textContent = `${this.currentLevel} / ${this.maxLevel}`;
         document.getElementById('gameover-steps').textContent = this.totalSteps;
         document.getElementById('gameover-time').textContent = this.formatHHMMSS(this.totalSeconds);
@@ -3013,6 +3133,7 @@
 
       showVictoryModal() {
         this.sound.playGameWin();
+        document.getElementById('victory-diff').textContent = this.difficulty.toUpperCase();
         document.getElementById('victory-total-steps').textContent = this.totalSteps;
         document.getElementById('victory-total-time').textContent = this.formatHHMMSS(this.totalSeconds);
         document.getElementById('modal-victory').classList.remove('hidden');
@@ -3026,6 +3147,7 @@
         document.getElementById('modal-victory').classList.add('hidden');
         document.getElementById('modal-gameover').classList.add('hidden');
         document.getElementById('modal-confirm-newgame').classList.add('hidden');
+        document.getElementById('modal-select-difficulty').classList.add('hidden');
         document.getElementById('modal-options').classList.add('hidden');
         document.getElementById('modal-leaderboard').classList.add('hidden');
       }
@@ -3073,16 +3195,22 @@
 
           this.updateBuffsUI();
 
+          const maxAllowedEnemies = this.getMaxEnemiesForCurrentLevel();
+
           this.enemySpawnTimer -= effectiveDt;
           if (this.enemySpawnTimer <= 0) {
             this.enemySpawnTimer = 20;
-            this.spawnRandomEnemy(false);
+            if (this.enemies.length < maxAllowedEnemies) {
+              this.spawnRandomEnemy(false);
+            }
           }
 
           this.ghostSpawnTimer -= effectiveDt;
           if (this.ghostSpawnTimer <= 0) {
             this.ghostSpawnTimer = 35.0;
-            this.spawnRandomEnemy(true);
+            if (this.enemies.length < maxAllowedEnemies) {
+              this.spawnRandomEnemy(true);
+            }
           }
 
           this.powerupSpawnTimer -= effectiveDt;
@@ -3652,10 +3780,14 @@
           this.lives = saved.lives;
           this.totalSteps = saved.totalSteps || 0;
           this.totalSeconds = saved.totalSeconds || 0;
+          this.difficulty = saved.difficulty || 'normale';
+          this.applyDifficultySettings();
           this.availableBombs = (typeof saved.availableBombs === 'number') ? saved.availableBombs : this.maxAvailableBombs;
         } else {
           this.currentLevel = 1;
           this.lives = this.maxLives;
+          this.difficulty = 'normale';
+          this.applyDifficultySettings();
           this.availableBombs = this.maxAvailableBombs;
         }
 
@@ -3665,7 +3797,6 @@
         this.updateLivesUI();
         this.updateBombsUI();
         this.applyControlModeUI();
-        this.applyDifficultyUI();
         
         this.showMainMenu();
         requestAnimationFrame(this.gameLoop);
