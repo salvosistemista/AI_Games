@@ -291,6 +291,7 @@ function newGameState(){
     day: 1,
     lastSaveTime: Date.now(),
     lastDayAdvanceTime: Date.now(),
+    lastPartialTickTime: Date.now(), // ultimo istante in cui è stata applicata la progressione continua proporzionale
     lastDayProcessed: 1,
     fish: [],          // {id, speciesId, birthDay, age, size, hunger, happiness, health, stage, diseaseId, diseaseDay, medicineId, medicineDaysLeft, pairId, selected}
     nextFishId: 1,
@@ -412,6 +413,14 @@ function isBored(f){
 }
 
 /* ---- Elaborazione giornaliera (mercato, missioni, crescita, malattie, riproduzione) ---- */
+function dailyFilterWear(scale=1){
+  if (state.filter.life>0){
+    const dirty = clamp((state.water.ammonia + state.water.nitrite)/2, 0, 100);
+    const wearRate = 1 + (dirty/100)*4; // fino a 5x più veloce con acqua molto sporca
+    state.filter.life = Math.max(0, state.filter.life - wearRate*scale);
+  }
+}
+
 function processDailyTick(daysPassed){
   for (let i=0;i<daysPassed;i++){
     state.day++;
@@ -422,33 +431,43 @@ function processDailyTick(daysPassed){
     dailyPassiveIncome();
     dailyReproductionCheck();
     dailyMarketFluctuation();
-    if (state.filter.life>0){
-      const dirty = clamp((state.water.ammonia + state.water.nitrite)/2, 0, 100);
-      const wearRate = 1 + (dirty/100)*4; // fino a 5x più veloce con acqua molto sporca
-      state.filter.life = Math.max(0, state.filter.life - wearRate);
-    }
+    dailyFilterWear();
   }
   refreshDailyMissionsIfNeeded();
   refreshWeeklyMissionIfNeeded();
 }
 
-function dailyHeaterUpdate(){
+/* Applica una frazione di giorno (0-1) di progressione: usata quando si riapre il gioco
+   dopo un'assenza inferiore alle 24h, così le meccaniche non restano completamente
+   congelate. Riproduzione, fluttuazione di mercato e streak "acqua pulita" restano
+   legate solo ai giorni pieni: sono eventi che non ha senso frazionare. */
+function applyPartialDayProgress(scale){
+  if (scale<=0) return;
+  dailyHeaterUpdate(scale);
+  dailyWaterDegrade(scale);
+  dailyGrowthAndFeed(scale);
+  dailyDiseaseProgress(scale);
+  dailyPassiveIncome(scale);
+  dailyFilterWear(scale);
+}
+
+function dailyHeaterUpdate(scale=1){
   const w = state.water;
   const h = state.heater;
   if (h.life > 0){
     // il riscaldatore mantiene la temperatura vicina al target
     const diff = h.targetTemp - w.temperature;
-    w.temperature += clamp(diff, -1.5, 1.5);
-    h.life = Math.max(0, h.life - 1);
+    w.temperature += clamp(diff, -1.5, 1.5) * scale;
+    h.life = Math.max(0, h.life - 1*scale);
   } else {
     // nessun riscaldatore attivo: deriva naturale verso la temperatura ambiente
     const diff = ROOM_TEMP - w.temperature;
-    w.temperature += clamp(diff*0.3, -1, 1);
+    w.temperature += clamp(diff*0.3, -1, 1) * scale;
   }
   w.temperature = clamp(w.temperature, 10, 35);
 }
 
-function dailyWaterDegrade(){
+function dailyWaterDegrade(scale=1){
   const w = state.water;
   const totalBioLoad = state.fish.reduce((s,f)=> s + 0.5 + f.size, 0);
   const filterEfficiency = state.filter.life>0 ? 1 : 0.4;
@@ -456,50 +475,56 @@ function dailyWaterDegrade(){
   const plantFilterBonus = livePlants.reduce((s,p)=> s + PLANT_TYPES[p.kind].filter*(0.5+Math.min(p.growth,1)*0.5), 0);
   const plantOxygenBonus = livePlants.reduce((s,p)=> s + PLANT_TYPES[p.kind].oxygen*(0.5+Math.min(p.growth,1)*0.5), 0);
 
-  w.ammonia = clamp(w.ammonia + totalBioLoad*0.8 - filterEfficiency*1.2 - plantFilterBonus*0.6, 0, 100);
+  w.ammonia = clamp(w.ammonia + (totalBioLoad*0.8 - filterEfficiency*1.2 - plantFilterBonus*0.6)*scale, 0, 100);
   // batteri maturano lentamente (ciclo azoto, ~14 giorni per maturità piena), il fondale fine li aiuta
-  w.bacteria = clamp(w.bacteria + 0.07*(state.substrate==='fine'?1.3:1), 0, 1);
+  w.bacteria = clamp(w.bacteria + 0.07*(state.substrate==='fine'?1.3:1)*scale, 0, 1);
   const nitriteProd = w.ammonia * (0.15 + w.bacteria*0.3);
-  w.nitrite = clamp(w.nitrite + nitriteProd*0.3 - w.bacteria*1.0, 0, 100);
+  w.nitrite = clamp(w.nitrite + (nitriteProd*0.3 - w.bacteria*1.0)*scale, 0, 100);
   const nitrateProd = w.nitrite * (0.1 + w.bacteria*0.25);
-  w.nitrate = clamp(w.nitrate + nitrateProd*0.25, 0, 100);
+  w.nitrate = clamp(w.nitrate + nitrateProd*0.25*scale, 0, 100);
 
   w.oxygen = clamp(80 + plantOxygenBonus*25 - totalBioLoad*1.5 - (w.temperature>28?10:0), 10, 100);
 
-  // rischio malattie ambientali
-  if (w.ammonia>55 || w.nitrite>50) tryOnsetDisease('finrot', 0.20);
+  // rischio malattie ambientali (probabilità scalata sulla frazione di giorno)
+  if (w.ammonia>55 || w.nitrite>50) tryOnsetDisease('finrot', 0.20*scale);
   const rottingPlant = state.plants.some(p=>p.isPlant && p.health<15);
-  if (rottingPlant) tryOnsetDisease('fungus', 0.18);
+  if (rottingPlant) tryOnsetDisease('fungus', 0.18*scale);
 
-  // streak di acqua pulita per la missione settimanale
+  // streak di acqua pulita per la missione settimanale: solo sui giorni pieni,
+  // non ha senso frazionarla su una progressione parziale
+  if (scale>=1) updateCleanStreak();
+
+  dailyPlantGrowth(scale);
+}
+
+function updateCleanStreak(){
+  const w = state.water;
   const dirtyNow = (w.ammonia + w.nitrite) / 2;
   if (dirtyNow < 30) state.weeklyProgress.cleanStreak = (state.weeklyProgress.cleanStreak||0) + 1;
   else state.weeklyProgress.cleanStreak = 0;
   checkWeeklyMissionCompletion();
-
-  dailyPlantGrowth();
 }
 
-function dailyPlantGrowth(){
+function dailyPlantGrowth(scale=1){
   const livePlants = state.plants.filter(p=>p.isPlant);
   if (!livePlants.length) return;
   const fertilized = state.fertilizerUnits > 0;
-  if (fertilized) state.fertilizerUnits = Math.max(0, state.fertilizerUnits - 1);
+  if (fertilized && scale>=1) state.fertilizerUnits = Math.max(0, state.fertilizerUnits - 1);
   const lightFactor = state.light.upgraded ? 1.3 : 1.0;
   livePlants.forEach(p=>{
     const type = PLANT_TYPES[p.kind];
     if (fertilized){
-      p.growth = clamp(p.growth + type.growthRate*lightFactor, 0, 1.6);
-      p.health = clamp(p.health + 4, 0, 100);
+      p.growth = clamp(p.growth + type.growthRate*lightFactor*scale, 0, 1.6);
+      p.health = clamp(p.health + 4*scale, 0, 100);
     } else {
       // pianta trascurata: perde salute lentamente
-      p.health = clamp(p.health - 5, 0, 100);
+      p.health = clamp(p.health - 5*scale, 0, 100);
     }
     if (p.growth > 1){
-      p.overgrownDays = (p.overgrownDays||0) + 1;
+      p.overgrownDays = (p.overgrownDays||0) + scale;
       if (p.overgrownDays > 4){
         // troppo cresciuta e non potata: soffoca la vasca
-        p.health = clamp(p.health - 6, 0, 100);
+        p.health = clamp(p.health - 6*scale, 0, 100);
       }
     } else {
       p.overgrownDays = 0;
@@ -527,15 +552,15 @@ function hasRiskMultiplier(f){
   return f.happiness < 25 || state.water.temperature < 22 || state.water.temperature > 29;
 }
 
-function dailyGrowthAndFeed(){
+function dailyGrowthAndFeed(scale=1){
   state.fish.forEach(f=>{
     const sp = speciesOf(f);
     const wasAdult = f.stage === 'adulto';
     const wellFed = f.hunger < 70 && f.health > 40;
     if (wellFed){
-      f.age += 1;
+      f.age += 1*scale;
     } else {
-      f.age += 0.5; // crescita rallentata da denutrizione
+      f.age += 0.5*scale; // crescita rallentata da denutrizione
     }
     f.stage = stageForAge(f);
     if (f.stage==='adulto' && !wasAdult && f.neverSick){
@@ -547,28 +572,28 @@ function dailyGrowthAndFeed(){
 
     // apatia da solitudine prolungata
     if (isLonely(f) && f.happiness < 30){
-      tryOnsetDisease2(f, 'apathy');
+      tryOnsetDisease2(f, 'apathy', scale);
     }
     if (state.water.temperature < 22 || state.water.temperature > 29){
-      tryOnsetDisease2(f, 'stress_temp');
+      tryOnsetDisease2(f, 'stress_temp', scale);
     }
   });
 }
-function tryOnsetDisease2(f, diseaseId){
+function tryOnsetDisease2(f, diseaseId, scale=1){
   if (f.diseaseId) return;
-  if (Math.random() < 0.25) { f.diseaseId = diseaseId; f.diseaseDay = 0; f.neverSick = false; playSound('disease'); }
+  if (Math.random() < 0.25*scale) { f.diseaseId = diseaseId; f.diseaseDay = 0; f.neverSick = false; playSound('disease'); }
 }
 
-function dailyDiseaseProgress(){
+function dailyDiseaseProgress(scale=1){
   state.fish.forEach(f=>{
     if (!f.diseaseId) return;
     const dis = DISEASES[f.diseaseId];
-    f.diseaseDay += 1;
+    f.diseaseDay += scale;
 
     const beingTreated = f.medicineId === dis.medicineId && f.medicineDaysLeft > 0;
     if (dis.cureType==='medicine'){
       if (beingTreated){
-        f.medicineDaysLeft -= 1;
+        f.medicineDaysLeft -= scale;
         if (f.medicineDaysLeft <= 0){
           f.diseaseId = null; f.diseaseDay = 0; f.medicineId = null;
         }
@@ -576,12 +601,12 @@ function dailyDiseaseProgress(){
     } else {
       // cura naturale: se le condizioni sono migliorate, guarisce gradualmente
       if (conditionsImprovedFor(f)) {
-        if (Math.random()<0.35){ f.diseaseId = null; f.diseaseDay = 0; }
+        if (Math.random()<0.35*scale){ f.diseaseId = null; f.diseaseDay = 0; }
       }
     }
 
     // contagio
-    if (f.diseaseId && dis.contagious && Math.random() < dis.contagionSpeed){
+    if (f.diseaseId && dis.contagious && Math.random() < dis.contagionSpeed*scale){
       const others = state.fish.filter(o=>o.id!==f.id && !o.diseaseId && speciesOf(o).diseaseWeak.includes(f.diseaseId));
       if (others.length){ const target = choice(others); target.diseaseId = f.diseaseId; target.diseaseDay = 0; }
     }
@@ -601,13 +626,14 @@ function conditionsImprovedFor(f){
   return false;
 }
 
-function dailyPassiveIncome(){
+function dailyPassiveIncome(scale=1){
   let total = 0;
   state.fish.forEach(f=>{
     if (f.health < 50 || f.happiness < 50) return; // stato sotto il 50%: nessun regalo
     if (f.health < 75 || f.happiness < 75) { total += 0.50; return; } // uno dei due tra 50 e 75%
     total += 1.00; // entrambi almeno al 75%
   });
+  total *= scale;
   if (total > 0){
     state.money += total;
     pushToast(`🎁 +${total.toFixed(2)}€ per la buona cura dei tuoi pesci`);
@@ -717,28 +743,62 @@ function applyOfflineProgression(){
   const now = Date.now();
   let hoursPassed = (now - state.lastSaveTime) / 3600000;
   hoursPassed = clamp(hoursPassed, 0, OFFLINE_CAP_HOURS);
-  const daysPassed = Math.floor(hoursPassed/24 * (24/24)); // 1 giorno di gioco = 24h reali
-  // effetto continuo diretto: fame/felicità proporzionali alle ore
+  const daysPassed = Math.floor(hoursPassed/24); // 1 giorno di gioco = 24h reali
+  const remainderHours = hoursPassed - daysPassed*24;
+  const fraction = remainderHours/24; // frazione di giorno non ancora "chiusa"
+
+  // effetto continuo diretto: fame proporzionale alle ore, indipendente dai giorni pieni
   state.fish.forEach(f=>{
     f.hunger = clamp(f.hunger + hoursPassed*0.6, 0, 100);
   });
   if (daysPassed>0){
     processDailyTick(daysPassed);
   }
+  if (fraction>0){
+    applyPartialDayProgress(fraction);
+  }
   state.lastSaveTime = now;
+  state.lastPartialTickTime = now; // evita che checkLiveDayAdvance riconti lo stesso intervallo
   if (hoursPassed > 1){
     return { hours: Math.round(hoursPassed), days: daysPassed };
   }
   return null;
 }
 
+/* Eventi legati esclusivamente al passaggio di un giorno di calendario intero:
+   contatore giorno, riproduzione, fluttuazione di mercato, missioni, streak acqua pulita.
+   NON include acqua/crescita/malattie/filtro/entrate: quelle sono già coperte in modo
+   continuo da applyPartialDayProgress, chiamata ad ogni controllo di checkLiveDayAdvance. */
+function advanceCalendarDays(daysToAdvance){
+  for (let i=0;i<daysToAdvance;i++){
+    state.day++;
+    updateCleanStreak();
+    dailyReproductionCheck();
+    dailyMarketFluctuation();
+  }
+  refreshDailyMissionsIfNeeded();
+  refreshWeeklyMissionIfNeeded();
+}
+
 /* ---- Avanzamento dei giorni anche a gioco aperto (non solo al riavvio) ---- */
 function checkLiveDayAdvance(){
   const now = Date.now();
-  const hoursSince = (now - state.lastDayAdvanceTime) / 3600000;
-  if (hoursSince < 24) return;
-  const daysToAdvance = Math.min(Math.floor(hoursSince / 24), 3); // tetto di sicurezza per un'unica chiamata
-  processDailyTick(daysToAdvance);
+
+  // progressione continua e proporzionale (acqua, crescita, malattie, filtro, entrate passive):
+  // scala con il tempo realmente trascorso dall'ultimo controllo, non con i giorni interi.
+  // Stesso tetto di sicurezza usato per il calcolo offline, nel caso il tab sia rimasto
+  // in background per molto tempo (es. laptop in sospensione).
+  let hoursSincePartial = clamp((now - state.lastPartialTickTime) / 3600000, 0, OFFLINE_CAP_HOURS);
+  if (hoursSincePartial > 0){
+    applyPartialDayProgress(hoursSincePartial/24);
+    state.lastPartialTickTime = now;
+  }
+
+  // eventi legati esclusivamente al passaggio di un giorno pieno di calendario
+  const hoursSinceDay = (now - state.lastDayAdvanceTime) / 3600000;
+  if (hoursSinceDay < 24) return;
+  const daysToAdvance = Math.min(Math.floor(hoursSinceDay / 24), 3); // tetto di sicurezza per un'unica chiamata
+  advanceCalendarDays(daysToAdvance);
   state.lastDayAdvanceTime += daysToAdvance * 24 * 3600000;
   updateTopBarBadges();
   saveGame();
