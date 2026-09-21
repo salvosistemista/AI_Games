@@ -22,15 +22,21 @@
 
   /* TOP BAR */
   #topbar{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:flex-start; gap:16px;
     padding: calc(8px + env(safe-area-inset-top)) 14px 8px 14px;
     font-size: 14px; z-index: 20; background: linear-gradient(180deg, rgba(4,20,26,.85), rgba(4,20,26,0));
     position:absolute; top:0; left:0; right:0;
   }
   .stat{display:flex; align-items:center; gap:5px; opacity:.95;}
-  #statusOpener{ padding:4px 6px; margin:-4px -6px; border-radius:8px; }
-  #statusOpener:active{ background: rgba(255,255,255,.08); }
   .stat .icon{font-size:15px;}
+  /* pulsante flottante "Stato acquario" (in basso a sinistra) */
+  #statusOpener{
+    position:absolute; left:16px; bottom: calc(18px + env(safe-area-inset-bottom));
+    width:44px; height:44px; border-radius:50%; border:none;
+    background: rgba(15,47,58,.85); z-index:25;
+    display:flex; align-items:center; justify-content:center; gap:3px;
+  }
+  #statusOpener:active{ background: rgba(255,255,255,.12); }
   #waterBadge{width:10px; height:10px; border-radius:50%; background:var(--ui-ok); box-shadow:0 0 6px currentColor;}
   #waterBadge.warn{background:var(--ui-warn);}
   #waterBadge.danger{background:var(--ui-danger);}
@@ -62,9 +68,10 @@
     box-shadow: 0 4px 14px rgba(0,0,0,.35);
   }
   #fullscreenBtn{
-    position:absolute; left:16px; bottom: calc(18px + env(safe-area-inset-bottom));
-    width:44px; height:44px; border-radius:50%; border:none;
-    background: rgba(15,47,58,.85); color:var(--ui-text); font-size:18px; z-index:25;
+    position:absolute; right:12px; top: calc(10px + env(safe-area-inset-top));
+    width:32px; height:32px; border-radius:50%; border:none;
+    background: rgba(15,47,58,.75); color:var(--ui-text); font-size:14px; z-index:26;
+    display:flex; align-items:center; justify-content:center;
   }
   #exitZenBtn{
     position:absolute; right:16px; bottom: calc(18px + env(safe-area-inset-bottom));
@@ -75,7 +82,7 @@
   body.zen #exitZenBtn{ display:block; }
 
   /* ZEN MODE */
-  body.zen #topbar, body.zen #quickbar, body.zen #menuBtn{ display:none; }
+  body.zen #topbar, body.zen #quickbar, body.zen #menuBtn, body.zen #statusOpener{ display:none; }
 
   /* OVERLAY / PANELS */
   .overlay{
@@ -141,7 +148,6 @@
   <div id="topbar">
     <div class="stat"><span class="icon">💰</span><span id="moneyVal">0€</span></div>
     <div class="stat"><span class="icon">⭐</span><span id="repVal">0</span></div>
-    <div class="stat" id="statusOpener"><span id="waterBadge"></span><span id="alertDot"></span></div>
   </div>
 
   <div id="tankWrap">
@@ -153,6 +159,7 @@
     <button class="quick-btn" id="btnClean">💧 Pulisci</button>
   </div>
 
+  <div id="statusOpener"><span id="waterBadge"></span><span id="alertDot"></span></div>
   <button id="fullscreenBtn">⛶</button>
   <button id="menuBtn">☰</button>
   <button id="exitZenBtn">✕</button>
