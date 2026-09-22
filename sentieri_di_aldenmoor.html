@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Sentieri di Aldenmoor - Fantasy Survival RPG</title>
   <style>
     :root {
@@ -64,7 +64,7 @@
     }
 
     header {
-      padding: 10px 16px;
+      padding: calc(10px + env(safe-area-inset-top)) 16px 10px 16px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       display: flex;
       justify-content: space-between;
@@ -322,7 +322,9 @@
       background: #4a1e1e !important;
       color: #f0a08a !important;
       border: 1px solid #7a2d2d !important;
-      padding: 2px 6px !important;
+      padding: 6px 10px !important;
+      min-width: 30px;
+      min-height: 30px;
       font-size: 0.70rem !important;
       font-weight: bold;
       line-height: 1;
@@ -333,7 +335,7 @@
     }
 
     .controls {
-      padding: 8px 16px 12px 16px;
+      padding: 8px 16px calc(12px + env(safe-area-inset-bottom)) 16px;
       background: var(--bg-color);
       border-top: 1px solid var(--border-color);
       display: flex;
@@ -572,8 +574,8 @@
       background: #333025;
       border: none;
       color: #fff;
-      width: 22px;
-      height: 20px;
+      width: 32px;
+      height: 30px;
       border-radius: 3px;
       font-weight: bold;
       cursor: pointer;
@@ -725,6 +727,11 @@
         <strong id="val-time-elapsed">0g 0h 0m</strong>
       </div>
 
+      <div class="time-tracker-row" style="color:#b7e4c7;">
+        <span>Regione:</span>
+        <strong id="val-region-name">Le Terre Basse</strong>
+      </div>
+
       <div class="stat-row">
         <span class="stat-label">Salute</span>
         <div class="bar-bg"><div id="bar-hp" class="bar-fill fill-hp"></div></div>
@@ -832,6 +839,18 @@
       <p>Colpo Furtivo — un'azione rapida e silenziosa (8 Energia) per sgattaiolare via inosservato, con la possibilità di arraffare qualcosa.</p>
       <button onclick="chooseClass('rogue')">Scegli Ladro</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Nome Compagno -->
+<div id="modal-name-companion" class="modal">
+  <div class="modal-content">
+    <h2>🐺 Un nuovo compagno</h2>
+    <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.35;">
+      Il lupo selvatico si è calmato e sembra affezionarsi a te. Come vuoi chiamarlo?
+    </div>
+    <input id="input-companion-name" type="text" placeholder="Ombra" maxlength="20" style="background:#18160f; border:1px solid #3a352a; border-radius:6px; padding:8px 10px; color:var(--text-main); font-size:0.9rem;">
+    <button class="btn-main btn-move" id="btn-confirm-companion-name">Conferma nome</button>
   </div>
 </div>
 
@@ -1222,6 +1241,23 @@
     rogue: { name: "Ladro", abilityName: "Colpo Furtivo", energyCost: 8, baseChance: 0.60, humanPenalty: 0.10 }
   };
 
+  /* =========================================================================
+     REGIONI: LA DIFFICOLTÀ E IL BOTTINO CRESCONO CON LE LEGHE PERCORSE
+     ========================================================================= */
+  const REGIONS = [
+    { name: "Le Terre Basse", minKm: 0, dmgMult: 1.0, lootBonus: 0 },
+    { name: "La Landa Grigia", minKm: 30, dmgMult: 1.3, lootBonus: 1 },
+    { name: "I Confini Perduti", minKm: 70, dmgMult: 1.6, lootBonus: 2 }
+  ];
+
+  function getCurrentRegion() {
+    let current = REGIONS[0];
+    for (const r of REGIONS) {
+      if ((player.km || 0) >= r.minKm) current = r;
+    }
+    return current;
+  }
+
   let isResetting = false;
 
   const defaultPlayerState = {
@@ -1347,19 +1383,24 @@
      COMPAGNO DI VIAGGIO
      ========================================================================= */
   function tameAnimal() {
+    const input = document.getElementById("input-companion-name");
+    if (input) input.value = "";
+    document.getElementById("modal-name-companion").style.display = "flex";
+  }
+
+  function confirmCompanionName() {
     const defaultName = "Ombra";
-    let chosenName = prompt("Il lupo selvatico sembra affezionarsi a te! Come vuoi chiamarlo?", defaultName);
-    if (!chosenName || chosenName.trim() === "") {
-      chosenName = defaultName;
-    } else {
-      chosenName = chosenName.trim();
-    }
+    const input = document.getElementById("input-companion-name");
+    let chosenName = input ? input.value.trim() : "";
+    if (!chosenName) chosenName = defaultName;
 
     player.companion = {
       name: chosenName,
       hp: 100,
       maxHp: 100
     };
+
+    document.getElementById("modal-name-companion").style.display = "none";
 
     playSound("pet");
     log(`Incredibile! ${chosenName} si è unito a te come fedele compagno di viaggio!`, "pet");
@@ -2070,6 +2111,7 @@
     }
 
     playSound("move");
+    const regionBefore = getCurrentRegion();
     player.km += 1;
     player.maxEnergy = Math.max(0, player.maxEnergy - 5);
     player.energy = Math.max(0, player.energy - 5);
@@ -2080,6 +2122,12 @@
 
     log(`Percorri 1 Lega attraverso le terre selvagge di Aldenmoor (+12 min).`, "idle");
     advanceTime(720);
+
+    const regionAfter = getCurrentRegion();
+    if (regionAfter.name !== regionBefore.name) {
+      log(`Varchi un confine invisibile: entri in ${regionAfter.name}. Le insidie si fanno più dure, ma il bottino è migliore.`, "success");
+      playSound("loot");
+    }
 
     const dice = Math.random();
     if (dice < 0.28) {
@@ -2129,7 +2177,8 @@
     playSound("scavenge");
 
     if (Math.random() < 0.5) {
-      const capsFound = Math.floor(Math.random() * 4) + 2;
+      const region = getCurrentRegion();
+      const capsFound = Math.floor(Math.random() * 4) + 2 + region.lootBonus;
       player.caps = (player.caps || 0) + capsFound;
       playSound("loot");
       log(`Hai recuperato ${capsFound} Monete (mo) tra le macerie!`, "caps");
@@ -2271,25 +2320,29 @@
     playSound("hit");
     log("Una belva selvatica ringhia e ti sbarra la strada con fare feroce!", "danger");
 
+    const region = getCurrentRegion();
+    const minDmg = Math.round(12 * region.dmgMult);
+    const maxDmg = Math.round(22 * region.dmgMult);
+
     const combatRow = [];
 
     if (player.companion && player.companion.hp > 0) {
       combatRow.push({
         label: `Aiuto (${player.companion.name})`,
-        action: () => resolvePetCombat("animal", 12, 22, "la belva selvatica")
+        action: () => resolvePetCombat("animal", minDmg, maxDmg, "la belva selvatica")
       });
     }
 
     if (player.characterClass && player.energy >= CLASS_DATA[player.characterClass].energyCost) {
       combatRow.push({
         label: CLASS_DATA[player.characterClass].abilityName,
-        action: () => resolveClassAbility("animal", 12, 22, "la belva selvatica")
+        action: () => resolveClassAbility("animal", minDmg, maxDmg, "la belva selvatica")
       });
     }
 
     combatRow.push({
       label: "Combatti",
-      action: () => resolveCombat("animal", 12, 22, "la belva selvatica")
+      action: () => resolveCombat("animal", minDmg, maxDmg, "la belva selvatica")
     });
 
     const otherActions = [];
@@ -2349,25 +2402,29 @@
     playSound("hit");
     log("Un brigante sbuca da un cespuglio puntandoti contro una lama arrugginita!", "danger");
 
+    const region = getCurrentRegion();
+    const minDmg = Math.round(14 * region.dmgMult);
+    const maxDmg = Math.round(28 * region.dmgMult);
+
     const combatRow = [];
 
     if (player.companion && player.companion.hp > 0) {
       combatRow.push({
         label: `Aiuto (${player.companion.name})`,
-        action: () => resolvePetCombat("human", 14, 28, "il brigante")
+        action: () => resolvePetCombat("human", minDmg, maxDmg, "il brigante")
       });
     }
 
     if (player.characterClass && player.energy >= CLASS_DATA[player.characterClass].energyCost) {
       combatRow.push({
         label: CLASS_DATA[player.characterClass].abilityName,
-        action: () => resolveClassAbility("human", 14, 28, "il brigante")
+        action: () => resolveClassAbility("human", minDmg, maxDmg, "il brigante")
       });
     }
 
     combatRow.push({
       label: "Combatti",
-      action: () => resolveCombat("human", 14, 28, "il brigante")
+      action: () => resolveCombat("human", minDmg, maxDmg, "il brigante")
     });
 
     const otherActions = [];
@@ -2841,7 +2898,8 @@
       player.sick = true;
       log("Inali le spore di un fungo velenoso: sei AVVELENATO.", "danger");
     } else {
-      const dmg = 8;
+      const region = getCurrentRegion();
+      const dmg = Math.round(8 * region.dmgMult);
       player.hp = Math.max(0, player.hp - dmg);
       log(`Una trappola di rovi nascosta ti ferisce al polpaccio (-${dmg} HP).`, "danger");
     }
@@ -2962,6 +3020,8 @@
     document.getElementById("val-energy").textContent = `${Math.round(player.energy)}/${Math.round(player.maxEnergy)}`;
 
     document.getElementById("val-km").textContent = player.km;
+    const regionEl = document.getElementById("val-region-name");
+    if (regionEl) regionEl.textContent = getCurrentRegion().name;
 
     const weaponNameEl = document.getElementById("val-weapon-name");
     const weaponDurEl = document.getElementById("val-weapon-durability");
@@ -3270,6 +3330,7 @@
   document.getElementById("btn-sleep-toggle").addEventListener("click", toggleSleep);
   document.getElementById("btn-sleep-hour").addEventListener("click", sleepOneHour);
   document.getElementById("btn-drink-water").addEventListener("click", drinkWater);
+  document.getElementById("btn-confirm-companion-name").addEventListener("click", confirmCompanionName);
 
   const modalOptions = document.getElementById("modal-options");
   const modalLeaderboard = document.getElementById("modal-leaderboard");
