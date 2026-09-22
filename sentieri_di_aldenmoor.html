@@ -826,17 +826,17 @@
     </div>
     <div class="class-select-card">
       <h3>⚔ Guerriero</h3>
-      <p>Colpo Poderoso — un attacco travolgente (10 Energia) che può abbattere il nemico in un solo colpo, senza subire danni.</p>
+      <p>Colpo Poderoso — un attacco travolgente (10 Energia) che può abbattere il nemico in un solo colpo. Anche se fallisce, la sua guardia dimezza sempre il danno subito: non è mai del tutto vulnerabile.</p>
       <button onclick="chooseClass('warrior')">Scegli Guerriero</button>
     </div>
     <div class="class-select-card">
       <h3>🔮 Mago</h3>
-      <p>Dardo Arcano — un incantesimo a distanza (15 Energia) che respinge il nemico prima che possa colpirti.</p>
+      <p>Dardo Arcano — un incantesimo a distanza (15 Energia) che respinge il nemico prima che possa colpirti. Contro le belve, a volte le ammansisce del tutto invece di scacciarle.</p>
       <button onclick="chooseClass('mage')">Scegli Mago</button>
     </div>
     <div class="class-select-card">
       <h3>🗡 Ladro</h3>
-      <p>Colpo Furtivo — un'azione rapida e silenziosa (8 Energia) per sgattaiolare via inosservato, con la possibilità di arraffare qualcosa.</p>
+      <p>Colpo Furtivo — un'azione rapida e silenziosa (8 Energia) per sgattaiolare via inosservato, garantendo un furto dalle tasche del nemico umano. Se fallisce, però, non ha alcuna protezione.</p>
       <button onclick="chooseClass('rogue')">Scegli Ladro</button>
     </div>
   </div>
@@ -1258,6 +1258,53 @@
     return current;
   }
 
+  /* =========================================================================
+     LANDMARK: SCOPERTE UNICHE E NON RIPETIBILI, CON UN FRAMMENTO DI LORE
+     ========================================================================= */
+  const LANDMARKS = [
+    {
+      id: "torre_del_faro",
+      name: "la Torre del Faro Sommerso",
+      lore: "Un'antica torre di segnalazione, mezza inghiottita dalla palude. Qualcosa luccica ancora tra le sue macerie crollate.",
+      reward: () => {
+        player.caps = (player.caps || 0) + 25;
+        const got = addItem("runa_antica", "Runa Antica", "material", 1);
+        if (got) {
+          log("Tra le macerie della torre trovi 25 Monete e una Runa Antica incisa di simboli dimenticati!", "caps");
+        } else {
+          log("Tra le macerie della torre trovi 25 Monete. Intravedi anche una Runa Antica, ma il tuo zaino è troppo pieno per portarla via.", "caps");
+        }
+      }
+    },
+    {
+      id: "cerchio_druidico",
+      name: "un cerchio di menhir druidici",
+      lore: "Le pietre sussurrano ancora un rituale dimenticato dai secoli. L'aria qui è densa di qualcosa di antico e potente.",
+      reward: () => {
+        const got = addItem("amuleto_runico", "Amuleto Runico", "cure", 50, 1);
+        if (got) {
+          log("Al centro del cerchio trovi un Amuleto Runico, che pulsa di energia curativa.", "success");
+        } else {
+          log("Al centro del cerchio scorgi un Amuleto Runico, ma il tuo zaino è troppo pieno per raccoglierlo.", "danger");
+        }
+      }
+    },
+    {
+      id: "relitto_arenato",
+      name: "il relitto di una vecchia nave arenata tra le colline",
+      lore: "Come sia arrivata così lontano dall'acqua, nessuno lo sa. Il legno è marcio, ma la stiva nasconde ancora qualcosa di utile.",
+      reward: () => {
+        const got1 = addItem("scrap", "Ferro grezzo", "material", 4);
+        const got2 = addItem("cloth", "Stoffa", "material", 4);
+        if (got1 && got2) {
+          log("Nella stiva del relitto recuperi una scorta considerevole di ferro grezzo e stoffa.", "success");
+        } else {
+          log("Nella stiva del relitto intravedi rifornimenti preziosi, ma il tuo zaino è troppo pieno per portarli via tutti.", "danger");
+        }
+      }
+    }
+  ];
+
   let isResetting = false;
 
   const defaultPlayerState = {
@@ -1292,6 +1339,7 @@
     backpackTier: 0,
     equippedWeapon: null,
     companion: null,
+    foundLandmarks: [],
     inventory: [
       { id: "canned_food", name: "Pane e formaggio", type: "food", val: 35, qty: 2, slotWeight: 1 },
       { id: "raw_meat", name: "Carne di cinghiale cruda", type: "perishable_food", val: 20, qty: 1, acquiredAt: 0, slotWeight: 1 },
@@ -2148,10 +2196,26 @@
   }
 
   function handleLocationDiscovery() {
+    const availableLandmarks = LANDMARKS.filter(lm => !(player.foundLandmarks || []).includes(lm.id));
+    if (availableLandmarks.length > 0 && Math.random() < 0.15) {
+      const landmark = availableLandmarks[Math.floor(Math.random() * availableLandmarks.length)];
+      player.foundLandmarks = player.foundLandmarks || [];
+      player.foundLandmarks.push(landmark.id);
+      playSound("loot");
+      log(`Scorgi ${landmark.name}. ${landmark.lore}`, "success");
+      landmark.reward();
+      saveGame();
+      updateUI();
+      return;
+    }
+
     const locs = [
-      { name: "un casale abbandonato", type: "casa" },
-      { name: "i resti di un accampamento di mercanti", type: "campo" },
-      { name: "le rovine di un antico tempio", type: "discarica" }
+      { name: "un casale abbandonato" },
+      { name: "i resti di un accampamento di mercanti" },
+      { name: "le rovine di un antico tempio" },
+      { name: "una torre di guardia crollata" },
+      { name: "il relitto di un carro rovesciato" },
+      { name: "una piccola cappella diroccata" }
     ];
     const loc = locs[Math.floor(Math.random() * locs.length)];
     loc.searchesDone = 0;
@@ -2270,17 +2334,35 @@
         if (type === "human") lootRaiderItems(3);
         endEncounter();
       } else {
-        log(`Il tuo ${cls.abilityName} non basta a fermare ${enemyName}, che riesce comunque a colpirti.`, "danger");
-        resolveCombat(type, minDmg, maxDmg, enemyName);
-        return;
+        // Il Guerriero non fallisce mai del tutto: la sua guardia dimezza sempre il danno, arma permettendo.
+        log(`Il tuo ${cls.abilityName} non basta ad abbattere ${enemyName}, ma la tua guardia attutisce il colpo.`, "danger");
+        let baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+        baseDmg = Math.max(1, Math.floor(baseDmg / 2));
+        if (player.equippedWeapon) {
+          const reduction = player.equippedWeapon.dmgReduction || 0.5;
+          baseDmg = Math.max(1, Math.round(baseDmg * (1 - reduction)));
+          useEquippedWeapon();
+        }
+        player.hp = Math.max(0, player.hp - baseDmg);
+        log(`Subisci solo ${baseDmg} danni grazie alla tua guardia.`, "danger");
+        if (type === "human" && baseDmg < 8) lootRaiderItems(1);
+        endEncounter();
+        checkDeath();
       }
     } else if (clsId === "mage") {
       playSound("magic");
       if (success) {
+        if (type === "animal" && !player.companion && Math.random() < 0.25) {
+          log(`Il tuo ${cls.abilityName} placa la furia della belva invece di scacciarla: sembra ammansita!`, "success");
+          endEncounter();
+          tameAnimal();
+          return;
+        }
         log(`Scagli un ${cls.abilityName} che respinge ${enemyName} senza che tu subisca danni!`, "success");
         if (type === "human") lootRaiderItems(2);
         endEncounter();
       } else {
+        // Il contraccolpo magico ignora l'arma equipaggiata: è un danno arcano, non fisico.
         const halfDmg = Math.max(1, Math.floor(((minDmg + maxDmg) / 2) / 2));
         player.hp = Math.max(0, player.hp - halfDmg);
         log(`Il tuo ${cls.abilityName} indebolisce ${enemyName}, che ti colpisce comunque per ${halfDmg} danni ridotti.`, "danger");
@@ -2291,9 +2373,12 @@
       playSound("dodge");
       if (success) {
         log(`Con un ${cls.abilityName} sgusci via da ${enemyName} senza farti notare!`, "success");
-        if (type === "human" && Math.random() < 0.6) {
+        if (type === "human") {
           lootRaiderItems(1);
           log("Nel frattempo, riesci a sottrarre qualcosa dalle sue tasche!", "combat");
+        } else if (type === "animal" && Math.random() < 0.4) {
+          addItem("scrap", "Ferro grezzo", "material", 1);
+          log("Approfittando della distrazione, raccogli anche un pezzo di ferro grezzo dal terreno.", "combat");
         }
         endEncounter();
       } else {
@@ -3284,6 +3369,7 @@
       if (player.caps === undefined) player.caps = 5;
       if (player.soundEnabled === undefined) player.soundEnabled = true;
       if (player.characterClass === undefined) player.characterClass = null;
+      if (player.foundLandmarks === undefined) player.foundLandmarks = [];
 
       const now = Date.now();
       const rawElapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
