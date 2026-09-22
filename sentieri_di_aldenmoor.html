@@ -538,10 +538,54 @@
       gap: 6px;
     }
 
+    .trade-modal-card.rare {
+      background: linear-gradient(155deg, #2b2412, #221f18 60%);
+      border: 1px solid #7a6420;
+      box-shadow: 0 0 8px rgba(201, 164, 46, 0.15);
+    }
+
+    .trade-modal-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .trade-card-icon {
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
     .trade-modal-card-title {
       font-size: 0.82rem;
       font-weight: bold;
       color: #fff;
+      flex: 1;
+    }
+
+    .trade-rare-badge {
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #1a1710;
+      background: #d4b23c;
+      border-radius: 10px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    .trade-rare-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+      padding: 0 2px;
+    }
+
+    .trade-card-subtotal {
+      font-size: 0.72rem;
+      color: var(--caps-color);
+      text-align: right;
+      font-weight: bold;
+      border-top: 1px dashed #3a352a;
+      padding-top: 4px;
     }
 
     .trade-card-options-row {
@@ -582,6 +626,51 @@
     }
 
     .btn-step:hover { background: #443f2e; }
+
+    .trade-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .trade-summary-box {
+      background: #18160f;
+      border: 1px solid #2d2a20;
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .trade-summary-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .trade-summary-value {
+      font-size: 0.88rem;
+    }
+
+    .trade-summary-sub {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .trade-summary-box.trade-summary-ok {
+      border-color: #2d5a3d;
+      background: #16211a;
+    }
+
+    .trade-summary-box.trade-summary-bad {
+      border-color: var(--danger);
+      background: #2a1414;
+    }
 
     .storage-columns-grid {
       display: grid;
@@ -770,6 +859,7 @@
           <span id="condition-tag" class="condition-tag">In salute</span>
           <span id="sleep-tag" class="condition-tag sleeping" style="display:none;">Addormentato</span>
           <span id="class-tag" class="condition-tag class-tag" style="display:none;"></span>
+          <span id="victory-tag" class="condition-tag" style="display:none; background:#1f3b2e; color:#b7e4c7;">🏆 Viaggio Completato</span>
         </div>
         <div style="display:flex; gap:10px; align-items:center; font-size:0.8rem;">
           <span style="color:var(--caps-color); font-weight:bold;">🪙 <span id="val-caps">5</span> mo</span>
@@ -871,16 +961,24 @@
   <div class="modal-content">
     <h2>🤝 Scambio Merci</h2>
     <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.3;">
-      Imposta quanti scambi desideri effettuare. Puoi pagare con le merci richieste o in monete (mo).
+      Il mercante offre un assortimento mutevole di merci. Puoi pagare con le risorse richieste o in monete (mo) — tieni d'occhio le offerte contrassegnate <span style="color:var(--caps-color);">✨ Rara</span>.
     </div>
 
     <div class="trade-modal-list" id="trade-list-container"></div>
 
-    <div style="background:#18160f; padding:8px; border-radius:6px; font-size:0.75rem; border:1px solid #282318;">
-      <div>Costo totale Monete: <strong id="trade-sum-caps" style="color:var(--caps-color);">0 mo</strong> (Possedute: <span id="trade-owned-caps">0</span>)</div>
-      <div>Spazio previsto zaino: <strong id="trade-sum-slots">0 / 10</strong></div>
-      <div id="trade-warn-msg" style="color:var(--danger); font-size:0.72rem; margin-top:3px; display:none;">Risorse o spazio insufficienti nello zaino!</div>
+    <div class="trade-summary-grid">
+      <div class="trade-summary-box" id="trade-caps-row">
+        <span class="trade-summary-label">🪙 Monete</span>
+        <span class="trade-summary-value"><strong id="trade-sum-caps">0 mo</strong></span>
+        <span class="trade-summary-sub">Possedute: <span id="trade-owned-caps">0</span></span>
+      </div>
+      <div class="trade-summary-box" id="trade-slots-row">
+        <span class="trade-summary-label">🎒 Zaino</span>
+        <span class="trade-summary-value"><strong id="trade-sum-slots">0 / 10</strong></span>
+        <span class="trade-summary-sub">Spazio previsto</span>
+      </div>
     </div>
+    <div id="trade-warn-msg" style="color:var(--danger); font-size:0.72rem; margin-top:3px; display:none; text-align:center;">⚠ Risorse o spazio insufficienti nello zaino!</div>
 
     <div class="modal-footer-dual-btns">
       <button class="btn-main" id="btn-trade-cancel">Annulla</button>
@@ -941,9 +1039,10 @@
         <thead>
           <tr>
             <th>#</th>
+            <th>Esito</th>
             <th>Durata</th>
             <th>Leghe</th>
-            <th>Data Decesso</th>
+            <th>Data</th>
           </tr>
         </thead>
         <tbody id="leaderboard-body"></tbody>
@@ -1211,6 +1310,19 @@
           osc.start(now + i * 0.05);
           osc.stop(now + i * 0.05 + 0.2);
         });
+      } else if (type === "victory") {
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(f, now + i * 0.15);
+          gain.gain.setValueAtTime(0.28, now + i * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.4);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.15);
+          osc.stop(now + i * 0.15 + 0.4);
+        });
       }
     } catch (e) {
       console.warn("Riproduzione audio non riuscita", e);
@@ -1246,9 +1358,13 @@
      ========================================================================= */
   const REGIONS = [
     { name: "Le Terre Basse", minKm: 0, dmgMult: 1.0, lootBonus: 0 },
-    { name: "La Landa Grigia", minKm: 30, dmgMult: 1.3, lootBonus: 1 },
-    { name: "I Confini Perduti", minKm: 70, dmgMult: 1.6, lootBonus: 2 }
+    { name: "La Landa Grigia", minKm: 50, dmgMult: 1.15, lootBonus: 1 },
+    { name: "Il Bosco Sussurrante", minKm: 100, dmgMult: 1.35, lootBonus: 1 },
+    { name: "Le Alture Spezzate", minKm: 150, dmgMult: 1.55, lootBonus: 2 },
+    { name: "I Confini di Aldenmoor", minKm: 200, dmgMult: 1.8, lootBonus: 3 }
   ];
+
+  const FINAL_LEAGUES = 250; // 5 regioni x 50 leghe: il traguardo del viaggio
 
   function getCurrentRegion() {
     let current = REGIONS[0];
@@ -1328,6 +1444,7 @@
     maxSlots: 10,
     survivalSeconds: 0,
     isDead: false,
+    isVictorious: false,
     lastActiveTimestamp: Date.now(),
     secFood: 0,
     secThirst: 0,
@@ -1508,7 +1625,7 @@
      AVANZAMENTO TEMPO
      ========================================================================= */
   function advanceTime(secondsToAdd, silent = false) {
-    if (player.hp <= 0 || secondsToAdd <= 0) return;
+    if (player.hp <= 0 || player.isVictorious || secondsToAdd <= 0) return;
 
     if (player.companion && player.companion.hp > 0) {
       const totalPetSec = (player.secPetRegen || 0) + secondsToAdd;
@@ -2177,6 +2294,11 @@
       playSound("loot");
     }
 
+    if (!player.isVictorious && player.km >= FINAL_LEAGUES) {
+      triggerVictory();
+      return;
+    }
+
     const dice = Math.random();
     if (dice < 0.28) {
       handleLocationDiscovery();
@@ -2671,6 +2793,7 @@
   const TRADE_OFFERS = [
     {
       id: "to_food_1",
+      icon: "🍞",
       title: "1x Pane e formaggio",
       barterName: "2x Ferro grezzo",
       costItem: { id: "scrap", qty: 2 },
@@ -2679,6 +2802,7 @@
     },
     {
       id: "to_med_1",
+      icon: "💊",
       title: "1x Unguento curativo",
       barterName: "3x Ferro grezzo",
       costItem: { id: "scrap", qty: 3 },
@@ -2687,6 +2811,7 @@
     },
     {
       id: "to_mats_1",
+      icon: "🧵",
       title: "1x Corda + 1x Stoffa",
       barterName: "1x Ferro grezzo",
       costItem: { id: "scrap", qty: 1 },
@@ -2698,6 +2823,7 @@
     },
     {
       id: "to_med_2",
+      icon: "💊",
       title: "1x Unguento curativo",
       barterName: "2x Pane e formaggio",
       costItem: { id: "canned_food", qty: 2 },
@@ -2706,19 +2832,123 @@
     },
     {
       id: "to_food_2",
+      icon: "🍞",
       title: "2x Pane e formaggio",
       barterName: "1x Unguento",
       costItem: { id: "medkit", qty: 1 },
       costCaps: 15,
       rewardItems: [{ id: "canned_food", name: "Pane e formaggio", type: "food", val: 35, qty: 2 }]
+    },
+    {
+      id: "to_scrap_bundle",
+      icon: "🔩",
+      title: "3x Ferro grezzo",
+      barterName: "2x Stoffa",
+      costItem: { id: "cloth", qty: 2 },
+      costCaps: 12,
+      rewardItems: [{ id: "scrap", name: "Ferro grezzo", type: "material", qty: 3 }]
+    },
+    {
+      id: "to_cloth_bundle",
+      icon: "🧶",
+      title: "4x Stoffa",
+      barterName: "1x Pane e formaggio",
+      costItem: { id: "canned_food", qty: 1 },
+      costCaps: 9,
+      rewardItems: [{ id: "cloth", name: "Stoffa", type: "material", qty: 4 }]
+    },
+    {
+      id: "to_bandage",
+      icon: "🌿",
+      title: "1x Impacco di erbe curative",
+      barterName: "3x Stoffa",
+      costItem: { id: "cloth", qty: 3 },
+      costCaps: 10,
+      rewardItems: [{ id: "rudimentary_bandage", name: "Impacco di erbe curative", type: "cure_minor", val: 15, qty: 1 }]
     }
   ];
 
+  // Offerte rare: solo monete, una per incontro al massimo, sbloccate man mano che si avanza nelle regioni.
+  const RARE_TRADE_OFFERS = [
+    {
+      id: "rare_supply_cache",
+      icon: "📦",
+      title: "Scorta Copiosa del Mercante",
+      rewardLabel: "3x Ferro grezzo, 3x Stoffa, 2x Corda robusta",
+      minRegionIndex: 0,
+      priceCaps: 30,
+      spaceEstimate: 4.0,
+      reward: () => {
+        addItem("scrap", "Ferro grezzo", "material", 3);
+        addItem("cloth", "Stoffa", "material", 3);
+        addItem("duct_tape", "Corda robusta", "material", 2);
+      }
+    },
+    {
+      id: "rare_amulet",
+      icon: "🔮",
+      title: "Amuleto Runico del Mercante",
+      rewardLabel: "1x Amuleto Runico (cura 50 HP)",
+      minRegionIndex: 2,
+      priceCaps: 40,
+      spaceEstimate: 1,
+      reward: () => {
+        addItem("amuleto_runico", "Amuleto Runico", "cure", 50, 1);
+      }
+    },
+    {
+      id: "rare_weapon",
+      icon: "⚔",
+      title: "Spada del Pellegrino",
+      rewardLabel: "Arma pronta all'uso (70% riduzione danno, 8 usi)",
+      minRegionIndex: 4,
+      priceCaps: 55,
+      spaceEstimate: 0,
+      reward: () => {
+        promptEquipWeapon({ name: "Spada del Pellegrino", maxUses: 8, uses: 8, dmgReduction: 0.7 });
+      }
+    }
+  ];
+
+  function getCurrentRegionIndex() {
+    return REGIONS.indexOf(getCurrentRegion());
+  }
+
+  function applyPriceVariance(offer) {
+    const variance = 0.85 + Math.random() * 0.30; // +/- 15%
+    const adjustedCaps = Math.max(1, Math.round(offer.costCaps * variance));
+    return Object.assign({}, offer, { costCaps: adjustedCaps });
+  }
+
+  function generateMerchantOffers() {
+    const pool = TRADE_OFFERS.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+
+    const chosen = pool.slice(0, 3).map(applyPriceVariance);
+
+    const regionIdx = getCurrentRegionIndex();
+    const eligibleRares = RARE_TRADE_OFFERS.filter(r => regionIdx >= r.minRegionIndex);
+
+    if (eligibleRares.length > 0 && Math.random() < 0.12) {
+      const rare = eligibleRares[Math.floor(Math.random() * eligibleRares.length)];
+      chosen.push(Object.assign({}, rare, { isRare: true }));
+    } else if (pool.length > 3) {
+      chosen.push(applyPriceVariance(pool[3]));
+    }
+
+    return chosen;
+  }
+
+  let currentMerchantOffers = [];
   let currentTradeSelections = {};
 
   function openTradeModal() {
+    currentMerchantOffers = generateMerchantOffers();
     currentTradeSelections = {};
-    TRADE_OFFERS.forEach(o => {
+    currentMerchantOffers.forEach(o => {
       currentTradeSelections[o.id] = { barter: 0, caps: 0 };
     });
     renderTradeModal();
@@ -2726,10 +2956,16 @@
   }
 
   function adjustTradeSelection(offerId, mode, delta) {
-    const cur = currentTradeSelections[offerId][mode];
-    if (cur + delta < 0) return;
+    const offer = currentMerchantOffers.find(o => o.id === offerId);
+    if (!offer) return;
+    if (offer.isRare && mode === "barter") return;
 
-    currentTradeSelections[offerId][mode] += delta;
+    const cur = currentTradeSelections[offerId][mode];
+    const maxAllowed = offer.isRare ? 1 : Infinity;
+    const next = cur + delta;
+    if (next < 0 || next > maxAllowed) return;
+
+    currentTradeSelections[offerId][mode] = next;
 
     if (delta > 0) {
       const check = validateTradeSelections();
@@ -2745,8 +2981,20 @@
     const requiredItems = {};
     let spaceDelta = 0;
 
-    TRADE_OFFERS.forEach(o => {
+    currentMerchantOffers.forEach(o => {
       const sel = currentTradeSelections[o.id];
+      if (!sel) return;
+
+      if (o.isRare) {
+        if (sel.caps > 0) {
+          totalCaps += o.priceCaps;
+          if (typeof o.spaceEstimate === "number") {
+            spaceDelta += o.spaceEstimate;
+          }
+        }
+        return;
+      }
+
       if (sel.caps > 0) {
         totalCaps += o.costCaps * sel.caps;
       }
@@ -2793,39 +3041,77 @@
     const container = document.getElementById("trade-list-container");
     container.innerHTML = "";
 
-    TRADE_OFFERS.forEach(o => {
+    currentMerchantOffers.forEach(o => {
       const sel = currentTradeSelections[o.id];
       const card = document.createElement("div");
-      card.className = "trade-modal-card";
+      card.className = "trade-modal-card" + (o.isRare ? " rare" : "");
 
-      card.innerHTML = `
-        <div class="trade-modal-card-title">Ottieni: ${o.title}</div>
-        <div class="trade-card-options-row">
-          <div class="trade-counter-box">
-            <span>Baratta (${o.barterName})</span>
-            <div class="counter-controls">
-              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'barter', -1)">-</button>
-              <span style="font-weight:bold;">${sel.barter}</span>
-              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'barter', 1)">+</button>
-            </div>
-          </div>
-          <div class="trade-counter-box">
-            <span style="color:var(--caps-color);">Paga (${o.costCaps} mo)</span>
-            <div class="counter-controls">
-              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', -1)">-</button>
-              <span style="font-weight:bold;">${sel.caps}</span>
-              <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', 1)">+</button>
-            </div>
-          </div>
+      let bodyHtml = `
+        <div class="trade-modal-card-header">
+          <span class="trade-card-icon">${o.icon || "🎁"}</span>
+          <span class="trade-modal-card-title">${o.title}</span>
+          ${o.isRare ? '<span class="trade-rare-badge">✨ Rara</span>' : ""}
         </div>
       `;
+
+      if (o.isRare) {
+        const subtotal = sel.caps > 0 ? o.priceCaps : 0;
+        bodyHtml += `
+          <div class="trade-card-options-row">
+            <div class="trade-counter-box">
+              <span style="color:var(--caps-color);">🪙 Acquista (${o.priceCaps} mo)</span>
+              <div class="counter-controls">
+                <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', -1)">-</button>
+                <span style="font-weight:bold;">${sel.caps}</span>
+                <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', 1)">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="trade-rare-desc">${o.rewardLabel}</div>
+        `;
+        if (subtotal > 0) {
+          bodyHtml += `<div class="trade-card-subtotal">Totale: ${subtotal} mo</div>`;
+        }
+      } else {
+        const subtotal = (o.costCaps * sel.caps) || 0;
+        bodyHtml += `
+          <div class="trade-card-options-row">
+            <div class="trade-counter-box">
+              <span>🔄 Baratto (${o.barterName})</span>
+              <div class="counter-controls">
+                <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'barter', -1)">-</button>
+                <span style="font-weight:bold;">${sel.barter}</span>
+                <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'barter', 1)">+</button>
+              </div>
+            </div>
+            <div class="trade-counter-box">
+              <span style="color:var(--caps-color);">🪙 Monete (${o.costCaps} mo)</span>
+              <div class="counter-controls">
+                <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', -1)">-</button>
+                <span style="font-weight:bold;">${sel.caps}</span>
+                <button class="btn-step" onclick="adjustTradeSelection('${o.id}', 'caps', 1)">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+        if (subtotal > 0) {
+          bodyHtml += `<div class="trade-card-subtotal">Totale in monete: ${subtotal} mo</div>`;
+        }
+      }
+
+      card.innerHTML = bodyHtml;
       container.appendChild(card);
     });
 
     const check = validateTradeSelections();
     document.getElementById("trade-sum-caps").textContent = `${check.totalCaps} mo`;
-    document.getElementById("trade-owned-caps").textContent = `${player.caps || 0} mo`;
+    document.getElementById("trade-owned-caps").textContent = `${player.caps || 0}`;
     document.getElementById("trade-sum-slots").textContent = `${check.projectedSlots} / ${player.maxSlots}`;
+
+    const capsBox = document.getElementById("trade-caps-row");
+    const slotsBox = document.getElementById("trade-slots-row");
+    if (capsBox) capsBox.className = "trade-summary-box " + (check.capsOk ? "trade-summary-ok" : "trade-summary-bad");
+    if (slotsBox) slotsBox.className = "trade-summary-box " + (check.slotsOk ? "trade-summary-ok" : "trade-summary-bad");
 
     const warn = document.getElementById("trade-warn-msg");
     warn.style.display = (!check.valid && check.hasSelection) ? "block" : "none";
@@ -2839,8 +3125,18 @@
 
     player.caps = (player.caps || 0) - check.totalCaps;
 
-    TRADE_OFFERS.forEach(o => {
+    currentMerchantOffers.forEach(o => {
       const sel = currentTradeSelections[o.id];
+      if (!sel) return;
+
+      if (o.isRare) {
+        if (sel.caps > 0) {
+          o.reward();
+          log(`Acquisti dal mercante: ${o.rewardLabel}.`, "caps");
+        }
+        return;
+      }
+
       if (sel.barter > 0) {
         removeItem(o.costItem.id, o.costItem.qty * sel.barter);
       }
@@ -3152,6 +3448,9 @@
       classTag.style.display = "none";
     }
 
+    const victoryTag = document.getElementById("victory-tag");
+    if (victoryTag) victoryTag.style.display = player.isVictorious ? "inline-block" : "none";
+
     const classOptionsEl = document.getElementById("val-class-options");
     if (classOptionsEl) {
       classOptionsEl.textContent = (player.characterClass && CLASS_DATA[player.characterClass]) ? CLASS_DATA[player.characterClass].name : "Non ancora scelta";
@@ -3168,6 +3467,12 @@
       btnSleepHour.style.display = "none";
       btnDrink.disabled = true;
       btnMove.textContent = "Deceduto";
+    } else if (player.isVictorious) {
+      btnMove.disabled = true;
+      btnSleep.disabled = true;
+      btnSleepHour.style.display = "none";
+      btnDrink.disabled = true;
+      btnMove.textContent = "Viaggio Completato";
     } else if (player.isSleeping) {
       btnMove.disabled = true;
       btnDrink.disabled = true;
@@ -3228,7 +3533,7 @@
           const btnUse = document.createElement("button");
           btnUse.textContent = "Usa";
           btnUse.onclick = () => useItem(item.id, false);
-          if (player.isSleeping || player.isDead) btnUse.disabled = true;
+          if (player.isSleeping || player.isDead || player.isVictorious) btnUse.disabled = true;
           actions.appendChild(btnUse);
         }
 
@@ -3238,14 +3543,14 @@
             btnHealPet.textContent = `Cura ${player.companion.name}`;
             btnHealPet.style.borderColor = "var(--pet-bar)";
             btnHealPet.onclick = () => useItem(item.id, true);
-            if (player.isSleeping || player.isDead || player.companion.hp >= player.companion.maxHp) btnHealPet.disabled = true;
+            if (player.isSleeping || player.isDead || player.isVictorious || player.companion.hp >= player.companion.maxHp) btnHealPet.disabled = true;
             actions.appendChild(btnHealPet);
           } else if (item.type === "cure") {
             const btnFullPet = document.createElement("button");
             btnFullPet.textContent = `Full ${player.companion.name}`;
             btnFullPet.style.borderColor = "var(--pet-bar)";
             btnFullPet.onclick = () => useItem(item.id, true);
-            if (player.isSleeping || player.isDead || player.companion.hp >= player.companion.maxHp) btnFullPet.disabled = true;
+            if (player.isSleeping || player.isDead || player.isVictorious || player.companion.hp >= player.companion.maxHp) btnFullPet.disabled = true;
             actions.appendChild(btnFullPet);
           }
         }
@@ -3255,7 +3560,7 @@
         btnDel.textContent = "✕";
         btnDel.title = item.qty > 1 ? `Getta 1x ${item.name}` : `Getta ${item.name}`;
         btnDel.onclick = () => discardItem(item.id);
-        if (player.isDead) btnDel.disabled = true;
+        if (player.isDead || player.isVictorious) btnDel.disabled = true;
         actions.appendChild(btnDel);
 
         row.appendChild(actions);
@@ -3269,7 +3574,7 @@
   /* =========================================================================
      CLASSIFICA & SALVATAGGIO
      ========================================================================= */
-  function recordDeathLeaderboard() {
+  function recordRunToLeaderboard(isVictory) {
     let leaderboard = [];
     try {
       const stored = localStorage.getItem(LEADERBOARD_KEY);
@@ -3278,7 +3583,7 @@
       leaderboard = [];
     }
 
-    const deathDate = new Date().toLocaleDateString("it-IT", {
+    const endDate = new Date().toLocaleDateString("it-IT", {
       day: "2-digit",
       month: "2-digit",
       year: "2-digit",
@@ -3289,7 +3594,8 @@
     leaderboard.push({
       duration: player.survivalSeconds || 0,
       km: player.km || 0,
-      date: deathDate
+      date: endDate,
+      victory: !!isVictory
     });
 
     leaderboard.sort((a, b) => b.duration - a.duration);
@@ -3307,11 +3613,21 @@
       player.isDead = true;
       playSound("death");
       log("SEI MORTO. Il tuo cammino attraverso Aldenmoor finisce qui.", "danger");
-      recordDeathLeaderboard();
+      recordRunToLeaderboard(false);
       clearContextActions();
       saveGame();
       updateUI();
     }
+  }
+
+  function triggerVictory() {
+    player.isVictorious = true;
+    playSound("victory");
+    log("Dopo un lungo cammino attraverso le cinque regioni di Aldenmoor, scorgi finalmente le mura della città stagliarsi all'orizzonte. IL TUO VIAGGIO È COMPLETO: HAI RAGGIUNTO ALDENMOOR!", "success");
+    recordRunToLeaderboard(true);
+    clearContextActions();
+    saveGame();
+    updateUI();
   }
 
   function renderLeaderboard() {
@@ -3335,6 +3651,7 @@
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td><strong>#${idx + 1}</strong></td>
+          <td>${run.victory ? "🏆 Vittoria" : "⚔ Sconfitta"}</td>
           <td>${formatDuration(run.duration)}</td>
           <td>${run.km} leghe</td>
           <td>${run.date}</td>
@@ -3384,6 +3701,7 @@
       if (player.soundEnabled === undefined) player.soundEnabled = true;
       if (player.characterClass === undefined) player.characterClass = null;
       if (player.foundLandmarks === undefined) player.foundLandmarks = [];
+      if (player.isVictorious === undefined) player.isVictorious = false;
 
       const now = Date.now();
       const rawElapsedSeconds = Math.max(0, Math.floor((now - (player.lastActiveTimestamp || now)) / 1000));
@@ -3392,7 +3710,7 @@
       // Limite massimo invalicabile di 6 ore (21600 secondi)
       const elapsedSeconds = Math.min(rawElapsedSeconds, MAX_OFFLINE_SIMULATION_SEC);
 
-      if (!player.isDead && elapsedSeconds > 5) {
+      if (!player.isDead && !player.isVictorious && elapsedSeconds > 5) {
         const ore = Math.floor(elapsedSeconds / 3600);
         const min = Math.floor((elapsedSeconds % 3600) / 60);
 
@@ -3402,6 +3720,8 @@
           log(`Sei rimasto via per ${ore > 0 ? ore + "h " : ""}${min}m.`, "idle");
         }
         advanceTime(elapsedSeconds, true);
+      } else if (player.isVictorious) {
+        log("Il tuo viaggio attraverso Aldenmoor è già giunto al termine. Puoi ricominciare una nuova avventura dalle Opzioni.", "success");
       } else if (!player.isDead) {
         log("Bentornato tra i sentieri di Aldenmoor.");
       }
@@ -3414,7 +3734,7 @@
   }
 
   setInterval(() => {
-    if (player.hp <= 0) return;
+    if (player.hp <= 0 || player.isVictorious) return;
     advanceTime(1, true);
 
     if (!player.sick && player.food > 60 && player.thirst > 60 && player.energy > 60 && player.hp < player.maxHp) {
@@ -3450,7 +3770,7 @@
   };
 
   document.getElementById("btn-open-crafting").onclick = () => {
-    if (player.isDead) return;
+    if (player.isDead || player.isVictorious) return;
     renderCraftingModal();
     modalCrafting.style.display = "flex";
   };
