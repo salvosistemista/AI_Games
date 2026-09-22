@@ -1561,8 +1561,8 @@
 
     player.companion = {
       name: chosenName,
-      hp: 100,
-      maxHp: 100
+      hp: 60,
+      maxHp: 60
     };
 
     document.getElementById("modal-name-companion").style.display = "none";
@@ -1632,7 +1632,7 @@
       const petHealTicks = Math.floor(totalPetSec / 3600);
       player.secPetRegen = totalPetSec % 3600;
       if (petHealTicks > 0) {
-        player.companion.hp = Math.min(player.companion.maxHp, player.companion.hp + (petHealTicks * 2));
+        player.companion.hp = Math.min(player.companion.maxHp, player.companion.hp + petHealTicks);
       }
     }
 
@@ -2739,14 +2739,23 @@
     playSound("pet");
     const baseDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
     player.companion.hp = Math.max(0, player.companion.hp - baseDmg);
-    log(`${player.companion.name} si scaglia con coraggio contro ${enemyName} subendo ${baseDmg} danni al posto tuo!`, "danger");
 
-    if (type === "human") {
-      lootRaiderItems(2);
+    const region = getCurrentRegion();
+    const leakChance = 0.15 * region.dmgMult;
+    if (Math.random() < leakChance) {
+      const leakDmg = Math.max(1, Math.round(baseDmg * 0.4));
+      player.hp = Math.max(0, player.hp - leakDmg);
+      log(`${player.companion.name} si scaglia con coraggio contro ${enemyName}, ma non riesce a fermarlo del tutto: subisce ${baseDmg} danni e un fendente ti sfiora comunque (-${leakDmg} HP).`, "danger");
+    } else {
+      log(`${player.companion.name} si scaglia con coraggio contro ${enemyName} subendo ${baseDmg} danni al posto tuo!`, "danger");
+      if (type === "human" && Math.random() < 0.5) {
+        lootRaiderItems(1);
+      }
     }
 
     checkPetStatus();
     endEncounter();
+    checkDeath();
   }
 
   function fleeEncounter(type) {
