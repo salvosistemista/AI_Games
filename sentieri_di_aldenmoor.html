@@ -2993,13 +2993,22 @@
   /* =========================================================================
      RENDERING
      ========================================================================= */
+  function scrollLogToBottom() {
+    const logBox = document.getElementById("log-container");
+    // requestAnimationFrame: aspetta che il layout si sia ridisegnato (es. i comandi
+    // contestuali che cambiano altezza) prima di calcolare il fondo reale da raggiungere.
+    requestAnimationFrame(() => {
+      logBox.scrollTop = logBox.scrollHeight;
+    });
+  }
+
   function log(msg, type = "normal") {
     const logBox = document.getElementById("log-container");
     const entry = document.createElement("div");
     entry.className = `log-entry ${type}`;
     entry.textContent = msg;
     logBox.appendChild(entry);
-    logBox.scrollTop = logBox.scrollHeight;
+    scrollLogToBottom();
   }
 
   function setContextActions(actions) {
@@ -3007,6 +3016,7 @@
     box.innerHTML = "";
     if (!actions || actions.length === 0 || player.isSleeping) {
       box.style.display = "none";
+      scrollLogToBottom();
       return;
     }
     actions.forEach(a => {
@@ -3017,6 +3027,7 @@
       box.appendChild(btn);
     });
     box.style.display = "flex";
+    scrollLogToBottom();
   }
 
   function setContextActionsRow(combatRowActions, otherActions) {
@@ -3024,6 +3035,7 @@
     box.innerHTML = "";
     if (player.isSleeping) {
       box.style.display = "none";
+      scrollLogToBottom();
       return;
     }
 
@@ -3051,12 +3063,14 @@
     }
 
     box.style.display = "flex";
+    scrollLogToBottom();
   }
 
   function clearContextActions() {
     const box = document.getElementById("context-actions");
     box.innerHTML = "";
     box.style.display = "none";
+    scrollLogToBottom();
   }
 
   function updateSoundButton() {
