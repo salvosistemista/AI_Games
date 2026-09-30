@@ -47,7 +47,7 @@ button{font:inherit;color:inherit}
 .fs{flex:none;width:32px;height:32px;border:2px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer;align-self:flex-start}
 
 .scene{background:#15111d;display:flex;justify-content:center;border-bottom:2px solid var(--line)}
-#scene{display:block;width:min(100%, calc(40vh * 160 / 144));aspect-ratio:160/144;max-width:100%;image-rendering:crisp-edges;image-rendering:pixelated;cursor:pointer}
+#scene{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:block;width:min(100%, calc(40vh * 160 / 144));aspect-ratio:160/144;max-width:100%;image-rendering:crisp-edges;image-rendering:pixelated;cursor:pointer}
 
 .status{padding-block:8px 10px;padding-inline:16px;background:var(--night);display:grid;gap:6px;border-bottom:2px solid var(--line)}
 .st-top{font-family:var(--f-pixel);font-size:14px;line-height:1.3;overflow-wrap:anywhere}
@@ -297,7 +297,8 @@ function noWrite(g,t,noCoffee){let p=90;if(g===S.pref)p-=10;p-=Math.min(15,Math.
   for(const k of ['tool','lamp','win','seat'])p-=LINES[k].tiers[S.up[k]][1];
   for(const k in EXTRAS)if(S.ex[k])p-=EXTRAS[k][1];
   if(S.pet)p-=PET_BONUS;
-  if(!noCoffee&&t<S.coffeeUntil)p-=10;return Math.max(20,p);}
+  if(!noCoffee&&t<S.coffeeUntil)p-=10;
+  if(!noCoffee&&t<(S.creaUntil||0))p-=15;return Math.max(20,p);}
 function genTitle(g){const r=Math.random;return pick(r,TT[g][0])+' '+pick(r,TT[g][1]);}
 function newMs(g,f,a){return {id:uid(),kind:'new',title:genTitle(g),g,f,a,w:0,t:FORMATS[f].w,done:false,q:0};}
 const activeMs=()=>S.ms.find(m=>m.id===S.active&&!m.done);
@@ -310,7 +311,8 @@ function advance(to){
   while(S.clock<to&&guard++<100000){
     const d=new Date(S.clock);
     const nh=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()+1).getTime();
-    const seg=Math.min(to,nh);
+    let seg=Math.min(to,nh);
+    for(const c of [S.coffeeUntil,S.creaUntil||0])if(c>S.clock&&c<seg)seg=c;
     const m=activeMs();
     if(S.hours[d.getHours()]&&m)writeSec(m,(seg-S.clock)/1000,S.clock);
     S.clock=seg;
@@ -493,7 +495,7 @@ function hud(){
     const s=FORMATS[m.f].s;
     $('#sWords').textContent=fmt(m.w)+' / '+fmt(m.t)+' parole'+(m.kind!=='rev'&&s>1?' · vol. '+Math.min(s,Math.floor(m.w/25000)+1)+'/'+s:'');
     $('#sPct').textContent='Non scrittura '+p+'%';
-    $('#sRate').textContent='~'+fmt(3600/ROLL_SEC*(1-p/100))+' parole/ora'+(t<S.coffeeUntil?' · caffè':'');
+    $('#sRate').textContent='~'+fmt(3600/ROLL_SEC*(1-p/100))+' parole/ora'+(t<S.coffeeUntil?' · caffè':'')+(t<(S.creaUntil||0)?' · creatività':'');
   }else{
     $('#sBar').style.width='0%';$('#sWords').textContent='Apri un progetto dalla Scrivania';$('#sPct').textContent='';$('#sRate').textContent='';
   }
@@ -551,6 +553,8 @@ function rDesk(){
   if(t<S.coffeeUntil)cs='Fa effetto ancora per '+untilStr(S.coffeeUntil-t)+' (−10% non scrittura).';
   else if(t<S.coffeeReady)cs='Di nuovo pronto tra '+untilStr(S.coffeeReady-t)+'.';
   else cs='Pronto. Per 30 minuti toglie il 10% alla non scrittura. Si ricarica in 4 ore.';
+  const cu=S.creaUntil||0;
+  h+='<section class="card"><h2 class="h">Creatività</h2><p class="meta" style="margin:0">'+(t<cu?'Il punto esclamativo è acceso ancora per '+untilStr(cu-t)+' (−15% non scrittura).':'Mentre lo scrittore pensa o scrive, toccalo rapidamente 30 volte: il punto di domanda sopra la testa si riempie e diventa un punto esclamativo che per 30 minuti toglie il 15% alla non scrittura, anche a gioco chiuso.')+'</p></section>';
   h+='<section class="card"><div class="row between"><h2 class="h">Caffè</h2><button class="btn" data-act="coffee" '+(t<S.coffeeReady?'disabled':'')+'>Bevi</button></div><p class="meta" style="margin:0">'+cs+' Puoi anche toccare la tazza sulla scrivania.</p></section>';
   return h;
 }
@@ -818,7 +822,23 @@ function decoAt(x,y){
   }
   return null;
 }
+const CREA_TAPS=30,CREA_DECAY=2;
+const crea={fill:0,last:0,tick:0,skipClick:0};
+function sceneXY(e,el){const r=el.getBoundingClientRect();return [(e.clientX-r.left)/r.width*160,(e.clientY-r.top)/r.height*144];}
+$('#scene').addEventListener('pointerdown',e=>{
+  if(!S)return;
+  const [x,y]=sceneXY(e,e.currentTarget);
+  if(!(x>=12&&x<=46&&y>=56&&y<=112))return;
+  const st=wState();
+  if(st!=='think'&&st!=='write')return;
+  crea.skipClick=performance.now();
+  if(gnow()<(S.creaUntil||0))return;
+  crea.fill=Math.min(CREA_TAPS,crea.fill+1);crea.last=performance.now();
+  fx.parts.push({x:24+Math.random()*8,y:66,life:0.7});
+  if(crea.fill>=CREA_TAPS){crea.fill=0;S.creaUntil=gnow()+30*60e3;save();hud();toast('Ispirazione! Per 30 minuti scrive molto più veloce');if(tab==='desk')renderPanel();}
+});
 $('#scene').addEventListener('click',e=>{
+  if(performance.now()-crea.skipClick<600)return;
   if(!S)return;
   const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*160,y=(e.clientY-r.top)/r.height*144;
   const dk=decoAt(x,y);
@@ -1058,7 +1078,33 @@ function draw(){
   for(const p of fx.hearts){p.y-=0.2;p.life-=0.01;cx.globalAlpha=Math.max(0,p.life);const c='#f27a9a';R(p.x,p.y,1,1,c);R(p.x+2,p.y,1,1,c);R(p.x,p.y+1,3,1,c);R(p.x+1,p.y+2,1,1,c);}
   cx.globalAlpha=1;fx.hearts=fx.hearts.filter(p=>p.life>0);
   if(sleep){for(let i=0;i<3;i++){const k=((t/1600)+i/3)%1;drawZ(40+k*8+i,82-k*16,1-k);}}
-  if(pk==='dream')balloon(pa.icon,t);else if(st==='idle')balloon('libri',t);
+  if(pk==='dream')balloon(pa.icon,t);else if(st==='idle')balloon('libri',t);else drawCrea(t,st);
+}
+const GLYPH_Q=['.#####.','##...##','##...##','....##.','...##..','..##...','..##...','.......','..##...','..##...'];
+const GLYPH_E=['..###..','..###..','..###..','..###..','..###..','...#...','...#...','.......','..###..','..###..'];
+function drawCrea(t,st){
+  const now=performance.now(),dt=Math.min(100,now-(crea.tick||now));crea.tick=now;
+  const active=gnow()<(S.creaUntil||0);
+  if(!active&&crea.fill>0&&now-crea.last>300)crea.fill=Math.max(0,crea.fill-CREA_DECAY*dt/1000);
+  if(st==='sleep'||st==='pause'&&!active)return;
+  let g,frac,pulse=0;
+  if(active){g=GLYPH_E;frac=(S.creaUntil-gnow())/(30*60e3);pulse=Math.sin(now/260);}
+  else if(crea.fill>0&&(st==='think'||st==='write')){g=GLYPH_Q;frac=crea.fill/CREA_TAPS;}
+  else return;
+  const x0=23,y0=Math.round(58+Math.sin(now/520)*1.5),H=g.length,filled=frac*H;
+  const glow=cx.createRadialGradient(x0+3.5,y0+5,1,x0+3.5,y0+5,active?11+pulse*2:9);
+  glow.addColorStop(0,'rgba(255,245,210,'+(active?0.35+pulse*0.1:0.18+frac*0.15)+')');glow.addColorStop(1,'rgba(255,245,210,0)');
+  cx.fillStyle=glow;cx.fillRect(x0-12,y0-8,32,28);
+  for(let r=0;r<H;r++){
+    const fromBottom=H-1-r,lvl=Math.max(0,Math.min(1,filled-fromBottom));
+    for(let c=0;c<7;c++){
+      if(g[r][c]!=='#')continue;
+      cx.globalAlpha=0.28;R(x0+c,y0+r,1,1,'#d8d0ea');
+      if(lvl>0){cx.globalAlpha=lvl*(active?0.85+pulse*0.15:1);R(x0+c,y0+r,1,1,active?'#fff8e6':'#ffffff');}
+    }
+  }
+  cx.globalAlpha=1;
+  if(active&&Math.random()<0.04)fx.parts.push({x:x0+2+Math.random()*4,y:y0+2,life:0.8});
 }
 function balloon(ic,t){
   const o='#b9b2c9',wht='#fbf8f1',dy=Math.round(Math.sin(t/700));
