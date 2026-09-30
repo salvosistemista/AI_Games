@@ -8,7 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Scriptor">
-
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -995,21 +997,26 @@ function draw(){
         R(33,89,3,6,C.sw);R(34,84,6,8,C.paper);R(40,84,6,8,'#e4d3ad');R(39,83,2,10,'#8a3a2a');for(let i=0;i<3;i++){R(35,86+i*2,4,1,'#9a8a70');R(41,86+i*2,4,1,'#9a8a70');}R(35,90,3,3,C.skin);
       }else if(pk==='pet'&&S.pet==='cat'){
         R(33,95,30,3,C.sw);R(63,93-(((t/300)|0)%2),3,3,C.skin);
-        if(Math.random()<0.03)fx.hearts.push({x:70,y:DESK-10,life:1});
+        if(Math.random()<0.03)fx.hearts.push({x:66,y:DESK-10,life:1});
       }else{R(33,95,8,3,C.sw);R(41,94,3,3,C.skin);}
     }
   }else if(tool<3&&(out||sleep))R(47,DESK-3,6,1,penC);
   // cat
+  // pets face left, toward the writer (mirrored drawing)
+  cx.save();cx.translate(142,0);cx.scale(-1,1);
   if(S.pet==='cat'){const br=Math.sin(t/800)>0?1:0,tw=Math.round(Math.sin(t/500)*1.5);R(64+tw,DESK-3,3,2,'#e08a3a');R(66,DESK-5-br,10,5+br,'#e08a3a');R(67,DESK-6-br,8,1,'#e08a3a');R(69,DESK-5-br,1,4,'#b86a2a');R(72,DESK-5-br,1,4,'#b86a2a');
     R(74,DESK-8,4,4,'#e08a3a');R(74,DESK-9,1,1,'#e08a3a');R(77,DESK-9,1,1,'#e08a3a');R(75,DESK-6,2,1,'#5a3a1a');}
+  cx.restore();
+  cx.save();cx.translate(144,0);cx.scale(-1,1);
   if(S.pet==='dog'){
     const play=pk==='pet',br=Math.sin(t/900)>0?1:0,wag=play?((t/120)|0)%2:(Math.sin(t/700)>0.6?1:0),y0=FLOOR-(play?9:6);
     const fur='#c8955a',dk='#8a5a2a';
     R(62,y0-1-wag,3,1,fur);R(64,y0,11,play?7:5+br,fur);R(66,y0+2,7,2,'#e2bd8a');
     R(74,y0-4,6,6,fur);R(79,y0-2,3,3,fur);R(81,y0-2,1,1,'#1a1414');R(74,y0-4,2,6,dk);
-    if(play){R(77,y0-3,1,1,'#1a1414');R(80,y0+1,1,2,'#e8808a');R(65,FLOOR-2,2,2,fur);R(72,FLOOR-2,2,2,fur);if(Math.random()<0.03)fx.hearts.push({x:76,y:y0-8,life:1});}
+    if(play){R(77,y0-3,1,1,'#1a1414');R(80,y0+1,1,2,'#e8808a');R(65,FLOOR-2,2,2,fur);R(72,FLOOR-2,2,2,fur);if(Math.random()<0.03)fx.hearts.push({x:65,y:y0-8,life:1});}
     else{R(76,y0-2,2,1,'#5a3a1a');R(65,FLOOR-1,3,1,fur);R(71,FLOOR-1,3,1,fur);}
-  }
+  }  cx.restore();
+
   // coffee cup
   const hot=gnow()<S.coffeeUntil,ready=gnow()>=S.coffeeReady;
   R(79,DESK-5,4,5,'#f2ede0');R(83,DESK-4,1,3,'#f2ede0');R(79,DESK-5,4,1,ready||hot?'#6a3f22':'#d8d0c0');
@@ -1153,5 +1160,10 @@ requestAnimationFrame(draw);
 })();
 </script>
 
+<script>
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
 </body>
 </html>
