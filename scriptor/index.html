@@ -554,7 +554,7 @@ function rDesk(){
   else if(t<S.coffeeReady)cs='Di nuovo pronto tra '+untilStr(S.coffeeReady-t)+'.';
   else cs='Pronto. Per 30 minuti toglie il 10% alla non scrittura. Si ricarica in 4 ore.';
   const cu=S.creaUntil||0;
-  h+='<section class="card"><h2 class="h">Creatività</h2><p class="meta" style="margin:0">'+(t<cu?'Il punto esclamativo è acceso ancora per '+untilStr(cu-t)+' (−15% non scrittura).':'Mentre lo scrittore pensa o scrive, toccalo rapidamente 30 volte: il punto di domanda sopra la testa si riempie e diventa un punto esclamativo che per 30 minuti toglie il 15% alla non scrittura, anche a gioco chiuso.')+'</p></section>';
+  h+='<section class="card"><h2 class="h">Creatività</h2><p class="meta" style="margin:0">'+(t<cu?'Il punto esclamativo è acceso ancora per '+untilStr(cu-t)+' (−15% non scrittura).':'Mentre lo scrittore pensa o scrive, toccalo rapidamente 30 volte: il punto di domanda sopra la testa si riempie e diventa un punto esclamativo che toglie il 15% alla non scrittura, anche a gioco chiuso. Dura 5 minuti; con il caffè appena bevuto (meno di 5 minuti) 15 minuti, a caffè avviato 10 minuti, e negli ultimi 10 minuti del caffè fino alla sua fine.')+'</p></section>';
   h+='<section class="card"><div class="row between"><h2 class="h">Caffè</h2><button class="btn" data-act="coffee" '+(t<S.coffeeReady?'disabled':'')+'>Bevi</button></div><p class="meta" style="margin:0">'+cs+' Puoi anche toccare la tazza sulla scrivania.</p></section>';
   return h;
 }
@@ -822,7 +822,16 @@ function decoAt(x,y){
   }
   return null;
 }
-const CREA_TAPS=30,CREA_DECAY=2;
+const CREA_TAPS=30,CREA_DECAY=6;
+// creativity length depends on the coffee (which lasts 30 minutes)
+function creaDuration(t){
+  const left=S.coffeeUntil-t;
+  if(left<=0)return 5*60e3;
+  const since=30*60e3-left;
+  if(since<5*60e3)return 15*60e3;
+  if(left>=10*60e3)return 10*60e3;
+  return left;
+}
 const crea={fill:0,last:0,tick:0,skipClick:0};
 function sceneXY(e,el){const r=el.getBoundingClientRect();return [(e.clientX-r.left)/r.width*160,(e.clientY-r.top)/r.height*144];}
 $('#scene').addEventListener('pointerdown',e=>{
@@ -835,7 +844,7 @@ $('#scene').addEventListener('pointerdown',e=>{
   if(gnow()<(S.creaUntil||0))return;
   crea.fill=Math.min(CREA_TAPS,crea.fill+1);crea.last=performance.now();
   fx.parts.push({x:24+Math.random()*8,y:66,life:0.7});
-  if(crea.fill>=CREA_TAPS){crea.fill=0;S.creaUntil=gnow()+30*60e3;save();hud();toast('Ispirazione! Per 30 minuti scrive molto più veloce');if(tab==='desk')renderPanel();}
+  if(crea.fill>=CREA_TAPS){crea.fill=0;const t0=gnow(),d=creaDuration(t0);S.creaDur=d;S.creaUntil=t0+d;save();hud();toast('Ispirazione! Per '+Math.max(1,Math.round(d/60e3))+' minuti scrive molto più veloce');if(tab==='desk')renderPanel();}
 });
 $('#scene').addEventListener('click',e=>{
   if(performance.now()-crea.skipClick<600)return;
@@ -1088,7 +1097,7 @@ function drawCrea(t,st){
   if(!active&&crea.fill>0&&now-crea.last>300)crea.fill=Math.max(0,crea.fill-CREA_DECAY*dt/1000);
   if(st==='sleep'||st==='pause'&&!active)return;
   let g,frac,pulse=0;
-  if(active){g=GLYPH_E;frac=(S.creaUntil-gnow())/(30*60e3);pulse=Math.sin(now/260);}
+  if(active){g=GLYPH_E;frac=(S.creaUntil-gnow())/(S.creaDur||30*60e3);pulse=Math.sin(now/260);}
   else if(crea.fill>0&&(st==='think'||st==='write')){g=GLYPH_Q;frac=crea.fill/CREA_TAPS;}
   else return;
   const x0=23,y0=Math.round(58+Math.sin(now/520)*1.5),H=g.length,filled=frac*H;
