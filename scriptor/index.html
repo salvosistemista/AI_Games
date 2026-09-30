@@ -47,7 +47,7 @@ button{font:inherit;color:inherit}
 .fs{flex:none;width:32px;height:32px;border:2px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer;align-self:flex-start}
 
 .scene{background:#15111d;display:flex;justify-content:center;border-bottom:2px solid var(--line)}
-#scene{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:block;width:min(100%, calc(40vh * 160 / 144));aspect-ratio:160/144;max-width:100%;image-rendering:crisp-edges;image-rendering:pixelated;cursor:pointer}
+#scene{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:block;width:min(100%, calc(40vh * 160 / 144));aspect-ratio:160/144;max-width:100%;image-rendering:crisp-edges;image-rendering:pixelated;cursor:pointer}
 
 .status{padding-block:8px 10px;padding-inline:16px;background:var(--night);display:grid;gap:6px;border-bottom:2px solid var(--line)}
 .st-top{font-family:var(--f-pixel);font-size:14px;line-height:1.3;overflow-wrap:anywhere}
@@ -889,7 +889,7 @@ function endDrag(e){
   if(dr.type!=='ball'||!live2.ball)return;
   const dx=dr.x-dr.x0,dy=dr.y-dr.y0;
   const BIN=binR(),inBin=dr.x>=BIN[0]-8&&dr.x<=BIN[2]+8&&dr.y>=BIN[1]-10&&dr.y<=BIN[3];
-  const hit=inBin||(Math.hypot(dx,dy)>12&&dy>4&&dx>-6);
+  const hit=inBin||(Math.hypot(dx,dy)>8&&(dx>4||dy>4)&&!(dx<-8));
   live2.anim={from:[dr.x,dr.y],to:hit?[BIN[0]+4,BIN[1]-2]:[live2.ball.x,live2.ball.y],start:performance.now(),dur:hit?480:250,hit};
 }
 $('#scene').addEventListener('pointerup',endDrag);
