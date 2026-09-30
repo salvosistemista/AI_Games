@@ -1,0 +1,31 @@
+SCRIPTOR - versione installabile (v1.3)
+
+Contenuto della cartella
+  index.html              il gioco, con i caratteri incorporati
+  manifest.webmanifest    nome, colori e icone dell'app
+  sw.js                   salva il gioco sul dispositivo per usarlo offline
+  icon-*.png, apple-touch-icon.png   icone
+
+Pubblicare su GitHub Pages (gratis)
+  1. Accedi a github.com (o crea un account).
+  2. In alto a destra: "+" > "New repository". Nome: scriptor. Visibilita': Public. Crea.
+  3. Nella pagina del repository: "uploading an existing file" (oppure Add file > Upload files).
+     Trascina TUTTI i file di questa cartella (non la cartella stessa). "Commit changes".
+  4. Settings > Pages. In "Build and deployment": Source = Deploy from a branch,
+     Branch = main, cartella = / (root). Save.
+  5. Dopo uno o due minuti il gioco e' su: https://TUO-NOME-UTENTE.github.io/scriptor/
+
+Installare
+  - Chrome su computer: icona di installazione nella barra dell'indirizzo, oppure menu > "Trasmetti, salva e condividi" > "Installa pagina come app".
+  - Chrome su Android: menu > "Aggiungi a schermata Home" > "Installa".
+  - Safari su iPhone: Condividi > "Aggiungi alla schermata Home".
+  Dopo la prima apertura il gioco funziona anche senza internet.
+
+Aggiornare
+  Carica i nuovi index.html e sw.js sopra i vecchi (stesso nome). La nuova versione arriva
+  sui telefoni alla prima apertura con internet; a volte serve chiudere e riaprire l'app.
+
+Salvataggi
+  La partita resta nel browser/app in cui giochi. Il file scriptor.html, la pagina su claude.ai
+  e l'app installata hanno salvataggi separati: per spostare una partita usa
+  Diario > Salvataggio > "Genera codice" e poi "Carica codice" nell'altra versione.
