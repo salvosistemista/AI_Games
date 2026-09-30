@@ -240,17 +240,17 @@ function holUpcoming(t){const y=new Date(t).getFullYear(),lim=addDays(t,42);retu
 const SEAS_G=[[0,11],[9,11],[7,5,4],[5,3,2]];
 const seasonOf=mo=>mo===11||mo<2?0:mo<5?1:mo<8?2:3;
 function seasonPick(r,mo){const fav=SEAS_G[seasonOf(mo)],w=GENRES.map((_,i)=>fav.includes(i)?2.5:1);let x=r()*w.reduce((a,b)=>a+b,0);for(let i=0;i<12;i++){x-=w[i];if(x<=0)return i;}return 11;}
-let decoKey='',decoSet=new Set();
+let decoKey='',decoSet=new Set(),decoInfo={};
 function decos(t){
   const k=key(t)+'-'+new Date(t).getHours();if(k===decoKey)return decoSet;
-  const out=new Set(),y=new Date(t).getFullYear();
+  const out=new Set(),info={},y=new Date(t).getFullYear();
   for(const x of [...holInst(y-1),...holInst(y)]){
     if(!x.h.deco)continue;let a=addDays(x.d,-7),b=addDays(x.d,1);
     if(x.h.id==='natale'){a=addDays(x.d,-17);b=addDays(x.d,13);}
     if(x.h.deco==='festoni')a=x.d;
-    if(t>=a&&t<b)out.add(x.h.deco);
+    if(t>=a&&t<b){out.add(x.h.deco);info[x.h.deco]=x;}
   }
-  decoKey=k;decoSet=out;return out;
+  decoKey=k;decoSet=out;decoInfo=info;return out;
 }
 const ICONS=[['mare','al mare'],['monti','alla montagna'],['bici','a un giro in bici'],['libri','ai libri da leggere'],['panino','a un panino'],['gelato','a un gelato'],['luna','alle stelle'],['nave','a un viaggio in nave']];
 
@@ -803,9 +803,26 @@ function fullscreen(){
   if(!req){toast('Qui il tutto schermo non è disponibile. Su iPhone: Condividi → Aggiungi alla schermata Home');return;}
   try{const p=req.call(el);if(p&&p.catch)p.catch(()=>toast('Il browser non ha concesso il tutto schermo'));}catch(err){toast('Il browser non ha concesso il tutto schermo');}
 }
+const DECO_HIT={luci:[0,8,117,15],festoni:[0,7,117,14],cuore:[86,42,95,50],biglietto:[86,40,97,51],pesce:[36,59,46,69],zucca:[48,121,61,133],uovo:[48,122,59,133],calza:[68,100,78,112],coriandoli:[0,132,160,144]};
+function decoLabel(d,x){
+  const n=x.h.n;
+  return ({luci:'Luci di Natale',festoni:'Festoni per '+(x.h.id==='anniv'?"l'anniversario da scrittore":n.startsWith('Grande')?'il '+n:'la '+n),cuore:'Cuore di San Valentino',biglietto:'Biglietto di auguri per la '+n,pesce:"Pesce d'aprile",zucca:'Zucca di Halloween',uovo:'Uovo di Pasqua',calza:'Calza della Befana',coriandoli:'Coriandoli di Carnevale'})[d];
+}
+function decoAt(x,y){
+  const set=decos(gnow());
+  for(const d of ['biglietto','cuore','pesce','calza','zucca','uovo','luci','festoni','coriandoli']){
+    if(!set.has(d))continue;const [x0,y0,x1,y1]=DECO_HIT[d];
+    if(x>=x0&&x<=x1&&y>=y0&&y<=y1)return d;
+  }
+  return null;
+}
 $('#scene').addEventListener('click',e=>{
   if(!S)return;
   const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*160,y=(e.clientY-r.top)/r.height*144;
+  const dk=decoAt(x,y);
+  if(dk){const inf=decoInfo[dk],t=gnow(),n=S.offers.filter(o=>o.hol===inf.h.id&&o.st==='open'&&isOpen(o,t)).length;
+    const d=new Date(inf.d);
+    toast(decoLabel(dk,inf)+' · '+d.getDate()+' '+MONTHS[d.getMonth()]+(n?'. In Bacheca: '+n+(n>1?' offerte':' offerta')+' a tema':''));return;}
   if(x>=77&&x<=86&&y>=88&&y<=100){drinkCoffee();if(tab==='desk')renderPanel();return;}
   if(S.ex.radio){const top=FLOOR-S.shelves*13-5;if(x>=121&&x<=137&&y>=top-14&&y<=top){toggleRadio();return;}}
   if(x>=116){tab='lib';renderPanel();return;}
