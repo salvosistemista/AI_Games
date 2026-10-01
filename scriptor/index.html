@@ -8,9 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Scriptor">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -311,11 +309,15 @@ const fx={lastWord:0,parts:[],notes:[],hearts:[],hx:44,hy:92,lamp:[95,88]};
 /* ---------- boosts that work only while the game is open ---------- */
 const live2={flow:[],ideas:[],ball:null,anim:null,drag:null,binned:0,petAwakeUntil:0,petNext:0,petBoostUntil:0,t:0};
 const isFocused=()=>document.visibilityState==='visible'&&document.hasFocus();
-function flowCount(){const n=Date.now();live2.flow=live2.flow.filter(x=>x>n);return Math.min(3,live2.flow.length);}
-function addFlow(){const n=Date.now();live2.flow=live2.flow.filter(x=>x>n).sort((a,b)=>a-b);if(live2.flow.length>=3)live2.flow.shift();live2.flow.push(n+3*60e3);}
+// flow layers: -3% each up to 3 layers; with creativity active -5% each up to 4 layers
+const creaOn=()=>!!S&&gnow()<(S.creaUntil||0);
+const flowCap=()=>creaOn()?4:3,flowPer=()=>creaOn()?5:3;
+function flowCount(){const n=Date.now();live2.flow=live2.flow.filter(x=>x>n);return Math.min(flowCap(),live2.flow.length);}
+const flowPct=()=>flowPer()*flowCount();
+function addFlow(){const n=Date.now();live2.flow=live2.flow.filter(x=>x>n).sort((a,b)=>a-b);while(live2.flow.length>=flowCap())live2.flow.shift();live2.flow.push(n+3*60e3);}
 function liveBonus(t){
   if(!S||Math.abs(gnow()-t)>5000||!isFocused())return 0;
-  let v=3*flowCount();
+  let v=flowPct();
   if(Date.now()<live2.petBoostUntil)v+=5;
   if(live2.ball&&!live2.anim)v-=5;
   return v;
@@ -509,7 +511,7 @@ function hud(){
     const s=FORMATS[m.f].s;
     $('#sWords').textContent=fmt(m.w)+' / '+fmt(m.t)+' parole'+(m.kind!=='rev'&&s>1?' · vol. '+Math.min(s,Math.floor(m.w/25000)+1)+'/'+s:'');
     $('#sPct').textContent='Non scrittura '+p+'%';
-    $('#sRate').textContent='~'+fmt(3600/ROLL_SEC*(1-p/100))+' parole/ora'+(t<S.coffeeUntil?' · caffè':'')+(t<(S.creaUntil||0)?' · creatività':'')+(flowCount()?' · flusso −'+3*flowCount()+'%':'')+(Date.now()<live2.petBoostUntil?' · coccole':'')+(live2.ball?' · blocco':'');
+    $('#sRate').textContent='~'+fmt(3600/ROLL_SEC*(1-p/100))+' parole/ora'+(t<S.coffeeUntil?' · caffè':'')+(t<(S.creaUntil||0)?' · creatività':'')+(flowCount()?' · flusso −'+flowPct()+'%':'')+(Date.now()<live2.petBoostUntil?' · coccole':'')+(live2.ball?' · blocco':'');
   }else{
     $('#sBar').style.width='0%';$('#sWords').textContent='Apri un progetto dalla Scrivania';$('#sPct').textContent='';$('#sRate').textContent='';
   }
@@ -570,7 +572,7 @@ function rDesk(){
   const cu=S.creaUntil||0;
   h+='<section class="card"><h2 class="h">Creatività</h2><p class="meta" style="margin:0">'+(t<cu?'Il punto esclamativo è acceso ancora per '+untilStr(cu-t)+' (−15% non scrittura).':'Mentre lo scrittore pensa o scrive, toccalo rapidamente 30 volte: il punto di domanda sopra la testa si riempie e diventa un punto esclamativo che toglie il 15% alla non scrittura, anche a gioco chiuso. Dura 5 minuti; con il caffè appena bevuto (meno di 5 minuti) 15 minuti, a caffè avviato 10 minuti, e negli ultimi 10 minuti del caffè fino alla sua fine.')+'</p></section>';
   h+='<section class="card"><h2 class="h">Mentre giochi</h2><p class="meta" style="margin:0">Questi aiuti valgono solo con il gioco aperto e in primo piano.</p>'+
-    '<p class="meta" style="margin:0"><b>Idee al volo</b>: tocca le lucciole e i foglietti che escono dalla lampada, dalla finestra o dalla libreria. Ogni idea è uno strato di flusso (−3% per 3 minuti, fino a −9%).</p>'+
+    '<p class="meta" style="margin:0"><b>Idee al volo</b>: tocca le lucciole e i foglietti che escono dalla lampada, dalla finestra o dalla libreria. Ogni idea è uno strato di flusso per 3 minuti: −3% a strato fino a 3 strati (−9%), oppure −5% a strato fino a 4 strati (−20%) mentre la creatività è attiva.</p>'+
     '<p class="meta" style="margin:0"><b>Brutta copia</b>: quando sulla scrivania compare un foglio accartocciato scrive più lento (+5%). Lancialo nel cestino con uno swipe verso il basso: il blocco passa e guadagni uno strato di flusso.</p>'+
     (S.pet?'<p class="meta" style="margin:0"><b>Coccole</b>: quando '+(S.pet==='cat'?'il gatto':'il cagnolino')+' si sveglia e compare il cuoricino, accarezzalo con uno swipe: −5% per 1 minuto.</p>':'')+'</section>';
   h+='<section class="card"><div class="row between"><h2 class="h">Caffè</h2><button class="btn" data-act="coffee" '+(t<S.coffeeReady?'disabled':'')+'>Bevi</button></div><p class="meta" style="margin:0">'+cs+' Puoi anche toccare la tazza sulla scrivania.</p></section>';
@@ -857,7 +859,7 @@ const inPet=(x,y)=>S.pet==='cat'?(x>=60&&x<=82&&y>=DESK-12&&y<=DESK+1):S.pet==='
 function catchIdea(d){
   live2.ideas.splice(live2.ideas.indexOf(d),1);addFlow();
   for(let k=0;k<6;k++)fx.parts.push({x:d.x+Math.random()*4-2,y:d.y+Math.random()*4-2,life:0.8});
-  toast('Idea al volo! Flusso −'+3*flowCount()+'% per 3 minuti');hud();
+  toast('Idea al volo! Flusso −'+flowPct()+'% per 3 minuti');hud();
 }
 $('#scene').addEventListener('pointerdown',e=>{
   if(!S)return;
@@ -1197,7 +1199,7 @@ function liveUpdate(st){
   live2.ideas=live2.ideas.filter(d=>d.age<d.life);
   const a=live2.anim;
   if(a&&now-a.start>=a.dur){live2.anim=null;
-    if(a.hit){const BIN=binR();live2.ball=null;live2.binned++;addFlow();for(let k=0;k<5;k++)fx.parts.push({x:BIN[0]+3+Math.random()*6,y:BIN[1]-2,life:0.7});toast('Nel cestino! Blocco superato: flusso −'+3*flowCount()+'% per 3 minuti');hud();}
+    if(a.hit){const BIN=binR();live2.ball=null;live2.binned++;addFlow();for(let k=0;k<5;k++)fx.parts.push({x:BIN[0]+3+Math.random()*6,y:BIN[1]-2,life:0.7});toast('Nel cestino! Blocco superato: flusso −'+flowPct()+'% per 3 minuti');hud();}
   }
 }
 function drawLive(t,st){
@@ -1332,10 +1334,5 @@ requestAnimationFrame(draw);
 })();
 </script>
 
-<script>
-if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-}
-</script>
 </body>
 </html>
