@@ -307,7 +307,7 @@ const activeMs=()=>S.ms.find(m=>m.id===S.active&&!m.done);
 let live=false;
 const fx={lastWord:0,parts:[],notes:[],hearts:[],hx:44,hy:92,lamp:[95,88]};
 /* ---------- boosts that work only while the game is open ---------- */
-const live2={flow:[],ideas:[],ball:null,anim:null,drag:null,binned:0,petAwakeUntil:0,petNext:0,petBoostUntil:0,t:0};
+const live2={flow:[],ideas:[],ball:null,anim:null,drag:null,trip:null,drink:null,petAwakeUntil:0,petNext:0,petBoostUntil:0,t:0};
 const isFocused=()=>document.visibilityState==='visible'&&document.hasFocus();
 // flow layers: -3% each up to 3 layers; with creativity active -5% each up to 4 layers
 const creaOn=()=>!!S&&gnow()<(S.creaUntil||0);
@@ -574,6 +574,7 @@ function rDesk(){
   h+='<section class="card"><h2 class="h">Mentre giochi</h2><p class="meta" style="margin:0">Questi aiuti valgono solo con il gioco aperto e in primo piano.</p>'+
     '<p class="meta" style="margin:0"><b>Idee al volo</b>: tocca le lucciole e i foglietti che escono dalla lampada, dalla finestra o dalla libreria. Ogni idea è uno strato di flusso per 3 minuti: −3% a strato fino a 3 strati (−9%), oppure −5% a strato fino a 4 strati (−20%) mentre la creatività è attiva.</p>'+
     '<p class="meta" style="margin:0"><b>Brutta copia</b>: quando sulla scrivania compare un foglio accartocciato scrive più lento (+5%). Lancialo nel cestino con uno swipe verso il basso: il blocco passa e guadagni uno strato di flusso.</p>'+
+    '<p class="meta" style="margin:0"><b>Cestino</b>: '+(S.binCount||0)+'/'+BIN_MAX+' cartacce. Quando è pieno toccalo: lo scrittore lo porta fuori e torna con una lattina di cola (se non ce n\'è già una). Toccando la lattina la beve: per 30 minuti vale come un caffè e accende la creatività, anche a gioco chiuso.</p>'+
     (S.pet?'<p class="meta" style="margin:0"><b>Coccole</b>: quando '+(S.pet==='cat'?'il gatto':'il cagnolino')+' si sveglia e compare il cuoricino, accarezzalo con uno swipe: −5% per 1 minuto.</p>':'')+'</section>';
   h+='<section class="card"><div class="row between"><h2 class="h">Caffè</h2><button class="btn" data-act="coffee" '+(t<S.coffeeReady?'disabled':'')+'>Bevi</button></div><p class="meta" style="margin:0">'+cs+' Puoi anche toccare la tazza sulla scrivania.</p></section>';
   return h;
@@ -866,9 +867,11 @@ $('#scene').addEventListener('pointerdown',e=>{
   const cvs=e.currentTarget,[x,y]=sceneXY(e,cvs);
   for(const d of live2.ideas){if(Math.hypot(d.x-x,d.y-y)<9){catchIdea(d);crea.skipClick=performance.now();return;}}
   const bl=live2.ball;
-  if(bl&&!live2.anim&&x>=bl.x-6&&x<=bl.x+10&&y>=bl.y-7&&y<=bl.y+10){live2.drag={type:'ball',x0:x,y0:y,x,y};try{cvs.setPointerCapture(e.pointerId);}catch(err){}crea.skipClick=performance.now();return;}
+  if(bl&&!live2.anim&&!live2.trip&&x>=bl.x-6&&x<=bl.x+10&&y>=bl.y-7&&y<=bl.y+10){live2.drag={type:'ball',x0:x,y0:y,x,y};try{cvs.setPointerCapture(e.pointerId);}catch(err){}crea.skipClick=performance.now();return;}
+  if(x>=85&&x<=100&&y>=FLOOR-15&&y<=FLOOR){crea.skipClick=performance.now();tapBasket();return;}
+  if(S.coke&&x>=100&&x<=108&&y>=DESK-10&&y<=DESK+1){crea.skipClick=performance.now();tapCan();return;}
   if(S.pet&&inPet(x,y)&&Date.now()<live2.petAwakeUntil){live2.drag={type:'pet',x,y,dist:0};try{cvs.setPointerCapture(e.pointerId);}catch(err){}crea.skipClick=performance.now();return;}
-  if(!(x>=12&&x<=46&&y>=56&&y<=112))return;
+  if(live2.trip||!(x>=12&&x<=46&&y>=56&&y<=112))return;
   const st=wState();
   if(st!=='think'&&st!=='write')return;
   crea.skipClick=performance.now();
@@ -1032,15 +1035,14 @@ function draw(){
   R(38,DESK+3,3,FLOOR-DESK-3,C.woodD);R(101,DESK+3,3,FLOOR-DESK-3,C.woodD);R(36,DESK+3,70,3,C.woodD);
   R(83,DESK+6,19,11,C.wood);R(83,DESK+6,19,1,C.woodL);R(91,DESK+10,3,2,'#e0bf52');
   // waste-paper basket
-  if(live2.binned){R(88,FLOOR-13,3,2,C.paper);R(92,FLOOR-12,3,2,'#ddd2b8');}
-  R(87,FLOOR-11,11,2,'#8e95a6');R(88,FLOOR-9,9,9,'#6a7082');for(let i=0;i<3;i++)R(89+i*3,FLOOR-8,1,7,'#5a6072');
+  if(!tripCarrying())drawBasket(87,FLOOR-11,S.binCount||0,t);
   // floor decorations
   if(dec.has('zucca')){const c='#e0781e',gl=((t/400)|0)%3?'#ffe07a':'#ffc04a';R(50,FLOOR-6,9,6,c);R(51,FLOOR-7,7,1,c);R(54,FLOOR-9,1,2,'#4a7a2a');R(53,FLOOR-6,1,6,'#c8641a');R(56,FLOOR-6,1,6,'#c8641a');R(52,FLOOR-5,1,1,gl);R(56,FLOOR-5,1,1,gl);R(52,FLOOR-3,5,1,gl);}
   if(dec.has('uovo')){const c='#f2a0c8';R(52,FLOOR-8,3,1,c);R(51,FLOOR-7,5,7,c);R(50,FLOOR-5,7,4,c);R(50,FLOOR-4,7,1,'#7fc8f0');R(51,FLOOR-2,5,1,'#f2d24a');R(52,FLOOR-6,1,1,'#7fc8f0');R(54,FLOOR-6,1,1,'#f2d24a');}
   if(dec.has('coriandoli')){for(let i=0;i<26;i++)R((i*37)%150+4,FLOOR+1+(i*5)%10,1,1,['#e84a4a','#f2c94a','#4ac86a','#4a9ae8','#c7a2e6'][i%5]);}
   // writer
   const sleep=st==='sleep',pause=st==='pause',pa=pause?pauseAct(gnow()):null,pk=pa?pa.k:null;
-  const work=!sleep&&!pause,wr=st==='write',think=st==='think'||st==='idle',out=pk==='out';
+  const work=!sleep&&!pause,wr=st==='write',think=st==='think'||st==='idle',out=pk==='out'||!!live2.trip;
   const bob=((think||pk==='dream')&&Math.sin(t/650)>0.75)||(work&&radio.playing&&((t/420)|0)%2)?1:0;
   const tool=S.up.tool;
   if(!out){
@@ -1119,6 +1121,7 @@ function draw(){
     else{R(76,y0-2,2,1,'#5a3a1a');R(65,FLOOR-1,3,1,fur);R(71,FLOOR-1,3,1,fur);}
   }  cx.restore();
 
+  if(S.coke&&!live2.drink&&(!live2.trip||live2.trip.canPlaced))drawCan(103,DESK-6);
   // coffee cup
   const hot=gnow()<S.coffeeUntil,ready=gnow()>=S.coffeeReady;
   R(79,DESK-5,4,5,'#f2ede0');R(83,DESK-4,1,3,'#f2ede0');R(79,DESK-5,4,1,ready||hot?'#6a3f22':'#d8d0c0');
@@ -1134,7 +1137,7 @@ function draw(){
   const rad=[30,40,52][S.up.lamp],al=[0.22,0.26,0.3][S.up.lamp]*(sleep?0.35:1)*(0.95+Math.sin(t/140)*0.05*(S.up.lamp===0));
   const gr=cx.createRadialGradient(lxp,lyp,1,lxp,lyp,rad);gr.addColorStop(0,'rgba(255,196,110,'+al+')');gr.addColorStop(1,'rgba(255,196,110,0)');
   cx.globalCompositeOperation='lighter';cx.fillStyle=gr;cx.fillRect(0,0,SW,SH);cx.globalCompositeOperation='source-over';
-  liveUpdate(st);drawLive(t,st);
+  liveUpdate(st);drawLive(t,st);drawTrip(t);drawDrink(t);
   // particles
   for(const p of fx.parts){p.y-=0.35;p.x+=Math.sin(p.y/3)*0.2;p.life-=0.012;cx.globalAlpha=Math.max(0,p.life);R(p.x,p.y,2,1,'#fff3cf');}
   cx.globalAlpha=1;fx.parts=fx.parts.filter(p=>p.life>0).slice(-40);
@@ -1171,6 +1174,75 @@ function drawCrea(t,st){
   cx.globalAlpha=1;
   if(active&&Math.random()<0.04)fx.parts.push({x:x0+2+Math.random()*4,y:y0+2,life:0.8});
 }
+/* ---------- basket trip & cola ---------- */
+const BIN_MAX=10,WALK=34; // px per second
+function canMove(){const st=wState();if(st==='sleep')return 'dorme';if(st==='pause'&&pauseAct(gnow()).k==='out')return 'è uscito';return '';}
+function tapBasket(){
+  if(live2.trip)return;
+  const n=S.binCount||0;
+  if(n<BIN_MAX){toast('Cestino: '+n+'/'+BIN_MAX+' cartacce. Quando è pieno puoi farlo svuotare');return;}
+  const why=canMove();if(why){toast('Ora '+S.name+' '+why+': riprova quando è sveglio');return;}
+  const give=!S.coke;
+  S.binCount=0;if(give)S.coke=true;save();
+  const ph=[{k:'stand',x:20,d:500},{k:'walk',a:20,b:80},{k:'pick',x:80,d:500},{k:'walk',a:80,b:174,carry:1},{k:'off',x:174,d:2000,carry:1},{k:'walk',a:174,b:98,carry:1,can:give}];
+  if(give)ph.push({k:'placeCan',x:98,d:600,carry:1});
+  ph.push({k:'walk',a:98,b:80,carry:1},{k:'put',x:80,d:500},{k:'walk',a:80,b:20},{k:'sit',x:20,d:400});
+  let t0=performance.now();for(const p of ph){if(p.k==='walk')p.d=Math.abs(p.b-p.a)/WALK*1000;p.t0=t0;t0+=p.d;}
+  live2.trip={ph,end:t0,give,canPlaced:false};
+  toast(S.name+' porta fuori il cestino');
+}
+function tripPhase(now){const tr=live2.trip;if(!tr)return null;for(const p of tr.ph)if(now<p.t0+p.d)return p;return null;}
+function tripCarrying(){const p=tripPhase(performance.now());return !!(p&&(p.carry||p.k==='pick'&&performance.now()-p.t0>p.d/2));}
+function tapCan(){
+  if(live2.drink||(live2.trip&&!live2.trip.canPlaced))return;
+  if(live2.trip){toast('Prima torna a sedersi');return;}
+  const why=canMove();if(why){toast('Ora '+S.name+' '+why+': la lattina aspetta sulla scrivania');return;}
+  live2.drink={start:performance.now()};
+}
+function drawBasket(x,y,n,t){
+  const lvl=Math.min(BIN_MAX,n);
+  if(lvl){const rows=Math.ceil(lvl/4);for(let i=0;i<lvl;i++){const r=Math.floor(i/4),c=i%4;R(x+1+c*2+(r%2),y+2-r*2-((c%2)?0:1),3,2,i%2?'#ddd2b8':C.paper);}if(rows>2)R(x+3,y-5,4,2,C.paper);}
+  R(x,y,11,2,'#8e95a6');R(x+1,y+2,9,9,'#6a7082');for(let i=0;i<3;i++)R(x+2+i*3,y+3,1,7,'#5a6072');
+  if(lvl>=BIN_MAX&&!live2.trip){const k=(Math.sin(t/300)+1)/2;cx.globalAlpha=0.35+0.5*k;R(x+5,y-12,1,4,'#fff2c0');R(x+5,y-7,1,1,'#fff2c0');cx.globalAlpha=1;}
+}
+function drawCan(x,y){R(x,y,3,6,'#c8202a');R(x,y,3,1,'#c9c9d2');R(x,y+5,3,1,'#9a9aa8');R(x,y+2,3,1,'#f4f1ea');R(x+2,y+1,1,4,'#e04a4a');}
+function drawWalker(x,dir,frame,carry,can){
+  const L=S.look;
+  cx.save();if(dir<0){cx.translate(2*x+10,0);cx.scale(-1,1);}
+  const top=FLOOR-49,sw=frame?1:-1;
+  const lg=(lx,dx)=>{R(lx,FLOOR-20,3,10,C.pants);R(lx+dx,FLOOR-10,3,8,C.pants);R(lx+dx,FLOOR-2,4,2,C.shoe);};
+  lg(x+2,frame?-1:1);lg(x+5,frame?1:-1);
+  R(x+1,top+13,9,17,C.sw);R(x+1,top+13,9,1,C.swL);R(x+4,top+13,3,1,C.skinD);
+  if(!carry){R(x+4+sw,top+15,3,11,C.swD);R(x+4+sw,top+26,3,2,C.skin);}
+  drawHead(L,x-21,top+2,'open');
+  if(carry){R(x+7,top+15,3,10,C.swD);R(x+8,top+25,3,2,C.skin);drawBasket(x+6,top+27,0,0);}
+  if(can){R(x+1,top+15,3,10,C.sw);R(x+1,top+25,3,2,C.skin);drawCan(x,top+21);}
+  cx.restore();
+}
+function drawTrip(t){
+  const tr=live2.trip;if(!tr)return;
+  const now=performance.now();
+  if(now>=tr.end){live2.trip=null;if(tr.give)toast('Una lattina di cola fresca sulla scrivania: toccala per berla');return;}
+  const p=tripPhase(now);if(!p)return;
+  const k=Math.min(1,(now-p.t0)/p.d),frame=((now/180)|0)%2;
+  if(p.k==='placeCan'&&k>0.5)tr.canPlaced=true;
+  const canInHand=tr.give&&!tr.canPlaced&&(p.k==='walk'&&p.can||p.k==='placeCan');
+  if(p.k==='walk'){const x=p.a+(p.b-p.a)*k;drawWalker(Math.round(x),p.b>p.a?1:-1,frame,!!p.carry,canInHand);}
+  else if(p.k==='off'){}
+  else if(p.k==='stand'||p.k==='sit'){drawWalker(p.x,1,0,false,false);}
+  else if(p.k==='pick'){drawWalker(p.x,1,0,k>0.5,false);}
+  else if(p.k==='put'){drawWalker(p.x,-1,0,k<0.5,false);}
+  else if(p.k==='placeCan'){drawWalker(p.x,-1,0,true,canInHand);}
+}
+function drawDrink(t){
+  const d=live2.drink;if(!d)return;
+  const k=(performance.now()-d.start)/1600;
+  if(k>=1){live2.drink=null;S.coke=false;const n=gnow(),end=n+30*60e3;
+    S.coffeeUntil=Math.max(S.coffeeUntil,end);if((S.creaUntil||0)<end){S.creaUntil=end;S.creaDur=30*60e3;}
+    save();hud();if(tab==='desk')renderPanel();toast('Glu glu! Per 30 minuti: carica come il caffè e creatività accesa');return;}
+  const x=Math.round(103+(32-103)*Math.min(1,k*3)),y=Math.round(DESK-6+(82-DESK+6)*Math.min(1,k*3));
+  drawCan(x,y);if(k>0.35&&((performance.now()/200)|0)%2)R(x+1,y-3,1,1,'#ffffff');
+}
 function ballAt(x,y){R(x,y+1,5,3,'#f2e7ce');R(x+1,y,3,5,'#f2e7ce');R(x+1,y+2,1,1,'#b9ad92');R(x+3,y+1,1,1,'#b9ad92');R(x+2,y+3,2,1,'#cfc4a8');}
 function spawnIdea(){
   const src=['lamp','lamp'];if(S.up.win)src.push('win');if(S.books.length)src.push('lib');
@@ -1199,7 +1271,7 @@ function liveUpdate(st){
   live2.ideas=live2.ideas.filter(d=>d.age<d.life);
   const a=live2.anim;
   if(a&&now-a.start>=a.dur){live2.anim=null;
-    if(a.hit){const BIN=binR();live2.ball=null;live2.binned++;addFlow();for(let k=0;k<5;k++)fx.parts.push({x:BIN[0]+3+Math.random()*6,y:BIN[1]-2,life:0.7});toast('Nel cestino! Blocco superato: flusso −'+flowPct()+'% per 3 minuti');hud();}
+    if(a.hit){const BIN=binR();live2.ball=null;S.binCount=Math.min(BIN_MAX,(S.binCount||0)+1);save();if(S.binCount===BIN_MAX)setTimeout(()=>toast('Il cestino è pieno: toccalo per portarlo fuori'),3500);addFlow();for(let k=0;k<5;k++)fx.parts.push({x:BIN[0]+3+Math.random()*6,y:BIN[1]-2,life:0.7});toast('Nel cestino! Blocco superato: flusso −'+flowPct()+'% per 3 minuti');hud();}
   }
 }
 function drawLive(t,st){
