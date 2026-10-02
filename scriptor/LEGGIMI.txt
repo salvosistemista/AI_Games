@@ -1,10 +1,15 @@
-SCRIPTOR - versione installabile (v1.6)
+SCRIPTOR - versione installabile (v1.7)
 
 Contenuto della cartella
   index.html              il gioco, con i caratteri incorporati
   manifest.webmanifest    nome, colori e icone dell'app
   sw.js                   salva il gioco sul dispositivo per usarlo offline
   icon-*.png, apple-touch-icon.png   icone
+
+Novita' della 1.7: effetti sonori
+  Ogni interazione ha il suo suono, generato dal gioco stesso (nessun file da aggiungere).
+  Diario > Suoni: acceso/spento, volume, e i suoni della scrittura (spenti all'inizio).
+  Su iPhone i suoni partono dopo il primo tocco e non si sentono con il telefono in silenzioso.
 
 Novita' della 1.6: un anno di progressione
   - Livelli: Celebre ora a 1000 di notorieta', Leggenda a 2500.

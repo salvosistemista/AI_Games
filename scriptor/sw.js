@@ -1,6 +1,6 @@
 // Scriptor service worker: keeps the game on the device so it works offline.
 // When you publish a new version, change VERSION so phones download it.
-const VERSION = 'scriptor-1.6';
+const VERSION = 'scriptor-1.7';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 // Radio tracks are optional: saved if present in the folder.
 const OPTIONAL = ['radio1.ogg', 'radio2.ogg', 'radio3.ogg', 'radio1.mp3', 'radio2.mp3', 'radio3.mp3'];
