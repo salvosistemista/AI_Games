@@ -1,10 +1,17 @@
-SCRIPTOR - versione installabile (v1.5)
+SCRIPTOR - versione installabile (v1.6)
 
 Contenuto della cartella
   index.html              il gioco, con i caratteri incorporati
   manifest.webmanifest    nome, colori e icone dell'app
   sw.js                   salva il gioco sul dispositivo per usarlo offline
   icon-*.png, apple-touch-icon.png   icone
+
+Novita' della 1.6: un anno di progressione
+  - Livelli: Celebre ora a 1000 di notorieta', Leggenda a 2500.
+  - Negozio > Promozione: intervista, firmacopie, radio e tournee trasformano le monete in
+    notorieta'. Ognuna una volta a settimana; si sbloccano salendo di livello.
+  - Gli oggetti piu' costosi del negozio richiedono un livello di notorieta'.
+  - Diario > Traguardi: 32 obiettivi lunghi, ognuno regala notorieta'.
 
 Novita' della 1.5: Mondo Enigmistico
   Ogni lunedi' arriva un nuovo numero del settimanale di passatempi (lo vedi appoggiato sopra la

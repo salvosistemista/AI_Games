@@ -303,15 +303,16 @@ const LEVELS=[
   {n:'Emergente',f:50,offers:5,vis:1,mult:1.15,maxF:5},
   {n:'Promettente',f:200,offers:6,vis:2,mult:1.35,maxF:6},
   {n:'Affermato',f:600,offers:7,vis:4,mult:1.6,maxF:7},
-  {n:'Celebre',f:1500,offers:8,vis:4,mult:2,maxF:8},
-  {n:'Leggenda',f:4000,offers:9,vis:8,mult:2.5,maxF:8}];
-const LINES={
-  tool:{n:'Strumento',tiers:[['Matita',0,0],["Penna d'oca",3,30],['Stilografica',6,150],['Macchina da scrivere',10,600],['Macchina elettrica',14,2000],['Computer vintage',18,6000]]},
-  lamp:{n:'Lampada',tiers:[['Candela',0,0],['Lampada a olio',2,80],['Lampada da biblioteca',4,400]]},
-  win:{n:'Finestra',tiers:[['Muro spoglio',0,0],['Tetti di città',2,200],['Colline',4,800],['Mare',6,2500]]},
-  seat:{n:'Seduta',tiers:[['Sgabello',0,0],['Sedia imbottita',2,150],['Poltrona',4,700]]},
-  drawer:{n:'Cassetto',tiers:[['3 manoscritti',0,0],['5 manoscritti',0,250],['8 manoscritti',0,1200]]}};
+  {n:'Celebre',f:1000,offers:8,vis:4,mult:2,maxF:8},
+  {n:'Leggenda',f:2500,offers:9,vis:8,mult:2.5,maxF:8}];
+const LINES={"tool": {"n": "Strumento", "tiers": [["Matita", 0, 0], ["Penna d'oca", 3, 30], ["Stilografica", 6, 150], ["Macchina da scrivere", 10, 600, 2], ["Macchina elettrica", 14, 2000, 3], ["Computer vintage", 18, 6000, 4]]}, "lamp": {"n": "Lampada", "tiers": [["Candela", 0, 0], ["Lampada a olio", 2, 80], ["Lampada da biblioteca", 4, 400, 2]]}, "win": {"n": "Finestra", "tiers": [["Muro spoglio", 0, 0], ["Tetti di città", 2, 200], ["Colline", 4, 800, 2], ["Mare", 6, 2500, 3]]}, "seat": {"n": "Seduta", "tiers": [["Sgabello", 0, 0], ["Sedia imbottita", 2, 150], ["Poltrona", 4, 700, 2]]}, "drawer": {"n": "Cassetto", "tiers": [["3 manoscritti", 0, 0], ["5 manoscritti", 0, 250], ["8 manoscritti", 0, 1200]]}};
 const PET_PRICE=500,PET_BONUS=2;
+const PROMO=[{"id": "giornale", "n": "Intervista sul giornale", "d": "un articolo con la tua foto nelle pagine della cultura", "lv": 1, "c": 250, "f": 4}, {"id": "libreria", "n": "Firmacopie in libreria", "d": "un pomeriggio di dediche tra gli scaffali", "lv": 2, "c": 1000, "f": 10}, {"id": "radio", "n": "Ospite alla radio", "d": "mezz'ora di chiacchiere in diretta", "lv": 3, "c": 3000, "f": 22}, {"id": "festival", "n": "Tournée nei festival", "d": "una settimana tra le piazze letterarie", "lv": 4, "c": 6000, "f": 110}],PROMO_GROW=0;
+const promoWeek=()=>key(mondayOf(gnow()));
+function promoPrice(p){const n=(S.promo&&S.promo[p.id]&&S.promo[p.id].n)||0;return Math.round(p.c*(1+PROMO_GROW*n)/10)*10;}
+function promoUsed(p){const x=S.promo&&S.promo[p.id];return !!x&&x.wk===promoWeek();}
+function buyPromo(id){const p=PROMO.find(x=>x.id===id);if(!p||lvl()<p.lv||promoUsed(p))return;const c=promoPrice(p);if(S.coins<c)return;S.coins-=c;S.promo=S.promo||{};const x=S.promo[p.id]||(S.promo[p.id]={n:0});x.n++;x.wk=promoWeek();S.stats.promo=(S.stats.promo||0)+1;log(p.n+': +'+p.f+' notorietà');addFame(p.f);save();renderPanel();hud();}
+
 const HAIR_STYLES=[['calvo','Calvo'],['corti','Corti'],['spettinati','Spettinati'],['ricci','Ricci'],['caschetto','Caschetto'],['lunghi','Lunghi'],['coda','Coda'],['chignon','Chignon']];
 const HAIR_COL=[['Neri','#1f1a1a'],['Castano scuro','#3a2418'],['Castani','#6a4128'],['Ramati','#a8482a'],['Biondi','#d8b25a'],['Grigi','#8a8a90'],['Bianchi','#e6e2da'],['Blu','#3a5aa8']];
 const EYES=[['Marroni','#5a3a22'],['Nocciola','#9a6a22'],['Verdi','#3f8a4a'],['Azzurri','#4a8ac8'],['Grigi','#7a8a9a'],['Neri','#1a1414']];
@@ -493,7 +494,7 @@ function finish(m){
   }else{
     const aff=Math.floor((S.aff[m.g]||0)/5000);
     m.q=Math.min(5,1+Math.floor(Math.random()*3)+(aff>=5?1:0)+(aff>=12?1:0));
-    m.done=true;S.stats.books++;
+    m.done=true;S.stats.books++;S.stats.fmt=S.stats.fmt||[];S.stats.fmt[m.f]=(S.stats.fmt[m.f]||0)+1;
     log('Hai finito «'+m.title+'» ('+FORMATS[m.f].n+', '+m.q+(m.q===1?' stella)':' stelle)'));
   }
   if(S.active===m.id){S.active=null;const nx=S.ms.find(x=>!x.done);if(nx)S.active=nx.id;}
@@ -507,7 +508,7 @@ function placeReady(){
     S.ms.splice(S.ms.indexOf(m),1);
   }
 }
-function weekly(t){resolveDeadlines(t);ensureOffers(t);anniversary(t);MAG.check(t);}
+function weekly(t){resolveDeadlines(t);ensureOffers(t);anniversary(t);MAG.check(t);TRAG.check();}
 function anniversary(t){
   const sd=new Date(S.started),y=new Date(t).getFullYear();
   if(y<=sd.getFullYear()||S.annivY===y||t<Dm(y,sd.getMonth(),sd.getDate()))return;
@@ -791,7 +792,8 @@ function rShop(){
   for(const k of ['tool','lamp','win','seat','drawer']){
     const L=LINES[k],cur=S.up[k],nx=L.tiers[cur+1];
     h+='<div class="card"><div class="row between"><span class="label">'+L.n+'</span><span class="meta">'+L.tiers[cur][0]+(k!=='drawer'&&cur?' · −'+L.tiers[cur][1]+'%':'')+'</span></div>';
-    if(nx)h+='<div class="row between"><span>'+nx[0]+(k!=='drawer'?' <span class="meta">−'+nx[1]+'% non scrittura</span>':'')+'</span><button class="btn pri" data-act="buy" data-v="'+k+'" '+(S.coins<nx[2]?'disabled':'')+'>'+fmt(nx[2])+' monete</button></div>';
+    const lk=nx&&nx[3]&&lvl()<nx[3];
+    if(nx)h+='<div class="row between"><span>'+nx[0]+(k!=='drawer'?' <span class="meta">−'+nx[1]+'% non scrittura</span>':'')+(lk?'<br><span class="meta">Serve notorietà: '+LEVELS[nx[3]].n+'</span>':'')+'</span><button class="btn pri" data-act="buy" data-v="'+k+'" '+(lk||S.coins<nx[2]?'disabled':'')+'>'+fmt(nx[2])+' monete</button></div>';
     else h+='<span class="meta">Completo</span>';
     h+='</div>';
   }
@@ -804,6 +806,9 @@ function rShop(){
   const sp=100*2**(S.shelves-1);
   h+='<div class="card"><div class="row between"><span class="label">Libreria</span><span class="meta">'+S.shelves+'/8 ripiani · '+capSlots()+' posti</span></div>'+
     (S.shelves<8?'<div class="row between"><span>Nuovo ripiano <span class="meta">+6 posti</span></span><button class="btn pri" data-act="buy-shelf" '+(S.coins<sp?'disabled':'')+'>'+fmt(sp)+' monete</button></div>':'<span class="meta">Completa</span>')+'</div>';
+  h+='<section class="stack"><h2 class="h">Promozione</h2><p class="lead meta">Trasforma le monete in notorietà. Ogni iniziativa si può fare una volta a settimana'+(PROMO_GROW?' e costa un po\' di più ogni volta':'')+'; le nuove si sbloccano salendo di livello.</p></section>';
+  for(const p of PROMO){const lk=lvl()<p.lv,used=promoUsed(p),c=promoPrice(p);
+    h+='<div class="card"><div class="row between"><span>'+p.n+' <span class="meta">+'+p.f+' notorietà · '+p.d+'</span></span>'+(lk?'<span class="meta">Serve notorietà: '+LEVELS[p.lv].n+'</span>':used?'<span class="meta">Fatto questa settimana</span>':'<button class="btn pri" data-act="promo" data-v="'+p.id+'" '+(S.coins<c?'disabled':'')+'>'+fmt(c)+' monete</button>')+'</div></div>';}
   return h;
 }
 function rDiary(){
@@ -816,6 +821,7 @@ function rDiary(){
   h+='<section class="stack"><div class="row between"><h2 class="h">Aspetto</h2><button class="btn" data-act="look-edit">Cambia aspetto</button></div></section>';
   h+='<section class="stack"><h2 class="h">Statistiche</h2><div class="kv">'+
     '<span>Parole scritte</span><span>'+fmt(st.words)+'</span><span>Libri finiti</span><span>'+fmt(st.books)+'</span><span>Venduti agli editori</span><span>'+fmt(st.sold)+'</span><span>Vendite libere</span><span>'+fmt(st.freeSold||0)+'</span><span>Eventi</span><span>'+fmt(st.events)+'</span><span>Concorsi vinti</span><span>'+fmt(st.wins)+'</span></div></section>';
+  h+=TRAG.html();
   h+='<section class="stack"><h2 class="h">Affinità con i generi</h2><p class="empty">Ogni 5.000 parole in un genere tolgono l\'1% di non scrittura in quel genere, fino al 15%.</p><div class="kv">'+
     GENRES.map((g,i)=>{const w=S.aff[i]||0;if(!w&&i!==S.pref)return '';return '<span>'+sw(i)+g.n+(i===S.pref?' · preferito':'')+'</span><span>'+fmt(w)+' parole · −'+Math.min(15,Math.floor(w/5000))+'%</span>';}).join('')+'</div></section>';
   h+='<section class="stack"><h2 class="h">Attestati</h2>'+(S.trophies.length?'<div class="log">'+S.trophies.slice().reverse().map(x=>'<div><time>'+dateStr(x.t-1)+'</time><span>'+['','Primo','Secondo','Terzo'][x.p]+' posto al '+esc(x.n)+' con «'+esc(x.title)+'»</span></div>').join('')+'</div>':'<p class="empty">Gli attestati dei concorsi finiscono qui e sul muro della stanza.</p>')+'</section>';
@@ -929,6 +935,7 @@ document.addEventListener('click',e=>{
     case 'ms-drop':{const m=S.ms.find(x=>x.id===v);if(!m)break;abandonId=v;openModal('<h2 class="h">Abbandonare «'+esc(m.title)+'»?</h2><p class="lead">Le '+fmt(m.w)+' parole scritte andranno perse.'+(m.kind==='rev'?' Il libro torna disponibile senza la stella in più.':'')+'</p><div class="row"><button class="btn warn" data-act="ms-drop-yes">Abbandona</button><button class="btn" data-act="close">Tieni</button></div>','drop');break;}
     case 'ms-drop-yes':{const m=S.ms.find(x=>x.id===abandonId);if(m){if(m.kind==='rev'){const b=S.books.find(x=>x.id===m.bookId);if(b)b.lock=null;}S.ms.splice(S.ms.indexOf(m),1);if(S.active===m.id)S.active=null;log('Hai abbandonato «'+m.title+'»');}closeModal();save();renderPanel();hud();break;}
     case 'coffee':drinkCoffee();renderPanel();break;
+    case 'promo':buyPromo(v);break;
     case 'mag':MAG.open();break;
     case 'offer':{const o=S.offers.find(x=>x.id===v);if(!o)break;const bs=S.books.filter(b=>eligible(o,b));
       openModal('<div class="row between"><span class="label">Consegna</span><button class="btn" data-act="close">Chiudi</button></div><h2 class="h">'+esc(o.name)+'</h2><div class="meta">'+specs(o)+'</div>'+
@@ -942,7 +949,7 @@ document.addEventListener('click',e=>{
       log('Inizia la revisione di «'+b.title+'»');save();closeModal();tab='desk';renderPanel();hud();break;}
     case 'sell':sellArmed=v;bookModal(v);break;
     case 'sell-yes':{const b=S.books.find(x=>x.id===v);if(!b||b.lock)break;const p=sellPrice(b);S.coins+=p;S.books.splice(S.books.indexOf(b),1);S.stats.freeSold=(S.stats.freeSold||0)+1;log('Vendita libera di «'+b.title+'»: +'+fmt(p)+' monete');placeReady();save();closeModal();renderPanel();hud();break;}
-    case 'buy':{const L=LINES[v],nx=L.tiers[S.up[v]+1];if(!nx||S.coins<nx[2])break;S.coins-=nx[2];S.up[v]++;log('Hai comprato: '+nx[0]);placeReady();save();renderPanel();hud();break;}
+    case 'buy':{const L=LINES[v],nx=L.tiers[S.up[v]+1];if(!nx||S.coins<nx[2]||(nx[3]&&lvl()<nx[3]))break;S.coins-=nx[2];S.up[v]++;log('Hai comprato: '+nx[0]);placeReady();save();renderPanel();hud();break;}
     case 'buy-ex':{const x=EXTRAS[v];if(S.ex[v]||S.coins<x[2])break;S.coins-=x[2];S.ex[v]=true;log('Hai comprato: '+x[0]);save();renderPanel();hud();break;}
     case 'buy-shelf':{const p=100*2**(S.shelves-1);if(S.shelves>=8||S.coins<p)break;S.coins-=p;S.shelves++;log('Nuovo ripiano: ora hai '+capSlots()+' posti');placeReady();save();renderPanel();hud();break;}
     case 'hour':{const i=+v;if(!S.hours[i]&&workHours()>=10){toast('Hai già 10 ore: togline una prima');break;}S.hours[i]=!S.hours[i];save();renderPanel();hud();break;}
@@ -2188,6 +2195,69 @@ function cardHtml(){
 const unsolvedNow=()=>{if(!S)return false;ensure();return prog(current()).s.length<games(current()).length;};
 const freshNow=()=>{if(!S)return false;ensure();return prog(current()).s.length===0;};
 return {open,close,check,consume,cardHtml,banked,minStr,unsolvedNow,freshNow,isOpen:()=>!!view,_G:G,_games:games,_state:stateFor};
+})();
+
+/* ---------- Traguardi: long goals spread over the first year ---------- */
+const TRAG=(()=>{
+  const st=()=>S.stats;
+  const fmtN=from=>(st().fmt||[]).reduce((a,n,f)=>a+(f>=from?(n||0):0),0);
+  const fmtExact=f=>(st().fmt||[])[f]||0;
+  const genresWith=n=>GENRES.filter((_,i)=>(S.aff[i]||0)>=n).length;
+  const maxAff=()=>Math.max(0,...GENRES.map((_,i)=>S.aff[i]||0));
+  const magDone=()=>S.mag?Object.values(S.mag.iss).filter(x=>x.done).length:0;
+  const shopFull=()=>['tool','lamp','win','seat','drawer'].every(k=>S.up[k]>=LINES[k].tiers.length-1)&&Object.keys(EXTRAS).every(k=>S.ex[k])&&!!S.pet;
+  // [id, group, name, description, value, target, fame]
+  const L=[
+    ['w1','Scrittura','Prime pagine','Scrivi 10.000 parole',()=>st().words,1e4,2],
+    ['w2','Scrittura','Penna instancabile','Scrivi 100.000 parole',()=>st().words,1e5,5],
+    ['w3','Scrittura','Mezzo milione','Scrivi 500.000 parole',()=>st().words,5e5,15],
+    ['w4','Scrittura','Il milione','Scrivi 1.000.000 di parole',()=>st().words,1e6,45],
+    ['w5','Scrittura','Una vita di parole','Scrivi 2.000.000 di parole',()=>st().words,2e6,70],
+    ['b1','Libri','Il primo libro','Finisci il tuo primo libro',()=>st().books,1,2],
+    ['b2','Libri','Una piccola bibliografia','Finisci 10 libri',()=>st().books,10,5],
+    ['b3','Libri','Cinquanta volte «fine»','Finisci 50 libri',()=>st().books,50,15],
+    ['b4','Libri','Cento libri','Finisci 100 libri',()=>st().books,100,45],
+    ['b5','Libri','Opera omnia','Finisci 150 libri',()=>st().books,150,70],
+    ['f1','Formati','Il primo romanzo','Finisci un romanzo (o un\'opera più lunga)',()=>fmtN(3),1,8],
+    ['f2','Formati','Il grande romanzo','Finisci un grande romanzo',()=>fmtExact(4),1,20],
+    ['f3','Formati','Nasce una saga','Finisci una trilogia, una quadrilogia o una pentalogia',()=>fmtN(6),1,30],
+    ['f4','Formati','La pentalogia','Finisci una pentalogia',()=>fmtExact(8),1,60],
+    ['g1','Generi','Eclettico','Scrivi almeno 5.000 parole in 6 generi',()=>genresWith(5000),6,10],
+    ['g2','Generi','Penna universale','Scrivi almeno 5.000 parole in tutti i 12 generi',()=>genresWith(5000),12,40],
+    ['g3','Generi','Specialista','Scrivi 100.000 parole in un solo genere',()=>maxAff(),1e5,12],
+    ['g4','Generi','Maestro del genere','Scrivi 300.000 parole in un solo genere',()=>maxAff(),3e5,45],
+    ['c1','Carriera','Contratto firmato','Vendi 10 libri agli editori',()=>st().sold,10,5],
+    ['c2','Carriera','Autore di catalogo','Vendi 50 libri agli editori',()=>st().sold,50,30],
+    ['c3','Carriera','Bestseller','Vendi 100 libri agli editori',()=>st().sold,100,55],
+    ['e1','Carriera','Davanti al pubblico','Partecipa a 10 eventi',()=>st().events,10,5],
+    ['e2','Carriera','Volto noto','Partecipa a 40 eventi',()=>st().events,40,40],
+    ['p1','Concorsi','Primo premio','Vinci un concorso',()=>st().wins,1,8],
+    ['p2','Concorsi','Collezionista di premi','Vinci 10 concorsi',()=>st().wins,10,30],
+    ['p3','Concorsi','Il pluripremiato','Vinci 25 concorsi',()=>st().wins,25,60],
+    ['m1','Rivista','Enigmista','Completa un numero di Mondo Enigmistico',magDone,1,5],
+    ['m2','Rivista','Abbonato','Completa 10 numeri di Mondo Enigmistico',magDone,10,20],
+    ['m3','Rivista','Sei mesi di enigmi','Completa 26 numeri di Mondo Enigmistico',magDone,26,40],
+    ['m4','Rivista','Un anno di enigmi','Completa 52 numeri di Mondo Enigmistico',magDone,52,60],
+    ['s1','Lo studio','Una libreria vera','Arriva a 8 ripiani',()=>S.shelves,8,20],
+    ['s2','Lo studio','Lo studio dei sogni','Compra tutto il negozio, cassetto compreso',()=>shopFull()?1:0,1,40]];
+  function check(){
+    if(!S)return;if(!S.trag)S.trag={};
+    for(const [id,,n,,v,tg,f] of L){if(S.trag[id])continue;if(v()>=tg){S.trag[id]=S.clock;log('Traguardo: '+n+'! +'+f+' notorietà');addFame(f);}}
+  }
+  const num=v=>v>=1e4?fmt(v):String(Math.floor(v));
+  function html(){
+    check();const done=L.filter(x=>S.trag[x[0]]).length;
+    let h='<section class="stack"><div class="row between"><h2 class="h">Traguardi</h2><span class="meta">'+done+'/'+L.length+'</span></div><p class="empty">Obiettivi lunghi, da raggiungere con calma nel corso dell\'anno. Ognuno regala notorietà.</p>';
+    let grp='';
+    for(const [id,g,n,d,v,tg,f] of L){
+      if(g!==grp){grp=g;h+='<div class="label">'+g+'</div>';}
+      const ok=S.trag[id],val=Math.min(v(),tg);
+      h+='<div class="card trag'+(ok?' on':'')+'"><div class="row between"><span class="title">'+(ok?'✓ ':'')+esc(n)+'</span><span class="meta">+'+f+' notorietà</span></div><div class="meta">'+esc(d)+(ok?' · raggiunto il '+dateStr(ok):'')+'</div>'+
+        (ok||tg===1?'':'<div class="bar"><i style="width:'+(val/tg*100)+'%"></i></div><div class="meta">'+num(val)+' / '+num(tg)+'</div>')+'</div>';
+    }
+    return h+'</section>';
+  }
+  return {check,html,list:L};
 })();
 
 /* ---------- loop ---------- */
