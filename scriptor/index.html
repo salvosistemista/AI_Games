@@ -8,7 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Scriptor">
-
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -121,6 +123,139 @@ details>summary{cursor:pointer;font-family:var(--f-pixel);font-size:15px}
 .sheet{background:var(--panel);border:2px solid var(--line);box-shadow:0 4px 0 #0c0912;width:100%;max-width:520px;max-height:88%;overflow:auto;padding:18px 16px;display:grid;gap:14px}
 .sheet .big{font-family:var(--f-pixel);font-size:34px;line-height:1;color:var(--lamp);margin:0}
 .toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:var(--paper);color:var(--ink);font-family:var(--f-pixel);font-size:14px;padding:9px 13px;box-shadow:0 3px 0 rgba(0,0,0,.45);width:max-content;max-width:calc(100vw - 32px);z-index:20;text-align:center}
+/* Mondo Enigmistico: newsprint sheet over the app, same paper/ink tokens as the Bacheca slips */
+.mag{position:fixed;inset:0;z-index:9;background:rgba(12,9,18,.72);display:flex;justify-content:center}
+.mg-in{width:100%;max-width:560px;height:100%;overflow-y:auto;background:var(--paper);color:var(--ink);padding:12px 16px 32px;padding-top:max(12px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:14px;overscroll-behavior:contain}
+.mg-in .btn{background:var(--paper-2);color:var(--ink);border-color:var(--paper-edge);box-shadow:0 3px 0 #a58f64}
+.mg-in .btn.pri{background:var(--ink);color:var(--paper);border-color:var(--ink);box-shadow:0 3px 0 #000}
+.mg-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mg-x{font-family:var(--f-pixel);font-size:14px;background:none;border:2px solid var(--paper-edge);color:var(--ink);padding:6px 10px;cursor:pointer}
+.mg-mast{border-block:4px double var(--ink);padding-block:8px;text-align:center;display:grid;gap:4px}
+.mg-name{font-family:var(--f-pixel);font-weight:600;font-size:34px;line-height:.95;letter-spacing:.04em;text-transform:uppercase;color:#a8322e}
+.mg-sub{font-size:12px;color:var(--ink-2);font-style:italic}
+.mg-info{font-size:13px;display:grid;gap:2px;color:var(--ink-2)}
+.mg-info b{font-family:var(--f-pixel);font-weight:400;font-size:15px;color:var(--ink)}
+.mg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mg-tile{position:relative;text-align:left;background:#fbf4e2;border:2px solid var(--paper-edge);box-shadow:0 3px 0 #a58f64;padding:22px 10px 10px;display:grid;gap:3px;cursor:pointer;color:var(--ink);min-width:0}
+.mg-tile b{font-family:var(--f-pixel);font-weight:600;font-size:15px;line-height:1.15}
+.mg-tile small{font-size:12px;color:var(--ink-2);line-height:1.3}
+.mg-tile:active{transform:translateY(2px);box-shadow:0 1px 0 #a58f64}
+.mg-tile.done{background:var(--paper-2);box-shadow:none;cursor:default;opacity:.75}
+.mg-tile.done small{color:#3f7a3a;font-family:var(--f-pixel)}
+.mg-tile.done::after{content:'';position:absolute;right:8px;top:8px;width:10px;height:5px;border-left:3px solid #3f7a3a;border-bottom:3px solid #3f7a3a;transform:rotate(-45deg)}
+.mg-pg{position:absolute;left:10px;top:6px;font-family:var(--f-pixel);font-size:11px;color:var(--ink-2)}
+.mg-pile{display:grid;gap:6px}
+.mg-back{display:flex;justify-content:space-between;align-items:center;background:#fbf4e2;border:2px solid var(--paper-edge);padding:8px 10px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.mg-back b{font-family:var(--f-pixel);font-weight:400}
+.mg-back span{font-size:12px;color:var(--ink-2)}
+.mg-back.on{border-color:var(--ink)}
+.mg-gt{font-family:var(--f-pixel);font-weight:600;font-size:24px;margin:0;color:#a8322e;line-height:1.1}
+.mg-how{margin:-6px 0 0;font-size:13px;color:var(--ink-2);max-width:60ch}
+.mg-body{display:grid;gap:12px}
+.mg-lab{font-family:var(--f-pixel);font-size:12px;letter-spacing:.04em;color:var(--ink-2)}
+.mg-msg{margin:0;font-size:13px;color:#a8322e}
+.mg-msg.ok{color:#3f7a3a;font-style:italic;font-size:15px}
+.mg-win{display:grid;gap:8px;justify-items:start;border:2px dashed #3f7a3a;padding:12px;background:#eef3dc}
+.mg-win b{font-family:var(--f-pixel);font-size:20px;color:#3f7a3a}
+.mg-win span{font-size:13px}
+.mg-box{display:grid;gap:8px;background:#fbf4e2;border:2px solid var(--paper-edge);padding:10px;text-align:left;font:inherit;color:var(--ink);width:100%}
+.mg-box.ok{border-color:#7aa86a;background:#eef3dc}
+.mg-box.dim{opacity:.5}
+.mg-box.on{border-color:var(--ink)}
+.mg-word{font-family:var(--f-pixel);font-size:20px;letter-spacing:.12em}
+.mg-q{margin:0;font-size:15px}
+.mg-q.it{font-style:italic}
+/* tiles */
+.mg-tiles,.mg-slots,.mg-sent{display:flex;flex-wrap:wrap;gap:6px}
+.mg-sent{min-height:40px;align-items:center}
+.mg-t{font-family:var(--f-pixel);font-size:18px;min-width:36px;height:40px;padding:0 6px;display:inline-grid;place-items:center;background:#fff;border:2px solid var(--ink);box-shadow:0 2px 0 var(--ink);color:var(--ink);cursor:pointer}
+.mg-t.sy,.mg-t.wide{font-size:15px;padding:0 9px}
+.mg-t:disabled{opacity:.18;cursor:default;box-shadow:none}
+.mg-t.on{background:var(--ink);color:var(--paper)}
+.mg-t.empty{background:transparent;border-style:dashed;border-color:var(--paper-edge);box-shadow:none;cursor:default}
+.mg-t.empty.wide{min-width:48px}
+/* keyboard */
+.mg-kb{display:grid;gap:5px;user-select:none;-webkit-user-select:none}
+.mg-kb>div{display:flex;gap:4px;justify-content:center}
+.mg-k{flex:1 1 0;max-width:42px;height:44px;padding:0;font-family:var(--f-pixel);font-size:16px;background:#fff;border:2px solid var(--paper-edge);border-bottom-width:4px;color:var(--ink);cursor:pointer;touch-action:manipulation}
+.mg-k.wide{flex:1.6 1 0;max-width:68px;font-size:14px}
+.mg-k.ok{background:#6fa85a;border-color:#4a7a3a;color:#fff}
+.mg-k.near{background:#e0b43a;border-color:#a8822a;color:#2d2219}
+.mg-k.no{background:#9a8f80;border-color:#7a7064;color:#ece4d4}
+.mg-k.used{background:var(--paper-2);color:var(--ink-2)}
+/* crossword */
+.mg-cw{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:2px;width:min(100%,calc(var(--n)*40px));margin-inline:auto;background:var(--ink);border:2px solid var(--ink)}
+.mg-cb{aspect-ratio:1;background:var(--ink)}
+.mg-cc{aspect-ratio:1;position:relative;background:#fff;border:0;padding:0;font-family:var(--f-pixel);font-size:clamp(14px,4.4vw,20px);color:var(--ink);display:grid;place-items:center;cursor:pointer;min-width:0}
+.mg-cc i{position:absolute;left:2px;top:0;font-style:normal;font-size:9px;font-family:var(--f-body);color:var(--ink-2);line-height:1.2}
+.mg-cc.cur{background:#fbe9b8}
+.mg-cc.sel{background:#f2b64f}
+.mg-cc.bad{color:#c0473a;background:#f8d6cc}
+.mg-cc.ok{background:#e4f0d4}
+.mg-clue b{font-weight:700}
+.mg-clue{font-size:14px;background:#fbe9b8;padding:8px 10px;border-left:4px solid #f2b64f}
+.mg-clue span{color:var(--ink-2)}
+.mg-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mg-cols>div{display:grid;gap:4px;align-content:start}
+.mg-cl{text-align:left;background:none;border:0;padding:2px 0;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.mg-cl b{font-weight:700}
+/* word search */
+.mg-ws{display:grid;grid-template-columns:repeat(var(--n),1fr);width:min(100%,calc(var(--n)*40px));margin-inline:auto;border:2px solid var(--ink);background:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
+.mg-wc{aspect-ratio:1;display:grid;place-items:center;font-family:var(--f-pixel);font-size:clamp(13px,4vw,19px);cursor:pointer}
+.mg-wc.hl{background:#f2b64f}
+.mg-wc.f0{background:#cfe4b8}.mg-wc.f1{background:#bfe0f2}.mg-wc.f2{background:#f2d0dc}.mg-wc.f3{background:#e6d6f2}.mg-wc.f4{background:#f6e0b0}.mg-wc.f5{background:#c8ece4}
+.mg-wl{display:flex;flex-wrap:wrap;gap:6px 12px;font-family:var(--f-pixel);font-size:14px}
+.mg-wl .done{text-decoration:line-through;color:var(--ink-2)}
+/* secret word */
+.mg-wd{display:grid;gap:5px;justify-content:center}
+.mg-wr{display:flex;gap:5px}
+.mg-wt{width:46px;height:46px;display:grid;place-items:center;border:2px solid var(--paper-edge);background:#fff;font-family:var(--f-pixel);font-size:22px}
+.mg-wt.ok{background:#6fa85a;border-color:#6fa85a;color:#fff}
+.mg-wt.near{background:#e0b43a;border-color:#e0b43a}
+.mg-wt.no{background:#9a8f80;border-color:#9a8f80;color:#fff}
+/* hangman */
+.mg-ink{display:flex;gap:6px;align-items:center}
+.mg-ink i{width:12px;height:16px;border:2px solid #2a3a6a;border-radius:50% 50% 50% 50%/60% 60% 40% 40%}
+.mg-ink i.full{background:#2a3a6a}
+.mg-ink span{font-family:var(--f-pixel);font-size:13px;color:var(--ink-2);margin-left:4px}
+.mg-hang{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.mg-hang span{width:30px;height:38px;border-bottom:3px solid var(--ink);display:grid;place-items:center;font-family:var(--f-pixel);font-size:22px}
+/* cryptogram */
+.mg-crypt{display:flex;flex-wrap:wrap;gap:10px 14px}
+.mg-cw2{display:inline-flex;gap:2px}
+.mg-cr{width:26px;display:grid;grid-template-rows:26px auto;justify-items:center;background:none;border:0;padding:0;color:var(--ink);cursor:pointer}
+.mg-cr b{font-family:var(--f-pixel);font-weight:400;font-size:18px;width:100%;border-bottom:2px solid var(--ink);display:grid;place-items:center}
+.mg-cr i{font-style:normal;font-size:10px;color:var(--ink-2)}
+.mg-cr.p{font-family:var(--f-pixel);font-size:18px;align-self:start}
+.mg-cr.sel b{background:#f2b64f}
+.mg-cr.fix b{color:#3f5aa8}
+.mg-cr.bad b{color:#c0473a}
+/* options, matching */
+.mg-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mg-opts.col{grid-template-columns:1fr}
+.mg-o{font:inherit;font-size:14px;text-align:left;padding:9px 10px;background:#fff;border:2px solid var(--paper-edge);color:var(--ink);cursor:pointer;min-width:0;overflow-wrap:anywhere}
+.mg-o.it{font-style:italic}
+.mg-o.sel{border-color:var(--ink);background:#fbe9b8}
+.mg-o.right{background:#cfe4b8;border-color:#6fa85a}
+.mg-o.wrong{background:#f2d6cc;border-color:#d89a8a;text-decoration:line-through;opacity:.7}
+.mg-o:disabled{cursor:default}
+.mg-o.m0{background:#cfe4b8}.mg-o.m1{background:#bfe0f2}.mg-o.m2{background:#f2d0dc}.mg-o.m3{background:#e6d6f2}.mg-o.m4{background:#f6e0b0}.mg-o.m5{background:#c8ece4}
+.mg-match{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mg-match>div{display:grid;gap:8px;align-content:start}
+/* sudoku */
+.mg-sd{display:grid;grid-template-columns:repeat(6,1fr);width:min(100%,300px);margin-inline:auto;border:3px solid var(--ink);background:#fff}
+.mg-sd .mg-sc{aspect-ratio:1;border:0;border-right:1px solid var(--paper-edge);border-bottom:1px solid var(--paper-edge);background:#fff;font-family:var(--f-pixel);font-size:22px;color:#3f5aa8;padding:0;cursor:pointer}
+.mg-sc.br{border-right:3px solid var(--ink)}
+.mg-sc.bb{border-bottom:3px solid var(--ink)}
+.mg-sc.giv{color:var(--ink);background:#f6efdc;cursor:default}
+.mg-sc.sel{background:#f2b64f}
+.mg-sc.bad{color:#c0473a}
+/* differences, dots */
+.mg-df{width:100%;max-width:420px;margin-inline:auto;display:block;image-rendering:pixelated;border:2px solid var(--ink);cursor:crosshair}
+.mg-dots{width:100%;max-width:420px;margin-inline:auto;display:block;background:#fff;border:2px solid var(--paper-edge);font-family:var(--f-pixel)}
+.mg-dots g{cursor:pointer}
+.mg-card{border-color:#a8322e}
+
 @media (prefers-reduced-motion:reduce){.btn:active{transform:none}.slip{transform:none}}
 </style>
 
@@ -151,6 +286,7 @@ details>summary{cursor:pointer;font-family:var(--f-pixel);font-size:15px}
   </nav>
 </div>
 <div class="modal" id="modal" hidden></div>
+<div class="mag" id="mag" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -325,6 +461,7 @@ function liveBonus(t){
 function advance(to){
   let guard=0;
   while(S.clock<to&&guard++<100000){
+    MAG.consume();
     const d=new Date(S.clock);
     const nh=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()+1).getTime();
     let seg=Math.min(to,nh);
@@ -370,7 +507,7 @@ function placeReady(){
     S.ms.splice(S.ms.indexOf(m),1);
   }
 }
-function weekly(t){resolveDeadlines(t);ensureOffers(t);anniversary(t);}
+function weekly(t){resolveDeadlines(t);ensureOffers(t);anniversary(t);MAG.check(t);}
 function anniversary(t){
   const sd=new Date(S.started),y=new Date(t).getFullYear();
   if(y<=sd.getFullYear()||S.annivY===y||t<Dm(y,sd.getMonth(),sd.getDate()))return;
@@ -511,7 +648,7 @@ function hud(){
     const s=FORMATS[m.f].s;
     $('#sWords').textContent=fmt(m.w)+' / '+fmt(m.t)+' parole'+(m.kind!=='rev'&&s>1?' · vol. '+Math.min(s,Math.floor(m.w/25000)+1)+'/'+s:'');
     $('#sPct').textContent='Non scrittura '+p+'%';
-    $('#sRate').textContent='~'+fmt(3600/ROLL_SEC*(1-p/100))+' parole/ora'+(t<S.coffeeUntil?' · caffè':'')+(t<(S.creaUntil||0)?' · creatività':'')+(flowCount()?' · flusso −'+flowPct()+'%':'')+(Date.now()<live2.petBoostUntil?' · coccole':'')+(live2.ball?' · blocco':'');
+    $('#sRate').textContent='~'+fmt(3600/ROLL_SEC*(1-p/100))+' parole/ora'+(t<S.coffeeUntil?' · caffè':'')+(t<(S.creaUntil||0)?' · creatività':'')+(flowCount()?' · flusso −'+flowPct()+'%':'')+(Date.now()<live2.petBoostUntil?' · coccole':'')+(live2.ball?' · blocco':'')+(MAG.banked()>0?' · in serbo '+MAG.minStr(MAG.banked()):'');
   }else{
     $('#sBar').style.width='0%';$('#sWords').textContent='Apri un progetto dalla Scrivania';$('#sPct').textContent='';$('#sRate').textContent='';
   }
@@ -565,12 +702,13 @@ function rDesk(){
       (nf.f>L.maxF?'. Le offerte per questo formato arrivano con più notorietà; intanto si può vendere liberamente.':'')+'</p>'+
       '<div class="row"><button class="btn pri" data-act="new-go">Inizia a scrivere</button><button class="btn" data-act="new-x">Annulla</button></div></section>';
   }
+  h+=MAG.cardHtml();
   let cs;
   if(t<S.coffeeUntil)cs='Fa effetto ancora per '+untilStr(S.coffeeUntil-t)+' (−10% non scrittura).';
   else if(t<S.coffeeReady)cs='Di nuovo pronto tra '+untilStr(S.coffeeReady-t)+'.';
   else cs='Pronto. Per 30 minuti toglie il 10% alla non scrittura. Si ricarica in 4 ore.';
   const cu=S.creaUntil||0;
-  h+='<section class="card"><h2 class="h">Creatività</h2><p class="meta" style="margin:0">'+(t<cu?'Il punto esclamativo è acceso ancora per '+untilStr(cu-t)+' (−15% non scrittura).':'Mentre lo scrittore pensa o scrive, toccalo rapidamente 30 volte: il punto di domanda sopra la testa si riempie e diventa un punto esclamativo che toglie il 15% alla non scrittura, anche a gioco chiuso. Dura 5 minuti; con il caffè appena bevuto (meno di 5 minuti) 15 minuti, a caffè avviato 10 minuti, e negli ultimi 10 minuti del caffè fino alla sua fine.')+'</p></section>';
+  h+='<section class="card"><h2 class="h">Creatività</h2><p class="meta" style="margin:0">'+(t<cu?'Il punto esclamativo è acceso ancora per '+untilStr(cu-t)+' (−15% non scrittura).':'Mentre lo scrittore pensa o scrive, toccalo rapidamente 30 volte (oppure risolvi i giochi di Mondo Enigmistico): il punto di domanda sopra la testa si riempie e diventa un punto esclamativo che toglie il 15% alla non scrittura, anche a gioco chiuso. Dura 5 minuti; con il caffè appena bevuto (meno di 5 minuti) 15 minuti, a caffè avviato 10 minuti, e negli ultimi 10 minuti del caffè fino alla sua fine.')+'</p></section>';
   h+='<section class="card"><h2 class="h">Mentre giochi</h2><p class="meta" style="margin:0">Questi aiuti valgono solo con il gioco aperto e in primo piano.</p>'+
     '<p class="meta" style="margin:0"><b>Idee al volo</b>: tocca le lucciole e i foglietti che escono dalla lampada, dalla finestra o dalla libreria. Ogni idea è uno strato di flusso per 3 minuti: −3% a strato fino a 3 strati (−9%), oppure −5% a strato fino a 4 strati (−20%) mentre la creatività è attiva.</p>'+
     '<p class="meta" style="margin:0"><b>Brutta copia</b>: quando sulla scrivania compare un foglio accartocciato scrive più lento (+5%). Lancialo nel cestino con uno swipe verso il basso: il blocco passa e guadagni uno strato di flusso.</p>'+
@@ -791,6 +929,7 @@ document.addEventListener('click',e=>{
     case 'ms-drop':{const m=S.ms.find(x=>x.id===v);if(!m)break;abandonId=v;openModal('<h2 class="h">Abbandonare «'+esc(m.title)+'»?</h2><p class="lead">Le '+fmt(m.w)+' parole scritte andranno perse.'+(m.kind==='rev'?' Il libro torna disponibile senza la stella in più.':'')+'</p><div class="row"><button class="btn warn" data-act="ms-drop-yes">Abbandona</button><button class="btn" data-act="close">Tieni</button></div>','drop');break;}
     case 'ms-drop-yes':{const m=S.ms.find(x=>x.id===abandonId);if(m){if(m.kind==='rev'){const b=S.books.find(x=>x.id===m.bookId);if(b)b.lock=null;}S.ms.splice(S.ms.indexOf(m),1);if(S.active===m.id)S.active=null;log('Hai abbandonato «'+m.title+'»');}closeModal();save();renderPanel();hud();break;}
     case 'coffee':drinkCoffee();renderPanel();break;
+    case 'mag':MAG.open();break;
     case 'offer':{const o=S.offers.find(x=>x.id===v);if(!o)break;const bs=S.books.filter(b=>eligible(o,b));
       openModal('<div class="row between"><span class="label">Consegna</span><button class="btn" data-act="close">Chiudi</button></div><h2 class="h">'+esc(o.name)+'</h2><div class="meta">'+specs(o)+'</div>'+
         bs.map(b=>'<div class="card"><div class="title">'+esc(b.title)+'</div><div class="meta"><span class="stars">'+stars(b.q)+'</span> · '+(o.type==='req'?fmt(reqPay(o,b))+' monete, il libro esce dalla libreria':o.type==='evt'?'+'+evtFame(o,b)+' notorietà, il libro resta tuo':'in gara fino a '+dateStr(o.dl-1))+'</div><div class="row"><button class="btn pri" data-act="deliver" data-v="'+o.id+'|'+b.id+'">Consegna questo</button></div></div>').join(''),'offer');break;}
@@ -909,6 +1048,7 @@ $('#scene').addEventListener('click',e=>{
     toast(decoLabel(dk,inf)+' · '+d.getDate()+' '+MONTHS[d.getMonth()]+(n?'. In Bacheca: '+n+(n>1?' offerte':' offerta')+' a tema':''));return;}
   if(x>=77&&x<=86&&y>=88&&y<=100){drinkCoffee();if(tab==='desk')renderPanel();return;}
   if(S.ex.radio){const top=FLOOR-S.shelves*13-5;if(x>=121&&x<=137&&y>=top-14&&y<=top){toggleRadio();return;}}
+  if(MAG.unsolvedNow()){const top=FLOOR-S.shelves*13-5;if(x>=137&&x<=154&&y>=top-20&&y<=top+1){MAG.open();return;}}
   if(x>=116){tab='lib';renderPanel();return;}
   if(x<60&&y>60){tab='desk';renderPanel();}
 });
@@ -1024,6 +1164,8 @@ function draw(){
   // radio on top of the library
   if(S.ex.radio){const ry=top-9,on=S.radioOn!==false;R(lx+4,ry,13,7,'#8a3a2a');R(lx+4,ry,13,1,'#a84a36');for(let i=0;i<3;i++)for(let j=0;j<2;j++)R(lx+6+i*2,ry+2+j*2,1,1,'#3a1a14');R(lx+13,ry+2,2,3,on?'#f2d24a':'#5a4a3a');R(lx+15,ry-4,1,4,'#9a9aa8');
     const awake=st!=='sleep'&&st!=='pause';if(on&&awake&&(radio.playing||radio.dead||!radio.el)&&Math.random()<(radio.playing?0.03:0.012))fx.notes.push({x:lx+10,y:ry-2,life:1});}
+  if(MAG.unsolvedNow()){const mx=lx+22,my=top-12;R(mx,my,9,12,'#f2e7ce');R(mx,my,9,3,'#c0473a');R(mx+1,my+4,7,1,'#9a8a70');R(mx+1,my+6,5,1,'#9a8a70');R(mx+1,my+8,6,1,'#9a8a70');R(mx+5,my+9,3,2,'#3f86b8');R(mx+8,my,1,12,'#d8cbb0');
+    if(MAG.freshNow()&&((t/500)|0)%2){R(mx+4,my-7,1,4,'#fff2c0');R(mx+4,my-2,1,1,'#fff2c0');}}
   // plant
   if(S.ex.plant){const px=107,sway=Math.sin(t/900);R(px,FLOOR-7,8,7,'#b0603a');R(px-1,FLOOR-8,10,2,'#c8744a');
     for(const [ox,oh,c] of [[1,10,'#3f7f3f'],[3,14,'#5fa05a'],[5,11,'#3f7f3f'],[6,8,'#5fa05a']]){for(let k=0;k<oh;k++){const dx=Math.round(sway*k/oh*1.5);R(px+ox+dx,FLOOR-9-k,1,1,c);}R(px+ox+Math.round(sway*1.5)-1,FLOOR-9-oh,3,2,c);}}
@@ -1373,6 +1515,681 @@ function radioStatus(){
 document.addEventListener('visibilitychange',radioSync);
 document.addEventListener('pointerdown',()=>{if(radio.needGesture){radio.needGesture=false;}setTimeout(radioSync,0);},true);
 
+/* ---------- Mondo Enigmistico: data ---------- */
+// words: "sil-la-be:definizione", grouped by theme (used by crosswords, anagrams, syllables, odd-one-out, word search…)
+const MG_CATS=[
+ ['Scrittura e libri',"pen-na:Si intinge nel calamaio|li-bro:Si legge pagina dopo pagina|pa-gi-na:Facciata di un foglio|ca-pi-to-lo:Parte di un romanzo|ro-man-zo:Lungo racconto in prosa|ma-ti-ta:Si tempera quando è spuntata|in-chio-stro:Riempie la stilografica|qua-der-no:Lo usano gli scolari|ti-to-lo:Nome del libro in copertina|au-to-re:Chi scrive un libro|let-to-re:Chi legge un libro|ri-ma:Suono uguale in fondo a due versi|ver-so:Riga di una poesia|fia-ba:Racconto con fate e orchi|tra-ma:Intreccio di una storia|fo-glio:Si piega o si appallottola|gom-ma:Cancella i segni della matita|dia-rio:Quaderno dei segreti di ogni giorno|pro-sa:Il contrario della poesia|e-di-to-re:Pubblica i libri|co-per-ti-na:Protegge le pagine del libro|bu-sta:Contiene la lettera|let-te-ra:Si spedisce col francobollo|ri-vi-sta:Periodico illustrato|fu-met-to:Storia a nuvolette|fra-se:Parole con senso compiuto|pa-ro-la:La usa chi parla e chi scrive"],
+ ['Animali',"ca-ne:Il migliore amico dell'uomo|gat-to:Fa le fusa|ca-val-lo:Galoppa e nitrisce|le-o-ne:Il re della savana|ti-gre:Grosso felino a strisce|or-so:Ghiotto di miele|vol-pe:Furba dal pelo rosso|lu-po:Ulula alla luna|ric-cio:Ha il dorso pieno di aculei|tal-pa:Scava gallerie al buio|ra-na:Gracida nello stagno|a-na-tra:Fa qua qua|gu-fo:Rapace notturno|a-qui-la:Rapace dal volo maestoso|del-fi-no:Mammifero marino che salta tra le onde|bal-le-na:Il più grande dei cetacei|far-fal-la:Prima era un bruco|for-mi-ca:Lavora tutta l'estate|co-ni-glio:Ha le orecchie lunghe|ca-sto-ro:Costruisce dighe|gi-raf-fa:Ha il collo lunghissimo|ze-bra:Cavallo a strisce|mu-lo:Testardo per antonomasia|pe-co-ra:Ci dà la lana|ca-pra:Bruca sui monti|pin-gui-no:Uccello in frac che non vola"],
+ ['A tavola',"pa-ne:Si sforna dal fornaio|pa-sta:Spaghetti o penne|piz-za:Margherita o capricciosa|for-mag-gio:Si grattugia sulla pasta|bur-ro:Si spalma sul pane|mie-le:Lo fanno le api|me-la:La morse Biancaneve|pe-ra:Frutto a forma di goccia|u-va:Si raccoglie con la vendemmia|fra-go-la:Frutto rosso di primavera|li-mo-ne:Agrume giallo e aspro|a-ran-cia:Spremuta del mattino|ca-ro-ta:Piace ai conigli|pa-ta-ta:Tubero da friggere|po-mo-do-ro:Ortaggio rosso del sugo|ri-so:Serve per il risotto|tor-ta:Dolce del compleanno|ge-la-to:Cono o coppetta|bi-scot-to:Si inzuppa nel latte|sa-le:Si mette nell'acqua della pasta|o-lio:Condimento d'oliva|uo-vo:Lo depone la gallina|zuc-ca:Diventò una carrozza|ci-pol-la:Fa piangere chi la taglia|fun-go:Porcino o champignon"],
+ ['La casa',"ta-vo-lo:Ci si mangia sopra|se-dia:Ha quattro gambe e lo schienale|let-to:Ci si dorme|lam-pa-da:Fa luce di sera|spec-chio:Riflette l'immagine|fi-ne-stra:Si apre per cambiare aria|por-ta:Si apre con la chiave|chia-ve:Apre la serratura|cu-sci-no:Ci si appoggia la testa|ar-ma-dio:Contiene i vestiti|di-va-no:Ci si sdraia davanti alla TV|tap-pe-to:Copre il pavimento|ten-da:Copre la finestra|sca-la:Ha i gradini|tet-to:Copre la casa|ca-mi-no:Ci scende Babbo Natale|for-no:Cuoce arrosti e dolci|pen-to-la:Si mette sul fuoco|for-chet-ta:Ha i rebbi|cuc-chia-io:Serve per il brodo|bic-chie-re:Si riempie d'acqua|va-so:Contiene i fiori|o-ro-lo-gio:Segna le ore|can-de-la:Si accende con un fiammifero"],
+ ['Natura',"mon-te:Alta elevazione del terreno|fiu-me:Scorre fino al mare|la-go:Acqua circondata dalla terra|ma-re:Ha onde e maree|bo-sco:Fitto di alberi|i-so-la:Terra circondata dal mare|spiag-gia:Ci si prende il sole|val-le:Sta tra due monti|col-li-na:Piccolo monte|pra-to:Distesa d'erba|fio-re:Ha i petali|fo-glia:Cade in autunno|al-be-ro:Ha tronco, rami e radici|ro-sa:Fiore con le spine|sas-so:Piccola pietra|grot-ta:Cavità nella roccia|ca-sca-ta:Salto d'acqua|vul-ca-no:Erutta lava|de-ser-to:Distesa di sabbia|stel-la:Brilla nel cielo notturno|lu-na:Satellite della Terra|so-le:La stella del nostro sistema|nu-vo-la:Porta la pioggia"],
+ ['Mestieri',"fab-bro:Lavora il ferro|fa-le-gna-me:Lavora il legno|cuo-co:Lavora ai fornelli|me-di-co:Cura i malati|mae-stro:Insegna alle elementari|pit-to-re:Dipinge quadri|po-sti-no:Consegna la posta|pa-sto-re:Guida il gregge|pe-sca-to-re:Getta le reti in mare|sar-to:Cuce abiti su misura|con-ta-di-no:Coltiva i campi|pom-pie-re:Spegne gli incendi|pi-lo-ta:Guida l'aereo|ca-me-rie-re:Serve ai tavoli|far-ma-ci-sta:Vende medicine|bar-bie-re:Taglia barba e capelli|mu-ra-to-re:Costruisce muri|gior-na-li-sta:Scrive articoli|pa-net-tie-re:Sforna il pane|giu-di-ce:Emette sentenze|at-to-re:Recita sul palco"],
+ ['Musica',"chi-tar-ra:Ha sei corde|pia-no-for-te:Ha tasti bianchi e neri|vio-li-no:Si suona con l'archetto|flau-to:Strumento a fiato, dolce o traverso|trom-ba:Squilla nelle fanfare|tam-bu-ro:Si batte con le bacchette|ar-pa:Strumento a corde degli angeli|or-ga-no:Suona nelle chiese|sas-so-fo-no:Strumento a fiato del jazz|cla-ri-net-to:Fiato di legno con l'ancia|man-do-li-no:Strumento a corde napoletano|no-ta:Do, re o mi|can-zo-ne:Si canta|co-ro:Gruppo di cantanti|o-pe-ra:Si rappresenta alla Scala|rit-mo:Cadenza della musica|bas-so:La voce più grave|te-no-re:Voce maschile acuta|ar-chet-to:Si usa con il violino|cam-pa-na:Suona nel campanile"],
+ ['In viaggio',"tre-no:Corre sui binari|na-ve:Solca i mari|va-li-gia:Si riempie prima di partire|bi-gliet-to:Si timbra prima di salire|map-pa:Mostra la strada|bus-so-la:Indica il nord|zai-no:Si porta sulle spalle|al-ber-go:Ci si dorme in vacanza|stra-da:Via per le automobili|pon-te:Attraversa il fiume|por-to:Ci attraccano le navi|sta-zio-ne:Ci si aspetta il treno|bar-ca:Va a remi o a vela|bi-ci-clet-ta:Ha due ruote e i pedali|mo-to:Due ruote a motore|car-to-li-na:Si spedisce dalle vacanze|pas-sa-por-to:Documento per l'estero|fa-ro:Guida le navi di notte"],
+ ['Tempo e stagioni',"piog-gia:Cade dalle nuvole|ne-ve:Fiocchi bianchi d'inverno|ven-to:Muove le foglie|tuo-no:Segue il lampo|lam-po:Precede il tuono|neb-bia:Riduce la visibilità|gran-di-ne:Chicchi di ghiaccio|in-ver-no:La stagione più fredda|e-sta-te:La stagione delle vacanze|au-tun-no:La stagione delle foglie cadute|pri-ma-ve-ra:La stagione dei fiori|mat-ti-na:Inizio della giornata|se-ra:Arriva al tramonto|not-te:Ci si dorme|me-se:Ce ne sono dodici in un anno|an-no:Ha 365 giorni|gior-no:Ha 24 ore|o-ra:Ha 60 minuti|ar-co-ba-le-no:Ha sette colori|tra-mon-to:Il sole scende all'orizzonte"],
+ ['Abiti',"cap-pel-lo:Si porta in testa|scar-pa:Si allaccia al piede|giac-ca:Ha le maniche e i bottoni|gon-na:Si porta dalla vita in giù|ca-mi-cia:Ha il colletto|cra-vat-ta:Si annoda al collo|sciar-pa:Scalda il collo|guan-to:Copre la mano|cal-za:La Befana la riempie|ma-glia:Si fa ai ferri|cap-pot-to:Si indossa d'inverno|om-brel-lo:Ripara dalla pioggia|oc-chia-li:Correggono la vista|bor-sa:Si porta a tracolla|cin-tu-ra:Regge i pantaloni|bot-to-ne:Si infila nell'asola|ta-sca:Ci si mettono le mani|ve-sti-to:Abito elegante|sti-va-le:L'Italia ha questa forma"]
+].map(([n,s],ci)=>({n,w:s.split('|').map(x=>{const [sy,d]=x.split(':');const syl=sy.split('-');return {w:syl.join('').toUpperCase(),syl:syl.map(z=>z.toUpperCase()),d,c:ci};})}));
+const MG_WORDS=MG_CATS.flatMap(c=>c.w);
+
+const MG_PROV=["Chi va piano va sano e va lontano","Tra il dire e il fare c'è di mezzo il mare","Chi dorme non piglia pesci","L'abito non fa il monaco","Meglio tardi che mai","Chi trova un amico trova un tesoro","Can che abbaia non morde","Il mattino ha l'oro in bocca","Una rondine non fa primavera","Chi semina vento raccoglie tempesta","Non tutte le ciambelle riescono col buco","Paese che vai usanza che trovi","Rosso di sera bel tempo si spera","Chi ben comincia è a metà dell'opera","L'appetito vien mangiando","Batti il ferro finché è caldo","Ogni medaglia ha il suo rovescio","A buon intenditor poche parole","Chi fa da sé fa per tre","Meglio un uovo oggi che una gallina domani","Non è tutto oro quel che luccica","Patti chiari amicizia lunga","Ride bene chi ride ultimo","Le bugie hanno le gambe corte","Chi si accontenta gode","Natale con i tuoi Pasqua con chi vuoi","Il buon giorno si vede dal mattino","L'erba del vicino è sempre più verde","Dimmi con chi vai e ti dirò chi sei","Occhio non vede cuore non duole","Chi di spada ferisce di spada perisce","Anno nuovo vita nuova","Chi cerca trova","Volere è potere","Sbagliando s'impara","Chi tace acconsente"];
+
+const MG_RIDDLE=[
+ ['Ha i denti ma non morde.','Il pettine'],
+ ['Più ce n\'è, meno si vede.','Il buio'],
+ ['Ha le lancette e non si muove mai dal muro, eppure corre sempre.','L\'orologio'],
+ ['Ha un occhio solo ma non vede.','L\'ago'],
+ ['Più ne togli, più diventa grande.','La buca'],
+ ['Cade sempre ma non si fa mai male.','La pioggia'],
+ ['Si rompe appena lo nomini.','Il silenzio'],
+ ['Ha le foglie ma non è un albero, ha il dorso ma non è un animale.','Il libro'],
+ ['Ha la testa ma non il cervello, e si accende una volta sola.','Il fiammifero'],
+ ['Va su e giù senza muoversi.','La scala'],
+ ['Ha tanti tasti ma non apre nessuna porta.','Il pianoforte'],
+ ['Corre senza piedi e ha un letto in cui non dorme mai.','Il fiume'],
+ ['Ha il collo ma non ha la testa.','La bottiglia'],
+ ['Ha quattro gambe ma non cammina.','Il tavolo'],
+ ['Più si asciuga, più si bagna.','L\'asciugamano'],
+ ['Ha un solo piede e porta il cappello.','Il fungo'],
+ ['Spingeva avanti i buoi, arava bianchi prati, teneva un bianco aratro e seminava un nero seme. (Indovinello veronese)','La scrittura'],
+ ['Ha le pagine ma non è un libro, e ogni giorno ne perde una.','Il calendario'],
+ ['Ha la coda ma non è un animale, e vola solo se c\'è vento.','L\'aquilone'],
+ ['Più scrive, più si accorcia.','La matita'],
+ ['Ha la lingua ma non parla, e si allaccia ogni mattina.','La scarpa'],
+ ['La si dà senza perderla e la si mantiene senza toccarla.','La parola'],
+ ['Arriva senza far rumore, e più è fitta meno si vede.','La nebbia'],
+ ['Più è calda, più è fresca.','Il pane'],
+ ['Ha le ali ma non è un uccello, ha le pale ma non scava.','Il mulino a vento'],
+ ['Ha le chiavi ma non ha porte, ha lo spazio ma non ha stanze.','La tastiera']];
+
+const MG_AUTH=[['Alessandro Manzoni','I promessi sposi'],['Dante Alighieri','La Divina Commedia'],['Carlo Collodi','Le avventure di Pinocchio'],['Giovanni Verga','I Malavoglia'],['Luigi Pirandello','Il fu Mattia Pascal'],['Italo Svevo','La coscienza di Zeno'],['Italo Calvino','Il barone rampante'],['Umberto Eco','Il nome della rosa'],['Giuseppe Tomasi di Lampedusa','Il Gattopardo'],['Elsa Morante','L\'isola di Arturo'],['Alberto Moravia','Gli indifferenti'],['Dino Buzzati','Il deserto dei Tartari'],['Primo Levi','Se questo è un uomo'],['Cesare Pavese','La luna e i falò'],['Natalia Ginzburg','Lessico famigliare'],['Grazia Deledda','Canne al vento'],['Edmondo De Amicis','Cuore'],['Emilio Salgari','Le tigri di Mompracem'],['Giovanni Boccaccio','Decameron'],['Ludovico Ariosto','Orlando furioso'],['Torquato Tasso','Gerusalemme liberata'],['Ugo Foscolo','Ultime lettere di Jacopo Ortis'],['Gianni Rodari','Favole al telefono'],['Leonardo Sciascia','Il giorno della civetta'],['Giorgio Bassani','Il giardino dei Finzi-Contini'],['J.R.R. Tolkien','Il Signore degli Anelli'],['Jane Austen','Orgoglio e pregiudizio'],['Herman Melville','Moby Dick'],['Lev Tolstoj','Guerra e pace'],['Fëdor Dostoevskij','Delitto e castigo'],['Miguel de Cervantes','Don Chisciotte'],['Victor Hugo','I miserabili'],['Alexandre Dumas','I tre moschettieri'],['Jules Verne','Ventimila leghe sotto i mari'],['Robert L. Stevenson','L\'isola del tesoro'],['Mary Shelley','Frankenstein'],['Bram Stoker','Dracula'],['Lewis Carroll','Alice nel Paese delle Meraviglie'],['George Orwell','1984'],['Franz Kafka','La metamorfosi'],['Charles Dickens','Oliver Twist'],['Jonathan Swift','I viaggi di Gulliver'],['Daniel Defoe','Robinson Crusoe'],['Gustave Flaubert','Madame Bovary'],['Mark Twain','Le avventure di Tom Sawyer'],['Oscar Wilde','Il ritratto di Dorian Gray'],['Agatha Christie','Assassinio sull\'Orient Express'],['Isaac Asimov','Io, robot'],['Ray Bradbury','Fahrenheit 451'],['Antoine de Saint-Exupéry','Il piccolo principe']];
+
+// opening lines: Italian originals in the public domain, or short translations of public-domain works
+const MG_INC=[
+ ['Quel ramo del lago di Como, che volge a mezzogiorno, tra due catene non interrotte di monti…','I promessi sposi'],
+ ['Nel mezzo del cammin di nostra vita mi ritrovai per una selva oscura…','La Divina Commedia'],
+ ['C\'era una volta… – Un re! – diranno subito i miei piccoli lettori. No, ragazzi, avete sbagliato. C\'era una volta un pezzo di legno.','Le avventure di Pinocchio'],
+ ['Un tempo i Malavoglia erano stati numerosi come i sassi della strada vecchia di Trezza…','I Malavoglia'],
+ ['Una delle poche cose, anzi forse la sola ch\'io sapessi di certo era questa: che mi chiamavo Mattia Pascal.','Il fu Mattia Pascal'],
+ ['Io sono il dottor S., quello di cui in questa novella si parla talvolta con parole poco lusinghiere.','La coscienza di Zeno'],
+ ['Le donne, i cavallier, l\'arme, gli amori, le cortesie, l\'audaci imprese io canto…','Orlando furioso'],
+ ['Canto l\'arme pietose e \'l capitano che \'l gran sepolcro liberò di Cristo.','Gerusalemme liberata'],
+ ['La notte del 20 dicembre 1849 un uragano violentissimo imperversava sopra Mompracem…','Le tigri di Mompracem'],
+ ['Umana cosa è aver compassione degli afflitti…','Decameron'],
+ ['Chiamatemi Ismaele.','Moby Dick'],
+ ['Tutte le famiglie felici si somigliano; ogni famiglia infelice è infelice a modo suo.','Anna Karenina'],
+ ['È una verità universalmente riconosciuta che uno scapolo con un ricco patrimonio debba essere in cerca di moglie.','Orgoglio e pregiudizio'],
+ ['Era il migliore dei tempi, era il peggiore dei tempi…','Racconto di due città'],
+ ['Una mattina Gregor Samsa, svegliandosi da sogni inquieti, si trovò trasformato nel suo letto in un enorme insetto.','La metamorfosi'],
+ ['In un villaggio della Mancia, del cui nome non voglio ricordarmi, viveva non molto tempo fa un gentiluomo…','Don Chisciotte'],
+ ['Alice cominciava a stancarsi di stare seduta accanto alla sorella sulla riva, senza niente da fare…','Alice nel Paese delle Meraviglie'],
+ ['Nacqui nell\'anno 1632 nella città di York, da una buona famiglia…','Robinson Crusoe'],
+ ['3 maggio. Bistrita. Partito da Monaco alle 8 e 35 di sera del primo maggio…','Dracula'],
+ ['– Tom! Nessuna risposta. – Tom!','Le avventure di Tom Sawyer'],
+ ['Lo studio era pieno del profumo intenso delle rose…','Il ritratto di Dorian Gray'],
+ ['Tutti i bambini, tranne uno, crescono.','Peter Pan'],
+ ['Dorothy viveva in mezzo alle grandi praterie del Kansas, con lo zio Henry, che era un contadino, e la zia Em…','Il meraviglioso mago di Oz'],
+ ['Il 24 febbraio 1815 la vedetta di Notre-Dame de la Garde segnalò il tre alberi Pharaon…','Il conte di Montecristo'],
+ ['Buck non leggeva i giornali…','Il richiamo della foresta'],
+ ['L\'anno 1866 fu segnato da un avvenimento bizzarro…','Ventimila leghe sotto i mari'],
+ ['Mio padre aveva un piccolo podere nel Nottinghamshire; io ero il terzo di cinque figli.','I viaggi di Gulliver'],
+ ['Il signor Sherlock Holmes, che di solito si alzava molto tardi la mattina…','Il mastino dei Baskerville']];
+
+// connect-the-dots figures, points in a 0–100 box
+const MG_DOTS=[
+ ['una stella',[[50,5],[61,38],[96,38],[68,59],[79,93],[50,72],[21,93],[32,59],[4,38],[39,38]]],
+ ['una casa',[[15,95],[15,45],[50,10],[85,45],[85,95],[60,95],[60,65],[40,65],[40,95]]],
+ ['un cuore',[[50,92],[14,58],[6,36],[12,18],[30,10],[50,24],[70,10],[88,18],[94,36],[86,58]]],
+ ['un pesce',[[8,50],[25,32],[48,24],[70,30],[84,44],[96,28],[96,72],[84,56],[70,70],[48,76],[25,68]]],
+ ['una barca a vela',[[10,62],[46,62],[46,8],[82,54],[54,54],[54,62],[90,62],[76,86],[24,86]]],
+ ['un abete',[[50,4],[70,30],[60,30],[80,55],[66,55],[90,80],[56,80],[56,96],[44,96],[44,80],[10,80],[34,55],[20,55],[40,30],[30,30]]],
+ ['la luna',[[62,4],[40,10],[25,28],[20,50],[27,72],[44,88],[68,96],[54,80],[45,62],[45,40],[52,20]]],
+ ['un libro aperto',[[4,26],[28,16],[50,28],[72,16],[96,26],[96,86],[72,76],[50,88],[28,76],[4,86]]],
+ ['una campana',[[50,6],[63,14],[69,34],[72,62],[88,78],[12,78],[28,62],[31,34],[37,14]]],
+ ['una tazza',[[12,22],[80,22],[79,34],[94,36],[96,54],[78,58],[68,80],[24,80],[14,56]]],
+ ['una penna d\'oca',[[88,4],[76,22],[62,44],[46,66],[30,86],[18,96],[22,84],[30,64],[42,42],[58,22]]],
+ ['una chiave',[[6,38],[26,26],[40,38],[94,38],[94,54],[84,54],[84,46],[76,46],[76,56],[66,56],[66,46],[40,46],[26,60],[6,50]]]];
+
+const MG_SUDO=['STORIA','PAGINE','SCRIVO','MOSTRA','FIGURA','PAROLE','ROMANE','LEGATO'];
+
+/* ---------- Mondo Enigmistico: the weekly puzzle magazine ---------- */
+const MAG=(()=>{
+const WEEK=7*864e5,PER_ISSUE=12,MIN=60e3,HOUR=3600e3;
+const shuf=(r,a)=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const pickN=(r,a,k)=>shuf(r,a).slice(0,k);
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const KROWS=['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+function kb(marks,enter){
+  return '<div class="mg-kb">'+KROWS.map((row,i)=>'<div>'+(i===2&&enter?'<button class="mg-k wide" data-mg="enter">Invio</button>':'')+
+    [...row].map(c=>'<button class="mg-k'+(marks&&marks[c]?' '+marks[c]:'')+'" data-mg="key" data-v="'+c+'">'+c+'</button>').join('')+
+    (i===2?'<button class="mg-k wide" data-mg="bk" aria-label="Cancella">⌫</button>':'')+'</div>').join('')+'</div>';
+}
+const msg=st=>st.msg?'<p class="mg-msg'+(st.msgOk?' ok':'')+'">'+esc(st.msg)+'</p>':'';
+const wordsBy=f=>MG_WORDS.filter(f);
+
+/* ===== the games ===== */
+const G={};
+
+// 1. crossword built from the word bank
+G.cruci={n:'Parole crociate',d:'Schema libero con le definizioni',
+ how:'Tocca una casella e scrivi con la tastiera. Tocca di nuovo la stessa casella per passare da orizzontale a verticale.',
+ init(r,d){
+  const want=[6,7,8][d],MAXW=9,MAXH=9;let best=null;
+  for(let att=0;att<40;att++){
+    const pool=shuf(r,wordsBy(w=>w.w.length>=3&&w.w.length<=8));
+    const cells=new Map(),placed=[];let x0=0,x1=-1,y0=0,y1=-1;
+    const put=(o,x,y,dir)=>{const [dx,dy]=dir==='h'?[1,0]:[0,1];
+      for(let k=0;k<o.w.length;k++){const kk=(x+k*dx)+','+(y+k*dy),c=cells.get(kk)||{ch:o.w[k]};c[dir]=1;cells.set(kk,c);}
+      placed.push({w:o.w,d:o.d,x,y,dir});x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x+dx*(o.w.length-1));y1=Math.max(y1,y+dy*(o.w.length-1));};
+    const first=pool.find(w=>w.w.length>=5&&w.w.length<=MAXW);put(first,0,0,'h');
+    const used=new Set([first.w]);
+    for(const o of pool){
+      if(placed.length>=want)break;if(used.has(o.w))continue;
+      let opts=[];
+      for(const [kk,c] of cells){
+        if(c.h&&c.v)continue;const [cx0,cy0]=kk.split(',').map(Number),dir=c.h?'v':'h',[dx,dy]=dir==='h'?[1,0]:[0,1];
+        for(let i=0;i<o.w.length;i++){
+          if(o.w[i]!==c.ch)continue;
+          const x=cx0-i*dx,y=cy0-i*dy;
+          if(cells.has((x-dx)+','+(y-dy))||cells.has((x+dx*o.w.length)+','+(y+dy*o.w.length)))continue;
+          let ok=true,inter=0;
+          for(let k=0;k<o.w.length&&ok;k++){
+            const px=x+k*dx,py=y+k*dy,g=cells.get(px+','+py);
+            if(g){if(g.ch!==o.w[k]||g[dir])ok=false;else inter++;}
+            else if(cells.has((px+dy)+','+(py+dx))||cells.has((px-dy)+','+(py-dx)))ok=false;
+          }
+          if(!ok||!inter)continue;
+          const nx0=Math.min(x0,x),ny0=Math.min(y0,y),nx1=Math.max(x1,x+dx*(o.w.length-1)),ny1=Math.max(y1,y+dy*(o.w.length-1));
+          if(nx1-nx0+1>MAXW||ny1-ny0+1>MAXH)continue;
+          opts.push({x,y,dir,s:inter+r()*0.5});
+        }
+      }
+      if(!opts.length)continue;
+      opts.sort((a,b)=>b.s-a.s);const p=opts[0];put(o,p.x,p.y,p.dir);used.add(o.w);
+    }
+    if(!best||placed.length>best.placed.length)best={placed,x0,y0,x1,y1};
+    if(placed.length>=want)break;
+  }
+  const W=best.x1-best.x0+1,H=best.y1-best.y0+1,cells={};
+  const words=best.placed.map(p=>({...p,x:p.x-best.x0,y:p.y-best.y0}));
+  for(const p of words){const [dx,dy]=p.dir==='h'?[1,0]:[0,1];for(let k=0;k<p.w.length;k++){const kk=(p.x+k*dx)+','+(p.y+k*dy);cells[kk]=cells[kk]||{ch:p.w[k],in:''};}}
+  const starts=[...new Set(words.map(p=>p.y*100+p.x))].sort((a,b)=>a-b);
+  for(const p of words){p.num=starts.indexOf(p.y*100+p.x)+1;}
+  const w0=words[0];
+  return {W,H,cells,words,sel:{x:w0.x,y:w0.y,dir:w0.dir}};
+ },
+ wordAt(st,x,y,dir){return st.words.find(p=>p.dir===dir&&(dir==='h'?p.y===y&&x>=p.x&&x<p.x+p.w.length:p.x===x&&y>=p.y&&y<p.y+p.w.length));},
+ html(st){
+  const cur=this.wordAt(st,st.sel.x,st.sel.y,st.sel.dir),inCur=(x,y)=>cur&&(cur.dir==='h'?y===cur.y&&x>=cur.x&&x<cur.x+cur.w.length:x===cur.x&&y>=cur.y&&y<cur.y+cur.w.length);
+  const full=Object.values(st.cells).every(c=>c.in);
+  let g='<div class="mg-cw" style="--n:'+st.W+'">';
+  for(let y=0;y<st.H;y++)for(let x=0;x<st.W;x++){
+    const c=st.cells[x+','+y];
+    if(!c){g+='<div class="mg-cb"></div>';continue;}
+    const num=st.words.find(p=>p.x===x&&p.y===y);
+    const cls=(st.sel.x===x&&st.sel.y===y?' sel':inCur(x,y)?' cur':'')+(full&&c.in!==c.ch?' bad':'')+(st.solved?' ok':'');
+    g+='<button class="mg-cc'+cls+'" data-mg="cell" data-v="'+x+','+y+'">'+(num?'<i>'+num.num+'</i>':'')+c.in+'</button>';
+  }
+  g+='</div>';
+  const clue=cur?'<div class="mg-clue"><b>'+cur.num+' '+(cur.dir==='h'?'orizz.':'vert.')+'</b> '+esc(cur.d)+' <span>('+cur.w.length+')</span></div>':'';
+  const list=dir=>st.words.filter(p=>p.dir===dir).sort((a,b)=>a.num-b.num).map(p=>'<button class="mg-cl" data-mg="clue" data-v="'+st.words.indexOf(p)+'"><b>'+p.num+'</b> '+esc(p.d)+' ('+p.w.length+')</button>').join('');
+  return g+(st.solved?'':clue+(full?'<p class="mg-msg">Qualcosa non torna: le caselle rosse sono sbagliate.</p>':'')+kb())+
+    '<div class="mg-cols"><div><div class="mg-lab">Orizzontali</div>'+list('h')+'</div><div><div class="mg-lab">Verticali</div>'+list('v')+'</div></div>';
+ },
+ act(st,a,v){
+  if(a==='cell'){const [x,y]=v.split(',').map(Number);
+    if(st.sel.x===x&&st.sel.y===y){const o=st.sel.dir==='h'?'v':'h';if(this.wordAt(st,x,y,o))st.sel.dir=o;}
+    else{st.sel={x,y,dir:this.wordAt(st,x,y,st.sel.dir)?st.sel.dir:st.sel.dir==='h'?'v':'h'};}}
+  else if(a==='clue'){const p=st.words[+v];st.sel={x:p.x,y:p.y,dir:p.dir};}
+  else if(a==='key'||a==='bk'){
+    const {x,y,dir}=st.sel,[dx,dy]=dir==='h'?[1,0]:[0,1],c=st.cells[x+','+y];if(!c)return;
+    if(a==='key'){c.in=v;const n=st.cells[(x+dx)+','+(y+dy)];if(n)st.sel={x:x+dx,y:y+dy,dir};}
+    else{if(c.in)c.in='';else{const p=st.cells[(x-dx)+','+(y-dy)];if(p){p.in='';st.sel={x:x-dx,y:y-dy,dir};}}}
+    if(Object.values(st.cells).every(c=>c.in===c.ch))st.solved=true;
+  }
+ }};
+
+// 2. anagrams
+G.ana={n:'Anagrammi',d:'Rimetti in ordine le lettere',
+ how:'Tocca le lettere nell\'ordine giusto per comporre la parola della definizione. Tocca una lettera già messa per toglierla.',
+ init(r,d){
+  const [lo,hi]=[[4,6],[5,7],[6,9]][d];
+  return {items:pickN(r,wordsBy(w=>w.w.length>=lo&&w.w.length<=hi),3).map(o=>{let t;do{t=shuf(r,[...o.w]);}while(t.join('')===o.w);return {w:o.w,d:o.d,tiles:t,ans:[]};}),i:0};
+ },
+ html(st){
+  return st.items.map((it,k)=>{
+    if(k<st.i||st.solved)return '<div class="mg-box ok"><div class="mg-lab">'+esc(it.d)+'</div><div class="mg-word">'+it.w+'</div></div>';
+    if(k>st.i)return '<div class="mg-box dim"><div class="mg-lab">Parola '+(k+1)+'</div></div>';
+    return '<div class="mg-box"><div class="mg-lab">'+esc(it.d)+' ('+it.w.length+')</div>'+
+      '<div class="mg-slots">'+[...it.w].map((_,j)=>it.ans[j]!=null?'<button class="mg-t on" data-mg="ans" data-v="'+j+'">'+it.tiles[it.ans[j]]+'</button>':'<span class="mg-t empty"></span>').join('')+'</div>'+
+      '<div class="mg-tiles">'+it.tiles.map((c,j)=>'<button class="mg-t" data-mg="tile" data-v="'+j+'" '+(it.ans.includes(j)?'disabled':'')+'>'+c+'</button>').join('')+'</div>'+msg(st)+'</div>';
+  }).join('');
+ },
+ act(st,a,v){
+  const it=st.items[st.i];if(!it)return;st.msg='';
+  if(a==='tile'){const j=+v;if(it.ans.includes(j))return;it.ans.push(j);}
+  else if(a==='ans')it.ans.splice(+v,1);
+  if(it.ans.length===it.w.length){
+    if(it.ans.map(j=>it.tiles[j]).join('')===it.w){st.i++;if(st.i>=st.items.length)st.solved=true;}
+    else st.msg='Non è la parola giusta: togli qualche lettera e riprova.';
+  }
+ }};
+
+// 3. word search
+G.cerca={n:'Crucipuzzle',d:'Trova le parole nascoste',
+ how:'Trascina il dito sulla parola, oppure tocca la prima e poi l\'ultima lettera. Le parole possono essere in orizzontale, in verticale o in diagonale.',
+ init(r,d){
+  const N=[8,9,10][d],cat=pick(r,MG_CATS);
+  const dirs=[[[1,0],[0,1]],[[1,0],[0,1],[1,1],[1,-1]],[[1,0],[0,1],[1,1],[1,-1],[-1,0],[0,-1],[-1,-1],[-1,1]]][d];
+  const grid=Array(N*N).fill(''),words=[];
+  for(const o of shuf(r,cat.w.filter(w=>w.w.length<=N))){
+    if(words.length>=[6,8,10][d])break;
+    for(let t=0;t<120;t++){
+      const [dx,dy]=pick(r,dirs),L=o.w.length,x=Math.floor(r()*N),y=Math.floor(r()*N),ex=x+dx*(L-1),ey=y+dy*(L-1);
+      if(ex<0||ex>=N||ey<0||ey>=N)continue;
+      const idx=[];let ok=true;
+      for(let k=0;k<L;k++){const i=(y+dy*k)*N+x+dx*k;if(grid[i]&&grid[i]!==o.w[k]){ok=false;break;}idx.push(i);}
+      if(!ok)continue;
+      idx.forEach((i,k)=>grid[i]=o.w[k]);words.push({w:o.w,cells:idx,found:0});break;
+    }
+  }
+  const fill='AAAEEEIIIOOORRNNTTSSLLCCMMPPDDVGBFZU';
+  for(let i=0;i<grid.length;i++)if(!grid[i])grid[i]=fill[Math.floor(r()*fill.length)];
+  words.sort((a,b)=>a.w.localeCompare(b.w));
+  return {N,grid,words,cat:cat.n,anchor:null};
+ },
+ html(st){
+  const fc={};st.words.forEach((w,k)=>{if(w.found)w.cells.forEach(i=>fc[i]=w.found);});
+  return '<div class="mg-lab">Tema: '+esc(st.cat)+' · '+st.words.filter(w=>w.found).length+'/'+st.words.length+'</div>'+
+    '<div class="mg-ws" style="--n:'+st.N+'">'+st.grid.map((c,i)=>'<div class="mg-wc'+(fc[i]?' f'+fc[i]%6:'')+(st.anchor===i?' hl':'')+'" data-i="'+i+'">'+c+'</div>').join('')+'</div>'+
+    '<div class="mg-wl">'+st.words.map(w=>'<span'+(w.found?' class="done"':'')+'>'+w.w+'</span>').join('')+'</div>';
+ },
+ line(st,a,b){
+  const N=st.N,ax=a%N,ay=a/N|0,bx=b%N,by=b/N|0,dx=bx-ax,dy=by-ay;
+  if(!(dx===0||dy===0||Math.abs(dx)===Math.abs(dy)))return [a];
+  const n=Math.max(Math.abs(dx),Math.abs(dy)),sx=Math.sign(dx),sy=Math.sign(dy),out=[];
+  for(let k=0;k<=n;k++)out.push((ay+sy*k)*N+ax+sx*k);return out;
+ },
+ tryLine(st,cells){
+  const s=cells.join(','),rv=cells.slice().reverse().join(',');
+  const w=st.words.find(w=>!w.found&&(w.cells.join(',')===s||w.cells.join(',')===rv));
+  if(!w)return false;
+  w.found=st.words.filter(x=>x.found).length+1;
+  if(st.words.every(x=>x.found))st.solved=true;return true;
+ },
+ post(st,root,rerender){
+  const g=root.querySelector('.mg-ws');if(!g||st.solved)return;
+  let start=null,moved=false;
+  const at=e=>{const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.dataset&&el.dataset.i!=null&&g.contains(el)?+el.dataset.i:null;};
+  const paint=cells=>g.querySelectorAll('.mg-wc').forEach(el=>el.classList.toggle('hl',cells.includes(+el.dataset.i)));
+  g.addEventListener('pointerdown',e=>{const i=at(e);if(i==null)return;e.preventDefault();start=i;moved=false;try{g.setPointerCapture(e.pointerId);}catch(err){}paint(st.anchor!=null?[st.anchor,i]:[i]);});
+  g.addEventListener('pointermove',e=>{if(start==null)return;const i=at(e);if(i==null)return;if(i!==start)moved=true;paint(this.line(st,start,i));});
+  const up=e=>{
+    if(start==null)return;const i=at(e);const s=start;start=null;
+    if(moved&&i!=null){st.anchor=null;this.tryLine(st,this.line(st,s,i));rerender();return;}
+    if(st.anchor==null){st.anchor=s;rerender();return;}
+    const a=st.anchor;st.anchor=null;if(a!==s)this.tryLine(st,this.line(st,a,s));rerender();
+  };
+  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',()=>{start=null;paint([]);});
+ }};
+
+// 4. secret word (five letters, six tries)
+G.parola={n:'La parola segreta',d:'Cinque lettere, sei tentativi',
+ how:'Indovina la parola di 5 lettere. Dopo ogni tentativo: verde = lettera giusta al posto giusto, giallo = lettera giusta al posto sbagliato, grigio = non c\'è.',
+ init(r,d){const o=pick(r,wordsBy(w=>w.w.length===5));return {t:o.w,d:o.d,cat:MG_CATS[o.c].n,dl:d,rows:[],cur:'',marks:{}};},
+ score(g,t){const res=Array(5).fill('no'),left={};
+  for(let i=0;i<5;i++){if(g[i]===t[i])res[i]='ok';else left[t[i]]=(left[t[i]]||0)+1;}
+  for(let i=0;i<5;i++)if(res[i]!=='ok'&&left[g[i]]){res[i]='near';left[g[i]]--;}return res;},
+ html(st){
+  let h='<div class="mg-lab">Tema: '+esc(st.cat)+(st.dl===0?' · '+esc(st.d):'')+'</div><div class="mg-wd">';
+  for(let r=0;r<6;r++){
+    const row=st.rows[r],txt=row?row.g:r===st.rows.length?st.cur:'';
+    h+='<div class="mg-wr">'+[0,1,2,3,4].map(i=>'<span class="mg-wt'+(row?' '+row.s[i]:'')+'">'+(txt[i]||'')+'</span>').join('')+'</div>';
+  }
+  h+='</div>'+msg(st);
+  if(st.over)return h+'<p class="mg-msg">Era <b>'+st.t+'</b>. Riprova con un\'altra parola.</p><button class="btn pri" data-mg="retry">Nuova parola</button>';
+  return h+(st.solved?'':kb(st.marks,true));
+ },
+ act(st,a,v){
+  if(st.over)return;st.msg='';
+  if(a==='key'){if(st.cur.length<5)st.cur+=v;}
+  else if(a==='bk')st.cur=st.cur.slice(0,-1);
+  else if(a==='enter'){
+    if(st.cur.length<5){st.msg='Servono 5 lettere';return;}
+    const s=this.score(st.cur,st.t);st.rows.push({g:st.cur,s});
+    const pr={ok:3,near:2,no:1};[...st.cur].forEach((c,i)=>{if(!st.marks[c]||pr[s[i]]>pr[st.marks[c]])st.marks[c]=s[i];});
+    if(st.cur===st.t)st.solved=true;else if(st.rows.length>=6)st.over=true;
+    st.cur='';
+  }
+ }};
+
+// 5. hangman with an inkwell
+G.impiccato={n:'L\'impiccato d\'inchiostro',d:'Indovina prima che il calamaio si svuoti',
+ how:'Scegli le lettere una alla volta. Ogni lettera sbagliata fa cadere una goccia: hai 6 gocce.',
+ init(r,d){const o=pick(r,wordsBy(w=>w.w.length>=[5,6,7][d]));return {w:o.w,d:o.d,g:'',errs:0};},
+ html(st){
+  const MAXE=6,marks={};for(const c of st.g)marks[c]=st.w.includes(c)?'ok':'no';
+  let h='<div class="mg-ink">'+Array.from({length:MAXE},(_,i)=>'<i class="'+(i<MAXE-st.errs?'full':'')+'"></i>').join('')+'<span>'+(MAXE-st.errs)+' gocce</span></div>'+
+    '<div class="mg-lab">'+esc(st.d)+'</div><div class="mg-hang">'+[...st.w].map(c=>'<span>'+(st.g.includes(c)||st.over?c:'')+'</span>').join('')+'</div>';
+  if(st.over)return h+'<p class="mg-msg">Il calamaio è vuoto! Riprova con un\'altra parola.</p><button class="btn pri" data-mg="retry">Nuova parola</button>';
+  return h+(st.solved?'':kb(marks));
+ },
+ act(st,a,v){
+  if(a!=='key'||st.over||st.g.includes(v))return;
+  st.g+=v;if(!st.w.includes(v))st.errs++;
+  if([...st.w].every(c=>st.g.includes(c)))st.solved=true;else if(st.errs>=6)st.over=true;
+ }};
+
+// 6. cryptogram
+G.critto={n:'Crittogramma',d:'Un proverbio in cifra',
+ how:'A ogni numero corrisponde sempre la stessa lettera. Tocca una casella e scegli la lettera: si scrive in tutte le caselle con quel numero.',
+ init(r,d){
+  const text=pick(r,MG_PROV.filter(p=>p.length>=24)),N=norm(text),letters=[...new Set(N.replace(/[^A-Z]/g,''))];
+  const nums=shuf(r,Array.from({length:26},(_,i)=>i+1)),map={};letters.forEach((c,i)=>map[c]=nums[i]);
+  const rev={};for(const c of pickN(r,letters,[4,3,2][d]))rev[map[c]]=c;
+  const first=[...N].find(c=>map[c]&&!rev[map[c]]);
+  return {text,N,map,rev,guess:{},sel:first?map[first]:null};
+ },
+ html(st){
+  const inv={};for(const c in st.map)inv[st.map[c]]=c;
+  const used={};for(const n in st.guess)used[st.guess[n]]='used';for(const n in st.rev)used[st.rev[n]]='used';
+  const full=Object.keys(inv).every(n=>st.guess[n]||st.rev[n]);
+  const words=st.text.split(' ').map(w=>{let h='<span class="mg-cw2">';
+    for(const ch of w){const c=norm(ch);
+      if(!st.map[c]){h+='<span class="mg-cr p">'+esc(ch)+'</span>';continue;}
+      const n=st.map[c],g=st.rev[n]||st.guess[n]||'';
+      h+='<button class="mg-cr'+(st.rev[n]?' fix':'')+(st.sel===n?' sel':'')+(full&&g&&g!==c?' bad':'')+'" data-mg="num" data-v="'+n+'"><b>'+g+'</b><i>'+n+'</i></button>';}
+    return h+'</span>';}).join(' ');
+  return '<div class="mg-crypt">'+words+'</div>'+(st.solved?'<p class="mg-msg ok">«'+esc(st.text)+'»</p>':(full?'<p class="mg-msg">Qualcosa non torna: controlla le lettere in rosso.</p>':'')+kb(used));
+ },
+ act(st,a,v){
+  if(a==='num'){if(!st.rev[+v])st.sel=+v;return;}
+  if(st.sel==null)return;
+  if(a==='key'){for(const n in st.guess)if(st.guess[n]===v)delete st.guess[n];st.guess[st.sel]=v;
+    const order=[...st.N].map(c=>st.map[c]).filter(n=>n&&!st.rev[n]&&!st.guess[n]);if(order.length)st.sel=order[0];}
+  else if(a==='bk')delete st.guess[st.sel];
+  if(Object.keys(st.map).every(c=>(st.rev[st.map[c]]||st.guess[st.map[c]])===c))st.solved=true;
+ }};
+
+// 7. syllables
+G.sillabe={n:'Sillabe in fila',d:'Ricomponi le parole dalle sillabe',
+ how:'Scegli una definizione e tocca le sillabe nell\'ordine giusto. Le sillabe di tutte le parole sono mescolate insieme.',
+ init(r,d){
+  const items=pickN(r,wordsBy(w=>w.syl.length>=3),[3,4,5][d]).map(o=>({w:o.w,syl:o.syl,d:o.d,fill:[],ok:false}));
+  const tiles=shuf(r,items.flatMap(it=>it.syl)).map(s=>({s,used:false}));
+  return {items,tiles,act:0};
+ },
+ html(st){
+  return st.items.map((it,k)=>'<button class="mg-box mg-sy'+(it.ok?' ok':'')+(k===st.act&&!it.ok?' on':'')+'" data-mg="slot" data-v="'+k+'"><div class="mg-lab">'+esc(it.d)+' · '+it.syl.length+' sillabe</div><div class="mg-slots">'+
+    it.syl.map((s,j)=>it.ok?'<span class="mg-t on">'+s+'</span>':it.fill[j]!=null?'<span class="mg-t on" data-mg="unfill" data-v="'+k+'|'+j+'">'+st.tiles[it.fill[j]].s+'</span>':'<span class="mg-t empty wide"></span>').join('')+'</div></button>').join('')+
+    msg(st)+(st.solved?'':'<div class="mg-tiles">'+st.tiles.map((t,j)=>'<button class="mg-t sy" data-mg="tile" data-v="'+j+'" '+(t.used?'disabled':'')+'>'+t.s+'</button>').join('')+'</div>');
+ },
+ act(st,a,v){
+  st.msg='';
+  if(a==='slot'){if(!st.items[+v].ok)st.act=+v;return;}
+  if(a==='unfill'){const [k,j]=v.split('|').map(Number),it=st.items[k];st.act=k;const id=it.fill.splice(j,1)[0];if(id!=null)st.tiles[id].used=false;return;}
+  if(a!=='tile')return;
+  const it=st.items[st.act],t=st.tiles[+v];if(!it||it.ok||t.used)return;
+  it.fill.push(+v);t.used=true;
+  if(it.fill.length===it.syl.length){
+    if(it.fill.map(i=>st.tiles[i].s).join('')===it.w){it.ok=true;const nx=st.items.findIndex(x=>!x.ok);if(nx<0)st.solved=true;else st.act=nx;}
+    else{it.fill.forEach(i=>st.tiles[i].used=false);it.fill=[];st.msg='Non è la parola giusta: riprova.';}
+  }
+ }};
+
+// 8. odd one out
+G.intruso={n:'L\'intruso',d:'Una parola non c\'entra',
+ how:'In ogni gruppo tre parole hanno qualcosa in comune. Tocca quella che non c\'entra.',
+ init(r,d){
+  const rounds=[];
+  for(let i=0;i<[4,5,6][d];i++){
+    const [A,B]=pickN(r,MG_CATS,2),opts=shuf(r,[...pickN(r,A.w,3).map(o=>({w:o.w,odd:0})),{w:pick(r,B.w).w,odd:1}]);
+    rounds.push({opts,A:A.n,B:B.n,wrong:[],ok:false});
+  }
+  return {rounds,i:0};
+ },
+ html(st){
+  return st.rounds.map((rd,k)=>{
+    if(k>st.i)return '';
+    const done=rd.ok;
+    return '<div class="mg-box'+(done?' ok':'')+'"><div class="mg-lab">Gruppo '+(k+1)+' di '+st.rounds.length+'</div><div class="mg-opts">'+rd.opts.map((o,j)=>'<button class="mg-o'+(done&&o.odd?' right':'')+(rd.wrong.includes(j)?' wrong':'')+'" data-mg="pick" data-v="'+k+'|'+j+'" '+(done||rd.wrong.includes(j)?'disabled':'')+'>'+o.w+'</button>').join('')+'</div>'+
+      (done?'<div class="mg-lab">Le altre: '+esc(rd.A)+' · l\'intruso: '+esc(rd.B)+'</div>':'')+'</div>';
+  }).join('');
+ },
+ act(st,a,v){
+  if(a!=='pick')return;const [k,j]=v.split('|').map(Number),rd=st.rounds[k];if(k!==st.i||rd.ok)return;
+  if(rd.opts[j].odd){rd.ok=true;st.i++;if(st.i>=st.rounds.length)st.solved=true;}else rd.wrong.push(j);
+ }};
+
+// 9. authors and works
+G.abbina={n:'Autori e opere',d:'Collega ogni autore al suo libro',
+ how:'Tocca un autore a sinistra e poi il suo libro a destra.',
+ init(r,d){const pairs=pickN(r,MG_AUTH,[4,5,6][d]);return {pairs,L:shuf(r,pairs.map((_,i)=>i)),R:shuf(r,pairs.map((_,i)=>i)),done:[],sel:null};},
+ html(st){
+  const col=i=>st.done.indexOf(i);
+  return '<div class="mg-match"><div>'+st.L.map(i=>'<button class="mg-o'+(col(i)>=0?' m'+col(i)%6:'')+(st.sel===i?' sel':'')+'" data-mg="l" data-v="'+i+'" '+(col(i)>=0?'disabled':'')+'>'+esc(st.pairs[i][0])+'</button>').join('')+'</div><div>'+
+    st.R.map(i=>'<button class="mg-o it'+(col(i)>=0?' m'+col(i)%6:'')+'" data-mg="r" data-v="'+i+'" '+(col(i)>=0?'disabled':'')+'>'+esc(st.pairs[i][1])+'</button>').join('')+'</div></div>'+msg(st);
+ },
+ act(st,a,v){
+  st.msg='';
+  if(a==='l'){st.sel=+v;return;}
+  if(a!=='r')return;
+  if(st.sel==null){st.msg='Tocca prima un autore';return;}
+  if(st.sel===+v){st.done.push(+v);st.sel=null;if(st.done.length===st.pairs.length)st.solved=true;}
+  else st.msg='No, quel libro è di un altro autore.';
+ }};
+
+// 10. famous opening lines
+G.incipit={n:'Indovina l\'incipit',d:'Da quale libro viene la prima riga?',
+ how:'Leggi l\'inizio e scegli il libro giusto.',
+ init(r,d){
+  const titles=[...new Set(MG_INC.map(x=>x[1]))];
+  return {rounds:pickN(r,MG_INC,[3,4,5][d]).map(([q,a])=>({q,opts:shuf(r,[a,...pickN(r,titles.filter(t=>t!==a),3)]),a,wrong:[],ok:false})),i:0};
+ },
+ html(st){return quizHtml(st,true);},
+ act(st,a,v){quizAct(st,a,v);}};
+
+// 11. letter sudoku
+G.sudoku={n:'Sudoku di lettere',d:'Sei lettere al posto dei numeri',
+ how:'Ogni riga, ogni colonna e ogni riquadro 2×3 contiene una sola volta ciascuna delle 6 lettere.',
+ init(r,d){
+  const word=pick(r,MG_SUDO),sym=shuf(r,[0,1,2,3,4,5]);
+  const rows=shuf(r,[0,1,2]).flatMap(b=>shuf(r,[0,1]).map(k=>b*2+k)),cols=shuf(r,[0,1]).flatMap(s=>shuf(r,[0,1,2]).map(k=>s*3+k));
+  const sol=[];for(let y=0;y<6;y++)for(let x=0;x<6;x++){const R=rows[y],C=cols[x];sol.push(sym[((R%2)*3+Math.floor(R/2)+C)%6]);}
+  const giv=new Set(pickN(r,[...Array(36).keys()],[20,17,14][d]));
+  return {word,sol,cur:sol.map((v,i)=>giv.has(i)?v:-1),given:sol.map((_,i)=>giv.has(i)),sel:[...Array(36).keys()].find(i=>!giv.has(i))};
+ },
+ bad(st){const b=new Set(),c=st.cur;
+  for(let i=0;i<36;i++){if(c[i]<0)continue;const x=i%6,y=i/6|0;
+    for(let j=0;j<36;j++){if(j===i||c[j]!==c[i])continue;const x2=j%6,y2=j/6|0;
+      if(x===x2||y===y2||(Math.floor(y/2)===Math.floor(y2/2)&&Math.floor(x/3)===Math.floor(x2/3)))b.add(i);}}return b;},
+ html(st){
+  const bad=this.bad(st);
+  return '<div class="mg-lab">Le lettere: '+[...st.word].join(' ')+'</div><div class="mg-sd">'+st.cur.map((v,i)=>'<button class="mg-sc'+(st.given[i]?' giv':'')+(st.sel===i?' sel':'')+(bad.has(i)?' bad':'')+((i%6)===2?' br':'')+((i/6|0)%2===1&&i<30?' bb':'')+'" data-mg="cell" data-v="'+i+'" '+(st.given[i]?'disabled':'')+'>'+(v>=0?st.word[v]:'')+'</button>').join('')+'</div>'+
+    (st.solved?'':'<div class="mg-tiles">'+[...st.word].map((c,k)=>'<button class="mg-t" data-mg="let" data-v="'+k+'">'+c+'</button>').join('')+'<button class="mg-t wide" data-mg="erase">⌫</button></div>');
+ },
+ act(st,a,v){
+  if(a==='cell'){st.sel=+v;return;}
+  if(st.sel==null||st.given[st.sel])return;
+  if(a==='let'||(a==='key'&&st.word.includes(v)))st.cur[st.sel]=a==='let'?+v:st.word.indexOf(v);
+  else if(a==='erase'||a==='bk')st.cur[st.sel]=-1;
+  if(st.cur.every(x=>x>=0)&&!this.bad(st).size)st.solved=true;
+ }};
+
+// 12. spot the differences (two pixel-art rooms)
+const PAL=['#c0473a','#3f86b8','#6f9a3c','#d6ad2c','#9154a8','#d0712c','#4fb3a0','#d86d93','#77808f','#5566bb'];
+G.diff={n:'Trova le differenze',d:'Due stanze quasi uguali',
+ how:'Le due stanze hanno alcune differenze. Toccale, in una qualsiasi delle due immagini.',
+ init(r,d){
+  const O=[],add=(parts,mode)=>O.push({parts,mode,bb:bbox(parts)});
+  const wall=pick(r,['#3b3150','#3a4a5a','#4a3a3a','#3a4a3a']),day=r()<0.5;
+  const base=[[0,0,64,40,wall],[0,40,64,8,'#2c2233'],[0,39,64,1,'#54476f']];
+  add([[3,5,17,14,'#8a5a36'],[4,6,15,12,day?'#7fc8f0':'#1f2550']],null);
+  add([[13,8,4,4,day?'#f2d24a':'#e8e0c0']],'both');
+  add([[6,12,6,2,'#f2f2f2'],[7,11,3,1,'#f2f2f2']],'hide');
+  add([[23,6,11,9,pick(r,PAL)]],'color');
+  add([[25,8,7,5,'#bfe2f5'],[26,11,3,2,'#6f9a3c'],[28,10,3,3,'#3f7f3f']],'color3');
+  add([[37,6,5,5,'#f2e7ce'],[39,7,1,2,'#2d2219'],[39,8,2,1,'#2d2219']],'hide');
+  add([[44,5,18,35,'#5a3822']],null);
+  for(const sy of [14,23,32,39]){add([[45,sy,16,1,'#8a5a36']],null);}
+  for(const sy of [14,23,32]){let x=46;while(x<59){const w=1+(r()<0.5?1:0),h=4+Math.floor(r()*4);if(x+w>60)break;add([[x,sy-h,w,h,pick(r,PAL)]],'both');x+=w+(r()<0.2?1:0);}}
+  add([[47,38-4,4,4,'#c8744a'],[48,38-6,2,2,'#5fa05a']],'hide');
+  add([[3,29,32,2,'#a8703f'],[4,31,2,9,'#5a3822'],[32,31,2,9,'#5a3822']],null);
+  add([[27,22,5,3,pick(r,PAL)],[29,25,1,4,'#c9a24a'],[27,28,5,1,'#c9a24a']],'color');
+  add([[19,26,3,3,pick(r,PAL)],[22,27,1,1,'#f2f2f2']],'color');
+  add([[6,27,7,2,'#f2e7ce'],[7,26,6,1,'#e4d3ad']],'hide');
+  add([[14,27,1,2,'#2d2219'],[15,24,1,3,'#f4f1ea']],'hide');
+  add([[37,35,5,5,'#b0603a'],[38,31,1,4,'#3f7f3f'],[40,30,1,5,'#5fa05a'],[36,32,1,3,'#3f7f3f']],'hide');
+  add([[10,43,22,3,pick(r,PAL)]],'color');
+  add([[56,2,5,3,pick(r,PAL)]],'both');
+  const cand=shuf(r,O.filter(o=>o.mode));const diffs=[];
+  for(const o of cand){if(diffs.length>=[4,5,6][d])break;if(diffs.some(x=>overlap(x.bb,o.bb)))continue;
+    const m=o.mode==='both'?(r()<0.5?'hide':'color'):o.mode==='color3'?'color':o.mode;
+    const nc=pick(r,PAL.filter(c=>c!==o.parts[0][4]));diffs.push({o,m,nc,bb:o.bb,found:false});}
+  return {base,O,diffs};
+ },
+ html(st){
+  const n=st.diffs.filter(x=>x.found).length;
+  return '<div class="mg-lab">Trovate '+n+' di '+st.diffs.length+'</div><canvas class="mg-df" width="256" height="192" data-k="0"></canvas><canvas class="mg-df" width="256" height="192" data-k="1"></canvas>';
+ },
+ post(st,root,rerender){
+  root.querySelectorAll('.mg-df').forEach(cv=>{
+    const k=+cv.dataset.k,g=cv.getContext('2d'),P=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x*4,y*4,w*4,h*4);};
+    for(const p of st.base)P(...p);
+    for(const o of st.O){const df=k?st.diffs.find(x=>x.o===o):null;
+      if(df&&df.m==='hide')continue;
+      o.parts.forEach((p,i)=>P(p[0],p[1],p[2],p[3],df&&df.m==='color'&&i===0?df.nc:p[4]));}
+    g.lineWidth=3;g.strokeStyle='#f2d24a';
+    for(const df of st.diffs)if(df.found){const [x,y,w,h]=df.bb;g.beginPath();g.ellipse((x+w/2)*4,(y+h/2)*4,w*2+8,h*2+8,0,0,Math.PI*2);g.stroke();}
+    if(st.solved)return;
+    cv.addEventListener('click',e=>{const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)/b.width*64,y=(e.clientY-b.top)/b.height*48;
+      const df=st.diffs.find(q=>!q.found&&x>=q.bb[0]-1.5&&x<=q.bb[0]+q.bb[2]+1.5&&y>=q.bb[1]-1.5&&y<=q.bb[1]+q.bb[3]+1.5);
+      if(df){df.found=true;if(st.diffs.every(q=>q.found))st.solved=true;rerender();}});
+  });
+ },
+ act(){}};
+function bbox(parts){let x0=99,y0=99,x1=0,y1=0;for(const [x,y,w,h] of parts){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x+w);y1=Math.max(y1,y+h);}return [x0,y0,x1-x0,y1-y0];}
+function overlap(a,b){return a[0]<b[0]+b[2]+1&&b[0]<a[0]+a[2]+1&&a[1]<b[1]+b[3]+1&&b[1]<a[1]+a[3]+1;}
+
+// 13. connect the dots
+G.puntini={n:'Unisci i puntini',d:'Che cosa apparirà?',
+ how:'Tocca i puntini in ordine, dall\'1 in poi.',
+ init(r,d){const [name,pts0]=pick(r,MG_DOTS),s=Math.floor(r()*pts0.length);let pts=pts0.slice(s).concat(pts0.slice(0,s));if(r()<0.5)pts=[pts[0],...pts.slice(1).reverse()];return {name,pts,next:1,dl:d};},
+ html(st){
+  const P=st.pts.map(([x,y])=>[x+5,y+5]),N=P.length,done=st.next-1;
+  let s='<svg class="mg-dots" viewBox="0 0 110 110">';
+  if(st.solved)s+='<polygon points="'+P.map(p=>p.join(',')).join(' ')+'" fill="#f2b64f" stroke="#2d2219" stroke-width="1.2"/>';
+  else if(done>1)s+='<polyline points="'+P.slice(0,done).map(p=>p.join(',')).join(' ')+'" fill="none" stroke="#2d2219" stroke-width="1.2"/>';
+  P.forEach(([x,y],i)=>{const nx=i+1===st.next&&st.dl===0;
+    s+='<g data-mg="dot" data-v="'+i+'"><circle cx="'+x+'" cy="'+y+'" r="6" fill="transparent"/><circle cx="'+x+'" cy="'+y+'" r="'+(nx?2.2:1.5)+'" fill="'+(i<done?'#2d2219':nx?'#c0473a':'#6b5a48')+'"/>'+
+      (st.solved?'':'<text x="'+(x+2.5)+'" y="'+(y-2.5)+'" font-size="4.6" fill="#6b5a48">'+(i+1)+'</text>')+'</g>';});
+  return s+'</svg>'+(st.solved?'<p class="mg-msg ok">È '+esc(st.name)+'!</p>':msg(st));
+ },
+ act(st,a,v){if(a!=='dot')return;st.msg='';if(+v+1===st.next){st.next++;if(st.next>st.pts.length)st.solved=true;}else st.msg='Cerca il numero '+st.next;}};
+
+// 14. riddles
+G.indovinelli={n:'Indovinelli',d:'Che cos\'è?',
+ how:'Leggi l\'indovinello e scegli la risposta.',
+ init(r,d){const ans=MG_RIDDLE.map(x=>x[1]);return {rounds:pickN(r,MG_RIDDLE,[3,4,5][d]).map(([q,a])=>({q,a,opts:shuf(r,[a,...pickN(r,ans.filter(x=>x!==a),3)]),wrong:[],ok:false})),i:0};},
+ html(st){return quizHtml(st,false);},
+ act(st,a,v){quizAct(st,a,v);}};
+function quizHtml(st,quote){
+  return st.rounds.map((rd,k)=>k>st.i?'':'<div class="mg-box'+(rd.ok?' ok':'')+'"><div class="mg-lab">'+(k+1)+' di '+st.rounds.length+'</div><p class="mg-q'+(quote?' it':'')+'">'+(quote?'«'+esc(rd.q)+'»':esc(rd.q))+'</p><div class="mg-opts col">'+
+    rd.opts.map((o,j)=>'<button class="mg-o'+(rd.ok&&o===rd.a?' right':'')+(rd.wrong.includes(j)?' wrong':'')+'" data-mg="pick" data-v="'+k+'|'+j+'" '+(rd.ok||rd.wrong.includes(j)?'disabled':'')+'>'+esc(o)+'</button>').join('')+'</div></div>').join('');
+}
+function quizAct(st,a,v){
+  if(a!=='pick')return;const [k,j]=v.split('|').map(Number),rd=st.rounds[k];if(k!==st.i||rd.ok)return;
+  if(rd.opts[j]===rd.a){rd.ok=true;st.i++;if(st.i>=st.rounds.length)st.solved=true;}else rd.wrong.push(j);
+}
+
+// 15. scrambled proverb
+G.frase={n:'Frase in disordine',d:'Rimetti in fila il proverbio',
+ how:'Tocca le parole nell\'ordine giusto per ricomporre il proverbio. Tocca una parola già messa per toglierla.',
+ init(r,d){
+  const keep=w=>/^(Natale|Pasqua)$/.test(w)?w:w.toLowerCase();
+  return {items:pickN(r,MG_PROV.filter(p=>p.split(' ').length>=5),[2,2,3][d]).map(p=>{const words=p.split(' ').map(keep);let t;do{t=shuf(r,words.map((_,i)=>i));}while(t.every((v,i)=>v===i));return {p,words,tiles:t,ans:[]};}),i:0};
+ },
+ html(st){
+  return st.items.map((it,k)=>{
+    if(k<st.i||st.solved)return '<div class="mg-box ok"><p class="mg-q it">«'+esc(it.p)+'»</p></div>';
+    if(k>st.i)return '<div class="mg-box dim"><div class="mg-lab">Proverbio '+(k+1)+'</div></div>';
+    return '<div class="mg-box"><div class="mg-lab">Proverbio '+(k+1)+' di '+st.items.length+'</div><div class="mg-sent">'+(it.ans.length?it.ans.map((j,q)=>'<button class="mg-t on wide" data-mg="ans" data-v="'+q+'">'+esc(it.words[j])+'</button>').join(''):'<span class="mg-lab">Tocca le parole qui sotto</span>')+'</div>'+
+      '<div class="mg-tiles">'+it.tiles.map(j=>'<button class="mg-t wide" data-mg="tile" data-v="'+j+'" '+(it.ans.includes(j)?'disabled':'')+'>'+esc(it.words[j])+'</button>').join('')+'</div>'+msg(st)+'</div>';
+  }).join('');
+ },
+ act(st,a,v){
+  const it=st.items[st.i];if(!it)return;st.msg='';
+  if(a==='tile'){if(!it.ans.includes(+v))it.ans.push(+v);}else if(a==='ans')it.ans.splice(+v,1);
+  if(it.ans.length===it.words.length){
+    if(it.ans.map(j=>it.words[j]).join(' ')===it.words.join(' ')){st.i++;if(st.i>=st.items.length)st.solved=true;}
+    else st.msg='Il proverbio non suona così: sposta qualche parola.';
+  }
+ }};
+
+const ORDER=['cruci','cerca','ana','parola','critto','impiccato','sillabe','sudoku','intruso','abbina','incipit','indovinelli','frase','diff','puntini'];
+
+/* ===== issues, progress and rewards ===== */
+const magNo=t=>Math.max(1,Math.round((mondayOf(t)-mondayOf(S.started))/WEEK)+1);
+function ensure(){if(!S.mag)S.mag={first:0,last:0,iss:{}};if(S.insp==null)S.insp=0;}
+function prog(n){ensure();return S.mag.iss[n]||(S.mag.iss[n]={s:[],t:{}});}
+function games(n){const r=rng(hash(S.seed+'|mag|'+n));return shuf(r,ORDER).slice(0,PER_ISSUE).sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));}
+const level=n=>n<5?0:n<13?1:2;
+function check(t){
+  ensure();const n=magNo(t);
+  if(!S.mag.first)S.mag.first=n;
+  if(n>S.mag.last){S.mag.last=n;log('È arrivato Mondo Enigmistico n. '+n);}
+}
+const current=()=>magNo(gnow());
+function banked(){return S&&S.insp||0;}
+function award(n,gid){
+  const p=prog(n);if(p.s.includes(gid))return;
+  p.s.push(gid);const cur=n===current();
+  if(cur)S.coins+=1;S.insp+=MIN;
+  let m='Risolto! '+(cur?'+1 moneta e ':'')+'+1 minuto di Ispirazione';
+  if(p.s.length===games(n).length){p.done=1;S.insp+=HOUR;m='Rivista completata! +1 ora di Ispirazione';log('Hai completato Mondo Enigmistico n. '+n+': +1 ora di Ispirazione');}
+  delete p.t[gid];save();hud();toast(m);if(tab==='desk')renderPanel();
+}
+// called by advance(): starts banked inspiration when the writer is at work
+function consume(){
+  if(!S.insp||S.insp<=0)return;
+  const d=new Date(S.clock);if(!S.hours[d.getHours()]||!activeMs()||S.clock<(S.creaUntil||0))return;
+  let e=new Date(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours()+1).getTime();
+  for(let i=0;i<24&&S.hours[new Date(e).getHours()];i++)e=new Date(e).setHours(new Date(e).getHours()+1);
+  const ch=Math.min(S.insp,e-S.clock);if(ch<=0)return;
+  S.creaUntil=S.clock+ch;S.creaDur=ch;S.insp-=ch;
+}
+
+/* ===== UI ===== */
+let view=null;const cache={};
+const root=()=>$('#mag');
+function stateFor(n,gid){
+  const p=prog(n),tries=p.t[gid]||0,k=n+'|'+gid+'|'+tries;
+  if(!cache[k])cache[k]=G[gid].init(rng(hash(S.seed+'|mg|'+n+'|'+gid+'|'+tries)),level(n));
+  return cache[k];
+}
+const minStr=ms=>{const m=Math.round(ms/MIN);return m>=60?Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':''):m+' min';};
+function open(n){ensure();check(gnow());view={n:n||current(),g:null};render();}
+function close(){view=null;const el=root();el.hidden=true;el.innerHTML='';}
+function issueDate(n){return addDays(mondayOf(S.started),7*(n-1));}
+function indexHtml(){
+  const n=view.n,cur=n===current(),gs=games(n),p=prog(n),solved=p.s.length;
+  let h='<div class="mg-top"><button class="mg-x" data-mg="close">Chiudi</button>'+(cur?'':'<button class="mg-x" data-mg="issue" data-v="'+current()+'">Numero corrente</button>')+'</div>'+
+    '<header class="mg-mast"><div class="mg-name">Mondo<br>Enigmistico</div><div class="mg-sub">Settimanale di parole e passatempi · n. '+n+' · '+new Date(issueDate(n)).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})+'</div></header>'+
+    '<div class="mg-info"><b>'+solved+'/'+gs.length+' risolti</b>'+(cur?'Ogni gioco: +1 moneta e +1 minuto di Ispirazione. Tutti: +1 ora.':'Arretrato: ogni gioco +1 minuto di Ispirazione, senza monete. Tutti: +1 ora.')+
+    '<span>Ispirazione in serbo: '+minStr(banked())+'. Parte quando '+esc(S.name)+' scrive.</span></div>'+
+    '<div class="mg-grid">'+gs.map((gid,i)=>{const done=p.s.includes(gid);return '<button class="mg-tile'+(done?' done':'')+'" data-mg="game" data-v="'+gid+'" '+(done?'disabled':'')+'><span class="mg-pg">pag. '+(i*2+3)+'</span><b>'+esc(G[gid].n)+'</b><small>'+(done?'Risolto':esc(G[gid].d))+'</small></button>';}).join('')+'</div>';
+  const pile=[];for(let k=current()-1;k>=S.mag.first;k--)pile.push(k);
+  if(pile.length)h+='<section class="mg-pile"><div class="mg-lab">La pila degli arretrati</div>'+pile.map(k=>{const q=prog(k),tot=games(k).length;return '<button class="mg-back'+(k===n?' on':'')+'" data-mg="issue" data-v="'+k+'"><b>n. '+k+'</b><span>'+(q.s.length>=tot?'completato':q.s.length+'/'+tot+' risolti')+'</span></button>';}).join('')+'</section>';
+  return h;
+}
+function gameHtml(){
+  const {n,g}=view,st=stateFor(n,g),pg=games(n).indexOf(g)*2+3;
+  return '<div class="mg-top"><button class="mg-x" data-mg="back">‹ Indice</button><span class="mg-lab">n. '+n+' · pag. '+pg+'</span></div>'+
+    '<h2 class="mg-gt">'+esc(G[g].n)+'</h2>'+(st.solved?'':'<p class="mg-how">'+esc(G[g].how)+'</p>')+
+    '<div class="mg-body">'+G[g].html(st)+'</div>'+
+    (st.solved?'<div class="mg-win"><b>Risolto!</b><span>'+(n===current()?'+1 moneta e +1 minuto di Ispirazione':'+1 minuto di Ispirazione')+'</span><button class="btn pri" data-mg="back">Torna all\'indice</button></div>':'');
+}
+function render(){
+  const el=root();if(!view){close();return;}
+  const sc=el.firstElementChild?el.firstElementChild.scrollTop:0;
+  el.innerHTML='<div class="mg-in">'+(view.g?gameHtml():indexHtml())+'</div>';el.hidden=false;
+  el.firstElementChild.scrollTop=sc;
+  if(view.g&&G[view.g].post){const st=stateFor(view.n,view.g);G[view.g].post(st,el,()=>{afterAct(st);render();});}
+}
+function afterAct(st){if(st.solved&&!st.paid){st.paid=true;award(view.n,view.g);}}
+function act(a,v){
+  if(a==='close')return close();
+  if(a==='issue'){view={n:+v,g:null};render();root().firstElementChild.scrollTop=0;return;}
+  if(a==='game'){if(prog(view.n).s.includes(v))return;view.g=v;render();root().firstElementChild.scrollTop=0;return;}
+  if(a==='back'){view.g=null;render();return;}
+  if(!view||!view.g)return;
+  const p=prog(view.n);
+  if(a==='retry'){p.t[view.g]=(p.t[view.g]||0)+1;save();render();return;}
+  const st=stateFor(view.n,view.g);if(st.solved)return;
+  G[view.g].act(st,a,v);afterAct(st);render();
+}
+document.addEventListener('click',e=>{const el=e.target.closest('#mag [data-mg]');if(!el||el.disabled)return;act(el.dataset.mg,el.dataset.v);});
+document.addEventListener('keydown',e=>{
+  if(!view)return;
+  if(e.key==='Escape'){view.g?act('back'):close();return;}
+  if(!view.g||e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=norm(e.key);
+  if(/^[A-Z]$/.test(k)){e.preventDefault();act('key',k);}
+  else if(e.key==='Backspace'){e.preventDefault();act('bk');}
+  else if(e.key==='Enter'){e.preventDefault();act('enter');}
+});
+function cardHtml(){
+  ensure();const n=current(),gs=games(n),p=prog(n),back=[];
+  for(let k=S.mag.first;k<n;k++){const q=prog(k);if(q.s.length<games(k).length)back.push(k);}
+  return '<section class="card mg-card"><div class="row between"><h2 class="h">Mondo Enigmistico n. '+n+'</h2><span class="meta">'+p.s.length+'/'+gs.length+'</span></div>'+
+    '<p class="meta" style="margin:0">Il settimanale di passatempi arriva ogni lunedì. Ogni gioco risolto: +1 moneta e +1 minuto di Ispirazione; tutta la rivista: +1 ora. Gli arretrati danno solo Ispirazione.'+
+    (banked()>0?' <b>In serbo: '+minStr(banked())+'</b>, partono quando '+esc(S.name)+' scrive.':'')+(back.length?' Arretrati da finire: '+back.length+'.':'')+'</p>'+
+    '<div class="row"><button class="btn pri" data-act="mag">Apri la rivista</button></div></section>';
+}
+const unsolvedNow=()=>{if(!S)return false;ensure();return prog(current()).s.length<games(current()).length;};
+const freshNow=()=>{if(!S)return false;ensure();return prog(current()).s.length===0;};
+return {open,close,check,consume,cardHtml,banked,minStr,unsolvedNow,freshNow,isOpen:()=>!!view,_G:G,_games:games,_state:stateFor};
+})();
+
 /* ---------- loop ---------- */
 let lastReal=Date.now(),hidden=null;
 function tick(){
@@ -1406,5 +2223,10 @@ requestAnimationFrame(draw);
 })();
 </script>
 
+<script>
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
 </body>
 </html>

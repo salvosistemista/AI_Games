@@ -1,10 +1,18 @@
-SCRIPTOR - versione installabile (v1.4)
+SCRIPTOR - versione installabile (v1.5)
 
 Contenuto della cartella
   index.html              il gioco, con i caratteri incorporati
   manifest.webmanifest    nome, colori e icone dell'app
   sw.js                   salva il gioco sul dispositivo per usarlo offline
   icon-*.png, apple-touch-icon.png   icone
+
+Novita' della 1.5: Mondo Enigmistico
+  Ogni lunedi' arriva un nuovo numero del settimanale di passatempi (lo vedi appoggiato sopra la
+  libreria; si apre toccandolo o da Scrivania > "Apri la rivista"). Ogni numero ha 12 giochi scelti
+  tra 15. Ogni gioco risolto vale 1 moneta e 1 minuto di Ispirazione; tutta la rivista 1 ora.
+  I numeri vecchi restano nella pila degli arretrati: danno solo Ispirazione, niente monete.
+  L'Ispirazione e' la creativita' (-15% di non scrittura): resta in serbo e parte solo quando
+  lo scrittore e' nelle ore di lavoro con un manoscritto attivo.
 
 Musica della radio (facoltativa)
   Metti nella cartella anche radio1.ogg, radio2.ogg e radio3.ogg. Suonano in sequenza
