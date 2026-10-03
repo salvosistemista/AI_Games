@@ -1,10 +1,14 @@
-SCRIPTOR - versione installabile (v1.8)
+SCRIPTOR - versione installabile (v1.9)
 
 Contenuto della cartella
   index.html              il gioco, con i caratteri incorporati
   manifest.webmanifest    nome, colori e icone dell'app
   sw.js                   salva il gioco sul dispositivo per usarlo offline
   icon-*.png, apple-touch-icon.png   icone
+
+Novita' della 1.9: 12 ore di lavoro
+  Lo scrittore puo' lavorare fino a 12 ore al giorno (prima 10). Nelle partite gia' iniziate
+  aggiungi le 2 ore in piu' da Diario > Orario di lavoro.
 
 Novita' della 1.8: vocabolario piu' difficile
   Mondo Enigmistico usa parole meno comuni e definizioni da enigmista: medie nei numeri 1-4,

@@ -417,8 +417,8 @@ const LEVELS=[
   {n:'Celebre',f:1000,offers:8,vis:4,mult:2,maxF:8},
   {n:'Leggenda',f:2500,offers:9,vis:8,mult:2.5,maxF:8}];
 const LINES={"tool": {"n": "Strumento", "tiers": [["Matita", 0, 0], ["Penna d'oca", 3, 30], ["Stilografica", 6, 150], ["Macchina da scrivere", 10, 600, 2], ["Macchina elettrica", 14, 2000, 3], ["Computer vintage", 18, 6000, 4]]}, "lamp": {"n": "Lampada", "tiers": [["Candela", 0, 0], ["Lampada a olio", 2, 80], ["Lampada da biblioteca", 4, 400, 2]]}, "win": {"n": "Finestra", "tiers": [["Muro spoglio", 0, 0], ["Tetti di città", 2, 200], ["Colline", 4, 800, 2], ["Mare", 6, 2500, 3]]}, "seat": {"n": "Seduta", "tiers": [["Sgabello", 0, 0], ["Sedia imbottita", 2, 150], ["Poltrona", 4, 700, 2]]}, "drawer": {"n": "Cassetto", "tiers": [["3 manoscritti", 0, 0], ["5 manoscritti", 0, 250], ["8 manoscritti", 0, 1200]]}};
-const PET_PRICE=500,PET_BONUS=2;
-const PROMO=[{"id": "giornale", "n": "Intervista sul giornale", "d": "un articolo con la tua foto nelle pagine della cultura", "lv": 1, "c": 250, "f": 4}, {"id": "libreria", "n": "Firmacopie in libreria", "d": "un pomeriggio di dediche tra gli scaffali", "lv": 2, "c": 1000, "f": 10}, {"id": "radio", "n": "Ospite alla radio", "d": "mezz'ora di chiacchiere in diretta", "lv": 3, "c": 3000, "f": 22}, {"id": "festival", "n": "Tournée nei festival", "d": "una settimana tra le piazze letterarie", "lv": 4, "c": 6000, "f": 110}],PROMO_GROW=0;
+const PET_PRICE=500,PET_BONUS=2,MAX_H=12;
+const PROMO=[{"id": "giornale", "n": "Intervista sul giornale", "d": "un articolo con la tua foto nelle pagine della cultura", "lv": 1, "c": 250, "f": 4}, {"id": "libreria", "n": "Firmacopie in libreria", "d": "un pomeriggio di dediche tra gli scaffali", "lv": 2, "c": 1000, "f": 10}, {"id": "radio", "n": "Ospite alla radio", "d": "mezz'ora di chiacchiere in diretta", "lv": 3, "c": 3000, "f": 20}, {"id": "festival", "n": "Tournée nei festival", "d": "una settimana tra le piazze letterarie", "lv": 4, "c": 6000, "f": 70}],PROMO_GROW=0;
 const promoWeek=()=>key(mondayOf(gnow()));
 function promoPrice(p){const n=(S.promo&&S.promo[p.id]&&S.promo[p.id].n)||0;return Math.round(p.c*(1+PROMO_GROW*n)/10)*10;}
 function promoUsed(p){const x=S.promo&&S.promo[p.id];return !!x&&x.wk===promoWeek();}
@@ -924,9 +924,9 @@ function rShop(){
 }
 function rDiary(){
   const nh=workHours();
-  let h='<section class="stack"><div class="row between"><h2 class="h">Orario di lavoro</h2><span class="meta">'+nh+'/10 ore</span></div><div class="hours">'+
+  let h='<section class="stack"><div class="row between"><h2 class="h">Orario di lavoro</h2><span class="meta">'+nh+'/'+MAX_H+' ore</span></div><div class="hours">'+
     S.hours.map((on,i)=>'<button class="hr" data-act="hour" data-v="'+i+'" aria-pressed="'+on+'" aria-label="Ore '+i+'">'+pad(i)+'</button>').join('')+'</div>'+
-    '<p class="empty">'+esc(S.name)+' lavora nelle ore accese e dorme nelle altre. Puoi sceglierne al massimo 10, anche non consecutive.'+(nh<10?' Te ne restano '+(10-nh)+' da assegnare.':'')+'</p></section>';
+    '<p class="empty">'+esc(S.name)+' lavora nelle ore accese e dorme nelle altre. Puoi sceglierne al massimo '+MAX_H+', anche non consecutive.'+(nh<MAX_H?' Te ne restano '+(MAX_H-nh)+' da assegnare.':'')+'</p></section>';
   h+=SFX.html();
   const st=S.stats;
   if(S.ex.radio){const on=S.radioOn!==false;h+='<section class="stack"><div class="row between"><h2 class="h">Radio</h2><button class="btn'+(on?'':' pri')+'" data-act="radio-toggle">'+(on?'Spegni':'Accendi')+'</button></div><p class="empty">'+radioStatus()+' Suona nelle ore di lavoro, con la finestra del gioco in primo piano. Puoi anche toccare la radio sulla libreria.</p></section>';}
@@ -982,8 +982,8 @@ function setupModal(){
     openModal('<p class="big">Aspetto</p>'+lookHtml(setup.look,'setup'),'setup');drawPreview(setup.look);
   }else{
     const n=setup.hours.filter(Boolean).length;
-    openModal('<p class="big">Orario</p><p class="lead">Scegli le 10 ore del giorno in cui '+esc(setup.name)+' scrive. Nelle pause fino a 4 ore mangia, legge e sogna a occhi aperti; nelle pause più lunghe dorme. Il tempo del gioco è quello reale: una settimana di gioco è una settimana vera.</p>'+
-      '<div class="hours">'+setup.hours.map((on,i)=>'<button class="hr" data-act="su-h" data-v="'+i+'" aria-pressed="'+on+'">'+pad(i)+'</button>').join('')+'</div><p class="meta" style="margin:0">'+n+'/10 ore scelte</p>'+
+    openModal('<p class="big">Orario</p><p class="lead">Scegli le '+MAX_H+' ore del giorno in cui '+esc(setup.name)+' scrive. Nelle pause fino a 4 ore mangia, legge e sogna a occhi aperti; nelle pause più lunghe dorme. Il tempo del gioco è quello reale: una settimana di gioco è una settimana vera.</p>'+
+      '<div class="hours">'+setup.hours.map((on,i)=>'<button class="hr" data-act="su-h" data-v="'+i+'" aria-pressed="'+on+'">'+pad(i)+'</button>').join('')+'</div><p class="meta" style="margin:0">'+n+'/'+MAX_H+' ore scelte</p>'+
       '<div class="row"><button class="btn" data-act="su-back">Indietro</button><button class="btn pri" data-act="su-go" '+(n?'':'disabled')+'>Inizia</button></div>','setup');
   }
 }
@@ -1026,7 +1026,7 @@ document.addEventListener('click',e=>{
     if(setup)setupModal();else{openModal('<p class="big">Aspetto</p>'+lookHtml(editLook,'edit'),'look');drawPreview(editLook);}
     const sh=$('#modal .sheet');if(sh)sh.scrollTop=sc;return;
   }
-  if(a==='su-h'){const i=+v,n=setup.hours.filter(Boolean).length;if(!setup.hours[i]&&n>=10){toast('Hai già 10 ore: togline una prima');return;}setup.hours[i]=!setup.hours[i];return setupModal();}
+  if(a==='su-h'){const i=+v,n=setup.hours.filter(Boolean).length;if(!setup.hours[i]&&n>=MAX_H){toast('Hai già '+MAX_H+' ore: togline una prima');return;}setup.hours[i]=!setup.hours[i];return setupModal();}
   if(a==='su-go')return startGame();
   if(!S)return;
   switch(a){
@@ -1067,7 +1067,7 @@ document.addEventListener('click',e=>{
     case 'buy':{const L=LINES[v],nx=L.tiers[S.up[v]+1];if(!nx||S.coins<nx[2]||(nx[3]&&lvl()<nx[3]))break;S.coins-=nx[2];S.up[v]++;log('Hai comprato: '+nx[0]);placeReady();save();renderPanel();hud();break;}
     case 'buy-ex':{const x=EXTRAS[v];if(S.ex[v]||S.coins<x[2])break;S.coins-=x[2];S.ex[v]=true;log('Hai comprato: '+x[0]);save();renderPanel();hud();break;}
     case 'buy-shelf':{const p=100*2**(S.shelves-1);if(S.shelves>=8||S.coins<p)break;S.coins-=p;S.shelves++;log('Nuovo ripiano: ora hai '+capSlots()+' posti');placeReady();save();renderPanel();hud();break;}
-    case 'hour':{const i=+v;if(!S.hours[i]&&workHours()>=10){toast('Hai già 10 ore: togline una prima');break;}S.hours[i]=!S.hours[i];save();renderPanel();hud();break;}
+    case 'hour':{const i=+v;if(!S.hours[i]&&workHours()>=MAX_H){toast('Hai già '+MAX_H+' ore: togline una prima');break;}S.hours[i]=!S.hours[i];save();renderPanel();hud();break;}
     case 'export':{try{$('#saveBox').value=btoa(unescape(encodeURIComponent(JSON.stringify(S))));toast('Codice generato');}catch(err){toast('Non sono riuscito a generare il codice');}break;}
     case 'copy':{const box=$('#saveBox');if(!box.value){toast('Prima genera il codice');break;}const done=()=>toast('Codice copiato');
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(box.value).then(done,()=>{box.select();toast('Selezionato: copialo a mano');});else{box.select();toast('Selezionato: copialo a mano');}break;}
@@ -1075,7 +1075,7 @@ document.addEventListener('click',e=>{
     case 'speed':S.speed=+v;save();renderPanel();hud();break;
     case 'skip':{const s=snap();S.offset+=+v;live=false;SFX.hush(true);advance(gnow());SFX.hush(false);save();renderPanel();hud();summary(s);break;}
     case 'cheat':S.coins+=500;save();renderPanel();hud();break;
-    case 'reset':if(!resetArmed){resetArmed=true;renderPanel();}else{try{localStorage.removeItem(KEY);}catch(err){}S=null;resetArmed=false;tab='desk';showNew=false;setup={step:1,name:'',g:null,look:defLook('m'),hours:Array.from({length:24},(_,i)=>i>=9&&i<19)};setupModal();}break;
+    case 'reset':if(!resetArmed){resetArmed=true;renderPanel();}else{try{localStorage.removeItem(KEY);}catch(err){}S=null;resetArmed=false;tab='desk';showNew=false;setup={step:1,name:'',g:null,look:defLook('m'),hours:Array.from({length:24},(_,i)=>i>=8&&i<20)};setupModal();}break;
   }
 });
 function toggleRadio(){
@@ -2427,7 +2427,7 @@ if(S){
   const s={w:S.stats.words,b:S.stats.books,c:S.coins,f:S.fame,seq:S.seq,t:S.lastSeen||S.clock};
   SFX.hush(true);advance(gnow());SFX.hush(false);nf.g=S.pref;save();hud();renderPanel();summary(s);
 }else{
-  setup={step:1,name:'',g:null,look:defLook('m'),hours:Array.from({length:24},(_,i)=>i>=9&&i<19)};
+  setup={step:1,name:'',g:null,look:defLook('m'),hours:Array.from({length:24},(_,i)=>i>=8&&i<20)};
   renderPanelEmpty();setupModal();
 }
 function renderPanelEmpty(){$('#panel').innerHTML='';}
