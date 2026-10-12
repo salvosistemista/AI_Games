@@ -303,10 +303,12 @@ const SFX=(()=>{
       try{ac=new C();}catch(e){return null;}
       master=ac.createGain();master.connect(ac.destination);
       const n=ac.sampleRate;NB=ac.createBuffer(1,n,n);const d=NB.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
-    if(ac.state==='suspended')ac.resume().catch(()=>{});
-    master.gain.value=VOL[cfg.vol];return ac;
+    // some browsers return nothing from resume(), or throw: never let audio break the game
+    try{if(ac.state==='suspended'){const r=ac.resume();if(r&&r.catch)r.catch(()=>{});}}catch(e){}
+    try{master.gain.value=VOL[cfg.vol];}catch(e){}
+    return ac;
   }
-  for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>{if(cfg.on)ctx();},true);
+  for(const ev of ['pointerdown','keydown'])document.addEventListener(ev,()=>{try{if(cfg.on)ctx();}catch(e){}},true);
   const now=()=>ac.currentTime;
   function env(g,T,a,d,v){g.gain.setValueAtTime(0.0001,T);g.gain.exponentialRampToValueAtTime(Math.max(0.0002,v),T+a);g.gain.exponentialRampToValueAtTime(0.0001,T+a+d);}
   function tone(f,o={}){const {t=0,d=0.15,a=0.005,v=0.3,type='sine',to=null}=o,T=now()+t,os=ac.createOscillator(),g=ac.createGain();
@@ -380,8 +382,10 @@ const SFX=(()=>{
       else for(let i=0;i<4;i++)noise({t:R()*0.9,d:0.05+R()*0.05,v:0.06,f:tool===1?5000:4000,q:5});}
   };
   function play(name,arg){
-    if(!cfg.on||quiet)return;const n=performance.now();if(last[name]&&n-last[name]<60)return;last[name]=n;
-    if(!ctx()||!S_[name])return;try{S_[name](arg);}catch(e){}
+    try{
+      if(!cfg.on||quiet)return;const n=performance.now();if(last[name]&&n-last[name]<60)return;last[name]=n;
+      if(!ctx()||!S_[name])return;S_[name](arg);
+    }catch(e){}
   }
   let lastW=0;
   function write(tool){if(!cfg.write||!cfg.on||quiet||document.hidden)return;const n=performance.now();if(n-lastW<900)return;lastW=n;play('write',tool);}
@@ -391,7 +395,7 @@ const SFX=(()=>{
     hour:'tick',export:'ok',copy:'ui',import:'ok',speed:'tick',skip:'page',cheat:'coins',reset:'error',mag:'page'};
   document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const a=el.dataset.act;
     const s=ACT[a]||(a.startsWith('lk-')?'chip':null);if(s)play(s);},true);
-  function set(k,v){cfg[k]=v;saveCfg();if(cfg.on){ctx();if(master)master.gain.value=VOL[cfg.vol];}}
+  function set(k,v){cfg[k]=v;saveCfg();try{if(cfg.on){ctx();if(master)master.gain.value=VOL[cfg.vol];}}catch(e){}}
   function html(){
     const vl=['','Basso','Medio','Alto'];
     return '<section class="stack"><div class="row between"><h2 class="h">Suoni</h2><button class="btn'+(cfg.on?'':' pri')+'" data-act="sfx-on">'+(cfg.on?'Spegni':'Accendi')+'</button></div>'+
@@ -669,8 +673,8 @@ function genWeek(mon,lv){
 function resolveDeadlines(t){
   for(const o of S.offers.slice()){
     if(o.dl>t)continue;
-    if(o.type==='con'&&o.st==='sub')resolveContest(o);
     S.offers.splice(S.offers.indexOf(o),1);
+    if(o.type==='con'&&o.st==='sub')resolveContest(o);
   }
 }
 function resolveContest(o){
@@ -720,7 +724,7 @@ let tab='desk',showNew=false,nf={g:0,f:0,a:2},modalKind=null,setup=null,sellArme
 let toastT=0;
 function toast(m){const el=$('#toast');el.textContent=m;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true;},3400);}
 function openModal(html,kind){const md=$('#modal');md.innerHTML='<div class="sheet" role="dialog" aria-modal="true">'+html+'</div>';md.hidden=false;modalKind=kind||'x';}
-function closeModal(){const md=$('#modal');md.hidden=true;md.innerHTML='';modalKind=null;sellArmed=null;}
+function closeModal(){const md=$('#modal');md.hidden=true;md.innerHTML='';modalKind=null;sellArmed=null;if(S)hud();}
 function wState(){
   const d=new Date(gnow());
   if(!S.hours[d.getHours()])return offBlock(d.getHours()).len<=4?'pause':'sleep';
@@ -2409,7 +2413,7 @@ function tick(){
   if(!S)return;
   const r=Date.now(),dt=r-lastReal;lastReal=r;
   if(S.speed>1)S.offset+=dt*(S.speed-1);
-  live=dt<5000;advance(gnow());live=false;
+  live=dt<5000;try{advance(gnow());}catch(err){console.error(err);}live=false;
   hud();tickN++;radioSync();
   if(!modalKind&&(tab==='desk'||tickN%20===0))renderPanel();
   if(modalKind&&modalKind.startsWith('book:')&&tickN%20===0&&document.activeElement.id!=='rename')bookModal(modalKind.slice(5));
