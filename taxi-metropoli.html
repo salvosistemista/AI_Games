@@ -26,8 +26,8 @@ html,body{margin:0;height:100%;background:#0b0c10;overflow:hidden;font-family:"T
 #money.neg{color:var(--red);}
 #clock{font-size:15px;font-variant-numeric:tabular-nums;}
 #clock small{color:var(--mut);font-weight:600;font-size:11px;}
-#gauges{position:absolute;top:calc(52px + env(safe-area-inset-top));left:10px;width:112px;display:flex;flex-direction:column;gap:5px;}
-.g{background:var(--chip);border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;}
+#gauges{position:absolute;top:calc(52px + env(safe-area-inset-top));left:10px;width:112px;display:flex;flex-direction:column;gap:4px;}
+.g{background:var(--chip);border-radius:8px;padding:2px 7px;height:20px;box-sizing:border-box;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;}
 .g .ic{width:16px;text-align:center;font-size:13px;}
 .g .bar{flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden;}
 .g .bar i{display:block;height:100%;border-radius:4px;background:var(--lime);}
@@ -41,10 +41,11 @@ html,body{margin:0;height:100%;background:#0b0c10;overflow:hidden;font-family:"T
 #nav .d{font-weight:900;font-size:17px;font-variant-numeric:tabular-nums;line-height:1;}
 #nav .s{font-size:10px;color:#dfe3ee;line-height:1.15;margin-top:2px;max-height:24px;overflow:hidden;}
 #street{position:absolute;top:calc(176px + env(safe-area-inset-top));right:10px;max-width:150px;text-align:right;font-size:10px;font-weight:700;color:#e8ebf2;text-shadow:0 1px 3px #000;}
-#job{position:absolute;top:calc(118px + env(safe-area-inset-top));left:10px;right:134px;background:var(--panel);border-radius:10px;padding:6px 9px;font-size:12px;line-height:1.3;}
+#job{position:absolute;top:calc(126px + env(safe-area-inset-top));left:10px;right:134px;background:var(--panel);border-radius:10px;padding:6px 9px;font-size:12px;line-height:1.3;}
 #job b{color:var(--yel);} #job .row2{display:flex;gap:10px;margin-top:3px;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;}
+#job .iss{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;font-weight:700;color:#ffb3a8;}
 #job .late{color:var(--red);} #job .ok{color:var(--lime);}
-#calls{position:absolute;top:calc(200px + env(safe-area-inset-top));left:10px;right:10px;display:flex;flex-direction:column;gap:6px;pointer-events:auto;}
+#calls{position:absolute;top:calc(208px + env(safe-area-inset-top));left:10px;right:10px;display:flex;flex-direction:column;gap:6px;pointer-events:auto;}
 .call{background:var(--panel);border-radius:12px;padding:8px 10px;border:2px solid transparent;font-size:12px;line-height:1.3;cursor:pointer;position:relative;animation:slide .3s;}
 @keyframes slide{from{transform:translateX(-30px);opacity:0;}}
 .call.sel{border-color:var(--yel);}
@@ -133,6 +134,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
     <div id="gauges">
       <div class="g" id="gFuel"><span class="ic">⛽</span><div class="bar"><i></i></div><span class="pc">--</span></div>
       <div class="g" id="gTire"><span class="ic">◎</span><div class="bar"><i></i></div><span class="pc">--</span></div>
+      <div class="g" id="gHp"><span class="ic">🛠</span><div class="bar"><i></i></div><span class="pc">--</span></div>
     </div>
     <div id="nav" class="off"><svg viewBox="0 0 100 100" id="navIc"></svg><div><div class="d" id="navD">--</div><div class="s" id="navS"></div></div></div>
     <canvas id="mini" width="232" height="232"></canvas>
@@ -170,7 +172,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
    TAXI METROPOLI — core puro (città, navigatore, fisica, economia)
    Nessuna dipendenza da DOM o Three.js: testabile in Node.
    ========================================================== */
-const VERSION='1.0';
+const VERSION='1.1';
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -614,11 +616,11 @@ function stepCar(c,inp,dt,C,npcs){
   if(c.flat){mu*=0.72;drag+=0.25;}
   const fx=Math.sin(c.a),fz=-Math.cos(c.a),rx=Math.cos(c.a),rz=Math.sin(c.a);
   let vf=c.vx*fx+c.vz*fz,vr=c.vx*rx+c.vz*rz;
-  const trac=11.5*mu*sp.grip+1.2; let gas=c.fuelOut?0:inp.gas;
+  const trac=11.5*mu*sp.grip+1.2; let gas=(c.fuelOut||c.engineDead)?0:inp.gas;
   let ax=0; c.wheelspin=0;
   if(gas>0.02){
     if(vf<-1)ax=11;
-    else{const vm=c.flat?Math.min(sp.vmax,7):sp.vmax;const t=Math.max(0,1-Math.pow(Math.max(vf,0)/vm,2));let want=gas*sp.accel*t;if(want>trac){c.wheelspin=(want-trac)/sp.accel;want=trac;}ax=want;}
+    else{const pf=c.perf||1,vm=c.flat?Math.min(sp.vmax*pf,7):sp.vmax*pf;const t=Math.max(0,1-Math.pow(Math.max(vf,0)/vm,2));let want=gas*sp.accel*pf*t;if(want>trac){c.wheelspin=(want-trac)/sp.accel;want=trac;}ax=want;}
   }
   if(inp.brake>0.02){
     if(vf>0.6)ax-=inp.brake*Math.min(14,11.5*mu*sp.grip+2.5);
@@ -640,8 +642,8 @@ function stepCar(c,inp,dt,C,npcs){
   c.w+=(target-c.w)*Math.min(1,(5+5*mu)*dt); c.a+=c.w*dt;
   let vx=vf*fx+vr*rx,vz=vf*fz+vr*rz,nx=c.x+vx*dt,nz=c.z+vz*dt;
   // collisioni
-  let hit=0; const H=C.hcell, nfx=Math.sin(c.a),nfz=-Math.cos(c.a);
-  const resolve=(n1,n2,pen,o,bounce)=>{nx+=n1*pen;nz+=n2*pen;const vn=vx*n1+vz*n2;if(vn<0){vx-=(1+bounce)*vn*n1;vz-=(1+bounce)*vn*n2;const loss=clamp(1+vn*0.04,0.4,1);vx*=loss;vz*=loss;hit=Math.max(hit,-vn);c.w+=(o>0?1:-1)*(vx*n2-vz*n1)*0.015;}};
+  let hit=0,hitF=0; const H=C.hcell, nfx=Math.sin(c.a),nfz=-Math.cos(c.a);
+  const resolve=(n1,n2,pen,o,bounce)=>{nx+=n1*pen;nz+=n2*pen;const vn=vx*n1+vz*n2;if(vn<0){vx-=(1+bounce)*vn*n1;vz-=(1+bounce)*vn*n2;const loss=clamp(1+vn*0.04,0.4,1);vx*=loss;vz*=loss;hit=Math.max(hit,-vn);if(o>0&&(n1*nfx+n2*nfz)<-0.55)hitF=Math.max(hitF,-vn);c.w+=(o>0?1:-1)*(vx*n2-vz*n1)*0.015;}};
   for(const o of[1.3,-1.3]){
     const px=nx+nfx*o,pz=nz+nfz*o, ka=Math.floor(px/H),kb=Math.floor(pz/H);
     for(let a=ka-1;a<=ka+1;a++)for(let b=kb-1;b<=kb+1;b++){const k=a*100003+b;
@@ -657,7 +659,7 @@ function stepCar(c,inp,dt,C,npcs){
   const B=C.bounds;
   if(nx<B.x0){nx=B.x0;if(vx<0){hit=Math.max(hit,-vx);vx*=-0.3;}} if(nx>B.x1){nx=B.x1;if(vx>0){hit=Math.max(hit,vx);vx*=-0.3;}}
   if(nz<B.z0){nz=B.z0;if(vz<0){hit=Math.max(hit,-vz);vz*=-0.3;}} if(nz>C.seaZ-1.2){nz=C.seaZ-1.2;if(vz>0){hit=Math.max(hit,vz);vz*=-0.3;}}
-  c.hit=hit; c.x=nx; c.z=nz; c.vx=vx; c.vz=vz;
+  c.hit=hit; c.hitFront=hitF; c.x=nx; c.z=nz; c.vx=vx; c.vz=vz;
   const fx2=Math.sin(c.a),fz2=-Math.cos(c.a); c.vf=vx*fx2+vz*fz2; c.vr=vx*Math.cos(c.a)+vz*Math.sin(c.a);
   c.steer=inp.steer;
   // urto contro il cordolo
@@ -672,12 +674,38 @@ function wearRate(c,inp){
   const v=Math.abs(c.vf); let w=v*0.0036+c.slip*0.05+c.wheelspin*0.5+(inp.hb&&v>3?0.3:0)+(c.surf===2?v*0.003:0)+(c.flat?v*0.05:0);
   return w*c.spec.wear;
 }
-function punctureChance(tread,dt,curb){
-  // probabilità di forare nel passo
+function punctureChance(tread,dt,curb,hp){
+  // probabilità di forare nel passo (più alta se il taxi è danneggiato)
   let p=0; if(tread<22)p+=Math.pow((22-tread)/22,2)*0.03*dt; if(tread<=0)p+=0.25*dt;
   if(curb>6)p+=(tread<45?0.03:0.006)*Math.pow(curb/14,2);
-  return p;
+  return p*(1+2.5*damageSeverity(hp==null?100:hp));
 }
+
+/* ---------------- DANNI ---------------- */
+// integrità 0..100. hit = velocità d'impatto (m/s) lungo la normale
+const DMG_FREE=2.5;
+function impactDamage(hit,frontal){ if(hit<DMG_FREE)return 0; return 0.8*Math.pow(hit-DMG_FREE,1.25)*(frontal?1:0.6); }
+// probabilità che un urto frontale rompa il motore
+function engineBreakChance(hitF,hp){
+  if(hitF<9)return 0;
+  let p=clamp((hitF-14)/12,0,1)*0.8;           // da ~50 km/h il rischio cresce, ~95 km/h quasi certo
+  p+=clamp((hitF-9)/4,0,1)*0.04;                // urti medi: piccolo rischio
+  if(hp<25)p+=0.25*clamp((hitF-9)/6,0,1);      // motore già provato
+  return clamp(p,0,0.85);
+}
+function damageSeverity(hp){return clamp((60-hp)/60,0,1);}   // 0 sopra il 60%
+function perfFactor(hp){return 1-0.35*damageSeverity(hp);}
+// probabilità al secondo che compaia un nuovo guasto (perdita, fari, navigatore)
+function issueRate(hp){const s=damageSeverity(hp);return s>0?0.004+s*0.012:0;}
+const LEAK_RATE=0.012; // litri al secondo persi con il serbatoio forato
+// probabilità che il cliente rifiuti il taxi ammaccato
+function refuseChance(type,hp){
+  const th=type==='vip'?75:type==='group'?30:type==='urgent'?35:45;
+  if(hp>=th)return 0;
+  return clamp(0.15+(th-hp)/th*0.75,0,0.9)*(type==='urgent'?0.6:1);
+}
+const BODY_RATE={gazzella:3,brezza:3.5,orsa:4,conte:6,lampo:8};   // € per punto di integrità
+const ENGINE_PRICE={gazzella:350,brezza:420,orsa:500,conte:700,lampo:900};
 
 /* ---------------- ECONOMIA ---------------- */
 const BASE_FARE=8, PER_KM=20;
@@ -832,7 +860,7 @@ function botDrive(c,route,st,npcs,cruise){
 }
 
 if(typeof module!=='undefined')module.exports={VERSION,CARS,CAR_BY_ID,LANDMARKS,TIME_SCALE,FUEL_PRICE,genCity,surfaceAt,blockAt,projectEdge,routeTo,navRoute,routeLen,maneuvers,laneOffset,polyLen,polyProject,polyPoint,
-  makeCar,stepCar,fuelRate,wearRate,punctureChance,isNight,fareFor,towCost,RESCUE_FUEL,RESCUE_COST,hourDemand,newCall,settleRide,makeTraffic,stepTraffic,botDrive,mulberry32,clamp,wrapA,inServiceZone};
+  makeCar,stepCar,fuelRate,wearRate,punctureChance,isNight,fareFor,towCost,RESCUE_FUEL,RESCUE_COST,hourDemand,impactDamage,engineBreakChance,damageSeverity,perfFactor,issueRate,refuseChance,LEAK_RATE,BODY_RATE,ENGINE_PRICE,newCall,settleRide,makeTraffic,stepTraffic,botDrive,mulberry32,clamp,wrapA,inServiceZone};
 
 'use strict';
 /* ==========================================================
@@ -973,9 +1001,9 @@ function buildTaxi(spec){
   const signMat=new THREE.MeshLambertMaterial({color:0xffffff,map:signTex,emissive:0xffcc33,emissiveIntensity:0});
   const sign=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.28,0.3),[mDark,mDark,mDark,mDark,signMat,signMat]);sign.position.set(0,roofY+0.18,f.cabZ+0.1);sign.castShadow=true;body.add(sign);
   // luci
-  const headM=new THREE.MeshLambertMaterial({color:0xfff6d8,emissive:0xfff2c0,emissiveIntensity:0.2});
+  const headM=new THREE.MeshLambertMaterial({color:0xfff6d8,emissive:0xfff2c0,emissiveIntensity:0.2}),headM2=headM.clone();
   const tailM=new THREE.MeshLambertMaterial({color:0x8a1410,emissive:0xff2a1a,emissiveIntensity:0.2});
-  for(const sx of[-1,1]){const a=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.14,0.06),headM);a.position.set(sx*(f.W/2-0.32),0.74+y0,-hl-0.02);body.add(a);
+  for(const sx of[-1,1]){const a=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.14,0.06),sx<0?headM:headM2);a.position.set(sx*(f.W/2-0.32),0.74+y0,-hl-0.02);body.add(a);
     const b=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.14,0.06),tailM);b.position.set(sx*(f.W/2-0.3),0.74+y0,hl+0.02);body.add(b);}
   // ruote
   const wheels=[],fronts=[];const wg=new THREE.CylinderGeometry(f.wr,f.wr,0.28,12);wg.rotateZ(Math.PI/2);const wgf=fgeo(wg);wg.dispose();
@@ -986,7 +1014,7 @@ function buildTaxi(spec){
     wheels.push(w);if(z<0)fronts.push(piv);}
   const beamMat=new THREE.MeshBasicMaterial({map:BEAM(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0});
   const beam=new THREE.Mesh(new THREE.PlaneGeometry(12,26),beamMat);beam.rotation.x=-Math.PI/2;beam.position.set(0,0.09,-hl-12.5);beam.renderOrder=2;g.add(beam);
-  g.userData={body,wheels,fronts,front:-hl,signMat,headM,tailM,y0,wr:f.wr,beamMat};
+  g.userData={body,wheels,fronts,front:-hl,signMat,headM,headM2,tailM,y0,wr:f.wr,beamMat,mBody,bodyCol:new THREE.Color(spec.body),hl,dmgK:-1};
   return g;
 }
 const NPC_GEO={};
@@ -1018,7 +1046,7 @@ function buildPerson(shirt){
 /* ---------- particelle e segni ---------- */
 const MAXP=260,MAXS=1400;
 function makeParticles(){const g=fgeo(new THREE.BoxGeometry(1,1,1));const m=new THREE.InstancedMesh(g,new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:0.6,depthWrite:false}),MAXP);
-  for(let i=0;i<MAXP;i++){dummy.position.set(0,-50,0);dummy.scale.setScalar(0.001);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);}m.frustumCulled=false;
+  for(let i=0;i<MAXP;i++){dummy.position.set(0,-50,0);dummy.scale.setScalar(0.001);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);m.setColorAt(i,_c.setRGB(1,1,1));}m.frustumCulled=false;
   const P=[];for(let i=0;i<MAXP;i++)P.push({alive:false});return{mesh:m,P,next:0};}
 function makeSkids(){const geo=new THREE.BufferGeometry();const pos=new Float32Array(MAXS*18);geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
   const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:0.35,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3}));m.frustumCulled=false;m.renderOrder=2;return{mesh:m,pos,n:0,last:[null,null],dirty:false};}
@@ -1285,12 +1313,19 @@ function setTime(hours){
   for(const m of S.svcLights)m.material.color.set(mixC(0xd8d8d8,0xffffff,lit));
   S.mtnMat.color.set(mixC(0x0f1424,0x8696a8,k.day));
   S.sunSpr.material.opacity=clamp(k.el*4+0.3,0,1);S.moonSpr.material.opacity=clamp(-k.el*3+0.2,0,1)*1;
-  if(S.car){const u=S.car.userData;u.headM.emissiveIntensity=lit>0.3?1.2:0.15;u.beamMat.opacity=clamp((lit-0.25)*1.6,0,0.75);}
+  S.lit=lit;
   return k;
 }
 
 /* ---------- aggiornamento per frame ---------- */
-function spawnP(x,y,z,vx,vy,vz,s,life,col){const ps=S.parts,i=ps.next,q=ps.P[i];ps.next=(i+1)%MAXP;Object.assign(q,{alive:true,x,y,z,vx,vy,vz,s,life,age:0});}
+function spawnP(x,y,z,vx,vy,vz,s,life,col){const ps=S.parts,i=ps.next,q=ps.P[i];ps.next=(i+1)%MAXP;Object.assign(q,{alive:true,x,y,z,vx,vy,vz,s,life,age:0});
+  ps.mesh.setColorAt(i,_c.set(col||0xf2f2f2));ps.mesh.instanceColor.needsUpdate=true;}
+// detriti all'urto
+function debris(x,z,n,col){if(!S)return;for(let i=0;i<n;i++)spawnP(x+(Math.random()-0.5),0.6+Math.random()*0.5,z+(Math.random()-0.5),(Math.random()-0.5)*6,1.5+Math.random()*3,(Math.random()-0.5)*6,0.12+Math.random()*0.15,0.5+Math.random()*0.5,col||0x9a9a9a);}
+// luci in base ai guasti: 'ok' | 'flicker' | 'off'
+function lightFactor(mode,t){if(mode==='off')return 0;if(mode!=='flicker')return 1;
+  const slow=Math.sin(t*0.9)+Math.sin(t*2.3+1);if(slow<-1.1)return 0;           // blackout di qualche secondo
+  return Math.sin(t*31)+Math.sin(t*17.3)>0.9?0.1:1;}
 function update(c,dt,t,o){
   if(!S||!S.car)return;
   const car=S.car,ud=car.userData,spd=Math.hypot(c.vx,c.vz);
@@ -1308,11 +1343,20 @@ function update(c,dt,t,o){
   ud.tailM.emissiveIntensity=o.braking?1.6:(S.light&&S.light.night>0.3?0.6:0.15);
   ud.signMat.emissiveIntensity=o.free?(S.light&&S.light.night>0.3?1.3:0.35):0;
   ud.signMat.color.set(o.free?0xffffff:0x777777);
+  // fari (guasti) e carrozzeria ammaccata
+  const D=o.dmg||{hp:100,lights:'ok'},lit=S.lit||0,lf=lightFactor(D.lights,t),one=D.hp<40;
+  const base=lit>0.3?1.2:0.15;ud.headM.emissiveIntensity=base*lf;ud.headM2.emissiveIntensity=one?0.05:base*lf;
+  ud.beamMat.opacity=clamp((lit-0.25)*1.6,0,0.75)*lf*(one?0.55:1);
+  const dk=Math.round(D.hp);if(dk!==ud.dmgK){ud.dmgK=dk;const f=1-clamp((100-dk)/100,0,1)*0.5;ud.mBody.color.copy(ud.bodyCol).multiplyScalar(f).lerp(_c.set(0x5a4c3e),clamp((75-dk)/120,0,0.45));}
   // fumo e segni
   const fx=Math.sin(c.a),fz=-Math.cos(c.a),rx=Math.cos(c.a),rz=Math.sin(c.a);
   const skidding=spd>3&&(c.slip>3.2||c.wheelspin>0.3);
   S.spawnAcc+=(skidding?(c.slip*4+c.wheelspin*40):0)*dt;
   while(S.spawnAcc>1){S.spawnAcc-=1;const side=Math.random()<0.5?-1:1;spawnP(c.x-fx*1.5+rx*side*0.85,0.3,c.z-fz*1.5+rz*side*0.85,(Math.random()-0.5)*1.5,0.8+Math.random(),(Math.random()-0.5)*1.5,0.5+Math.random()*0.5,1.2+Math.random(),0);}
+  // fumo dal cofano: motore rotto o taxi molto danneggiato
+  const smoke=D.dead?16:D.hp<35?3+(35-D.hp)/35*9:0;S.smokeAcc=(S.smokeAcc||0)+smoke*dt;
+  while(S.smokeAcc>1){S.smokeAcc-=1;const hx=c.x+fx*(ud.hl-0.6),hz=c.z+fz*(ud.hl-0.6);
+    spawnP(hx+(Math.random()-0.5)*0.8,1.05,hz+(Math.random()-0.5)*0.8,(Math.random()-0.5)*0.6-c.vx*0.3,1.2+Math.random()*0.8,(Math.random()-0.5)*0.6-c.vz*0.3,0.5+Math.random()*0.4,1.8+Math.random()*1.2,D.dead?0x2a2a2a:0x9a9a9a);}
   const ps=S.parts;let ch=false;
   for(let i=0;i<MAXP;i++){const q=ps.P[i];if(!q.alive)continue;ch=true;q.age+=dt;if(q.age>=q.life){q.alive=false;dummy.position.set(0,-50,0);dummy.scale.setScalar(0.001);dummy.updateMatrix();ps.mesh.setMatrixAt(i,dummy.matrix);continue;}
     q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vy*=0.98;const k=q.age/q.life,sc=q.s*(1+k*3)*(1-k);dummy.position.set(q.x,q.y,q.z);dummy.rotation.set(q.age,q.age*0.7,0);dummy.scale.setScalar(Math.max(0.001,sc));dummy.updateMatrix();ps.mesh.setMatrixAt(i,dummy.matrix);}
@@ -1396,7 +1440,7 @@ function resetFx(){if(!S)return;for(const q of S.parts.P)q.alive=false;S.skids.n
 function shake(v){if(S)S.shake=Math.min(1.2,Math.max(S.shake,v));}
 function render(){if(S)renderer.render(scene,camera);}
 function info(){return renderer?renderer.info.render:null;}
-return{init,build,setCar,setNpcs,setTime,update,render,resize,setQuality,setBeacons,setPeople,setRoute,resetFx,shake,info,sky,get ready(){return!!S;}};
+return{debris,init,build,setCar,setNpcs,setTime,update,render,resize,setQuality,setBeacons,setPeople,setRoute,resetFx,shake,info,sky,get ready(){return!!S;}};
 })();
 
 'use strict';
@@ -1420,7 +1464,7 @@ const SFX=(()=>{
   function setVol(v){vol=v;if(master)master.gain.setTargetAtTime(v,ctx.currentTime,0.05);}
   function engine(c,active,gas){
     if(!ctx||!eng)return;const t=ctx.currentTime;
-    if(!active||c.fuelOut){eng.g.gain.setTargetAtTime(0,t,0.1);roll.g.gain.setTargetAtTime(0,t,0.1);return;}
+    if(!active||c.fuelOut||c.engineDead){eng.g.gain.setTargetAtTime(0,t,0.1);roll.g.gain.setTargetAtTime(0,t,0.1);return;}
     const rpm=c.rpm||0.2,gn=typeof c.gear==='number'?c.gear:1,f=34+rpm*95+gn*3;
     eng.o1.frequency.setTargetAtTime(f,t,0.04);eng.o2.frequency.setTargetAtTime(f*0.5,t,0.04);eng.o3.frequency.setTargetAtTime(f*2.01,t,0.04);
     eng.lp.frequency.setTargetAtTime(300+rpm*1100+gas*400,t,0.06);eng.g.gain.setTargetAtTime(0.05+rpm*0.06+gas*0.05,t,0.06);
@@ -1443,6 +1487,7 @@ const SFX=(()=>{
     pop(){if(!ok())return;noise(0,0.5,0.6,2600);tone('sine',200,0,0.4,0.3,40);},
     fuel(){if(!ok())return;noise(0,1.2,0.12,900,'bandpass');tone('triangle',880,1.2,0.15,0.12);},
     tow(){if(!ok())return;for(let i=0;i<3;i++)tone('sawtooth',300-i*40,i*0.2,0.18,0.06);},
+    boom(){if(!ok())return;noise(0,0.9,0.7,900);tone('sawtooth',90,0,0.8,0.35,28);noise(0.12,1.4,0.3,260);tone('square',60,0.3,0.6,0.15,30);},
     curb(v){if(!ok())return;noise(0,0.12,Math.min(0.4,v*0.03),500);}};
 })();
 const VOICE=(()=>{
@@ -1475,12 +1520,13 @@ const hours=min=>(min/60)%24;
 let CITY=null;
 const G={mode:'boot',K:null,car:null,npcs:[],calls:[],sel:0,job:null,nav:null,route:null,raw:null,man:[],lastRoute:-9,
   input:{steer:0,gas:0,brake:0,hb:false},kbSteer:0,t:0,callT:4,callId:1,said:new Set(),lastInput:'none',rng:mulberry32(Date.now()%1e9),
-  frameHit:0,lastHitT:0,frameCurb:0,events:[],stuckT:0,menuHour:17.5,bot:null,warn:{},night:null,actKey:'',hud:{},minT:0};
+  frameHit:0,frameDmg:0,lastHitT:0,lastDmgT:-9,gps:{on:true,t:8},frameCurb:0,events:[],stuckT:0,menuHour:17.5,bot:null,warn:{},night:null,actKey:'',hud:{},minT:0};
 const cs=()=>G.K.cars[G.K.car];
 const spec=()=>CAR_BY_ID[G.K.car];
 
-function newCareer(){const g=CITY.garages[0];return{v:1,fresh:true,money:100,clock:7*60,car:'gazzella',owned:['gazzella'],cars:{gazzella:{fuel:28,tread:80,flat:false}},
-  x:g.cx,z:g.cz,a:Math.atan2(CITY.edges[g.addr.e].dx,-CITY.edges[g.addr.e].dz),stats:{rides:0,km:0,earned:0,tips:0,fuel:0,tires:0,tow:0,stars:0,best:0,cancelled:0,lost:0}};}
+function newCareer(){const g=CITY.garages[0];return{v:1,fresh:true,money:100,clock:7*60,car:'gazzella',owned:['gazzella'],cars:{gazzella:{fuel:28,tread:80,flat:false,hp:100,iss:{},dead:false}},
+  x:g.cx,z:g.cz,a:Math.atan2(CITY.edges[g.addr.e].dx,-CITY.edges[g.addr.e].dz),stats:{rides:0,km:0,earned:0,tips:0,fuel:0,tires:0,tow:0,stars:0,best:0,cancelled:0,lost:0,repair:0,crash:0}};}
+function normCar(st){if(st.hp==null)st.hp=100;if(!st.iss)st.iss={};st.dead=!!st.dead;return st;}
 
 /* ---------- navigazione nei menu (come Prova Speciale) ---------- */
 const NAV={items:[],i:0,back:null};
@@ -1520,7 +1566,7 @@ function menuMain(){
 function intro(){
   showScreen(`<h2>Primo turno<small>Benvenuto a Metropoli</small></h2><div class="bottom">
     <div class="card" style="line-height:1.5;font-size:14px">📞 Le chiamate arrivano dalla centrale: accettale e vai a prendere il cliente (fascio <b style="color:#ffd400">giallo</b>), poi portalo a destinazione (fascio <b style="color:#7dff6a">verde</b>). Il tassametro conta i km: più lunga la corsa, più guadagni. Guida pulita e puntuale = mance più alte.<br><br>
-    ⛽ Il taxi consuma benzina: fai il pieno ai distributori.<br>◎ Le gomme si consumano: se sono lisce rischi di bucare e dovrai pagare il carro attrezzi fino all'officina.<br>🌙 Dalle 22 alle 6 vale la tariffa notturna (+20%).<br>🔧 In officina compri gomme nuove e taxi migliori.</div>
+    ⛽ Il taxi consuma benzina: fai il pieno ai distributori.<br>◎ Le gomme si consumano: se sono lisce rischi di bucare e dovrai pagare il carro attrezzi fino all'officina.<br>🛠 Gli urti ammaccano il taxi: sotto il 60% arrivano i guasti (perdite di benzina, fari, navigatore) e i clienti più esigenti non salgono. Un frontale ad alta velocità può rompere il motore.<br>🌙 Dalle 22 alle 6 vale la tariffa notturna (+20%).<br>🔧 In officina ripari carrozzeria e motore, compri gomme nuove e taxi migliori.</div>
     <button class="btn main" data-nav id="bGo">INIZIA IL TURNO</button><button class="btn" data-nav id="bBack">Indietro</button></div>`,menuMain,'bGo');
   $('bGo').onclick=()=>{store.career=newCareer();startPlay(store.career);save();};$('bBack').onclick=menuMain;
 }
@@ -1562,7 +1608,7 @@ function placeOnRoad(x,z,a){const P=projectEdge(CITY,x,z),e=P.e;let dir=1;if(a!=
   const nx=-e.dz*dir,nz=e.dx*dir;const s=clamp(P.s,e.hw+6,e.len-e.hw-6);
   G.car.x=e.ax+e.dx*s+nx*e.hw*0.45;G.car.z=e.az+e.dz*s+nz*e.hw*0.45;G.car.a=Math.atan2(e.dx*dir,-e.dz*dir);G.car.vx=G.car.vz=G.car.w=G.car.vf=G.car.vr=0;}
 function startPlay(K){
-  SFX.unlock();VOICE.hush();G.K=K;G.bot=null;
+  SFX.unlock();VOICE.hush();G.K=K;G.bot=null;for(const k in K.cars)normCar(K.cars[k]);K.stats.repair=K.stats.repair||0;K.stats.crash=K.stats.crash||0;G.gps={on:true,t:8};
   G.car=makeCar(spec());GFX.setCar(spec());G.car.x=K.x;G.car.z=K.z;G.car.a=K.a;if(K.fresh){placeOnRoad(K.x,K.z,null);delete K.fresh;}G.car.flat=!!cs().flat;G.car.flatSide=1;G.car.fuelOut=cs().fuel<=0;
   G.npcs=makeTraffic(CITY,32,G.rng,G.car.x,G.car.z);GFX.setNpcs(G.npcs);GFX.resetFx();
   G.calls=[];G.job=null;G.nav=null;G.route=null;G.raw=null;G.man=[];G.callT=3;G.night=isNight(K.clock);G.warn={};G.said.clear();
@@ -1585,7 +1631,7 @@ function renderCalls(force){
   if(force||el.dataset.k!==key){el.dataset.k=key;
     el.innerHTML=G.calls.map((c,i)=>{const no=c.needsCap>spec().cap;
       return`<div class="call ${i===G.sel?'sel':''}" data-i="${i}"><div class="h"><span>📞 ${c.name}${c.type!=='normal'?`<span class="tag ${c.type}">${TYPE_TAG[c.type]}</span>`:''}</span><span style="color:#ffd400">~${eur0(c.fare)}</span></div>
-      <div>${c.pick.name} → <b>${c.dest.name}</b></div><div class="mut" style="font-size:11px">corsa ${km(c.dist)} · cliente a ${km(Math.hypot(c.pick.x-G.car.x,c.pick.z-G.car.z))}${no?' · <span class="no">serve un monovolume</span>':''}<span class="k">${i===G.sel?(G.lastInput==='pad'?'△ Y accetta':'E accetta'):''}</span></div><div class="tm"></div></div>`;}).join('');
+      <div>${c.pick.name} → <b>${c.dest.name}</b></div><div class="mut" style="font-size:11px">corsa ${km(c.dist)} · cliente a ${km(Math.hypot(c.pick.x-G.car.x,c.pick.z-G.car.z))}${no?' · <span class="no">serve un monovolume</span>':refuseChance(c.type,cs().hp)>0?' · <span class="no">⚠ potrebbe rifiutare il taxi ammaccato</span>':''}<span class="k">${i===G.sel?(G.lastInput==='pad'?'△ Y accetta':'E accetta'):''}</span></div><div class="tm"></div></div>`;}).join('');
     el.querySelectorAll('.call').forEach(d=>d.onclick=()=>{G.sel=+d.dataset.i;acceptCall();});}
   el.querySelectorAll('.call .tm').forEach((b,i)=>{const c=G.calls[i];if(c)b.style.width=clamp((c.exp-G.t)/c.ttl,0,1)*100+'%';});
 }
@@ -1603,7 +1649,9 @@ function updateJob(dt){
   const J=G.job;if(!J)return;const c=J.c,car=G.car,v=Math.abs(car.vf);
   if(J.phase==='pickup'){
     const d=Math.hypot(c.pick.x-car.x,c.pick.z-car.z);
-    if(d<10&&v<1.5){J.phase='board';J.bt=0;clearNav();SFX.beep(880,0.08);}
+    if(d<10&&v<1.5){
+      const hp=cs().hp;if(G.rng()<refuseChance(c.type,hp)){refuse(c,hp);return;}
+      J.phase='board';J.bt=0;clearNav();SFX.beep(880,0.08);}
     else if(G.t-J.t0>J.limit){cancelJob('😠 '+c.name+' ha preso un altro taxi.');VOICE.say('Il cliente ha annullato la corsa');}
   }else if(J.phase==='board'){
     J.bt+=dt;if(v>4){J.phase='pickup';setNav({x:c.pick.x,z:c.pick.z,e:c.pick.e,s:c.pick.s,name:c.pick.name},'pickup');return;}
@@ -1612,10 +1660,17 @@ function updateJob(dt){
       bubble(`<b>${c.name}:</b> ${c.line}`);VOICE.say('Destinazione: '+c.dest.name.replace(/\s\d+$/,''),true);}
   }else if(J.phase==='ride'){
     const d=Math.hypot(c.dest.x-car.x,c.dest.z-car.z);
-    if(d<10&&v<1.5){J.phase='alight';J.at=0;clearNav();SFX.door();J.res=settleRide(c,J.driven,G.t-J.rideT,J.smooth,spec());}
+    if(d<10&&v<1.5){J.phase='alight';J.at=0;clearNav();SFX.door();J.res=settleRide(c,J.driven,G.t-J.rideT,J.smooth,spec());
+      const hp=cs().hp;if(hp<50&&J.res.tip>0){J.res.tip=Math.round(J.res.tip*(hp<30?0.2:0.45)*100)/100;J.res.notes.push('Taxi malconcio: mancia ridotta');}}
   }else if(J.phase==='alight'){
     J.at+=dt;if(J.at>1.4)payout();
   }
+}
+function refuse(c,hp){
+  const L=c.type==='vip'?['Un VIP non sale su un\'auto ammaccata.','Mi aspettavo un\'auto impeccabile. Chiamo un altro servizio.']
+    :hp<35?['Ma fuma dal cofano! Chiamo un altro taxi.','Su quel rottame? Neanche per sogno!']:['Con quel taxi ammaccato? No grazie!','Ehm... preferisco aspettarne un altro.'];
+  bubble(`<b>${c.name}:</b> ${L[Math.floor(G.rng()*L.length)]}`);SFX.beep(300,0.25);
+  cancelJob('🙅 '+c.name+' non è salito: il taxi è troppo malconcio.');VOICE.say('Il cliente ha rifiutato il taxi',true);
 }
 function payout(){
   const J=G.job,r=J.res,K=G.K,tot=r.fare+r.tip;K.money+=tot;const S=K.stats;S.rides++;S.earned+=r.fare;S.tips+=r.tip;S.stars+=r.stars;S.best=Math.max(S.best,tot);
@@ -1631,7 +1686,7 @@ function bubble(html){const b=$('bubble');b.innerHTML=html;b.classList.add('show
 const TURN_TXT={left:'svolta a sinistra',right:'svolta a destra',uturn:'fai inversione',arrive:'arrivo'};
 function updateNav(){
   if(!G.nav)return;const car=G.car;
-  if(G.t-G.lastRoute>1){G.lastRoute=G.t;const r=navRoute(CITY,car.x,car.z,car.a,G.nav.target);G.route=r.lane;G.raw=r.pts;G.man=maneuvers(r.pts);G.routeLen=r.len;GFX.setRoute(r.lane,G.nav.color);}
+  if(G.t-G.lastRoute>1){G.lastRoute=G.t;const r=navRoute(CITY,car.x,car.z,car.a,G.nav.target);G.route=r.lane;G.raw=r.pts;G.man=maneuvers(r.pts);G.routeLen=r.len;GFX.setRoute(gpsOk()?r.lane:null,G.nav.color);}
   // servizi: arrivo nella piazzola
   if(G.nav&&(G.nav.kind==='fuel'||G.nav.kind==='garage')){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type===G.nav.kind){clearNav();VOICE.say('Sei arrivato');}}
 }
@@ -1647,11 +1702,15 @@ const ARROWS={
   left:'<path d="M70 90 V45 Q70 30 55 30 H38" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"/><polygon points="40,12 12,30 40,48" fill="#fff"/>',
   straight:'<path d="M50 92 V30" stroke="#fff" stroke-width="12" stroke-linecap="round"/><polygon points="28,36 50,8 72,36" fill="#fff"/>',
   uturn:'<path d="M66 90 V40 Q66 18 46 18 Q28 18 28 40 V58" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/><polygon points="12,54 44,54 28,82" fill="#fff"/>',
+  nosig:'<circle cx="50" cy="50" r="40" fill="none" stroke="#ff4d3d" stroke-width="9"/><path d="M22 22 L78 78" stroke="#ff4d3d" stroke-width="9"/><path d="M50 40 V64 M38 50 Q50 34 62 50" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round"/>',
   arrive:'<path d="M30 92 V12" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M34 14 H80 L70 30 L80 46 H34Z" fill="#7dff6a"/>',
 };
 function navHud(){
   const el=$('nav');if(!G.nav||G.mode!=='play'){el.classList.add('off');return;}
-  el.classList.remove('off');const m=nextManeuver();if(!m){return;}
+  el.classList.remove('off');
+  if(!gpsOk()){if(G.hud.navIc!=='nosig'){G.hud.navIc='nosig';$('navIc').innerHTML=ARROWS.nosig;}
+    if(G.hud.navD!=='nosig'){G.hud.navD='nosig';$('navD').textContent='NO GPS';}const t=Math.floor(G.t*2)%4;const sT='Ricerca segnale'+'.'.repeat(t);if(G.hud.navS!==sT){G.hud.navS=sT;$('navS').textContent=sT;}return;}
+  const m=nextManeuver();if(!m){return;}
   const ic=m.turn==='arrive'?'arrive':m.turn;
   if(G.hud.navIc!==ic){G.hud.navIc=ic;$('navIc').innerHTML=ARROWS[ic]||ARROWS.straight;}
   const dTxt=m.d<1000?Math.round(m.d/10)*10+' m':(m.d/1000).toFixed(1).replace('.',',')+' km';
@@ -1662,6 +1721,14 @@ function navHud(){
   if(m.turn==='arrive'){if(m.d<70&&!G.said.has('arr')){G.said.add('arr');VOICE.say('Destinazione tra poco, accosta');}}
   else{ if(m.d<190&&m.d>70&&!G.said.has(key+'f')){G.said.add(key+'f');VOICE.say('Tra '+Math.round(m.d/50)*50+' metri, '+TURN_TXT[m.turn]+(m.street?' in '+m.street:''));}
     if(m.d<40&&!G.said.has(key+'n')){G.said.add(key+'n');G.said.add(key+'f');VOICE.say(TURN_TXT[m.turn].replace(/^./,c=>c.toUpperCase()),true);} }
+}
+function gpsOk(){return!(G.K&&cs().iss.gps)||G.gps.on;}
+function updateGps(dt){
+  const st=cs();if(!st.iss.gps){if(!G.gps.on){G.gps.on=true;G.lastRoute=-9;}return;}
+  G.gps.t-=dt;if(G.gps.t>0)return;const sev=damageSeverity(st.hp);
+  G.gps.on=!G.gps.on;
+  if(G.gps.on){G.gps.t=5+G.rng()*10*(1-sev*0.6);G.lastRoute=-9;}
+  else{G.gps.t=3+G.rng()*6+sev*8;GFX.setRoute(null);VOICE.hush();if(G.nav)SFX.beep(240,0.2);}
 }
 function nearestSvc(list){let b=null,bd=1e9;for(const s of list){const d=Math.hypot(s.cx-G.car.x,s.cz-G.car.z);if(d<bd){bd=d;b=s;}}return b;}
 function navToService(type){const s=nearestSvc(type==='fuel'?CITY.stations:CITY.garages);setNav({x:s.cx,z:s.cz,e:s.addr.e,s:s.addr.s,name:s.name},type);VOICE.say('Navigazione verso '+s.name,true);toast((type==='fuel'?'⛽ ':'🔧 ')+s.name);}
@@ -1681,14 +1748,23 @@ function fuelScreen(s){
   $('bFull').onclick=()=>buy(need);$('b10').onclick=()=>buy(10);$('bOut').onclick=resumePlay;if($('bCred'))$('bCred').onclick=()=>{st.fuel+=10;K.money-=10*FUEL_PRICE;K.stats.fuel+=10*FUEL_PRICE;G.car.fuelOut=false;SFX.fuel();save();fuelScreen(s);};
 }
 function garageScreen(s){
-  s=s||inServiceZone(CITY,G.car.x,G.car.z,0)||nearestSvc(CITY.garages);const sp=spec(),st=cs(),K=G.K,flat=G.car.flat;
+  s=s||inServiceZone(CITY,G.car.x,G.car.z,0)||nearestSvc(CITY.garages);const sp=spec(),st=cs(),K=G.K,flat=G.car.flat,dead=st.dead;
+  const hp=st.hp,rate=BODY_RATE[sp.id]||4,miss=Math.ceil(100-hp-0.001),full=Math.round(miss*rate),eng=ENGINE_PRICE[sp.id]||400,pts=Math.min(miss,Math.floor(Math.max(0,K.money)/rate));
+  const hcond=hp>85?'Come nuovo':hp>60?'Qualche ammaccatura':hp>35?'<b class="neg">Danneggiato</b>':'<b class="neg">Distrutto</b>';
+  const il=issueList(st,true);
   const tr=st.tread,cond=flat?'<b class="neg">FORATA</b>':tr>70?'Ottime':tr>40?'Buone':tr>22?'Consumate':'<b class="neg">Lisce: rischio foratura!</b>';
   svcScreen(`<h2>${s.name}<small>Cassa ${eur(K.money)}</small></h2><div class="bottom">
-    <div class="card"><div class="mut">Pneumatici ${sp.name}</div><div class="meter"><i style="width:${tr}%;background:${tr<22||flat?'#ff4d3d':tr<45?'#ffd400':'#c8f03c'}"></i></div><div class="center">${Math.round(tr)}% · ${cond}</div></div>
-    <button class="btn main" data-nav id="bTire" ${K.money<sp.tires||(tr>97&&!flat)?'disabled':''}>GOMME NUOVE<span class="r">${eur0(sp.tires)}</span></button>
+    <div class="card"><div class="mut">Pneumatici ${sp.name}</div><div class="meter"><i style="width:${tr}%;background:${tr<22||flat?'#ff4d3d':tr<45?'#ffd400':'#c8f03c'}"></i></div><div class="center">${Math.round(tr)}% · ${cond}</div>
+      <div class="mut" style="margin-top:8px">Carrozzeria e meccanica</div><div class="meter"><i style="width:${hp}%;background:${hp<35||dead?'#ff4d3d':hp<60?'#ffd400':'#c8f03c'}"></i></div><div class="center">${Math.round(hp)}% · ${hcond}${dead?' · <b class="neg">MOTORE ROTTO</b>':''}${il?'<br><span class="mut" style="font-size:12px">'+il+'</span>':''}</div></div>
+    ${dead?`<button class="btn main" data-nav id="bEng">MOTORE NUOVO<span class="r">${eur0(eng)}${K.money<eng?' · a credito':''}</span></button>`:''}
+    <button class="btn${!dead&&hp<60?' main':''}" data-nav id="bBody" ${miss<1||pts<1?'disabled':''}>${miss<1?'CARROZZERIA PERFETTA':pts>=miss||pts<1?'RIPARA CARROZZERIA':'RIPARA CON TUTTA LA CASSA'}<span class="r">${miss<1?'':pts>=miss||pts<1?eur0(full):'+'+pts+'% · '+eur0(pts*rate)}</span></button>
+    <button class="btn${!dead&&hp>=60?' main':''}" data-nav id="bTire" ${K.money<sp.tires||(tr>97&&!flat)?'disabled':''}>GOMME NUOVE<span class="r">${eur0(sp.tires)}</span></button>
     <button class="btn" data-nav id="bUsed" ${(tr>=55&&!flat)||(K.money<45&&!flat)?'disabled':''}>Gomme usate (55%)<span class="r">€ 45${K.money<45&&flat?' · a credito':''}</span></button>
     <button class="btn" data-nav id="bDeal">Concessionario taxi<span class="r">${K.owned.length}/${CARS.length}</span></button>
-    <button class="btn" data-nav id="bOut" ${flat?'disabled':''}>Riparti</button></div>`,'bTire');
+    <button class="btn" data-nav id="bOut" ${flat||dead?'disabled':''}>Riparti</button></div>`,dead?'bEng':flat?'bTire':hp<60&&pts>=1?'bBody':'bTire');
+  if($('bEng'))$('bEng').onclick=()=>{K.money-=eng;K.stats.repair+=eng;st.dead=false;G.car.engineDead=false;st.hp=Math.max(st.hp,20);SFX.cash();toast('🔧 Motore nuovo montato!');save();garageScreen(s);};
+  $('bBody').onclick=()=>{const p=Math.min(miss,Math.floor(Math.max(0,K.money)/rate));if(p<1)return;K.money-=p*rate;K.stats.repair+=p*rate;st.hp=Math.min(100,st.hp+p);
+    let msg='🛠 Carrozzeria riparata: '+Math.round(st.hp)+'%';if(st.hp>=60&&Object.keys(st.iss).length){st.iss={};msg+=' · guasti risolti';}G.warn.h60=G.warn.h30=false;SFX.cash();toast(msg);save();garageScreen(s);};
   $('bTire').onclick=()=>{K.money-=sp.tires;K.stats.tires+=sp.tires;st.tread=100;G.car.flat=false;st.flat=false;G.warn={};SFX.cash();toast('Gomme nuove montate!');save();garageScreen(s);};
   $('bUsed').onclick=()=>{K.money-=45;K.stats.tires+=45;st.tread=55;G.car.flat=false;st.flat=false;G.warn={};SFX.click();toast('Gomme usate montate');save();garageScreen(s);};
   $('bDeal').onclick=()=>dealerScreen(s);$('bOut').onclick=resumePlay;
@@ -1702,20 +1778,20 @@ function dealerScreen(s){
     const b=$('bAct');b.disabled=cur||(!own&&K.money<c.price);
     b.innerHTML=cur?'IN USO':own?'USA QUESTO TAXI':`COMPRA<span class="r">${eur0(c.price)}</span>`;GFX.setCar(c);};
   bindRow('rCar',d=>{i=(i+d+CARS.length)%CARS.length;up();});
-  $('bAct').onclick=()=>{const c=CARS[i];if(!K.owned.includes(c.id)){K.money-=c.price;K.owned.push(c.id);K.cars[c.id]={fuel:c.tank,tread:100,flat:false};SFX.cash();toast('🎉 '+c.name+' è tuo!');}
+  $('bAct').onclick=()=>{const c=CARS[i];if(!K.owned.includes(c.id)){K.money-=c.price;K.owned.push(c.id);K.cars[c.id]={fuel:c.tank,tread:100,flat:false,hp:100,iss:{},dead:false};SFX.cash();toast('🎉 '+c.name+' è tuo!');}
     cs().flat=G.car.flat;K.car=c.id;const nc=makeCar(c);for(const k of['x','z','a'])nc[k]=G.car[k];nc.flat=!!cs().flat;nc.fuelOut=cs().fuel<=0;nc.flatSide=1;G.car=nc;save();up();};
   $('bBack').onclick=()=>{GFX.setCar(spec());garageScreen(s);};
 }
 function towScreen(){
-  const g=nearestSvc(CITY.garages),d=Math.hypot(g.cx-G.car.x,g.cz-G.car.z),cost=towCost(d),K=G.K;
-  svcScreen(`<h2>Gomma a terra!<small>Il taxi procede a passo d'uomo</small></h2><div class="bottom">
+  const g=nearestSvc(CITY.garages),d=Math.hypot(g.cx-G.car.x,g.cz-G.car.z),cost=towCost(d),K=G.K,eng=cs().dead;
+  svcScreen(`<h2>${eng?'Motore in panne!':'Gomma a terra!'}<small>${eng?'Il taxi non si muove più':'Il taxi procede a passo d\'uomo'}</small></h2><div class="bottom">
     <div class="card" style="font-size:14px;line-height:1.5">🛻 Il carro attrezzi ti porta a <b>${g.name}</b> (${km(d)}).<br>Costo: <b>${eur0(cost)}</b>${K.money<cost?'<br><span class="neg">Non hai abbastanza soldi: andrai in rosso.</span>':''}${G.job?'<br><span class="neg">Il cliente scenderà dal taxi.</span>':''}</div>
     <button class="btn main" data-nav id="bTow">CHIAMA IL CARRO ATTREZZI<span class="r">${eur0(cost)}</span></button>
-    <button class="btn" data-nav id="bOut">Provo ad arrivarci da solo</button></div>`,'bTow');
-  $('bTow').onclick=()=>{K.money-=cost;K.stats.tow+=cost;if(G.job)cancelJob('Il cliente è sceso: con una gomma a terra non si va lontano.',true);
+    <button class="btn" data-nav id="bOut">${eng?'Annulla':'Provo ad arrivarci da solo'}</button></div>`,'bTow');
+  $('bTow').onclick=()=>{K.money-=cost;K.stats.tow+=cost;if(G.job)cancelJob(eng?'Il cliente è sceso: il motore è andato.':'Il cliente è sceso: con una gomma a terra non si va lontano.',true);
     const e=CITY.edges[g.addr.e];G.car.x=g.cx;G.car.z=g.cz;const tx=e.ax+e.dx*g.addr.s,tz=e.az+e.dz*g.addr.s;G.car.a=Math.atan2(tx-g.cx,-(tz-g.cz));G.car.vx=G.car.vz=G.car.vf=G.car.w=0;
     GFX.resetFx();clearNav();SFX.tow();save();garageScreen(g);toast('Il carro attrezzi ti ha portato in officina');};
-  $('bOut').onclick=()=>{resumePlay();navToService('garage');};
+  $('bOut').onclick=()=>{resumePlay();if(!eng)navToService('garage');};
 }
 function rescueScreen(){
   const K=G.K;
@@ -1756,7 +1832,7 @@ function statsScreen(){
     <tr><td>Corse completate</td><td class="t">${S.rides}</td></tr><tr><td>Valutazione media</td><td class="t">${S.rides?(S.stars/S.rides).toFixed(1).replace('.',','):'-'} ★</td></tr>
     <tr><td>Chilometri percorsi</td><td class="t">${S.km.toFixed(1).replace('.',',')} km</td></tr><tr><td>Incassi tassametro</td><td class="t pos">${eur(S.earned)}</td></tr>
     <tr><td>Mance</td><td class="t pos">${eur(S.tips)}</td></tr><tr><td>Corsa migliore</td><td class="t">${eur(S.best)}</td></tr>
-    <tr><td>Carburante</td><td class="t neg">${eur(S.fuel)}</td></tr><tr><td>Gomme e riparazioni</td><td class="t neg">${eur(S.tires)}</td></tr><tr><td>Carro attrezzi e soccorso</td><td class="t neg">${eur(S.tow)}</td></tr>
+    <tr><td>Carburante</td><td class="t neg">${eur(S.fuel)}</td></tr><tr><td>Gomme</td><td class="t neg">${eur(S.tires)}</td></tr><tr><td>Carrozzeria e motore</td><td class="t neg">${eur(S.repair||0)}</td></tr><tr><td>Incidenti</td><td class="t">${S.crash||0}</td></tr><tr><td>Carro attrezzi e soccorso</td><td class="t neg">${eur(S.tow)}</td></tr>
     <tr><td>Clienti persi</td><td class="t">${S.cancelled+S.lost}</td></tr></table></div><button class="btn" data-nav id="bB">Indietro</button></div>`,pauseGame2);
   $('bB').onclick=pauseGame2;
 }
@@ -1791,6 +1867,9 @@ function drawRoute(x,tr,w){if(!G.route)return;x.strokeStyle='#'+G.nav.color.toSt
 function carArrow(x,px,py,ang,s){x.save();x.translate(px,py);x.rotate(ang);x.fillStyle='#ffd400';x.strokeStyle='#111';x.lineWidth=2;x.beginPath();x.moveTo(0,-9*s);x.lineTo(6.5*s,7*s);x.lineTo(0,3.5*s);x.lineTo(-6.5*s,7*s);x.closePath();x.fill();x.stroke();x.restore();}
 function drawMini(){
   const cv=$('mini'),x=cv.getContext('2d'),W=cv.width,R=W/2,car=G.car,zoom=2.4; // px per m = MS*zoom
+  if(!gpsOk()){x.save();x.clearRect(0,0,W,W);x.beginPath();x.arc(R,R,R,0,7);x.clip();x.fillStyle='#15171c';x.fillRect(0,0,W,W);
+    for(let i=0;i<260;i++){const g=Math.random()*90|0;x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(Math.random()*W,Math.random()*W,4,3);}
+    x.fillStyle='#ff4d3d';x.font='900 30px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText('NO',R,R-16);x.fillText('SEGNALE',R,R+18);x.restore();return;}
   x.save();x.clearRect(0,0,W,W);x.beginPath();x.arc(R,R,R,0,7);x.clip();x.fillStyle='#4d6b3c';x.fillRect(0,0,W,W);
   x.translate(R,R+R*0.28);x.rotate(-car.a);
   const[cx,cz]=mapXY(car.x,car.z);x.scale(zoom,zoom);x.translate(-cx,-cz);x.drawImage(mapBase,0,0);
@@ -1821,7 +1900,10 @@ function closeMap(){$('bigmap').classList.add('hide');if(G.mapFrom==='paused'){G
 
 /* ---------- HUD ---------- */
 function setTxt(id,v,html){if(G.hud[id]===v)return;G.hud[id]=v;if(html)$(id).innerHTML=v;else $(id).textContent=v;}
-function gauge(id,p,txt){const k=Math.round(p*100)+txt;if(G.hud[id]===k)return;G.hud[id]=k;const e=$(id);e.querySelector('i').style.width=clamp(p,0,1)*100+'%';e.querySelector('.pc').textContent=txt;e.classList.toggle('low',p<0.15);e.classList.toggle('mid',p>=0.15&&p<0.35);}
+function gauge(id,p,txt,lo,mi){lo=lo||0.15;mi=mi||0.35;const k=Math.round(p*100)+txt;if(G.hud[id]===k)return;G.hud[id]=k;const e=$(id);e.querySelector('i').style.width=clamp(p,0,1)*100+'%';e.querySelector('.pc').textContent=txt;e.classList.toggle('low',p<lo);e.classList.toggle('mid',p>=lo&&p<mi);}
+function issueList(st,full){const a=[];if(st.dead&&!full)a.push('💥 Motore rotto');if(st.iss.leak)a.push('💧 Perdita benzina');
+  if(st.iss.lights)a.push('💡 Fari '+(st.iss.lights==='off'?'guasti':'a intermittenza'));if(st.iss.gps)a.push('📡 Navigatore '+(full||G.gps.on?'instabile':'senza segnale'));
+  const pf=perfFactor(st.hp);if(pf<0.995)a.push('🐢 −'+Math.round((1-pf)*100)+'% potenza');return a.join(' · ');}
 function updateHUD(){
   const K=G.K,car=G.car,sp=spec(),st=cs();
   setTxt('money',eur0(K.money));$('money').classList.toggle('neg',K.money<0);
@@ -1829,15 +1911,17 @@ function updateHUD(){
   setTxt('clock',`${h>=6.3&&h<19.8?'☀️':'🌙'} ${hhmm(K.clock)} <small>G${Math.floor(K.clock/1440)+1}${nt?' · notte':''}</small>`,true);
   gauge('gFuel',st.fuel/sp.tank,Math.round(st.fuel/sp.tank*100)+'%');
   gauge('gTire',car.flat?0:st.tread/100,car.flat?'KO':Math.round(st.tread)+'%');
+  gauge('gHp',st.dead?0:st.hp/100,st.dead?'KO':Math.round(st.hp)+'%',0.3,0.6);
   const kmh=Math.round(Math.abs(car.vf)*3.6);setTxt('spd',kmh+'<small>km/h</small>',true);
   if(G.hud.gear!==car.gear){G.hud.gear=car.gear;const g=$('gear');g.textContent=car.gear;g.classList.toggle('r',car.gear==='R');}
   // pannello corsa
   let j;const J=G.job;
-  if(!J){j=G.nav?`🧭 Verso <b>${G.nav.target.name}</b> · ${km(G.routeLen||0)}`:(car.flat?'<b style="color:#ff4d3d">GOMMA A TERRA</b> · chiama il carro attrezzi':car.fuelOut?'<b style="color:#ff4d3d">SENZA BENZINA</b>':`🟢 <b>LIBERO</b> · ${G.calls.length?'chiamate in arrivo':'in attesa di chiamate…'}`);}
+  if(!J){j=G.nav?`🧭 Verso <b>${G.nav.target.name}</b> · ${km(G.routeLen||0)}`:(st.dead?'<b style="color:#ff4d3d">MOTORE ROTTO</b> · chiama il carro attrezzi':car.flat?'<b style="color:#ff4d3d">GOMMA A TERRA</b> · chiama il carro attrezzi':car.fuelOut?'<b style="color:#ff4d3d">SENZA BENZINA</b>':`🟢 <b>LIBERO</b> · ${G.calls.length?'chiamate in arrivo':'in attesa di chiamate…'}`);}
   else if(J.phase==='pickup'){const left=J.limit-(G.t-J.t0);j=`📍 Vai a prendere <b>${J.c.name}</b><br>${J.c.pick.name} · ${km(G.routeLen||Math.hypot(J.c.pick.x-car.x,J.c.pick.z-car.z))} · <span class="${left<30?'late':''}">⏳ ${mmss(left)}</span>`;}
   else if(J.phase==='board')j=`🚪 <b>${J.c.name}</b> sta salendo…`;
   else if(J.phase==='ride'){const el=G.t-J.rideT,late=el>J.c.target;j=`🚖 <b>${J.c.name}</b> → ${J.c.dest.name}<div class="row2"><span style="color:#ffd400">💶 ${eur(fareFor(J.driven,J.c.night,J.c.mult))}</span><span class="${late?'late':'ok'}">⏱ ${mmss(el)} / ${mmss(J.c.target)}</span></div>`;}
   else j='💶 Pagamento…';
+  const il=issueList(st);if(il)j+=`<div class="iss">${il}</div>`;
   setTxt('job',j,true);
   const P=projectEdge(CITY,car.x,car.z);setTxt('street',P.d<14?P.e.name:'');
   renderCalls(false);navHud();
@@ -1848,12 +1932,12 @@ function updateHUD(){
 }
 function computeAction(){
   const car=G.car,v=Math.abs(car.vf),st=cs(),sp=spec();
-  if(car.flat){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type==='garage'&&v<2)return{txt:'🔧 Officina',fn:()=>garageScreen(s)};return{txt:'🛻 Chiama il carro attrezzi',fn:towScreen,red:true};}
+  if(car.flat||st.dead){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type==='garage'&&v<2)return{txt:'🔧 Officina',fn:()=>garageScreen(s)};return{txt:'🛻 Chiama il carro attrezzi',fn:towScreen,red:true};}
   if(car.fuelOut){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type==='fuel')return{txt:'⛽ Distributore',fn:()=>fuelScreen(s)};return{txt:'⛽ Chiama il soccorso',fn:rescueScreen,red:true};}
   if(v<2.5){const s=inServiceZone(CITY,car.x,car.z,0);if(s)return s.type==='fuel'?{txt:'⛽ Distributore',fn:()=>fuelScreen(s)}:{txt:'🔧 Officina',fn:()=>garageScreen(s)};}
   if(!G.job&&G.calls.length)return{txt:'📞 Accetta la chiamata',fn:acceptCall};
   if(!G.job&&st.fuel/sp.tank<0.2&&(!G.nav||G.nav.kind!=='fuel'))return{txt:'⛽ Naviga al distributore',fn:()=>navToService('fuel')};
-  if(!G.job&&st.tread<25&&(!G.nav||G.nav.kind!=='garage'))return{txt:'🔧 Naviga all\'officina',fn:()=>navToService('garage')};
+  if(!G.job&&(st.tread<25||st.hp<45)&&(!G.nav||G.nav.kind!=='garage'))return{txt:'🔧 Naviga all\'officina',fn:()=>navToService('garage')};
   return null;
 }
 function doAction(){if(G.mode==='play'&&G.act){SFX.click();G.act.fn();}}
@@ -1863,13 +1947,18 @@ function playStep(){
   const car=G.car,st=cs(),sp=spec();
   if(G.job&&(G.job.phase==='board'||G.job.phase==='alight')){G.input={steer:0,gas:0,brake:0,hb:true};car.vx*=0.9;car.vz*=0.9;}
   const inp=G.input;
-  stepCar(car,inp,STEP,CITY,G.npcs);stepTraffic(CITY,G.npcs,STEP,G.rng,car);
+  car.perf=perfFactor(st.hp);car.engineDead=st.dead;
+  stepCar(car,inp,STEP,CITY,G.npcs);
+  if(car.hit>DMG_FREE){const fr=car.hitFront>car.hit*0.6,d=impactDamage(car.hit,fr);
+    if(d>0){st.hp=Math.max(0,st.hp-d);G.frameDmg+=d;
+      if(!st.dead&&(st.hp<=0||(fr&&G.rng()<engineBreakChance(car.hitFront,st.hp)))){st.dead=true;car.engineDead=true;G.events.push('engine');}
+      else if(st.hp<60&&d>4&&G.rng()<0.35)G.events.push('issue');}}stepTraffic(CITY,G.npcs,STEP,G.rng,car);
   const v=Math.abs(car.vf);G.K.stats.km+=v*STEP/1000;
   if(G.job&&G.job.phase==='ride')G.job.driven+=v*STEP;
-  if(!car.fuelOut){st.fuel=Math.max(0,st.fuel-fuelRate(car,inp.gas)*STEP);if(st.fuel<=0){car.fuelOut=true;G.events.push('fuelout');}}
+  if(!car.fuelOut){st.fuel=Math.max(0,st.fuel-(st.dead?0:fuelRate(car,inp.gas))*STEP-(st.iss.leak?LEAK_RATE*STEP:0));if(st.fuel<=0){car.fuelOut=true;G.events.push('fuelout');}}
   st.tread=Math.max(0,st.tread-wearRate(car,inp)*STEP);
   if(car.hit>G.frameHit)G.frameHit=car.hit;if(car.curb>G.frameCurb)G.frameCurb=car.curb;
-  if(!car.flat&&G.rng()<punctureChance(st.tread,STEP,car.curb)){car.flat=true;car.flatSide=G.rng()<0.5?-1:1;st.flat=true;G.events.push('flat');}
+  if(!car.flat&&G.rng()<punctureChance(st.tread,STEP,car.curb,st.hp)){car.flat=true;car.flatSide=G.rng()<0.5?-1:1;st.flat=true;G.events.push('flat');}
 }
 function playFrame(dt){
   const K=G.K,car=G.car,v=Math.abs(car.vf);
@@ -1878,30 +1967,49 @@ function playFrame(dt){
   for(const e of G.events){
     if(e==='flat'){SFX.pop();GFX.shake(0.6);rumble(10);toast('💥 Hai bucato una gomma!');VOICE.say('Foratura! Chiama il carro attrezzi',true);
       if(G.job&&G.job.phase!=='alight'){if(G.job.phase==='ride'||G.job.phase==='board')cancelJob('Il cliente è sceso: con una gomma a terra non si va lontano.',true);else cancelJob('Il cliente ha annullato la corsa.',false);}}
-    if(e==='fuelout'){toast('⛽ Benzina finita!');VOICE.say('Serbatoio vuoto',true);}
+    if(e==='fuelout'){toast(cs().iss.leak?'⛽ Il serbatoio si è svuotato: perdita di benzina!':'⛽ Benzina finita!');VOICE.say('Serbatoio vuoto',true);}
+    if(e==='engine'){SFX.boom();GFX.shake(1.2);rumble(16);toast('💥 Il motore si è rotto!');G.calls.length=0;G.sel=0;renderCalls(true);VOICE.say('Motore in panne. Chiama il carro attrezzi',true);
+      const fx=Math.sin(car.a),fz=-Math.cos(car.a);GFX.debris(car.x+fx*2,car.z+fz*2,22,0x333333);
+      if(G.job&&G.job.phase!=='alight'){if(G.job.phase==='ride'||G.job.phase==='board')cancelJob('Il cliente è sceso: il motore è andato.',true);else cancelJob('Il cliente ha annullato la corsa.',false);}}
+    if(e==='issue')addIssue();
   }G.events.length=0;
+  if(G.frameDmg>=2.5&&G.t-G.lastDmgT>0.6){G.lastDmgT=G.t;K.stats.crash++;const fx=Math.sin(car.a),fz=-Math.cos(car.a);GFX.debris(car.x+fx*1.8,car.z+fz*1.8,Math.min(24,4+G.frameDmg*1.5),spec().body);
+    toast(`🛠 Danni al taxi: −${Math.max(1,Math.round(G.frameDmg))}% · integrità ${Math.round(cs().hp)}%`);}
+  G.frameDmg=0;
   if(G.frameHit>3&&G.t-G.lastHitT>0.25){G.lastHitT=G.t;SFX.hit(G.frameHit);GFX.shake(Math.min(1,G.frameHit/12));rumble(G.frameHit);
     if(G.job&&G.job.phase==='ride')G.job.smooth=Math.max(0,G.job.smooth-(G.frameHit>6?0.25:0.08));
     if(car.npcHit){SFX.horn();car.npcHit=0;}}
   if(G.frameCurb>6){SFX.curb(G.frameCurb);if(G.job&&G.job.phase==='ride')G.job.smooth=Math.max(0,G.job.smooth-0.04);}
   G.frameHit=0;G.frameCurb=0;
   // chiamate
-  if(!G.job&&!car.flat&&!car.fuelOut){G.callT-=dt;const rate=hourDemand(hours(K.clock))/60;
+  if(!G.job&&!car.flat&&!car.fuelOut&&!cs().dead){G.callT-=dt;const rate=hourDemand(hours(K.clock))/60;
     if(G.calls.length<2&&G.callT<=0&&G.rng()<rate*dt*3+0.0){spawnCall();G.callT=3+G.rng()*5;}
     if(G.callT<-25&&!G.calls.length){spawnCall();G.callT=4;}}
   for(let i=G.calls.length-1;i>=0;i--)if(G.t>G.calls[i].exp){G.calls.splice(i,1);if(G.sel>=G.calls.length)G.sel=0;else if(G.sel>i)G.sel--;}
-  updateJob(dt);updateNav();
+  updateJob(dt);updateGps(dt);updateNav();
   // avvisi
   const st=cs(),sp=spec(),fp=st.fuel/sp.tank;
   if(fp<0.2&&!G.warn.f20){G.warn.f20=true;toast('⛽ Riserva: cerca un distributore');VOICE.say('Benzina in riserva');}
   if(fp<0.08&&!G.warn.f10){G.warn.f10=true;toast('⛽ Benzina quasi finita!');}
   if(st.tread<30&&!G.warn.t30){G.warn.t30=true;toast('◎ Gomme consumate: cambiale presto');}
+  if(!st.dead&&st.hp<60&&G.rng()<issueRate(st.hp)*dt)addIssue();
+  if(st.hp<60&&!G.warn.h60){G.warn.h60=true;toast('🛠 Taxi danneggiato: rischio guasti. Passa in officina');VOICE.say('Taxi danneggiato');}
+  if(st.hp<30&&!G.warn.h30){G.warn.h30=true;toast('🛠 Taxi distrutto: i clienti potrebbero rifiutarlo');}
   if(st.tread<15&&!G.warn.t15){G.warn.t15=true;toast('◎ Gomme lisce: rischio foratura!');VOICE.say('Attenzione, gomme lisce');}
   const nt=isNight(K.clock);if(nt!==G.night){G.night=nt;toast(nt?'🌙 Tariffa notturna attiva (+20%)':'☀️ Fine della tariffa notturna');}
   // bloccato
-  if(v<1&&(G.input.gas>0.5||G.input.brake>0.5)&&!car.fuelOut)G.stuckT+=dt;else G.stuckT=0;
+  if(v<1&&(G.input.gas>0.5||G.input.brake>0.5)&&!car.fuelOut&&!st.dead)G.stuckT+=dt;else G.stuckT=0;
   if(G.stuckT>3.5){G.stuckT=-6;toast('Bloccato? Premi R (R3) per tornare in strada');}
   if((G.autosave=(G.autosave||0)+dt)>15){G.autosave=0;save();}
+}
+function addIssue(){
+  const st=cs(),sev=damageSeverity(st.hp),opts=['leak','lights','gps'].filter(k=>!st.iss[k]);
+  if(!opts.length){if(st.iss.lights==='flicker'&&G.rng()<0.5){st.iss.lights='off';toast('💡 I fari si sono spenti del tutto!');}return;}
+  const k=opts[Math.floor(G.rng()*opts.length)];
+  if(k==='leak'){st.iss.leak=true;toast('💧 Il serbatoio perde benzina!');VOICE.say('Perdita di carburante');}
+  else if(k==='lights'){st.iss.lights=G.rng()<0.3+sev*0.4?'off':'flicker';toast(st.iss.lights==='off'?'💡 Guasto elettrico: fari spenti!':'💡 Guasto elettrico: i fari vanno a intermittenza');}
+  else{st.iss.gps=true;G.gps.on=true;G.gps.t=2+G.rng()*4;toast('📡 Il navigatore perde il segnale');}
+  SFX.beep(330,0.25);
 }
 function peopleAndBeacons(){
   const B=[],Pp=[],J=G.job,car=G.car;
@@ -2003,7 +2111,8 @@ function frame(now){
   let hrs;if(G.mode==='menu'){G.menuHour=(G.menuHour+dt*0.35)%24;hrs=G.menuHour;}else hrs=hours(G.K.clock);
   GFX.setTime(hrs);
   const playing=G.mode!=='menu';
-  GFX.update(G.car,G.mode==='play'||G.mode==='menu'?dt:0,tAll,{cam:G.mode==='menu'?1:store.opts.cam,free:!G.job||G.job.phase==='pickup',braking:G.input.brake>0.1&&G.car.vf>0.5});
+  GFX.update(G.car,G.mode==='play'||G.mode==='menu'?dt:0,tAll,{cam:G.mode==='menu'?1:store.opts.cam,free:!G.job||G.job.phase==='pickup',braking:G.input.brake>0.1&&G.car.vf>0.5,
+    dmg:G.mode!=='menu'&&G.K?{hp:cs().hp,lights:cs().iss.lights||'ok',dead:cs().dead}:null});
   peopleAndBeacons();
   GFX.render();
   if(playing&&G.K){updateHUD();if((G.minT+=dt)>1/30){G.minT=0;drawMini();}}
