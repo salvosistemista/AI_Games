@@ -42,11 +42,11 @@ html,body{margin:0;height:100%;background:#0b0c10;overflow:hidden;font-family:"T
 #nav .d{font-weight:900;font-size:17px;font-variant-numeric:tabular-nums;line-height:1;}
 #nav .s{font-size:10px;color:#dfe3ee;line-height:1.15;margin-top:2px;max-height:24px;overflow:hidden;}
 #street{position:absolute;top:calc(176px + env(safe-area-inset-top));right:10px;max-width:150px;text-align:right;font-size:10px;font-weight:700;color:#e8ebf2;text-shadow:0 1px 3px #000;}
-#job{position:absolute;top:calc(126px + env(safe-area-inset-top));left:10px;right:134px;background:var(--panel);border-radius:10px;padding:6px 9px;font-size:12px;line-height:1.3;}
+#job{position:absolute;top:calc(148px + env(safe-area-inset-top));left:10px;right:134px;background:var(--panel);border-radius:10px;padding:6px 9px;font-size:12px;line-height:1.3;}
 #job b{color:var(--yel);} #job .row2{display:flex;gap:10px;margin-top:3px;font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;}
 #job .iss{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;font-weight:700;color:#ffb3a8;}
 #job .late{color:var(--red);} #job .ok{color:var(--lime);}
-#calls{position:absolute;top:calc(208px + env(safe-area-inset-top));left:10px;right:10px;display:flex;flex-direction:column;gap:6px;pointer-events:auto;}
+#calls{position:absolute;top:calc(230px + env(safe-area-inset-top));left:10px;right:10px;display:flex;flex-direction:column;gap:6px;pointer-events:auto;}
 .call{background:var(--panel);border-radius:12px;padding:8px 10px;border:2px solid transparent;font-size:12px;line-height:1.3;cursor:pointer;position:relative;animation:slide .3s;}
 @keyframes slide{from{transform:translateX(-30px);opacity:0;}}
 .call.sel{border-color:var(--yel);}
@@ -67,6 +67,8 @@ html,body{margin:0;height:100%;background:#0b0c10;overflow:hidden;font-family:"T
 #act{position:absolute;left:50%;bottom:calc(62px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--yel);color:#141414;border:0;border-radius:24px;padding:10px 18px;font:inherit;font-weight:900;font-size:15px;white-space:nowrap;pointer-events:auto;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer;animation:pop .25s;}
 #tl{display:flex;align-items:center;gap:3px;background:#0d0e12;border-radius:6px;padding:3px 5px;}
 #tl.off{display:none;}
+#conf{position:absolute;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#7a2bd6;color:#fff;font-weight:900;border-radius:10px;padding:6px 12px;font-size:14px;animation:tlfl .5s steps(1) infinite;pointer-events:none;z-index:6;}
+#conf.off{display:none;}
 #ped{background:#ffd400;color:#111;border-radius:6px;padding:1px 5px;font-size:14px;animation:tlfl .8s steps(1) infinite;}
 #ped.off{display:none;}
 #tl i{width:9px;height:9px;border-radius:50%;background:#2a2c33;display:block;}
@@ -173,6 +175,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
       <div class="g" id="gFuel"><span class="ic">⛽</span><div class="bar"><i></i></div><span class="pc">--</span></div>
       <div class="g" id="gTire"><span class="ic">◎</span><div class="bar"><i></i></div><span class="pc">--</span></div>
       <div class="g" id="gHp"><span class="ic">🛠</span><div class="bar"><i></i></div><span class="pc">--</span></div>
+      <div class="g" id="gHun"><span class="ic">🍔</span><div class="bar"><i></i></div><span class="pc">--</span></div>
     </div>
     <div id="nav" class="off"><svg viewBox="0 0 100 100" id="navIc"></svg><div><div class="d" id="navD">--</div><div class="s" id="navS"></div></div></div>
     <canvas id="mini" width="232" height="232"></canvas>
@@ -181,6 +184,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
     <div id="calls"></div>
     <div id="bubble"></div>
     <div id="speedo"><div id="gear">1</div><div id="spd">0<small>km/h</small></div><div id="tl" class="off"></div><div id="ped" class="off">🚸</div></div>
+    <div id="conf" class="off">😵 COMANDI INVERTITI</div>
     <button id="act" class="hide"></button>
     <div id="touch" class="hide">
       <div class="tb" id="tL">◀</div><div class="tb" id="tR">▶</div>
@@ -210,7 +214,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
    TAXI METROPOLI — core puro (città, navigatore, fisica, economia)
    Nessuna dipendenza da DOM o Three.js: testabile in Node.
    ========================================================== */
-const VERSION='1.9.4';
+const VERSION='2.0';
 // rimescolamento Fisher-Yates: stesso risultato su tutti i browser (sort con confronto casuale dipende dal motore JS)
 function shuffle(arr,r){for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));const t=arr[i];arr[i]=arr[j];arr[j]=t;}return arr;}
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -334,6 +338,7 @@ function genCity(seed){
   genBusStops(C);
   genCrossings(C);
   genRailway(C);
+  genFoodHome(C,mulberry32(seed+991));   // generatore separato: il resto della città non cambia
   buildHashes(C);
   return C;
 }
@@ -736,6 +741,54 @@ function buildHashes(C){
   const H=16; C.hcell=H; C.rhash=new Map(); C.chash=new Map();
   C.rects.forEach((r,i)=>{for(let a=Math.floor(r.x0/H);a<=Math.floor(r.x1/H);a++)for(let b=Math.floor(r.z0/H);b<=Math.floor(r.z1/H);b++){const k=a*100003+b;(C.rhash.get(k)||C.rhash.set(k,[]).get(k)).push(r);}});
   C.circles.forEach(c=>{const k=Math.floor(c.x/H)*100003+Math.floor(c.z/H);(C.chash.get(k)||C.chash.set(k,[]).get(k)).push(c);});
+}
+
+
+/* ---------------- DRIVE-IN E CASA ---------------- */
+const FOOD_DEFS=[
+  {name:'Burger Lampo',ic:'🍔',col:'#d83a2c',roof:0xd83a2c,menu:[['Hamburger classico',3.5,40],['Doppio cheeseburger',5.5,60],['Patatine fritte',2,18]]},
+  {name:'Piadina Drive',ic:'🌯',col:'#1f8f4e',roof:0x1f8f4e,menu:[['Piadina crudo e squacquerone',4.5,50],['Piadina cotto e formaggio',3.8,42],['Crescione alle erbe',4,45]]},
+  {name:'Pizza al Volo',ic:'🍕',col:'#e07a10',roof:0xe07a10,menu:[['Trancio margherita',2.5,30],['Calzone fritto',3.5,45],['Pizza intera da asporto',6,75]]},
+  {name:'Panino Express',ic:'🥪',col:'#1e4fa8',roof:0x1e4fa8,menu:[['Panino con la porchetta',4,50],['Toast prosciutto e formaggio',2.5,28],['Arancino',2,25]]}];
+const DRINKS=[['Acqua minerale',1,4],['Bibita in lattina',1.8,6],['Caffè',1.2,3],['Succo di frutta',1.8,6]];
+function corner(b,sx,sz,zw,zd){const x0=sx?b.x1-zw:b.x0,z0=sz?b.z1-zd:b.z0;return{x0,x1:x0+zw,z0,z1:z0+zd};}
+function clearZone(C,Z,m){
+  const ov=r=>r.x1>Z.x0-m&&r.x0<Z.x1+m&&r.z1>Z.z0-m&&r.z0<Z.z1+m,inZ=o=>o.x>Z.x0-1.5&&o.x<Z.x1+1.5&&o.z>Z.z0-1.5&&o.z<Z.z1+1.5;
+  C.buildings=C.buildings.filter(B=>!ov(B));C.rects=C.rects.filter(r=>!ov(r));
+  C.lamps=C.lamps.filter(o=>!inZ(o));C.trees=C.trees.filter(o=>!inZ(o));C.peds=C.peds.filter(o=>!inZ(o));C.circles=C.circles.filter(o=>o.r===0.2||o.r===0.55||!inZ(o));}
+function svcAddr(C,S){let best=null,bd=1e9;
+  for(const e of C.edges){const s=clamp((S.cx-e.ax)*e.dx+(S.cz-e.az)*e.dz,0,e.len),px=e.ax+e.dx*s,pz=e.az+e.dz*s,d=Math.hypot(px-S.cx,pz-S.cz);if(d<bd){bd=d;best={e,s};}}
+  S.addr={e:best.e.id,s:best.s,x:S.cx,z:S.cz,name:S.name};}
+function genFoodHome(C,rng){
+  C.foods=[];C.home=null;const R=C.rail;
+  const nearRail=b=>R&&b.x0<R.xEnd+12&&Math.min(Math.abs(b.z0-R.z),Math.abs(b.z1-R.z))<R.hw+14;
+  const zoneOk=Z=>!(C.busStops||[]).some(t=>t.x>Z.x0-7&&t.x<Z.x1+7&&t.z>Z.z0-7&&t.z<Z.z1+7)&&!(C.ranks||[]).some(t=>Math.abs(t.x-(Z.x0+Z.x1)/2)<(Z.x1-Z.x0)/2+16&&Math.abs(t.z-(Z.z0+Z.z1)/2)<(Z.z1-Z.z0)/2+8);
+  const free=b=>b.kind==='normal'&&!b.zone&&b.w>58&&b.d>58&&!nearRail(b)&&C.services.every(s=>Math.hypot(s.cx-b.cx,s.cz-b.cz)>150);
+  const tryCorners=(b,zw,zd)=>{const cs=shuffle([[0,0],[0,1],[1,0],[1,1]],rng);for(const[sx,sz]of cs){const Z=corner(b,sx,sz,zw,zd);if(zoneOk(Z))return{Z,sx,sz};}return null;};
+  // drive-in: quattro, ben distanziati
+  const cands=shuffle(C.blocks.filter(free),rng),picked=[];
+  for(let pass=0;pass<3&&picked.length<4;pass++){const md=720*(1-pass*0.25);
+    for(const b of cands){if(picked.length>=4)break;if(picked.some(p=>p.b===b)||!picked.every(p=>Math.hypot(p.b.cx-b.cx,p.b.cz-b.cz)>md))continue;
+      const c=tryCorners(b,36,34);if(c)picked.push({b,...c});}}
+  picked.forEach((p,i)=>{const D=FOOD_DEFS[i],{b,Z,sx,sz}=p;clearZone(C,Z,1);b.zone=Z;b.food=true;
+    // ristorante sull'angolo interno, finestrella verso il piazzale
+    const k={x0:sx?Z.x0+2:Z.x1-15,z0:sz?Z.z0+2:Z.z1-12};k.x1=k.x0+13;k.z1=k.z0+10;C.rects.push({x0:k.x0,x1:k.x1,z0:k.z0,z1:k.z1});
+    const S={type:'food',id:i,name:D.name,ic:D.ic,col:D.col,roof:D.roof,menu:D.menu,zone:Z,block:b,sx,sz,cx:(Z.x0+Z.x1)/2,cz:(Z.z0+Z.z1)/2,shop:k,
+      totem:{x:sx?Z.x1-2.2:Z.x0+2.2,z:sz?Z.z1-2.2:Z.z0+2.2}};
+    C.circles.push({x:S.totem.x,z:S.totem.z,r:0.45});svcAddr(C,S);C.services.push(S);C.foods.push(S);});
+  // casa con box in periferia (zona residenziale, lontano dal centro)
+  const far=C.blocks.filter(b=>free(b)&&b.district==='resid'&&!b.food&&C.foods.every(f=>Math.hypot(f.cx-b.cx,f.cz-b.cz)>260)).sort((a,b)=>b.dist-a.dist||a.id-b.id);
+  for(const b of far.slice(0,8)){const c=tryCorners(b,30,26);if(!c)continue;const{Z,sx,sz}=c;
+    clearZone(C,Z,1);b.zone=Z;b.home=true;
+    // box: porta verso la strada lungo z, sul lato interno del lotto
+    const dz=sz?Z.z1-SIDEWALK:Z.z0+SIDEWALK,bx0=sx?Z.x0+2:Z.x1-8,box={x0:bx0,x1:bx0+6,z0:sz?dz-9:dz,z1:sz?dz:dz+9};
+    const wall=0.35,back=sz?{x0:box.x0,x1:box.x1,z0:box.z0,z1:box.z0+wall}:{x0:box.x0,x1:box.x1,z0:box.z1-wall,z1:box.z1};
+    C.rects.push(back,{x0:box.x0,x1:box.x0+wall,z0:box.z0,z1:box.z1},{x0:box.x1-wall,x1:box.x1,z0:box.z0,z1:box.z1});
+    const hx0=sx?box.x1+1.5:box.x0-13.5,hz0=sz?dz-13:dz+2,house={x0:hx0,x1:hx0+12,z0:hz0,z1:hz0+11};
+    C.buildings.push({...house,h:6.5,roof:'gableX',roofCol:0xb5523b,col:0xf0e2c4,dist:'resid',home:true});C.rects.push({...house});
+    const S={type:'home',name:'Casa tua',zone:Z,block:b,sx,sz,box,doorZ:dz,house,cx:(box.x0+box.x1)/2,cz:(box.z0+box.z1)/2};
+    C.rects.push(sx?{x0:Z.x0,x1:Z.x0+0.8,z0:Z.z0,z1:Z.z1}:{x0:Z.x1-0.8,x1:Z.x1,z0:Z.z0,z1:Z.z1},sz?{x0:Z.x0,x1:Z.x1,z0:Z.z0,z1:Z.z0+0.8}:{x0:Z.x0,x1:Z.x1,z0:Z.z1-0.8,z1:Z.z1});
+    svcAddr(C,S);C.services.push(S);C.home=S;break;}
 }
 
 /* ---------------- NAVIGATORE ---------------- */
@@ -1197,7 +1250,7 @@ function botDrive(c,route,st,npcs,cruise,C){
   return{steer,gas,brake,hb:false,remain};
 }
 
-if(typeof module!=='undefined')module.exports={VERSION,shuffle,CARS,CAR_BY_ID,LANDMARKS,TIME_SCALE,FUEL_PRICE,genCity,surfaceAt,blockAt,projectEdge,routeTo,navRoute,routeLen,maneuvers,laneOffset,polyLen,polyProject,polyPoint,
+if(typeof module!=='undefined')module.exports={VERSION,shuffle,FOOD_DEFS,DRINKS,CARS,CAR_BY_ID,LANDMARKS,TIME_SCALE,FUEL_PRICE,genCity,surfaceAt,blockAt,projectEdge,routeTo,navRoute,routeLen,maneuvers,laneOffset,polyLen,polyProject,polyPoint,
   makeCar,stepCar,fuelRate,wearRate,punctureChance,isNight,fareFor,towCost,RESCUE_FUEL,RESCUE_COST,hourDemand,railY,RAIL_Y,stepPeds,pedCheck,pedAhead,pedLight,spawnNpc,npcPlan,relRes,buildCall,routeInfo,farAddress,WEATHER,nextWeather,weatherHours,flashHour,setSignalNight,FINE_POLICE_HIT,POLICE_RANGE,sigState,signalAhead,boxAt,nearIdx,FINE_RED,RED_GRACE,STOP_OFF,impactDamage,engineBreakChance,damageSeverity,perfFactor,issueRate,refuseChance,LEAK_RATE,BODY_RATE,ENGINE_PRICE,newCall,settleRide,makeTraffic,stepTraffic,botDrive,mulberry32,clamp,wrapA,inServiceZone};
 
 'use strict';
@@ -1483,7 +1536,10 @@ function build(C){
     const I={x0:b.x0+3,x1:b.x1-3,z0:b.z0+3,z1:b.z1-3};
     const inner={park:0x7fb257,landmark:0xcdc3ad,normal:{centro:0xa9a59d,citta:0xbfb6a6,mare:0xd9cdb2,resid:0x8dbb5f,indu:0x9a9a92}[b.district],station:0xa9a59d,garage:0x9a9a92}[b.kind]||0xb0a898;
     G.top(I.x0,I.x1,I.z0,I.z1,SLAB+0.01,inner,8);
-    if(b.zone){const Z=b.zone;G.top(Z.x0,Z.x1,Z.z0,Z.z1,SLAB+0.02,0x8d8f93,6);}
+    if(b.zone&&b.home){const Z=b.zone,H=C.home;G.top(Z.x0,Z.x1,Z.z0,Z.z1,SLAB+0.02,0x79ad52,8);
+      const sz=H.sz,ez=sz?Z.z1:Z.z0;G.top(H.box.x0-0.4,H.box.x1+0.4,Math.min(H.doorZ,ez),Math.max(H.doorZ,ez),SLAB+0.035,0x9a9893,6);
+      const fz=sz?H.house.z1:H.house.z0;G.top(H.house.x0+5,H.house.x0+6.6,Math.min(fz,ez),Math.max(fz,ez),SLAB+0.035,0xc9bfa8,6);}
+    else if(b.zone){const Z=b.zone;G.top(Z.x0,Z.x1,Z.z0,Z.z1,SLAB+0.02,0x8d8f93,6);}
     if(b.pond){const P=b.pond;const n=10,y=SLAB+0.03;_c.set(0x3f86a8);const pc=_c.clone();for(let i=0;i<n;i++){const a1=i/n*Math.PI*2,a2=(i+1)/n*Math.PI*2;G.tri([P.x,y,P.z],[P.x+Math.cos(a2)*P.r,y,P.z+Math.sin(a2)*P.r],[P.x+Math.cos(a1)*P.r,y,P.z+Math.sin(a1)*P.r],[0,1,0],pc);}}
   }
   // lungomare
@@ -1617,6 +1673,50 @@ function build(C){
     // pile di gomme
     const tg=new THREE.CylinderGeometry(0.5,0.5,0.32,10);
     for(let i=0;i<4;i++)for(let h=0;h<4;h++){const t=new THREE.Mesh(tg,Lm(0x1d1d20));const sx=s.sx?s.zone.x0+2.5:s.zone.x1-2.5;t.position.set(sx,SLAB+0.16+h*0.33,lerp(s.zone.z0+3,s.zone.z1-3,i/3));grp.add(t);}
+  }
+  // drive-in
+  for(const s of C.foods||[]){
+    const grp=new THREE.Group();root.add(grp);const k=s.shop,Z=s.zone,Lm=c=>new THREE.MeshLambertMaterial({color:c}),H=4.2;
+    const kg=new GB();kg.walls(k.x0,k.x1,k.z0,k.z1,SLAB,H,0xf4efe6,0,0);kg.top(k.x0,k.x1,k.z0,k.z1,H,0xf4efe6);
+    const km=new THREE.Mesh(kg.geo(),matRes);km.castShadow=true;grp.add(km);
+    const band=new GB();band.box(k.x0-0.3,k.x1+0.3,k.z0-0.3,k.z1+0.3,H,H+0.9,s.roof);band.box(k.x0+0.6,k.x1-0.6,k.z0+0.6,k.z1-0.6,H+0.9,H+1.0,0xe8e4dc);
+    // tettoia della finestrella sul lato del piazzale (verso x)
+    const ax=s.sx?k.x1:k.x0,dir=s.sx?1:-1;band.box(Math.min(ax,ax+dir*3.2),Math.max(ax,ax+dir*3.2),k.z0+2,k.z1-2,2.9,3.15,s.roof);
+    for(const zz of[k.z0+2.3,k.z1-2.3])band.box(ax+dir*3-0.12,ax+dir*3+0.12,zz-0.12,zz+0.12,SLAB,2.9,0xd8d8d8);
+    const bm=new THREE.Mesh(band.geo(),VC());bm.castShadow=true;grp.add(bm);
+    const lamp=new THREE.Mesh(new THREE.PlaneGeometry(2.8,(k.z1-k.z0)-4.4),new THREE.MeshBasicMaterial({color:0xfff2d0}));lamp.rotation.x=Math.PI/2;lamp.position.set(ax+dir*1.6,2.88,(k.z0+k.z1)/2);grp.add(lamp);svcLights.push(lamp);
+    // insegna sul tetto
+    const st=textTex(s.ic+' '+s.name.toUpperCase(),s.col,'#ffffff',512,96,'900 46px Arial Black,Arial'),sm=new THREE.MeshBasicMaterial({map:st,toneMapped:false});
+    for(const side of[-1,1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(12,2.25),sm);p.position.set((k.x0+k.x1)/2,H+2.3,(k.z0+k.z1)/2+side*0.12);p.rotation.y=side<0?Math.PI:0;grp.add(p);}
+    const fr=new THREE.Mesh(new THREE.BoxGeometry(12.4,2.6,0.2),Lm(0x2c2f36));fr.position.set((k.x0+k.x1)/2,H+2.3,(k.z0+k.z1)/2);grp.add(fr);
+    for(const ox of[-4.5,4.5]){const pl=new THREE.Mesh(new THREE.BoxGeometry(0.25,1.2,0.25),Lm(0x2c2f36));pl.position.set((k.x0+k.x1)/2+ox,H+1.4,(k.z0+k.z1)/2);grp.add(pl);}
+    signs.push(sm);
+    // totem sull'angolo esterno
+    const T=s.totem,post=new THREE.Mesh(new THREE.BoxGeometry(0.45,8.5,0.45),Lm(0x3a3d44));post.position.set(T.x,4.25,T.z);grp.add(post);
+    const pt=canvasTex(256,256,(x,W,H)=>{x.fillStyle=s.col;x.fillRect(0,0,W,H);x.strokeStyle='#fff';x.lineWidth=8;x.strokeRect(10,10,W-20,H-20);x.textAlign='center';x.textBaseline='middle';x.font='120px Arial';x.fillText(s.ic,W/2,H*0.42);x.fillStyle='#fff';x.font='900 40px Arial Black,Arial';x.fillText('DRIVE-IN',W/2,H*0.8);},true),pm=new THREE.MeshBasicMaterial({map:pt,toneMapped:false});
+    const panel=new THREE.Mesh(new THREE.BoxGeometry(3.4,3.4,0.4),pm);panel.position.set(T.x,9.6,T.z);grp.add(panel);const p2=panel.clone();p2.rotation.y=Math.PI/2;grp.add(p2);signs.push(pm);
+    // tavolini con ombrellone sul lato
+    const tz0=s.sz?k.z1+2.5:k.z0-2.5;for(let i=0;i<2;i++){const tx=k.x0+3+i*6;const tb=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,0.08,10),Lm(0xf2f2f2));tb.position.set(tx,SLAB+0.75,tz0);grp.add(tb);
+      const um=new THREE.Mesh(new THREE.ConeGeometry(1.5,0.6,8),Lm(s.roof));um.position.set(tx,SLAB+2.4,tz0);grp.add(um);const ps=new THREE.Mesh(new THREE.BoxGeometry(0.08,2.2,0.08),Lm(0xdddddd));ps.position.set(tx,SLAB+1.1,tz0);grp.add(ps);}
+  }
+  // casa con box
+  if(C.home){const Hm=C.home,b=Hm.box,grp=new THREE.Group();root.add(grp);const Lm=c=>new THREE.MeshLambertMaterial({color:c}),h=3.1,col=0xd9cbb0,w=0.35;
+    const g=new GB(),atMax=Hm.sz;g.box(b.x0,b.x0+w,b.z0,b.z1,SLAB,h,col);g.box(b.x1-w,b.x1,b.z0,b.z1,SLAB,h,col);
+    if(atMax)g.box(b.x0,b.x1,b.z0,b.z0+w,SLAB,h,col);else g.box(b.x0,b.x1,b.z1-w,b.z1,SLAB,h,col);
+    const dz=atMax?b.z1:b.z0;g.box(b.x0,b.x1,dz-0.3,dz+0.3,h-0.6,h,col);
+    // basculante sollevata sotto il soffitto
+    g.box(b.x0+0.4,b.x1-0.4,atMax?dz-2.6:dz,atMax?dz:dz+2.6,h-0.75,h-0.65,0x9fa6ad);
+    const m=new THREE.Mesh(g.geo(),VC());m.castShadow=true;m.receiveShadow=true;grp.add(m);
+    const rg=new GB();rg.box(b.x0-0.3,b.x1+0.3,b.z0-0.3,b.z1+0.3,h,h+0.3,0x8a5a44);const roof=new THREE.Mesh(rg.geo(),VC());roof.castShadow=true;grp.add(roof);homeRoof=roof;
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(b.x1-b.x0-0.8,b.z1-b.z0-0.6),Lm(0x6b6e74));fl.rotation.x=-Math.PI/2;fl.position.set((b.x0+b.x1)/2,SLAB+0.04,(b.z0+b.z1)/2);grp.add(fl);
+    const lp=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.6),new THREE.MeshBasicMaterial({color:0xfff2d0}));lp.rotation.x=Math.PI/2;lp.position.set((b.x0+b.x1)/2,h-0.68,(b.z0+b.z1)/2);grp.add(lp);svcLights.push(lp);
+    const ht=textTex('🏠 CASA','#2c6d4a','#ffffff',256,64,'900 36px Arial Black,Arial'),hs=new THREE.Mesh(new THREE.PlaneGeometry(2.6,0.65),new THREE.MeshBasicMaterial({map:ht}));
+    hs.position.set((b.x0+b.x1)/2,h+0.75,atMax?dz+0.32:dz-0.32);hs.rotation.y=atMax?0:Math.PI;grp.add(hs);
+    // siepe intorno al lotto (lato interno)
+    const Z=Hm.zone,hg=new GB(),hc=0x3f7a35;
+    if(Hm.sx)hg.box(Z.x0,Z.x0+0.8,Z.z0,Z.z1,SLAB,SLAB+1.1,hc);else hg.box(Z.x1-0.8,Z.x1,Z.z0,Z.z1,SLAB,SLAB+1.1,hc);
+    if(Hm.sz)hg.box(Z.x0,Z.x1,Z.z0,Z.z0+0.8,SLAB,SLAB+1.1,hc);else hg.box(Z.x0,Z.x1,Z.z1-0.8,Z.z1,SLAB,SLAB+1.1,hc);
+    grp.add(new THREE.Mesh(hg.geo(),VC()));
   }
   // alberi, lampioni, passanti
   const treeMat=VC();
@@ -1882,6 +1982,7 @@ function update(c,dt,t,o){
   camUpdate(c,dt,o.cam,o.look||0);
 }
 function camUpdate(c,dt,mode,look){
+  if(homeRoof){const b=S.C.home.box;homeRoof.visible=!(c.x>b.x0-0.5&&c.x<b.x1+0.5&&c.z>b.z0-1.5&&c.z<b.z1+1.5);}
   const cm=S.cam,spd=Math.hypot(c.vx,c.vz),vh=spd>4&&c.vf>0?Math.atan2(c.vx,-c.vz):c.a;
   const tgtH=wrapA(c.a+wrapA(vh-c.a)*0.5);
   if(!cm.init){cm.h=c.a;cm.init=true;cm.dist=11;}
@@ -1955,7 +2056,7 @@ function buildCart(type){const g=new THREE.Group(),L=c=>new THREE.MeshLambertMat
 function setVendors(list){if(!S||!S.carts)return;const glow=(S.lit||0)>0.3;S.carts.forEach((g,i)=>{const v=list[i];g.visible=!!(v&&v.on);if(!g.visible)return;
   g.position.set(v.x,0.16,v.z);g.rotation.y=v.rot||0;g.userData.bulbs.color.set(glow?0xffe08a:0x665522);});}
 /* ---------- ferrovia: viadotto, binari, stazione e treni ---------- */
-let railLampMat=null,railFloorMat=null;
+let railLampMat=null,railFloorMat=null,homeRoof=null;
 function buildRailway(C,root){
   const R=C.rail,z=R.z,P=[],PB=[],Y=x=>railY(R,x),LP=[];
   railLampMat=new THREE.MeshLambertMaterial({color:0x8a8f96,emissive:0xfff0c8,emissiveIntensity:0});
@@ -2250,7 +2351,7 @@ const UPGR=[
 function hasUp(id){const u=UPGR.find(x=>x.id===id);return u.car?!!(cs().up||{})[id]:!!(G.K.up||{})[id];}
 
 const CITY_GEN=2; // generazione città identica su tutti i browser (dalla v1.9.3)
-function newCareer(){const g=CITY.garages[0];return{v:1,fresh:true,city:CITY_GEN,money:100,clock:7*60,car:'gazzella',owned:['gazzella'],cars:{gazzella:{fuel:28,tread:80,flat:false,hp:100,iss:{},dead:false,up:{}}},rep:3,up:{},wx:{kind:'sereno',until:7*60+180},
+function newCareer(){const g=CITY.garages[0];return{v:1,fresh:true,city:CITY_GEN,hunger:15,parts:null,money:100,clock:7*60,car:'gazzella',owned:['gazzella'],cars:{gazzella:{fuel:28,tread:80,flat:false,hp:100,iss:{},dead:false,up:{}}},rep:3,up:{},wx:{kind:'sereno',until:7*60+180},
   x:g.cx,z:g.cz,a:Math.atan2(CITY.edges[g.addr.e].dx,-CITY.edges[g.addr.e].dz),stats:{rides:0,km:0,earned:0,tips:0,fuel:0,tires:0,tow:0,stars:0,best:0,cancelled:0,lost:0,repair:0,crash:0,fines:0,fineN:0,reds:0}};}
 function normCar(st){if(st.hp==null)st.hp=100;if(!st.iss)st.iss={};st.dead=!!st.dead;if(!st.up)st.up={};return st;}
 
@@ -2312,7 +2413,7 @@ function intro(slot){
   if(slot==null)slot=store.slot;
   showScreen(`<h2>Primo turno<small>Benvenuto a Metropoli</small></h2><div class="bottom">
     <div class="card" style="line-height:1.5;font-size:14px">📞 Le chiamate arrivano dalla centrale: accettale e vai a prendere il cliente (fascio <b style="color:#ffd400">giallo</b>), poi portalo a destinazione (fascio <b style="color:#7dff6a">verde</b>). Il tassametro conta i km: più lunga la corsa, più guadagni. Guida pulita e puntuale = mance più alte.<br><br>
-    ⛽ Il taxi consuma benzina: fai il pieno ai distributori.<br>◎ Le gomme si consumano: se sono lisce rischi di bucare e dovrai pagare il carro attrezzi fino all'officina.<br>🛠 Gli urti ammaccano il taxi: sotto il 60% arrivano i guasti (perdite di benzina, fari, navigatore) e i clienti più esigenti non salgono. Un frontale ad alta velocità può rompere il motore.<br>🌙 Dalle 22 alle 6 vale la tariffa notturna (+20%).<br>🌧️ Con la pioggia le strade scivolano, ma arrivano più chiamate e mance.<br>★ Guida bene per alzare la reputazione: porta più chiamate, clienti VIP e corse speciali (inseguimenti, giri turistici, tappe).<br>🚕 Alla stazione e all'aeroporto puoi fermarti negli stalli gialli e metterti in coda: arrivano clienti per corse lunghe.<br>📅 Ogni giorno ci sono 3 obiettivi con premio ed eventi in città (partite, concerti, fiere): prima e dopo arrivano tante chiamate. Controllali dalla pausa.<br>🚑 Quando senti la sirena accosta a destra e lascia passare l'ambulanza.<br>🚸 Sulle strisce i pedoni hanno la precedenza: fermati e lasciali passare.<br>🚦 Rispetta i semafori: passare col rosso davanti a una telecamera 📷 o a una pattuglia dei vigili 👮 costa € ${FINE_RED}. Di notte (23–5:30) gli incroci minori passano al giallo lampeggiante.<br>🔧 In officina ripari carrozzeria e motore, compri gomme nuove e taxi migliori.</div>
+    ⛽ Il taxi consuma benzina: fai il pieno ai distributori.<br>◎ Le gomme si consumano: se sono lisce rischi di bucare e dovrai pagare il carro attrezzi fino all'officina.<br>🛠 Gli urti ammaccano il taxi: sotto il 60% arrivano i guasti (perdite di benzina, fari, navigatore) e i clienti più esigenti non salgono. Un frontale ad alta velocità può rompere il motore.<br>🌙 Dalle 22 alle 6 vale la tariffa notturna (+20%).<br>🌧️ Con la pioggia le strade scivolano, ma arrivano più chiamate e mance.<br>★ Guida bene per alzare la reputazione: porta più chiamate, clienti VIP e corse speciali (inseguimenti, giri turistici, tappe).<br>🚕 Alla stazione e all'aeroporto puoi fermarti negli stalli gialli e metterti in coda: arrivano clienti per corse lunghe.<br>📅 Ogni giorno ci sono 3 obiettivi con premio ed eventi in città (partite, concerti, fiere): prima e dopo arrivano tante chiamate. Controllali dalla pausa.<br>🚑 Quando senti la sirena accosta a destra e lascia passare l'ambulanza.<br>🚸 Sulle strisce i pedoni hanno la precedenza: fermati e lasciali passare.<br>🚦 Rispetta i semafori: passare col rosso davanti a una telecamera 📷 o a una pattuglia dei vigili 👮 costa € ${FINE_RED}. Di notte (23–5:30) gli incroci minori passano al giallo lampeggiante.<br>🔧 In officina ripari carrozzeria e motore, compri gomme nuove e taxi migliori.<br>🍔 La fame sale con le ore: mangia almeno una volta al giorno in uno dei 4 drive-in o a casa. Oltre il 90% i comandi possono invertirsi!<br>🏠 Nel box di casa (in periferia) le chiamate si fermano, mangi e ordini ricambi a metà prezzo: arrivano a casa dopo 24 ore di gioco.</div>
     <button class="btn main" data-nav id="bGo">INIZIA IL TURNO</button><button class="btn" data-nav id="bBack">Indietro</button></div>`,menuMain,'bGo');
   $('bGo').onclick=()=>{store.slot=slot;store.slots[slot]=newCareer();startPlay(store.slots[slot]);save();};$('bBack').onclick=()=>store.slots.some(x=>x)?slotsScreen():menuMain();
 }
@@ -2363,7 +2464,7 @@ function placeOnRoad(x,z,a){const P=projectEdge(CITY,x,z),e=P.e;let dir=1;if(a!=
   G.car.x=e.ax+e.dx*s+nx*e.hw*0.45;G.car.z=e.az+e.dz*s+nz*e.hw*0.45;G.car.a=Math.atan2(e.dx*dir,-e.dz*dir);G.car.vx=G.car.vz=G.car.w=G.car.vf=G.car.vr=0;}
 function startPlay(K){
   SFX.unlock();VOICE.hush();G.K=K;G.bot=null;for(const k in K.cars)normCar(K.cars[k]);K.stats.repair=K.stats.repair||0;if(K.rep==null)K.rep=K.stats.rides?clamp(K.stats.stars/K.stats.rides,1,5):3;if(!K.up)K.up={};if(!K.wx)K.wx={kind:'sereno',until:K.clock+120};
-  {const W=WEATHER[K.wx.kind];G.wxRain=W.rain;G.wxCloud=W.cloud;}G.rank=null;K.stats.crash=K.stats.crash||0;for(const k of['fines','fineN','reds'])K.stats[k]=K.stats[k]||0;G.px=K.x;G.pz=K.z;G.boxN=-1;G.gps={on:true,t:8};
+  {const W=WEATHER[K.wx.kind];G.wxRain=W.rain;G.wxCloud=W.cloud;}G.rank=null;K.stats.crash=K.stats.crash||0;for(const k of['fines','fineN','reds','food'])K.stats[k]=K.stats[k]||0;if(K.hunger==null)K.hunger=20;if(K.parts===undefined)K.parts=null;G.hungerW=K.hunger>=90?3:K.hunger>=80?2:K.hunger>=60?1:0;G.conf=0;G.confNext=0;G.atHome=false;G.px=K.x;G.pz=K.z;G.boxN=-1;G.gps={on:true,t:8};
   G.car=makeCar(spec());GFX.setCar(spec());G.car.x=K.x;G.car.z=K.z;G.car.a=K.a;if(K.fresh){placeOnRoad(K.x,K.z,null);delete K.fresh;}
   if(K.city!==CITY_GEN){const g=CITY.garages[0];placeOnRoad(g.cx,g.cz,null);K.x=G.car.x;K.z=G.car.z;K.a=G.car.a;G.px=K.x;G.pz=K.z;
     if(K.daily)for(const ev of K.daily.events){const L=CITY.landmarks.find(l=>l.id===ev.lm&&l.addr);if(L)ev.addr=L.addr;}
@@ -2571,7 +2672,7 @@ function updateNav(){
   if(!G.nav)return;const car=G.car;
   if(G.t-G.lastRoute>1){G.lastRoute=G.t;const r=navRoute(CITY,car.x,car.z,car.a,G.nav.target);G.route=r.lane;G.raw=r.pts;G.man=r.man;G.routeLen=r.len;GFX.setRoute(gpsOk()?r.lane:null,G.nav.color);}
   // servizi: arrivo nella piazzola
-  if(G.nav&&(G.nav.kind==='fuel'||G.nav.kind==='garage')){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type===G.nav.kind){clearNav();VOICE.say('Sei arrivato');}}
+  if(G.nav&&['fuel','garage','food','home'].includes(G.nav.kind)){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type===G.nav.kind&&(s.type!=='home'||inBox(s,car.x,car.z))){clearNav();VOICE.say(s.type==='home'?'Sei a casa':'Sei arrivato');}}
 }
 function nextManeuver(){
   if(!G.raw||!G.man.length)return null;const P=polyProject(G.raw,G.car.x,G.car.z,0);
@@ -2614,8 +2715,78 @@ function updateGps(dt){
   if(G.gps.on){G.gps.t=5+G.rng()*10*(1-sev*0.6);G.lastRoute=-9;}
   else{G.gps.t=3+G.rng()*6+sev*8;GFX.setRoute(null);VOICE.hush();if(G.nav)SFX.beep(240,0.2);}
 }
+/* ---------- fame, drive-in e casa ---------- */
+const HUNGER_H=30;            // ore di gioco per passare da 0% a 100% (circa 80% dopo un giorno)
+const PARTS_DAYS=1;           // i ricambi arrivano dopo 24 ore di gioco
+function hunger(){return G.K.hunger||0;}
+function inBox(H,x,z){const b=H.box;return x>b.x0+0.45&&x<b.x1-0.45&&z>b.z0+0.3&&z<b.z1-0.3;}
+function svcList(type){return type==='fuel'?CITY.stations:type==='garage'?CITY.garages:type==='food'?CITY.foods:CITY.home?[CITY.home]:[];}
+function eatDone(rec,txt){const K=G.K;K.hunger=Math.max(0,hunger()-rec);G.hungerW=K.hunger>=90?3:K.hunger>=80?2:K.hunger>=60?1:0;G.conf=0;G.confNext=0;toast(txt+' · fame '+Math.round(K.hunger)+'%');}
+function updateHunger(dt,dtMin){
+  const K=G.K;if(K.hunger==null)K.hunger=20;
+  if(!G.atHome)K.hunger=Math.min(100,K.hunger+dtMin*100/(HUNGER_H*60));
+  const h=K.hunger,w=h>=90?3:h>=80?2:h>=60?1:0;G.hungerW=G.hungerW||0;
+  if(w>G.hungerW){G.hungerW=w;
+    if(w===1){toast('🍔 Ti sta venendo fame: fermati a un drive-in');VOICE.say('Ti sta venendo fame');}
+    if(w===2){toast('🍔 Hai molta fame! Mangia qualcosa al più presto');VOICE.say('Hai molta fame, fermati a mangiare',true);}
+    if(w===3){toast('😵 Troppa fame: rischi di confondere i comandi!');VOICE.say('Attenzione: con questa fame rischi di sbagliare i comandi',true);SFX.beep(300,0.3);}}
+  else if(w<G.hungerW)G.hungerW=w;
+  // oltre il 90%: ogni tanto i comandi si invertono (più spesso e più a lungo vicino al 100%)
+  if(h>=90){G.confNext=(G.confNext||0)-dt;
+    if(G.conf>0){G.conf-=dt;if(G.conf<=0){G.conf=0;toast('🙂 Ti sei ripreso… per ora');}}
+    else if(G.confNext<=0){const k=(h-90)/10;G.conf=3+k*5+G.rng()*2;G.confNext=G.conf+(1-k)*30+8+G.rng()*12;SFX.beep(220,0.25);rumble(8);GFX.shake(0.25);
+      toast('😵 Che fame… destra e sinistra, gas e freno si invertono!');}}
+  else G.conf=0;
+  // ricambi in arrivo a casa
+  if(K.parts&&K.clock>=K.parts.due){const P=K.parts,cst=K.cars[P.car];if(cst)cst.spare=(cst.spare||0)+P.pts;K.parts=null;K.partsNew=true;
+    toast('📦 Sono arrivati i ricambi a casa: +'+P.pts+'% di integrità',4500);VOICE.say('Sono arrivati i pezzi di ricambio a casa',true);SFX.beep(880,0.12);save();}
+}
+function hhmmLeft(min){min=Math.max(0,Math.ceil(min));const h=Math.floor(min/60),m=min%60;return h?h+' h '+(m?m+' min':''):m+' min';}
+function foodScreen(s,sel){
+  const K=G.K;sel=sel||{f:-1,d:-1};const h=hunger();
+  const items=s.menu.map((m,i)=>({k:'f',i,n:m[0],p:m[1],r:m[2]})),drinks=DRINKS.map((m,i)=>({k:'d',i,n:m[0],p:m[1],r:m[2]}));
+  const fi=sel.f>=0?items[sel.f]:null,di=sel.d>=0?drinks[sel.d]:null,tot=(fi?fi.p:0)+(di?di.p:0),rec=(fi?fi.r:0)+(di?di.r:0),after=Math.max(0,h-rec);
+  const row=(o)=>{const on=(o.k==='f'?sel.f:sel.d)===o.i;return`<button class="btn${on?' main':''}" data-nav id="m${o.k}${o.i}">${on?'✅ ':''}${o.n}<span class="r">${eur(o.p)} · −${o.r}%</span></button>`;};
+  const col=h>=90?'#ff4d3d':h>=60?'#ffd400':'#c8f03c';
+  svcScreen(`<h2>${s.ic} ${s.name}<small>Drive-in · cassa ${eur(K.money)}</small></h2><div class="bottom">
+    <div class="card"><div class="mut">Fame</div><div class="meter"><i style="width:${h}%;background:${col}"></i></div><div class="center">${Math.round(h)}%${fi||di?' → <b>'+Math.round(after)+'%</b>':''}</div></div>
+    <div class="mut" style="margin:6px 2px 2px">DA MANGIARE</div>${items.map(row).join('')}
+    <div class="mut" style="margin:6px 2px 2px">DA BERE</div>${drinks.map(row).join('')}
+    <button class="btn main" data-nav id="bOrd" ${!tot||K.money<tot?'disabled':''}>${!tot?'SCEGLI COSA ORDINARE':K.money<tot?'CASSA INSUFFICIENTE':'ORDINA E MANGIA'}<span class="r">${tot?eur(tot):''}</span></button>
+    <button class="btn" data-nav id="bOut">Riparti</button></div>`,sel.focus||'mf0');
+  for(const o of items.concat(drinks))$('m'+o.k+o.i).onclick=()=>{const n={...sel};if(o.k==='f')n.f=n.f===o.i?-1:o.i;else n.d=n.d===o.i?-1:o.i;n.focus='m'+o.k+o.i;SFX.click();foodScreen(s,n);};
+  $('bOrd').onclick=()=>{if(!tot||K.money<tot)return;K.money-=tot;K.stats.food=(K.stats.food||0)+tot;SFX.cash();
+    const what=[fi&&fi.n.toLowerCase(),di&&di.n.toLowerCase()].filter(Boolean).join(' e ');save();resumePlay();eatDone(rec,'😋 Buon appetito: '+what);if(G.nav&&G.nav.kind==='food')clearNav();};
+  $('bOut').onclick=resumePlay;
+}
+function homeScreen(s){
+  const K=G.K,st=cs(),sp=spec();
+  if(hunger()>0){K.hunger=0;G.hungerW=0;G.conf=0;}K.partsNew=false;
+  const hp=st.hp,miss=Math.max(0,Math.ceil(100-hp-0.001)),rate=(BODY_RATE[sp.id]||4)/2,spare=st.spare||0,P=K.parts;
+  const need=Math.max(0,miss-spare),pts=Math.min(need,Math.floor(Math.max(0,K.money)/rate)),cost=Math.ceil(pts*rate),gar=Math.round(need*rate*2);
+  const use=Math.min(spare,miss),il=issueList(st,true);
+  const hcond=hp>85?'Come nuovo':hp>60?'Qualche ammaccatura':hp>35?'<b class="neg">Danneggiato</b>':'<b class="neg">Distrutto</b>';
+  const pending=P?`<div class="card">📦 <b>Ricambi ordinati</b>: +${P.pts}%${P.car!==sp.id?' per '+CAR_BY_ID[P.car].name:''}<br><span class="mut">Arrivano tra ${hhmmLeft(P.due-K.clock)} (ore di gioco)</span></div>`:'';
+  svcScreen(`<h2>🏠 Casa tua<small>Taxi nel box · chiamate sospese · cassa ${eur(K.money)}</small></h2><div class="bottom">
+    <div class="card">🍽 Hai mangiato a casa: <b>fame 0%</b></div>
+    <div class="card"><div class="mut">Integrità del ${sp.name}</div><div class="meter"><i style="width:${hp}%;background:${hp<35||st.dead?'#ff4d3d':hp<60?'#ffd400':'#c8f03c'}"></i></div><div class="center">${Math.round(hp)}% · ${hcond}${st.dead?' · <b class="neg">MOTORE ROTTO</b>':''}${il?'<br><span class="mut" style="font-size:12px">'+il+'</span>':''}</div>
+      ${spare?`<div class="center" style="margin-top:6px">📦 In garage hai ricambi per <b>+${spare}%</b></div>`:''}
+      ${st.dead?'<div class="mut center" style="margin-top:6px;font-size:12px">Il motore nuovo si monta solo in officina</div>':''}</div>
+    ${pending}
+    ${spare&&miss?`<button class="btn main" data-nav id="bMount">🔧 MONTA I RICAMBI<span class="r">+${use}%</span></button>`:''}
+    ${!P&&need>0?`<button class="btn${spare&&miss?'':' main'}" data-nav id="bOrder" ${pts<1?'disabled':''}>📦 ${pts>=need?'ORDINA I RICAMBI':pts<1?'CASSA INSUFFICIENTE':'ORDINA CON TUTTA LA CASSA'}<span class="r">${pts>=1?'+'+pts+'% · '+eur0(cost):''}</span></button>
+      <div class="mut center" style="font-size:12px;margin:-2px 0 4px">Metà prezzo rispetto all'officina (${eur0(gar)}) · consegna a casa tra 24 ore di gioco</div>`:''}
+    ${!miss&&!P?'<div class="card center">✨ Il taxi è in perfette condizioni</div>':''}
+    <button class="btn${(!spare||!miss)&&(P||!need)?' main':''}" data-nav id="bOut">Esci dal box</button></div>`,spare&&miss?'bMount':!P&&need>0&&pts>=1?'bOrder':'bOut');
+  if($('bMount'))$('bMount').onclick=()=>{const u=Math.min(st.spare||0,Math.ceil(100-st.hp-0.001));if(u<1)return;st.hp=Math.min(100,st.hp+u);st.spare=(st.spare||0)-u;
+    let msg='🔧 Ricambi montati: integrità '+Math.round(st.hp)+'%';if(st.hp>=60&&Object.keys(st.iss).length){st.iss={};msg+=' · guasti risolti';}G.warn.h60=G.warn.h30=false;SFX.cash();toast(msg);save();homeScreen(s);};
+  if($('bOrder'))$('bOrder').onclick=()=>{if(pts<1)return;K.money-=cost;K.stats.repair+=cost;K.parts={car:sp.id,pts,due:K.clock+PARTS_DAYS*1440,cost};SFX.cash();
+    toast('📦 Ricambi ordinati: arrivano a casa tra 24 ore');VOICE.say('Pezzi di ricambio ordinati. Arriveranno a casa domani a quest\'ora');save();homeScreen(s);};
+  $('bOut').onclick=resumePlay;
+  save();
+}
 function nearestSvc(list){let b=null,bd=1e9;for(const s of list){const d=Math.hypot(s.cx-G.car.x,s.cz-G.car.z);if(d<bd){bd=d;b=s;}}return b;}
-function navToService(type){const s=nearestSvc(type==='fuel'?CITY.stations:CITY.garages);setNav({x:s.cx,z:s.cz,e:s.addr.e,s:s.addr.s,name:s.name},type);VOICE.say('Navigazione verso '+s.name,true);toast((type==='fuel'?'⛽ ':'🔧 ')+s.name);}
+function navToService(type){const s=nearestSvc(svcList(type));if(!s)return;setNav({x:s.cx,z:s.cz,e:s.addr.e,s:s.addr.s,name:s.name},type);VOICE.say('Navigazione verso '+(type==='home'?'casa':s.name),true);toast(({fuel:'⛽ ',garage:'🔧 ',food:(s.ic||'🍔')+' ',home:'🏠 '})[type]+s.name);}
 
 /* ---------- servizi ---------- */
 function svcScreen(html,def){G.mode='service';showScreen(html,resumePlay,def,true);$('hud').classList.add('hide');$('btnMap').classList.add('hide');$('btnPause').classList.add('hide');}
@@ -2706,6 +2877,8 @@ function pauseGame(){
     ${!G.job?`<button class="btn" data-nav id="bDnd">${G.dnd>0?'🔔 Riattiva le chiamate<span class="r">pausa: '+mmss(G.dnd)+'</span>':'🔕 Pausa chiamate (5 minuti)'}</button>`:''}
     <button class="btn" data-nav id="bFuel">⛽ Naviga al distributore più vicino</button>
     <button class="btn" data-nav id="bGar">🔧 Naviga all'officina più vicina</button>
+    <button class="btn" data-nav id="bFood">🍔 Naviga al drive-in più vicino<span class="r">fame ${Math.round(hunger())}%</span></button>
+    ${CITY.home?`<button class="btn" data-nav id="bHome">🏠 Naviga verso casa${K.parts?'<span class="r">📦 tra '+hhmmLeft(K.parts.due-K.clock)+'</span>':K.partsNew?'<span class="r">📦 ricambi arrivati</span>':''}</button>`:''}
     ${G.nav&&!G.job?'<button class="btn" data-nav id="bNavOff">Spegni il navigatore</button>':''}
     ${G.job?'<button class="btn" data-nav id="bCancel">Annulla la corsa in corso</button>':''}
     <button class="btn" data-nav id="bMap">🗺 Mappa della città</button>
@@ -2717,6 +2890,8 @@ function pauseGame(){
   $('bRes').onclick=resumePlay;$('bDay').onclick=dayScreen;if($('bDnd'))$('bDnd').onclick=()=>{resumePlay();toggleDnd();};
   $('bFuel').onclick=()=>{if(G.job){toast('Prima finisci la corsa!');return;}resumePlay();navToService('fuel');};
   $('bGar').onclick=()=>{if(G.job){toast('Prima finisci la corsa!');return;}resumePlay();navToService('garage');};
+  $('bFood').onclick=()=>{if(G.job){toast('Prima finisci la corsa!');return;}resumePlay();navToService('food');};
+  if($('bHome'))$('bHome').onclick=()=>{if(G.job){toast('Prima finisci la corsa!');return;}resumePlay();navToService('home');};
   if($('bNavOff'))$('bNavOff').onclick=()=>{clearNav();resumePlay();};
   if($('bCancel'))$('bCancel').onclick=()=>{cancelJob('Corsa annullata.');resumePlay();};
   $('bMap').onclick=()=>openMap(true);
@@ -2742,7 +2917,7 @@ function statsScreen(){
     <tr><td>Corse completate</td><td class="t">${S.rides}</td></tr><tr><td>Valutazione media</td><td class="t">${S.rides?(S.stars/S.rides).toFixed(1).replace('.',','):'-'} ★</td></tr>
     <tr><td>Chilometri percorsi</td><td class="t">${S.km.toFixed(1).replace('.',',')} km</td></tr><tr><td>Incassi tassametro</td><td class="t pos">${eur(S.earned)}</td></tr>
     <tr><td>Mance</td><td class="t pos">${eur(S.tips)}</td></tr><tr><td>Corsa migliore</td><td class="t">${eur(S.best)}</td></tr>
-    <tr><td>Carburante</td><td class="t neg">${eur(S.fuel)}</td></tr><tr><td>Gomme</td><td class="t neg">${eur(S.tires)}</td></tr><tr><td>Carrozzeria e motore</td><td class="t neg">${eur(S.repair||0)}</td></tr><tr><td>Potenziamenti</td><td class="t neg">${eur(S.upg||0)}</td></tr><tr><td>Incidenti</td><td class="t">${S.crash||0}</td></tr><tr><td>Multe (${S.fineN||0})</td><td class="t neg">${eur(S.fines||0)}</td></tr><tr><td>Passaggi col rosso</td><td class="t">${S.reds||0}</td></tr><tr><td>Precedenze negate ai pedoni</td><td class="t">${S.noYield||0}</td></tr><tr><td>Pedoni investiti</td><td class="t">${S.pedHit||0}</td></tr><tr><td>Carro attrezzi e soccorso</td><td class="t neg">${eur(S.tow)}</td></tr>
+    <tr><td>Carburante</td><td class="t neg">${eur(S.fuel)}</td></tr><tr><td>Drive-in</td><td class="t neg">${eur(S.food||0)}</td></tr><tr><td>Gomme</td><td class="t neg">${eur(S.tires)}</td></tr><tr><td>Carrozzeria e motore</td><td class="t neg">${eur(S.repair||0)}</td></tr><tr><td>Potenziamenti</td><td class="t neg">${eur(S.upg||0)}</td></tr><tr><td>Incidenti</td><td class="t">${S.crash||0}</td></tr><tr><td>Multe (${S.fineN||0})</td><td class="t neg">${eur(S.fines||0)}</td></tr><tr><td>Passaggi col rosso</td><td class="t">${S.reds||0}</td></tr><tr><td>Precedenze negate ai pedoni</td><td class="t">${S.noYield||0}</td></tr><tr><td>Pedoni investiti</td><td class="t">${S.pedHit||0}</td></tr><tr><td>Carro attrezzi e soccorso</td><td class="t neg">${eur(S.tow)}</td></tr>
     <tr><td>Chiamate rifiutate</td><td class="t">${S.rejected||0}</td></tr><tr><td>Clienti persi</td><td class="t">${S.cancelled+S.lost}</td></tr></table></div><button class="btn" data-nav id="bB">Indietro</button></div>`,pauseGame2);
   $('bB').onclick=pauseGame2;
 }
@@ -2773,6 +2948,8 @@ function overlayPOI(x,tr,sc){ // tr: (wx,wz)->[px,py]
   for(const s of CITY.stations){const[p,q]=tr(s.cx,s.cz);drawIcon(x,p,q,7*sc,'#e8762a','⛽');}
   for(const s of CITY.garages){const[p,q]=tr(s.cx,s.cz);drawIcon(x,p,q,7*sc,'#2b63d9','🔧');}
   for(const R of CITY.ranks||[]){const[p,q]=tr(R.x,R.z);drawIcon(x,p,q,7*sc,'#d9b400','🚕');}
+  for(const f of CITY.foods||[]){const[p,q]=tr(f.cx,f.cz);drawIcon(x,p,q,7*sc,f.col,f.ic);}
+  if(CITY.home){const[p,q]=tr(CITY.home.cx,CITY.home.cz);drawIcon(x,p,q,7.5*sc,'#2c8a4a','🏠');}
   if(G.mode!=='menu'&&G.K){for(const{e,ph}of activeEvents()){const[p,q]=tr(e.addr.x,e.addr.z);drawIcon(x,p,q,8*sc,ph==='uscita'?'#e0428a':'#8a4fe0',e.ic);}
     if(G.amb&&G.amb.active){const[p,q]=tr(G.amb.x,G.amb.z);drawIcon(x,p,q,6*sc,'#e2231a','🚑');}}
   if(G.mode!=='menu'&&G.car){
@@ -2820,7 +2997,7 @@ function mapFit(){MV.z=1;const w=mapWorld();MV.cx=(w.x0+w.x1)/2;MV.cz=(w.z0+w.z1
 function mapLegend(){const li=G.lastInput,h=li==='pad'?'Stick sinistro: sposta · RT/LT o stick destro: zoom · A: taxi · Y: tutta la città · B: chiudi'
   :li==='key'?'Frecce/WASD: sposta · +/− o E/Q: zoom · C: taxi · F: tutta la città · Esc/M: chiudi'
   :li==='mouse'?'Trascina per spostarti · rotella o doppio clic: zoom · Esc: chiudi':'Trascina per spostarti · pizzica o doppio tocco per lo zoom';
-  const t='⛽ Distributori · 🔧 Officine · 🚕 Parcheggi taxi · ⭐ Eventi · 🚑 Ambulanza · 📞 Chiamate · 🏁 Destinazione · ● semafori · <span style="color:#4f8fe8">●</span> telecamere<br><span style="color:#9aa0b4">'+h+'</span>';
+  const t='⛽ Distributori · 🔧 Officine · 🍔 Drive-in · 🏠 Casa · 🚕 Parcheggi taxi · ⭐ Eventi · 🚑 Ambulanza · 📞 Chiamate · 🏁 Destinazione · ● semafori · <span style="color:#4f8fe8">●</span> telecamere<br><span style="color:#9aa0b4">'+h+'</span>';
   const L=$('bigmap').querySelector('.leg');if(L.innerHTML!==t)L.innerHTML=t;}
 function openMap(fromPause){
   const bm=$('bigmap');bm.classList.remove('hide');G.mapFrom=fromPause?'paused':G.mode;G.mode='map';
@@ -2942,6 +3119,7 @@ function updateHUD(){
   gauge('gFuel',st.fuel/sp.tank,Math.round(st.fuel/sp.tank*100)+'%');
   gauge('gTire',car.flat?0:st.tread/100,car.flat?'KO':Math.round(st.tread)+'%');
   gauge('gHp',st.dead?0:st.hp/100,st.dead?'KO':Math.round(st.hp)+'%',0.3,0.6);
+  {const h=hunger(),k=Math.round(h)+'|'+(G.conf>0?1:0);if(G.hud.gHun!==k){G.hud.gHun=k;const e=$('gHun');e.querySelector('i').style.width=h+'%';e.querySelector('.pc').textContent=Math.round(h)+'%';e.classList.toggle('low',h>=90);e.classList.toggle('mid',h>=60&&h<90);$('conf').classList.toggle('off',!(G.conf>0));}}
   const kmh=Math.round(Math.abs(car.vf)*3.6);setTxt('spd',kmh+'<small>km/h</small>',true);
   { const pf=pedAhead(CITY,car.x,car.z,car.a,45,4.5),pk=pf!==null?'p':'';if(G.hud.ped!==pk){G.hud.ped=pk;$('ped').classList.toggle('off',!pk);} }
   { const A=G.sigA,k=A?A.s+(A.sig.cam?'c':''):'';if(G.hud.tl!==k){G.hud.tl=k;const e=$('tl');
@@ -2949,9 +3127,10 @@ function updateHUD(){
   if(G.hud.gear!==car.gear){G.hud.gear=car.gear;const g=$('gear');g.textContent=car.gear;g.classList.toggle('r',car.gear==='R');}
   // pannello corsa
   let j;const J=G.job;
-  if(!J&&G.dnd>0&&!G.rank){j=`🔕 <b>PAUSA CHIAMATE</b> · ancora ${mmss(G.dnd)}<br><span class="mut" style="font-size:11px">${G.lastInput==='pad'?'Tieni premuto LB 2 s':G.lastInput==='touch'?'Dal menu pausa':'Premi N'} per riattivarle</span>`;}
+  if(!J&&G.atHome){j=`🏠 <b>A CASA</b> · chiamate sospese${G.K.parts?'<br><span class="mut" style="font-size:11px">📦 Ricambi in arrivo tra '+hhmmLeft(G.K.parts.due-G.K.clock)+'</span>':''}`;}
+  else if(!J&&G.dnd>0&&!G.rank){j=`🔕 <b>PAUSA CHIAMATE</b> · ancora ${mmss(G.dnd)}<br><span class="mut" style="font-size:11px">${G.lastInput==='pad'?'Tieni premuto LB 2 s':G.lastInput==='touch'?'Dal menu pausa':'Premi N'} per riattivarle</span>`;}
   else if(!J&&G.rank){j=`🚕 <b>In coda</b> · ${G.rank.R.lm==='stazione'?'Stazione Centrale':'Aeroporto'}<br>Sei <b>${G.rank.pos}°</b> nella fila · resta fermo negli stalli`;}
-  else if(!J){j=G.nav?`🧭 Verso <b>${G.nav.target.name}</b> · ${km(G.routeLen||0)}`:(st.dead?'<b style="color:#ff4d3d">MOTORE ROTTO</b> · chiama il carro attrezzi':car.flat?'<b style="color:#ff4d3d">GOMMA A TERRA</b> · chiama il carro attrezzi':car.fuelOut?'<b style="color:#ff4d3d">SENZA BENZINA</b>':`🟢 <b>LIBERO</b> · ${G.calls.length?'chiamate in arrivo':'in attesa di chiamate…'}`);}
+  else if(!J){j=G.nav?`🧭 Verso <b>${G.nav.target.name}</b> · ${km(G.routeLen||0)}`:(st.dead?'<b style="color:#ff4d3d">MOTORE ROTTO</b> · chiama il carro attrezzi':car.flat?'<b style="color:#ff4d3d">GOMMA A TERRA</b> · chiama il carro attrezzi':car.fuelOut?'<b style="color:#ff4d3d">SENZA BENZINA</b>':`🟢 <b>LIBERO</b> · ${G.calls.length?'chiamate in arrivo':'in attesa di chiamate…'}${G.K.partsNew?'<br><span style="font-size:11px;color:#ffd400">📦 Ricambi arrivati: passa da casa per montarli</span>':''}`);}
   else if(J.phase==='pickup'){const left=J.limit-(G.t-J.t0);j=`📍 Vai a prendere <b>${J.c.name}</b><br>${J.c.pick.name} · ${km(G.routeLen||Math.hypot(J.c.pick.x-car.x,J.c.pick.z-car.z))} · <span class="${left<30?'late':''}">⏳ ${mmss(left)}</span>`;}
   else if(J.phase==='board')j=`🚪 <b>${J.c.name}</b> sta salendo…`;
   else if(J.phase==='ride'&&J.c.special==='follow'){const far=J.dist>90;
@@ -2973,12 +3152,14 @@ function computeAction(){
   const car=G.car,v=Math.abs(car.vf),st=cs(),sp=spec();
   if(car.flat||st.dead){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type==='garage'&&v<2)return{txt:'🔧 Officina',fn:()=>garageScreen(s)};return{txt:'🛻 Chiama il carro attrezzi',fn:towScreen,red:true};}
   if(car.fuelOut){const s=inServiceZone(CITY,car.x,car.z,0);if(s&&s.type==='fuel')return{txt:'⛽ Distributore',fn:()=>fuelScreen(s)};return{txt:'⛽ Chiama il soccorso',fn:rescueScreen,red:true};}
-  if(v<2.5){const s=inServiceZone(CITY,car.x,car.z,0);if(s)return s.type==='fuel'?{txt:'⛽ Distributore',fn:()=>fuelScreen(s)}:{txt:'🔧 Officina',fn:()=>garageScreen(s)};}
+  if(v<2.5){const s=inServiceZone(CITY,car.x,car.z,0);if(s){if(s.type==='fuel')return{txt:'⛽ Distributore',fn:()=>fuelScreen(s)};if(s.type==='garage')return{txt:'🔧 Officina',fn:()=>garageScreen(s)};
+    if(s.type==='food'&&!G.job)return{txt:s.ic+' Ordina al drive-in',fn:()=>foodScreen(s)};if(s.type==='home'&&!G.job&&v<1.2&&inBox(s,car.x,car.z))return{txt:'🏠 Entra in casa',fn:()=>homeScreen(s)};}}
   if(!G.job&&!G.rank&&v<1.5){const R=rankAt(car.x,car.z);if(R)return{txt:'🚕 Mettiti in coda',fn:()=>joinRank(R)};}
   if(G.rank)return null;
   if(!G.job&&G.calls.length)return{txt:'📞 Accetta la chiamata',fn:acceptCall};
   if(!G.job&&st.fuel/sp.tank<0.2&&(!G.nav||G.nav.kind!=='fuel'))return{txt:'⛽ Naviga al distributore',fn:()=>navToService('fuel')};
   if(!G.job&&(st.tread<25||st.hp<45)&&(!G.nav||G.nav.kind!=='garage'))return{txt:'🔧 Naviga all\'officina',fn:()=>navToService('garage')};
+  if(!G.job&&hunger()>=60&&(!G.nav||G.nav.kind!=='food'))return{txt:'🍔 Naviga al drive-in',fn:()=>navToService('food')};
   return null;
 }
 function doAction(){if(G.mode==='play'&&G.act){SFX.click();G.act.fn();}}
@@ -3011,6 +3192,10 @@ function playStep(){
 function playFrame(dt){
   const K=G.K,car=G.car,v=Math.abs(car.vf);
   K.clock+=dt*TIME_SCALE;G.t+=dt;
+  {const H=CITY.home,was=G.atHome;G.atHome=!!(H&&!G.job&&v<0.6&&inBox(H,car.x,car.z));
+    if(G.atHome&&!was){if(G.calls.length){G.calls=[];G.sel=0;renderCalls(true);}toast('🏠 Sei nel box di casa: chiamate sospese');}
+    else if(!G.atHome&&was){G.callT=Math.max(G.callT||0,4);}}
+  updateHunger(dt,dt*TIME_SCALE);
   // eventi
   for(const e of G.events){
     if(e==='flat'){SFX.pop();GFX.shake(0.6);rumble(10);toast('💥 Hai bucato una gomma!');VOICE.say('Foratura! Chiama il carro attrezzi',true);
@@ -3040,7 +3225,7 @@ function playFrame(dt){
   G.frameHit=0;G.frameCurb=0;
   // chiamate
   if(G.dnd>0){G.dnd-=dt;if(G.dnd<=0){G.dnd=0;G.callT=3;toast('🔔 Pausa finita: sei di nuovo disponibile');VOICE.say('Pausa finita, sei di nuovo disponibile');}}
-  if(!G.job&&!G.rank&&!(G.dnd>0)&&!car.flat&&!car.fuelOut&&!cs().dead){G.callT-=dt;const rate=hourDemand(hours(K.clock))/60*(0.6+0.16*K.rep)*(1+0.8*(G.wxRain||0))*(hasUp('app')?1.3:1)*(activeEvents().some(x=>x.ph!=='incorso')?1.4:1);
+  if(!G.job&&!G.rank&&!(G.dnd>0)&&!G.atHome&&!car.flat&&!car.fuelOut&&!cs().dead){G.callT-=dt;const rate=hourDemand(hours(K.clock))/60*(0.6+0.16*K.rep)*(1+0.8*(G.wxRain||0))*(hasUp('app')?1.3:1)*(activeEvents().some(x=>x.ph!=='incorso')?1.4:1);
     if(G.calls.length<(hasUp('app')?3:2)&&G.callT<=0&&G.rng()<rate*dt*3+0.0){spawnCall();G.callT=3+G.rng()*5;}
     if(G.callT<-25&&!G.calls.length){spawnCall();G.callT=4;}}
   for(let i=G.calls.length-1;i>=0;i--)if(G.t>G.calls[i].exp){G.calls.splice(i,1);if(G.sel>=G.calls.length)G.sel=0;else if(G.sel>i)G.sel--;}
@@ -3323,7 +3508,7 @@ function peopleAndBeacons(){
       else if(J.phase==='alight'){const k=clamp(J.at/1.3,0,1);Pp.push({x:lerp(car.x,c.dest.px,k),z:lerp(car.z,c.dest.pz,k),face:Math.atan2(c.dest.px-car.x,c.dest.pz-car.z),shirt:c.shirt,bag:c.bag});}
     }else{
       G.calls.forEach((c,i)=>{B.push({x:c.pick.x,z:c.pick.z,color:0xffd400,dim:i!==G.sel});Pp.push({x:c.pick.px,z:c.pick.pz,face:Math.atan2(c.pick.x-c.pick.px,c.pick.z-c.pick.pz),wave:true,shirt:c.shirt,bag:c.bag});});
-      if(G.nav&&(G.nav.kind==='fuel'||G.nav.kind==='garage'))B.push({x:G.nav.target.x,z:G.nav.target.z,color:G.nav.color});
+      if(G.nav&&['fuel','garage','food','home'].includes(G.nav.kind))B.push({x:G.nav.target.x,z:G.nav.target.z,color:G.nav.color});
     }
     // folla agli eventi (vicino al taxi)
     for(const{e,ph}of activeEvents()){if(ph==='incorso'||Math.hypot(e.addr.x-car.x,e.addr.z-car.z)>260)continue;const E=CITY.edges[e.addr.e],nx=-E.dz*e.addr.side,nz=E.dx*e.addr.side;
@@ -3403,10 +3588,11 @@ function readInput(dt,pad){
   const rate=t===0?7:(Math.sign(t)!==Math.sign(G.kbSteer)&&G.kbSteer!==0?9:[3.2,4.2,5.6][store.opts.sens]||4.2);G.kbSteer+=clamp(t-G.kbSteer,-rate*dt,rate*dt);
   let steer=G.kbSteer,gas=(K_.ArrowUp||K_.KeyW||TOUCH.G)?1:0,brake=(K_.ArrowDown||K_.KeyS||TOUCH.B)?1:0,hb=!!(K_.Space||TOUCH.H);
   if(pad){if(Math.abs(pad.steer)>Math.abs(steer))steer=pad.steer;gas=Math.max(gas,pad.gas);brake=Math.max(brake,pad.brake);hb=hb||pad.hb;}
+  if(G.conf>0){steer=-steer;const g=gas;gas=brake;brake=g;}
   G.input={steer:clamp(steer,-1,1),gas,brake,hb};
 }
 function rumble(v){const gp=G.pad;if(!gp||!gp.vibrationActuator||!store.opts.rumble)return;try{gp.vibrationActuator.playEffect('dual-rumble',{duration:Math.min(300,90+v*12),strongMagnitude:clamp(v/14,0.2,1),weakMagnitude:0.6});}catch(e){}}
-function toast(s){const e=$('toast');e.innerHTML=s;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2000);}
+function toast(s,ms){const e=$('toast');e.innerHTML=s;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),ms||2000);}
 function toggleFs(){const d=document;if(!d.fullscreenElement&&!d.webkitFullscreenElement){const el=d.documentElement;const p=(el.requestFullscreen||el.webkitRequestFullscreen).call(el);if(p&&p.then)p.then(()=>{try{screen.orientation.lock('portrait').catch(()=>{});}catch(e){}}).catch(()=>{});}else{(d.exitFullscreen||d.webkitExitFullscreen).call(d);}}
 $('btnFs').onclick=e=>{e.stopPropagation();toggleFs();};
 $('btnPause').onclick=e=>{e.stopPropagation();pauseGame();};
