@@ -146,6 +146,8 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
 #bigmap .mbtns button{background:var(--panel);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 12px;font:800 14px Trebuchet MS,Arial;min-width:44px;cursor:pointer;}
 #bigmap .mbtns button:active{background:#2a2e3a;}
 #bigmap .leg{font-size:11px;color:#dfe3ee;margin-top:8px;text-align:center;line-height:1.6;}
+#errbox{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:60;background:#b3261e;color:#fff;font:700 11px/1.35 Arial,sans-serif;padding:6px 8px;border-radius:8px;pointer-events:none;word-break:break-word;}
+#errbox.hide{display:none;}
 #toast{position:absolute;left:50%;top:58%;transform:translateX(-50%);background:var(--panel);padding:10px 16px;border-radius:10px;font-weight:800;z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center;max-width:86%;}
 #toast.show{opacity:1;}
 #loading{position:absolute;inset:0;background:#0b0c10;display:grid;place-items:center;z-index:50;font-weight:800;font-style:italic;color:var(--yel);}
@@ -199,6 +201,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
   </div>
   <div id="bigmap" class="hide"><canvas id="bigcv" width="900" height="900"></canvas><div class="mbtns"><button id="mzOut" aria-label="Riduci">－</button><button id="mzIn" aria-label="Ingrandisci">＋</button><button id="mzCar">🚕 Taxi</button><button id="mzAll">⤢ Tutta</button><button id="mzX">✕ Chiudi</button></div><div class="leg"></div></div>
   <div id="screens" class="screen"></div>
+  <div id="errbox" class="hide"></div>
   <div id="toast"></div>
   <div id="loading">Costruisco la città…</div>
 </div>
@@ -214,7 +217,7 @@ td{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.07);} td.t{text-ali
    TAXI METROPOLI — core puro (città, navigatore, fisica, economia)
    Nessuna dipendenza da DOM o Three.js: testabile in Node.
    ========================================================== */
-const VERSION='2.0';
+const VERSION='2.0.1';
 // rimescolamento Fisher-Yates: stesso risultato su tutti i browser (sort con confronto casuale dipende dal motore JS)
 function shuffle(arr,r){for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));const t=arr[i];arr[i]=arr[j];arr[j]=t;}return arr;}
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -3619,7 +3622,7 @@ function frame(now){
     dmg:G.mode!=='menu'&&G.K?{hp:cs().hp,lights:cs().iss.lights||'ok',dead:cs().dead}:null});
   peopleAndBeacons();
   GFX.render();
-  if(playing&&G.K){updateHUD();if((G.minT+=dt)>1/30){G.minT=0;drawMini();}}
+  if(playing&&G.K){try{updateHUD();}catch(e){reportErr('HUD',e);}if((G.minT+=dt)>1/30){G.minT=0;try{drawMini();}catch(e){const m=$('mini');m.width=m.width;reportErr('minimappa',e);}}}
   SFX.engine(G.car,G.mode==='play',G.input.gas);
   G.look=(G.look||0)+(((G.mode==='play'?G.lookT:0)||0)-(G.look||0))*Math.min(1,dt*7);
   updatePromenade(dt);updateTrains(dt);atmosphere(dt);
@@ -3634,6 +3637,11 @@ function boot(){
     $('loading').classList.add('hide');updateTouchVis();menuMain();requestAnimationFrame(frame);
   }catch(e){$('loading').textContent='Errore: '+e.message;console.error(e);}
 }
+// errori: li mostro a schermo (una volta per tipo) così si possono segnalare
+const ERRS=new Set();
+function reportErr(where,e){const msg=(e&&e.message)||String(e),k=where+msg;if(ERRS.has(k)||ERRS.size>6)return;ERRS.add(k);console.error(where,e);
+  const line=(e&&e.stack||'').split('\n').find(l=>/:\d+:\d+/.test(l))||'';const b=$('errbox');b.textContent='⚠️ Errore'+(where?' ('+where+')':'')+': '+msg+(line?' — '+line.trim().slice(-60):'');b.classList.remove('hide');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.add('hide'),12000);}
+window.addEventListener('error',e=>reportErr('',e.error||e.message));
 window.__G=G;
 setTimeout(boot,30);
 
